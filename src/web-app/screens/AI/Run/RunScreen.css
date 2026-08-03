@@ -1,0 +1,709 @@
+@import "./phase.css";
+
+.AppScreen[data-screen="ai.run"] .RunScreenContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.RunHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.RunUsage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+
+.RunUsageMeter {
+  width: 96px;
+}
+
+.RunUsageMeter .bp6-progress-bar {
+  height: 6px;
+}
+
+.RunUsageLabel {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.RunPanel,
+.RunBar {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+
+.RunBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+}
+
+.RunGoal {
+  flex: 1;
+  font-size: 13px;
+}
+
+.RunStatStrip {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(78px, 1fr));
+  flex: 0 0 auto;
+  min-height: 47px;
+  overflow-x: auto;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+
+.RunStat {
+  display: flex;
+  min-width: 78px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 10px;
+}
+
+.RunStat + .RunStat {
+  border-left: 1px solid var(--app-border);
+}
+
+.RunStatLabel {
+  overflow: hidden;
+  color: var(--app-text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.RunStatValue {
+  overflow: hidden;
+  color: var(--app-text);
+  font-family: var(--monospace-font);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.RunStatValue[data-phase="done"] {
+  color: var(--app-intent-success-text);
+}
+
+.RunStatValue[data-phase="error"],
+.RunStatValue[data-phase="stopped"] {
+  color: var(--app-intent-danger-text);
+}
+
+.RunStatValue[data-phase="running"],
+.RunStatValue[data-phase="planning"],
+.RunStatValue[data-phase="synthesizing"] {
+  color: var(--app-accent-text);
+}
+
+.RunPlanGate {
+  border: 1px solid var(--app-accent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface));
+}
+
+.RunPlanGateHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-accent-text);
+  font-size: 12px;
+}
+
+.RunPlanGateCount {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-weight: 400;
+}
+
+.RunPlanGateActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.RunPlanList {
+  margin: 0;
+  padding: 6px 10px 6px 28px;
+  max-height: 20vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.RunPlanList li {
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.RunPlanDeps {
+  display: block;
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+
+.RunApprovals {
+  display: flex;
+  flex-direction: column;
+  max-height: 20vh;
+  overflow: hidden;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-intent-warning-text);
+  border-radius: 3px;
+}
+
+.RunApprovalQueueHeader {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  background: var(--app-surface-strong);
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+.RunApprovalQueueTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--app-intent-warning-text);
+  letter-spacing: 0.02em;
+}
+
+.RunApprovalQueueCount {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.RunApprovalList {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.RunApproval + .RunApproval {
+  border-top: 1px solid var(--app-border);
+}
+
+.RunApprovalBody {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  gap: 10px;
+  padding: 4px 8px 4px 10px;
+}
+
+.RunApprovalActions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+  border-left: 1px solid var(--app-border);
+}
+
+.RunApprovalText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.RunApprovalText strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.RunApprovalWhere {
+  font-size: 10px;
+  color: var(--app-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.RunApprovalDrawerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.RunApprovalDrawerContext {
+  padding: 9px 10px;
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-intent-warning-text);
+  border-radius: 3px;
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.RunApprovalDrawerReason {
+  color: var(--app-text);
+  line-height: 1.45;
+}
+
+.RunApprovalDrawerPayload {
+  max-height: 45vh;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  color: var(--app-text);
+  font-family: var(--monospace-font);
+  white-space: pre-wrap;
+}
+
+.RunApprovalDrawerActions {
+  margin-top: 12px;
+}
+
+@media (max-width: 900px) {
+  .RunApprovalBody {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .RunApprovalActions {
+    justify-content: flex-end;
+    padding-top: 6px;
+    padding-left: 0;
+    border-top: 1px solid var(--app-border);
+    border-left: 0;
+  }
+}
+
+.RunWorkspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.RunWorkspace--answerOnly {
+  display: block;
+}
+
+/* react-split-pane (repo fork, .split-pane-* classes). The split root fills the workspace via flex, exactly like
+   the Build studio; each pane hosts a single panel or a nested split, both filling the pane. Users drag the
+   dividers to reweight the graph, transcript and answer to taste. */
+.RunWorkspace .RunSplit {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.RunWorkspace .split-pane-pane {
+  overflow: hidden;
+}
+
+.RunWorkspace .split-pane-pane > .RunPanel,
+.RunWorkspace .split-pane-pane > .RunSplit {
+  width: 100%;
+  height: 100%;
+}
+
+.RunWorkspace .split-pane-divider {
+  background: transparent;
+  transition: background 0.12s ease;
+}
+
+.RunWorkspace .split-pane-divider:hover {
+  background: var(--app-accent);
+}
+
+.RunWorkspace .split-pane-divider.horizontal {
+  width: 8px !important;
+}
+
+.RunWorkspace .split-pane-divider.vertical {
+  height: 8px !important;
+}
+
+.RunGraph,
+.RunTranscript {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.RunWorkspace--answerOnly .RunSynthesis {
+  height: 100%;
+}
+
+.RunPanelHead {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.RunPanelHeadSub {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--app-text-muted);
+}
+
+.RunPanelHeadActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.RunPanelHeadActions .RunPanelHeadSub {
+  margin-left: 0;
+}
+
+/* Graph navigation floats over the canvas, outside React Flow's transformed viewport. It remains anchored while
+   nodes pan or zoom and keeps enough surface contrast to read over edges and cards. */
+.RunGraphControls {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 8px;
+  padding: 2px;
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  background: var(--app-surface-strong);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--app-bg) 65%, transparent);
+}
+
+.RunGraphControls .bp6-button .bp6-icon {
+  color: var(--app-text);
+}
+
+.RunGraphControls .bp6-button:hover .bp6-icon {
+  color: var(--app-accent);
+}
+
+/* The task DAG is a React Flow canvas (see RunGraphCanvas). React Flow needs a sized, positioned host and paints
+   its own pan/zoom viewport; we strip its default chrome so the panel reads exactly like the previous columns —
+   transparent background (inherits the panel surface), hidden attribution, invisible node handles, and edges +
+   node cards drawn with the app theme tokens. */
+.RunGraphBody {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.RunGraphBody .react-flow {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.RunGraphBody .react-flow__attribution {
+  display: none;
+}
+
+/* React Flow positions each node absolutely; give the card the former wave-column width and remove the library's
+   own selection/focus outline so our data-selected border is the only selection affordance. */
+.RunGraphBody .react-flow__node {
+  width: 190px;
+  cursor: pointer;
+}
+
+.RunGraphBody .react-flow__node-task.selected,
+.RunGraphBody .react-flow__node:focus,
+.RunGraphBody .react-flow__node:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.RunGraphBody .react-flow__node-waveLabel {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Invisible attach points: the dependency curves bow between each card's left/right mid-edge without a visible dot. */
+.RunGraphBody .react-flow__handle {
+  width: 1px;
+  height: 1px;
+  min-width: 1px;
+  min-height: 1px;
+  border: none;
+  background: transparent;
+  opacity: 0;
+}
+
+.RunGraphBody .react-flow__edge-path {
+  fill: none;
+  stroke: var(--app-border);
+  stroke-width: 1.5px;
+}
+
+.RunGraphBody .react-flow__edge.is-active .react-flow__edge-path {
+  stroke: var(--app-accent);
+  stroke-width: 2px;
+}
+
+.RunWaveLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-muted);
+}
+
+.RunTask {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--app-text);
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-text-muted);
+  border-radius: 3px;
+}
+
+/* Avatar rides in its own leading column, vertically centered, and never dictates the cell height. */
+.RunTaskAvatar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.RunTaskBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.RunTask:hover {
+  border-color: var(--app-text-muted);
+}
+
+.RunTask[data-selected="yes"] {
+  border-color: var(--app-accent);
+  border-left-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-bg));
+}
+
+.RunTask[data-status="complete"] {
+  border-left-color: var(--app-intent-success-rest);
+}
+
+.RunTask[data-status="running"] {
+  border-left-color: var(--app-accent);
+}
+
+.RunTask[data-status="awaiting-approval"] {
+  border-left-color: var(--app-intent-warning-rest);
+}
+
+.RunTask[data-status="failed"] {
+  border-left-color: var(--app-intent-danger-rest);
+}
+
+.RunTask[data-status="skipped"] {
+  opacity: 0.6;
+}
+
+.RunTaskTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.RunTaskTitleText {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
+}
+
+.RunTaskMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.RunTaskAgent {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  color: var(--app-text-muted);
+  background: var(--app-surface-strong);
+}
+
+.RunTaskDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--app-text-muted);
+}
+
+.RunTaskDot[data-status="complete"] {
+  background: var(--app-intent-success-rest);
+}
+
+.RunTaskDot[data-status="failed"] {
+  background: var(--app-intent-danger-rest);
+}
+
+.RunTaskDot[data-status="awaiting-approval"] {
+  background: var(--app-intent-warning-rest);
+}
+
+.RunTaskDot[data-status="running"] {
+  background: var(--app-accent);
+  animation: RunPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes RunPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.RunTranscriptBody {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--app-text);
+}
+
+.RunEvidence .InspectTabs {
+  flex: 1;
+}
+
+.RunEvidence .InspectTabsRail {
+  width: 108px;
+  min-width: 108px;
+  padding: 6px;
+}
+
+.RunEvidence .InspectTabsPanel {
+  padding: 8px;
+}
+
+.RunEvidence .RunTranscriptBody {
+  padding: 2px;
+}
+
+.RunEvidence .PropertyValueTable {
+  width: 100%;
+}
+
+.RunEvidenceRaw {
+  min-height: 100%;
+  font-family: var(--monospace-font);
+  font-size: 11px;
+}
+
+.RunTranscriptWaiting {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--app-text-muted);
+}
+
+.RunTranscriptWaitingText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.RunTranscriptWaitingTitle {
+  margin: 0;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.RunTranscriptHint {
+  margin: 0;
+  font-size: 12px;
+}
+
+.RunError .RunErrorMessage {
+  margin: 6px 0 10px;
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.45;
+  background: color-mix(in srgb, var(--app-danger, #db3737) 12%, var(--app-surface));
+  border-radius: 3px;
+}
+
+.RunErrorActions {
+  display: flex;
+  gap: 8px;
+}
+
+.RunSynthesis {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 3px solid var(--app-accent);
+}
+
+.RunSynthesisBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--app-text);
+}

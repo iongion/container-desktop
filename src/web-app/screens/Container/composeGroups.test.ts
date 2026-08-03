@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Container } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
 import type { ContainerGroup } from "@/web-app/Types";
 
 import { composeProjectOf, isComposeContainer, isComposeGroup } from "./composeGroups";

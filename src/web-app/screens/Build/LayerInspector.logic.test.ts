@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyzeLayers } from "@/container-client/builder/analyzeLayers";
-import type { ContainerImageHistory } from "@/env/Types";
+import type { ContainerImageHistory } from "@/container-client/types/image";
 import { toWaterfallRows } from "./LayerInspector.logic";
 
 const hist = (over: Partial<ContainerImageHistory>): ContainerImageHistory => ({

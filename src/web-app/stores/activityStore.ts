@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import { systemNotifier } from "@/container-client/notifier";
-import type { SystemNotification } from "@/env/Types";
+import type { SystemNotification } from "@/container-client/types/os";
 import { randomUUID } from "@/utils/randomUUID";
 import type {
   ActivityEntry,
@@ -249,9 +249,9 @@ systemNotifier.on("activity.api", (event: SystemNotification) => {
   } as Partial<ApiEntry>);
 });
 
-// Ingestion: CLI commands (from the preload ActivityBus over the contextBridge)
+// Ingestion: CLI commands (from window.ActivityBus, installed by the host bridge).
 // Subscribed lazily/idempotently — window.ActivityBus may not exist when this module first
-// evaluates (preload race). NotificationCenterHost also calls this on mount; the preload
+// evaluates (bridge race). NotificationCenterHost also calls this on mount; the bus
 // buffers entries emitted before the first subscriber, so startup CLI calls are not lost.
 
 let cliBusSubscribed = false;

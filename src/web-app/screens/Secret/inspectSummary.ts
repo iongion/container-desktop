@@ -1,4 +1,4 @@
-import type { Secret } from "@/env/Types";
+import type { Secret } from "@/container-client/types/secret";
 import { t } from "@/i18n";
 import type { InspectSummaryRow } from "@/web-app/components/InspectSummary";
 import { inspectDate, shortId } from "@/web-app/components/inspectSummary.helpers";

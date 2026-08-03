@@ -13,7 +13,7 @@ import classNames from "classnames";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Connection } from "@/env/Types";
+import type { Connection } from "@/container-client/types/connection";
 import { EngineCell } from "@/web-app/components/EngineCell";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";

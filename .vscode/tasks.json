@@ -2,21 +2,13 @@
   "version": "2.0.0",
   "tasks": [
     {
-      // Started automatically by the "Debug All" launch compound. Runs the normal dev
-      // flow (`yarn dev` -> support/watch.mjs: Vite dev server + Electron) but with the
-      // Electron main-process V8 inspector enabled on port 9229 so the Node debugger can
-      // attach. Kept as a background task: stopping the debug session leaves the dev
-      // server warm; stop this task to fully shut down (watch.mjs kills Electron on exit).
-      "label": "dev: electron + inspector",
-      "detail": "yarn dev with the Electron main-process inspector enabled (for VS Code debugging)",
+      // The normal dev flow on the shell that ships: `tauri dev` builds the Rust binary and serves the renderer
+      // from Vite. Kept as a background task so stopping it fully shuts the app down.
+      "label": "dev: tauri (mock)",
+      "detail": "yarn dev:mock — Tauri with the deterministic mock backend",
       "type": "shell",
-      "command": "yarn dev",
+      "command": "yarn dev:mock",
       "isBackground": true,
-      "options": {
-        "env": {
-          "CONTAINER_DESKTOP_INSPECT": "9229"
-        }
-      },
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -31,10 +23,8 @@
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "container-desktop\\] dev watcher starting",
-          // Electron prints this once the main-process inspector is listening; that is the
-          // moment both the Node (9229) and renderer CDP (9222) endpoints are ready to attach.
-          "endsPattern": "Debugger listening on ws://"
+          "beginsPattern": "Compiling|Running BeforeDevCommand",
+          "endsPattern": "Running `target/debug"
         }
       }
     }

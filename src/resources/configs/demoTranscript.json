@@ -4,11 +4,13 @@
     "id": "d1",
     "role": "user",
     "content": "Which images are safe to remove? Also show my containers, images, networks, volumes and some logs.",
-    "streaming": false
+    "delivery": "applied",
+    "status": "complete"
   },
   {
     "kind": "tool",
     "id": "d2",
+    "toolCallId": "demo-tool-2",
     "tool": "listContainers",
     "title": "List containers · System Docker",
     "args": { "connection": "System Docker" },
@@ -48,6 +50,7 @@
   {
     "kind": "tool",
     "id": "d3",
+    "toolCallId": "demo-tool-3",
     "tool": "listImages",
     "title": "List images",
     "args": {},
@@ -60,18 +63,36 @@
       { "Id": "sha256:34166d", "Name": "", "Tag": "", "Size": 7210103070 }
     ]
   },
-  { "kind": "message", "id": "d4", "role": "assistant", "content": "@demo-assistant-message", "streaming": false },
-  { "kind": "command", "id": "d5", "program": "docker", "args": ["image", "prune", "-a", "--filter", "until=240h"] },
   {
-    "kind": "command-result",
-    "id": "d6",
+    "kind": "message",
+    "id": "d4",
+    "role": "assistant",
+    "content": "@demo-assistant-message",
+    "delivery": "applied",
+    "status": "complete"
+  },
+  {
+    "kind": "tool",
+    "id": "d5",
+    "toolCallId": "demo-command-1",
+    "tool": "runCommand",
+    "title": "docker image prune",
+    "args": { "program": "docker", "args": ["image", "prune", "-a", "--filter", "until=240h"] },
+    "status": "complete",
     "ok": true,
-    "stdout": "Deleted Images:\nuntagged: node:20-alpine\ndeleted: sha256:9f2b3c…\n\nTotal reclaimed space: 1.2GB",
-    "stderr": ""
+    "result": {
+      "program": "docker",
+      "args": ["image", "prune", "-a", "--filter", "until=240h"],
+      "stdout": "Deleted Images:\nuntagged: node:20-alpine\ndeleted: sha256:9f2b3c…\n\nTotal reclaimed space: 1.2GB",
+      "stderr": "",
+      "code": 0,
+      "truncated": false
+    }
   },
   {
     "kind": "tool",
     "id": "d7",
+    "toolCallId": "demo-tool-7",
     "tool": "getContainerLogs",
     "title": "Get container logs",
     "args": { "id": "62fda4d3e0c4" },
@@ -85,6 +106,7 @@
   {
     "kind": "tool",
     "id": "d8",
+    "toolCallId": "demo-tool-8",
     "tool": "listNetworks",
     "title": "List networks",
     "args": {},
@@ -98,6 +120,7 @@
   {
     "kind": "tool",
     "id": "d9",
+    "toolCallId": "demo-tool-9",
     "tool": "listVolumes",
     "title": "List volumes",
     "args": {},
@@ -111,10 +134,10 @@
   {
     "kind": "approval",
     "id": "d10",
-    "actionId": "a1",
-    "cmdKind": "tool",
-    "program": "removeImage",
-    "args": [],
+    "approvalId": "approval-demo-1",
+    "toolCallId": "tool-demo-1",
+    "tool": "removeImage",
+    "args": { "id": "sha256:34166d" },
     "reason": "Removing an image is destructive and cannot be undone.",
     "status": "pending",
     "title": "Remove dangling image sha256:34166d"
@@ -122,6 +145,7 @@
   {
     "kind": "tool",
     "id": "d11",
+    "toolCallId": "demo-tool-11",
     "tool": "restartContainer",
     "title": "Restart shop-web-1",
     "args": { "id": "62fda4d3e0c4" },
@@ -132,6 +156,7 @@
   {
     "kind": "tool",
     "id": "d12",
+    "toolCallId": "demo-tool-12",
     "tool": "listContainers",
     "title": "List containers",
     "args": {},
@@ -140,6 +165,7 @@
   {
     "kind": "tool",
     "id": "d13",
+    "toolCallId": "demo-tool-13",
     "tool": "inspectRegistryTrust",
     "title": "Inspect registry trust (generic JSON fallback)",
     "args": { "registry": "docker.io" },
@@ -153,13 +179,26 @@
       "policy": { "default": "insecureAcceptAnything" }
     }
   },
-  { "kind": "rejected", "id": "d14", "program": "rm", "args": ["-rf", "/"], "reason": "Blocked by the safety policy." },
-  { "kind": "error", "id": "d15", "message": "The model connection was interrupted (ECONNRESET). Retry when ready." },
+  {
+    "kind": "denied",
+    "id": "d14",
+    "toolCallId": "tool-demo-denied",
+    "tool": "runCommand",
+    "title": "rm -rf /",
+    "reason": "Blocked by the safety policy."
+  },
+  {
+    "kind": "error",
+    "id": "d15",
+    "scope": "model",
+    "message": "The model connection was interrupted (ECONNRESET). Retry when ready."
+  },
   {
     "kind": "message",
     "id": "d16",
     "role": "assistant",
     "content": "One more thing while I finish streaming",
-    "streaming": true
+    "delivery": "applied",
+    "status": "streaming"
   }
 ]

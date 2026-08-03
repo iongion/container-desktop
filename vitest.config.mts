@@ -1,15 +1,11 @@
 import { configDefaults, defineConfig } from "vitest/config";
+import { makeAliases } from "./support/aliases.mjs";
 
 // Standalone Vitest config for the HERMETIC suite (the app's vite.config.*.mjs are per-target build
 // configs; the live matrix runs from vitest.live.config.mts). `@` mirrors the tsconfig path alias.
 export default defineConfig({
   resolve: {
-    alias: {
-      // Must precede "@" -> src: alias matching is first-hit, so "@" would otherwise swallow "@/cli".
-      "@/cli": new URL("./support/cli", import.meta.url).pathname,
-      "@": new URL("./src", import.meta.url).pathname,
-      "@/ai-system": new URL("./src/ai-system", import.meta.url).pathname,
-    },
+    alias: makeAliases(new URL(".", import.meta.url).pathname),
   },
   test: {
     // jsdom covers both pure-function tests (normalizers/comparators) and

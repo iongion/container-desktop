@@ -1,0 +1,38 @@
+{
+  "allowed": [
+    {
+      "workspaceId": "mock-workspace",
+      "targetId": "host",
+      "subject": { "kind": "access-profile", "id": "operator" },
+      "operation": { "kind": "tool", "id": "startContainer" },
+      "normalizedArgs": "{\"id\":\"web\"}",
+      "contentTrustEpoch": "trusted"
+    },
+    {
+      "workspaceId": "mock-workspace",
+      "targetId": "host",
+      "subject": { "kind": "access-profile", "id": "operator" },
+      "operation": { "kind": "tool", "id": "pullImage" },
+      "normalizedArgs": "{\"reference\":\"nginx:latest\"}",
+      "contentTrustEpoch": "trusted"
+    }
+  ],
+  "blocked": [
+    {
+      "workspaceId": "mock-workspace",
+      "targetId": "host",
+      "subject": { "kind": "access-profile", "id": "operator" },
+      "operation": { "kind": "tool", "id": "removeContainer" },
+      "normalizedArgs": "{\"id\":\"web\"}",
+      "contentTrustEpoch": "trusted"
+    },
+    {
+      "workspaceId": "mock-workspace",
+      "targetId": "host",
+      "subject": { "kind": "access-profile", "id": "operator" },
+      "operation": { "kind": "tool", "id": "removeVolume" },
+      "normalizedArgs": "{\"id\":\"data\"}",
+      "contentTrustEpoch": "trusted"
+    }
+  ]
+}

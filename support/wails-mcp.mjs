@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Wails remote-control / E2E driver — the Wails analog of support/cdp.mjs (Electron, Chrome DevTools Protocol)
+// Wails remote-control / E2E driver — the Wails analog of webdriver/wdio.conf.js (Tauri, W3C WebDriver)
 // and webdriver/wdio.conf.js (Tauri, W3C WebDriver via tauri-driver). Wails has NEITHER: WebKit2GTK (Linux) and
 // WKWebView (macOS) expose no CDP, and Wails ships no WebDriver/automation shim. Its cross-platform control
 // surface is instead Wails v3's built-in MCP server (Model Context Protocol), which starts when the app is built

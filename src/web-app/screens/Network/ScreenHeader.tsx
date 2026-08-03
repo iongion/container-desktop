@@ -2,7 +2,7 @@ import { AnchorButton, ButtonGroup } from "@blueprintjs/core";
 import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
-import type { Network } from "@/env/Types";
+import type { Network } from "@/container-client/types/network";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 

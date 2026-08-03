@@ -9,7 +9,7 @@
 //
 // Degraded fallback: when the OS vault is UNREACHABLE and the caller explicitly opts into degraded storage,
 // secrets are kept in a 0600 file (keychain-fallback.json, base64 per account) instead — the Tauri parity for
-// Electron's credentialsFs (safeStorage basic_text) path. This is NOT OS encryption (the opt-in gate warns the
+// degraded-vault path. This is NOT OS encryption (the opt-in gate warns the
 // user); the owner-only file mode is the real protection, base64 only keeps keys off disk in plaintext.
 
 use base64::Engine as _;
@@ -23,7 +23,7 @@ const KEYCHAIN_SERVICE: &str = "com.iongion.container-desktop.keychain";
 // A sentinel entry used ONLY to probe whether the OS secret store is reachable (the encryption-available check).
 const PROBE_SERVICE: &str = "com.iongion.container-desktop.keychain-probe";
 const PROBE_USER: &str = "probe";
-// Degraded-vault fallback store (see file header). A distinct filename from Electron's ai-credentials.json
+// Degraded-vault fallback store (see file header). A distinct filename from the AI credentials file
 // (different content) since both shells share the userData dir.
 const FALLBACK_FILE: &str = "keychain-fallback.json";
 
@@ -43,7 +43,7 @@ fn entry(service: &str, user: &str) -> Result<keyring::Entry, String> {
 }
 
 /// The OS secret-store backend name for the current platform — shown in the Settings degraded-security notice
-/// ("no OS keychain is available (…)"). Mirrors what Electron surfaces via safeStorage.getSelectedStorageBackend.
+/// ("no OS keychain is available (…)").
 fn keychain_backend_name() -> Option<String> {
     if cfg!(target_os = "macos") {
         Some("macOS Keychain".into())
@@ -59,7 +59,7 @@ fn keychain_backend_name() -> Option<String> {
 // Degraded-vault fallback file helpers.
 
 fn fallback_path() -> PathBuf {
-    PathBuf::from(crate::host::get_user_data_path()).join(FALLBACK_FILE)
+    PathBuf::from(crate::host::platform::get_user_data_path()).join(FALLBACK_FILE)
 }
 
 /// Read the fallback map (account → base64 secret). A missing or corrupt file reads as an empty map.
@@ -88,8 +88,10 @@ fn write_fallback(map: &HashMap<String, String>) -> Result<(), String> {
             .mode(0o600)
             .open(&path)
             .map_err(|e| e.to_string())?;
-        file.write_all(contents.as_bytes()).map_err(|e| e.to_string())?;
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).map_err(|e| e.to_string())?;
+        file.write_all(contents.as_bytes())
+            .map_err(|e| e.to_string())?;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+            .map_err(|e| e.to_string())?;
     }
     #[cfg(not(unix))]
     {
@@ -100,13 +102,18 @@ fn write_fallback(map: &HashMap<String, String>) -> Result<(), String> {
 
 fn fallback_set(account: &str, secret: &str) -> Result<(), String> {
     let mut map = read_fallback();
-    map.insert(account.to_string(), base64::engine::general_purpose::STANDARD.encode(secret.as_bytes()));
+    map.insert(
+        account.to_string(),
+        base64::engine::general_purpose::STANDARD.encode(secret.as_bytes()),
+    );
     write_fallback(&map)
 }
 
 fn fallback_get(account: &str) -> Option<String> {
     let encoded = read_fallback().remove(account)?;
-    let bytes = base64::engine::general_purpose::STANDARD.decode(encoded).ok()?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .ok()?;
     String::from_utf8(bytes).ok()
 }
 
@@ -120,7 +127,7 @@ fn fallback_clear(account: &str) {
 // Commands.
 
 /// Probe whether the OS secret store is usable by round-tripping a sentinel secret. Any failure ⇒ unavailable +
-/// degraded (the consumer then requires explicit opt-in before storing a key, mirroring Electron's safeStorage
+/// degraded (the consumer then requires explicit opt-in before storing a key, mirroring the shared
 /// degraded path). `backend` names the platform vault regardless of reachability.
 #[tauri::command]
 pub async fn keychain_status() -> KeychainStatus {
@@ -137,7 +144,11 @@ pub async fn keychain_status() -> KeychainStatus {
     })
     .await
     .unwrap_or(false);
-    KeychainStatus { available, backend: keychain_backend_name(), degraded: !available }
+    KeychainStatus {
+        available,
+        backend: keychain_backend_name(),
+        degraded: !available,
+    }
 }
 
 /// Whether a non-empty secret is stored for `account` (in the OS vault or the degraded fallback).
@@ -153,12 +164,16 @@ pub async fn keychain_has(account: String) -> bool {
     })
     .await
     .unwrap_or(false);
-    in_vault || fallback_get(&account).map(|s| !s.is_empty()).unwrap_or(false)
+    in_vault
+        || fallback_get(&account)
+            .map(|s| !s.is_empty())
+            .unwrap_or(false)
 }
 
 /// The plaintext secret for `account` (None if unset) — from the OS vault, else the degraded fallback.
-#[tauri::command]
-pub async fn keychain_get(account: String) -> Result<Option<String>, String> {
+/// Deliberately NOT a `#[tauri::command]`: the secret stays in this process, and the only caller is the native
+/// provider transport, which attaches it to the outbound request without the web view ever seeing it.
+pub(crate) async fn keychain_get(account: String) -> Result<Option<String>, String> {
     let account_for_vault = account.clone();
     let from_vault = tokio::task::spawn_blocking(move || -> Result<Option<String>, String> {
         let e = entry(KEYCHAIN_SERVICE, &account_for_vault)?;
@@ -178,14 +193,20 @@ pub async fn keychain_get(account: String) -> Result<Option<String>, String> {
 }
 
 /// Store (or overwrite) the secret for `account` in the OS vault. If the vault write fails and the caller opted
-/// into degraded storage, fall back to the 0600 file instead (Electron basic_text parity); otherwise the vault
+/// into degraded storage, fall back to the 0600 file instead; otherwise the vault
 /// error propagates.
 #[tauri::command]
-pub async fn keychain_set(account: String, secret: String, allow_degraded: Option<bool>) -> Result<(), String> {
+pub async fn keychain_set(
+    account: String,
+    secret: String,
+    allow_degraded: Option<bool>,
+) -> Result<(), String> {
     let account_for_vault = account.clone();
     let secret_for_vault = secret.clone();
     let vault_result = tokio::task::spawn_blocking(move || {
-        entry(KEYCHAIN_SERVICE, &account_for_vault)?.set_password(&secret_for_vault).map_err(|e| e.to_string())
+        entry(KEYCHAIN_SERVICE, &account_for_vault)?
+            .set_password(&secret_for_vault)
+            .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?;
@@ -234,10 +255,17 @@ mod tests {
 
         // Stored base64-encoded, never as plaintext on disk.
         let raw = std::fs::read_to_string(dir.join(FALLBACK_FILE)).unwrap();
-        assert!(!raw.contains("sk-secret"), "secret must not be on disk in plaintext: {raw}");
+        assert!(
+            !raw.contains("sk-secret"),
+            "secret must not be on disk in plaintext: {raw}"
+        );
 
         // Owner-only (0600) permissions.
-        let mode = std::fs::metadata(dir.join(FALLBACK_FILE)).unwrap().permissions().mode() & 0o777;
+        let mode = std::fs::metadata(dir.join(FALLBACK_FILE))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777;
         assert_eq!(mode, 0o600, "fallback file must be owner-only");
 
         fallback_clear("openai");

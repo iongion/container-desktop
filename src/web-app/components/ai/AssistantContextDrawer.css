@@ -1,0 +1,121 @@
+.AssistantContextDrawer .bp6-dialog-body,
+.AssistantContextSections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.AssistantContextStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.AssistantContextStat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+}
+
+.AssistantContextStat:nth-child(even) {
+  border-left: 1px solid var(--app-border);
+}
+
+.AssistantContextStat:nth-child(n + 3) {
+  border-top: 1px solid var(--app-border);
+}
+
+.AssistantContextStat span,
+.AssistantContextRow > span:nth-child(2),
+.AssistantContextNotice,
+.AssistantContextEmptyRow,
+.AssistantToolRow span {
+  color: var(--app-text-muted);
+}
+
+.AssistantContextStat span {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.AssistantContextStat strong {
+  color: var(--app-accent-text);
+  font-size: 20px;
+}
+
+.AssistantContextPanel,
+.AssistantToolList {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.AssistantContextPanelHeader,
+.AssistantContextRow,
+.AssistantToolRow {
+  display: flex;
+  align-items: center;
+}
+
+.AssistantContextPanelHeader {
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+}
+
+.AssistantContextPanelHeader h5 {
+  margin: 0;
+  color: var(--app-text);
+}
+
+.AssistantContextRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  min-height: 36px;
+  padding: 7px 10px;
+}
+
+.AssistantContextRow + .AssistantContextRow,
+.AssistantToolRow + .AssistantToolRow {
+  border-top: 1px solid var(--app-border);
+}
+
+.AssistantContextRow > span:first-child {
+  text-transform: capitalize;
+}
+
+.AssistantContextNotice,
+.AssistantContextEmptyRow {
+  padding: 12px;
+}
+
+.AssistantToolRow {
+  gap: 10px;
+  min-height: 54px;
+  padding: 8px 10px;
+}
+
+.AssistantToolRow > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.AssistantToolRow strong,
+.AssistantToolRow span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssistantToolRow span {
+  margin-top: 2px;
+  font-size: 12px;
+}

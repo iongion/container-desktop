@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type Pod, PodStatusList } from "@/env/Types";
+import { type Pod, PodStatusList } from "@/container-client/types/pod";
 
 import { buildPodSummary } from "./inspectSummary";
 

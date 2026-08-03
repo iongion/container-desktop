@@ -111,3 +111,25 @@
 .AppSidebar[data-expanded="yes"] .AppSidebarActions .bp6-button {
   padding: 5px;
 }
+
+/* Highlighted hub entry (the AI "Runs" hub) — stands out from the engine screens with the theme's attention/
+   warning colour, which is tuned per engine×mode (bright gold on dark, deep amber on light) so it stays legible
+   on every theme, not just this one. */
+.AppSidebarActions .bp6-button[data-highlight="true"] {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 12%, transparent);
+}
+/* Target the label span and include the active state so the tint holds when this entry is the selected screen —
+   Blueprint's active-minimal rule otherwise repaints the text white while the icon keeps its own fill. */
+.AppSidebarActions .bp6-button[data-highlight="true"],
+.AppSidebarActions .bp6-button[data-highlight="true"].bp6-active,
+.AppSidebarActions .bp6-button[data-highlight="true"] .bp6-button-text {
+  color: var(--app-intent-warning-text);
+}
+.AppSidebarActions .bp6-button[data-highlight="true"] .bp6-icon,
+.AppSidebarActions .bp6-button[data-highlight="true"] .bp6-icon svg {
+  color: var(--app-intent-warning-text);
+  fill: var(--app-intent-warning-text);
+}
+.AppSidebarActions .bp6-button[data-highlight="true"]:hover {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 20%, transparent);
+}

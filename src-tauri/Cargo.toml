@@ -1,5 +1,5 @@
 [package]
-# Same product as the Electron app — "container-desktop" is the one project. Cargo crate names live in a
+# One product — "container-desktop" is the one project. Cargo crate names live in a
 # different namespace from the npm package (no clash), this crate is never published, and the bundle keeps a
 # distinct identifier (com.iongion.container-desktop.tauri), so the shared name is safe.
 name = "container-desktop"
@@ -26,14 +26,18 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 # tray-icon + image-png: native system tray (Phase D). devtools: the footer console button, prod-enabled to
-# match Electron's unconditional devTools:true (revisited for release hardening in Phase F).
+# devtools stay enabled in release for now (revisited for release hardening in Phase F).
 tauri = { version = "2", features = ["tray-icon", "image-png", "devtools"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# Obfuscate secrets in the degraded-vault keychain fallback file (Electron basic_text parity) — NOT encryption,
+# Obfuscate secrets in the degraded-vault keychain fallback file — NOT encryption,
 # the 0600 perms are the real protection; base64 just keeps keys off disk in plaintext. Already in the tree
 # (tauri/reqwest pull it), so declaring it direct adds nothing to the binary.
 base64 = "0.22"
+# Regex for the coding-workspace grep + glob matching (workspace_grep / workspace_glob in host.rs), so the Rust
+# shell matches the Node shell's semantics exactly. Already in the tree (tauri/reqwest pull it), so declaring it
+# direct adds nothing to the binary.
+regex = "1"
 # Native shell parity (Phase D): dialogs (openFileSelector), opener (external links + reveal storage folder),
 # process (relaunch/exit), window-state (persist bounds), single-instance (focus the first launch).
 tauri-plugin-dialog = "2"

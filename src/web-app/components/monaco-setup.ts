@@ -7,19 +7,17 @@
 //
 // This module is import-only (side effects); import it before the editor mounts.
 import { loader } from "@monaco-editor/react";
-import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
-import "monaco-editor/esm/vs/language/json/monaco.contribution.js";
+import * as monaco from "monaco-editor/editor/editor.api.js";
+import "monaco-editor/language/json/monaco.contribution.js";
 // Basic-languages Monarch tokenizers give offline syntax highlighting for the read-only JS/TS code examples
-// (e.g. the Connection info "code example", language="javascript"). They colorize on the main thread and need
-// no dedicated worker — unlike the JSON language service above — so the base editor worker is enough.
-import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution.js";
-import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution.js";
-// Dockerfile/Containerfile highlighting for the writable Build Studio editor (same Monarch-tokenizer,
-// main-thread, no dedicated worker path).
-import "monaco-editor/esm/vs/basic-languages/dockerfile/dockerfile.contribution.js";
+// (e.g. the Connection info "code example", language="javascript") and the writable Build Studio Dockerfile
+// editor. They colorize on the main thread and need no dedicated worker — unlike the JSON language service
+// above — so the base editor worker is enough. Monaco 0.56 consolidated the per-language contributions into
+// this single entry, which lazily registers every basic language (tokenizers load on first use).
+import "monaco-editor/basic-languages/monaco.contribution.js";
 
-import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
+import EditorWorker from "monaco-editor/editor/editor.worker?worker";
+import JsonWorker from "monaco-editor/language/json/json.worker?worker";
 
 // Monaco requests a worker per language. JSON gets its dedicated language service;
 // everything else the app renders (yaml / markdown / text) falls back to the base

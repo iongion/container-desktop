@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type Container, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerStateList } from "@/container-client/types/container";
 
 import { buildContainerEnvRows, buildContainerPortRows, buildContainerSummary } from "./inspectSummary";
 

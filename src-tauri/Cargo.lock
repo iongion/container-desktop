@@ -692,6 +692,7 @@ dependencies = [
  "futures-util",
  "keyring",
  "libc",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

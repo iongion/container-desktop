@@ -1,4 +1,4 @@
-# Wails (Go) desktop backend — cross-build packaging pipeline. ADDITIVE: it does not touch the Electron/Tauri
+# Wails (Go) desktop backend — cross-build packaging pipeline. ADDITIVE: it does not touch the Tauri
 # CIPipeline/CDPipeline, and Wails is intentionally kept out of the public website/release matrix (build-matrix.cjs
 # PLATFORMS) while Tauri remains the publish-default.
 #

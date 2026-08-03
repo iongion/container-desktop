@@ -10,7 +10,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { VolumesAdapter } from "@/container-client/adapters/volumes";
-import type { Volume } from "@/env/Types";
+import type { Volume } from "@/container-client/types/volume";
 import type { BulkAction } from "@/web-app/components/Bulk";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";

@@ -1,0 +1,134 @@
+.AssistantSkillsDrawer .bp6-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.AssistantSkillsToolbar,
+.AssistantSkillsSectionHeader,
+.AssistantSkillRow,
+.AssistantSkillTitle {
+  display: flex;
+  align-items: center;
+}
+
+.AssistantSkillsToolbar,
+.AssistantSkillsSectionHeader {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.AssistantSkillsToolbar > span,
+.AssistantSkillsSectionHeader span,
+.AssistantSkillBody > span,
+.AssistantSkillBody small,
+.AssistantSkillsEmpty {
+  color: var(--app-text-muted);
+}
+
+.AssistantSkillsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.AssistantSkillsSectionHeader > div {
+  min-width: 0;
+}
+
+.AssistantSkillsSectionHeader h5 {
+  margin: 0 0 2px;
+  color: var(--app-text);
+  font-size: 14px;
+}
+
+.AssistantSkillsSectionHeader span {
+  font-size: 12px;
+}
+
+.AssistantSkillList {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.AssistantSkillRow {
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 10px;
+}
+
+.AssistantSkillRow + .AssistantSkillRow {
+  border-top: 1px solid var(--app-border);
+}
+
+.AssistantSkillRow > .bp6-button,
+.AssistantSkillRow > .bp6-tag {
+  flex: 0 0 auto;
+}
+
+.AssistantSkillBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.AssistantSkillTitle {
+  gap: 8px;
+}
+
+.AssistantSkillTitle strong,
+.AssistantSkillTitle code,
+.AssistantSkillBody > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssistantSkillTitle code {
+  color: var(--app-accent-text);
+  font-size: 11px;
+}
+
+.AssistantSkillBody > span,
+.AssistantSkillBody small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.AssistantSkillsRoot,
+.AssistantSkillsEmpty {
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-chrome);
+  font-size: 12px;
+}
+
+.AssistantSkillsRoot {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssistantSkillDiagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.AssistantSkillDiagnostics .bp6-callout {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.35fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.AssistantSkillsLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--app-text-muted);
+}

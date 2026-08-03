@@ -2,7 +2,7 @@
 // than hand-rolled CSS: tables use `bp6-html-table` (bordered + striped + compact), fenced code uses
 // `bp6-code-block` (wrapped with a language label + CopyButton + a scroll cap), inline code uses `bp6-code`,
 // headings use `bp6-heading`, lists use `bp6-list`, and blockquotes render as a Blueprint <Callout>. Links
-// open externally (the main process' window-open handler routes target=_blank to the system browser).
+// open externally (the shell's window-open handler routes target=_blank to the system browser).
 import { Callout } from "@blueprintjs/core";
 import { isValidElement, memo, type ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";

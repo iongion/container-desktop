@@ -1,18 +1,23 @@
 // Settings → AI permissions. The user-facing view of the broker-owned allow/reject record
-// (a dedicated versioned file): lists the remembered Allowed / Rejected commands (revoke via ConfirmMenu),
-// the Web search switch, the storage path + reveal, and surfaces a corrupt-cache error (fail-closed). All
+// (a dedicated versioned file): lists scoped remembered Allowed / Rejected operations (revoke via ConfirmMenu),
+// the storage path + reveal, and surfaces a corrupt-cache error (fail-closed). All
 // writes go through the broker (window.AI.*) — the renderer only sends the intent.
-import { Button, ButtonGroup, Callout, HTMLSelect, Intent, Tag } from "@blueprintjs/core";
+import { Button, ButtonGroup, Callout, Intent, Tag } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type AICommandRule, commandKey, type PermissionsList, type PermissionsSnapshot } from "@/ai-system/core";
+import {
+  type PermissionRule,
+  type PermissionsList,
+  type PermissionsSnapshot,
+  permissionKey,
+} from "@/ai-system/core/permissions";
 import { Application } from "@/container-client/Application";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 
 import "./AIPermissions.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.settings");
 
@@ -37,26 +42,16 @@ export const AIPermissions: React.FC = () => {
   }, [load]);
 
   const removeRule = useCallback(
-    async (list: PermissionsList, rule: AICommandRule) => {
+    async (list: PermissionsList, rule: PermissionRule) => {
       if (!bridge) {
         return;
       }
-      setSnap(await bridge.removePermission(list, commandKey(rule.program, rule.args)));
+      setSnap(await bridge.removePermission(list, permissionKey(rule)));
     },
     [bridge],
   );
 
-  const setWeb = useCallback(
-    async (verdict: "allow" | "block" | null) => {
-      if (!bridge) {
-        return;
-      }
-      setSnap(await bridge.setWebPermission(verdict));
-    },
-    [bridge],
-  );
-
-  const renderList = (list: PermissionsList, rules: AICommandRule[], emptyTitle: string, emptyHint: string) => (
+  const renderList = (list: PermissionsList, rules: PermissionRule[], emptyTitle: string, emptyHint: string) => (
     <div className="AIPermissionsListWrap">
       {rules.length === 0 ? (
         <div className="AIPermissionsEmpty">
@@ -66,14 +61,19 @@ export const AIPermissions: React.FC = () => {
       ) : (
         <ul className="AIPermissionsList">
           {rules.map((rule) => (
-            <li className="AIPermissionsRow" key={commandKey(rule.program, rule.args)}>
-              <code className="AIPermissionsCommand">
-                {rule.program} {rule.args.join(" ")}
-              </code>
+            <li className="AIPermissionsRow" key={permissionKey(rule)}>
+              <div className="AIPermissionsRule">
+                <code className="AIPermissionsCommand">{rule.operation.id}</code>
+                <span className="AIPermissionsScope">
+                  {rule.subject.kind === "access-profile" ? t("Access") : t("Worker")}: {rule.subject.id}
+                  {" · "}
+                  {rule.targetId}
+                </span>
+              </div>
               <ConfirmMenu
                 tag={rule}
                 title={t("Revoke")}
-                onConfirm={(r, confirmed) => confirmed && void removeRule(list, r as AICommandRule)}
+                onConfirm={(r, confirmed) => confirmed && void removeRule(list, r as PermissionRule)}
               />
             </li>
           ))}
@@ -81,13 +81,6 @@ export const AIPermissions: React.FC = () => {
       )}
     </div>
   );
-
-  const webStatus =
-    snap?.webSearch === "allow"
-      ? t("Always allowed")
-      : snap?.webSearch === "block"
-        ? t("Always blocked")
-        : t("Interactive approval");
 
   return (
     <div className="AIPermissions" data-form="ai-permissions">
@@ -100,23 +93,6 @@ export const AIPermissions: React.FC = () => {
       ) : null}
 
       <div className="AIPermissionsGrid">
-        <div className="AIPermissionsCol AIPermissionsCol--web">
-          <div className="AIPermissionsHeading">{t("Web search")}</div>
-          <HTMLSelect
-            fill
-            value={snap?.webSearch ?? ""}
-            onChange={(e) => void setWeb((e.currentTarget.value || null) as "allow" | "block" | null)}
-          >
-            <option value="">{t("Ask each time")}</option>
-            <option value="allow">{t("Always allow")}</option>
-            <option value="block">{t("Always block")}</option>
-          </HTMLSelect>
-          <div className="AIPermissionsStatus">
-            <span className="AIPermissionsStatusLabel">{t("Status")}</span>
-            <span className="AIPermissionsStatusValue">{webStatus}</span>
-          </div>
-        </div>
-
         <div className="AIPermissionsCol">
           <div className="AIPermissionsHeading">
             {t("Allow")}{" "}

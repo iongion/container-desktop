@@ -75,6 +75,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
                 variant="minimal"
                 key={Screen.ID}
                 data-screen={Screen.ID}
+                data-highlight={Screen.Metadata?.SidebarHighlight ? "true" : undefined}
                 icon={Screen.Metadata?.LeftIcon}
                 endIcon={Screen.Metadata?.RightIcon}
               />

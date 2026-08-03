@@ -1,0 +1,338 @@
+/* Shared assistant thread styles — used by both the full-page AssistantScreen and the quake console.
+   The root fills its parent as a flex column (transcript grows, composer pinned at the bottom). */
+.AssistantThread {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ThreadSelector {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 5px 8px 5px 10px;
+  background: var(--app-chrome);
+  border-bottom: 1px solid var(--app-border);
+}
+.ThreadSelectorTitle {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: calc(100% - 82px);
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--app-text);
+}
+.ThreadSelectorTitle:hover,
+.ThreadSelectorTitle:focus-within {
+  background: var(--app-surface-strong);
+}
+.ThreadSelectorTitle:focus-within {
+  border-color: var(--app-accent);
+}
+.ThreadSelectorTitle .bp6-editable-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 14px;
+  font-weight: 600;
+}
+.ThreadSelectorTitle .bp6-editable-text-content,
+.ThreadSelectorTitle .bp6-editable-text-input {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ThreadSelector > .bp6-button-group {
+  flex: 0 0 auto;
+}
+.ThreadSelector > .bp6-button-group .bp6-button {
+  color: var(--app-text);
+}
+.ThreadHistoryPopover {
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 16px));
+  padding: 6px;
+  background: var(--app-surface);
+}
+.ThreadHistoryPopover > .bp6-input-group {
+  margin-bottom: 4px;
+}
+.ThreadHistoryList.bp6-menu {
+  max-height: min(300px, calc(100vh - 150px));
+  overflow-y: auto;
+  padding: 0;
+  background: transparent;
+}
+.ThreadHistorySpacer {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.ThreadHistoryList .ThreadHistoryItem.bp6-menu-item {
+  min-height: 30px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.ThreadHistoryItem .bp6-menu-item-icon {
+  display: none;
+}
+.ThreadHistoryItemText {
+  min-width: 0;
+}
+.ThreadHistoryTitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ThreadHistoryItem.is-current .ThreadHistoryTitle {
+  font-weight: 600;
+}
+.ThreadHistoryItemMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.ThreadHistoryItemMeta time {
+  min-width: 48px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  text-align: right;
+}
+.ThreadHistoryActions {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0;
+}
+.ThreadHistoryItem:hover .ThreadHistoryActions,
+.ThreadHistoryItem.bp6-active .ThreadHistoryActions,
+.ThreadHistoryItem:focus-within .ThreadHistoryActions {
+  opacity: 1;
+}
+.ThreadHistoryActions .bp6-button {
+  min-width: 22px;
+  min-height: 22px;
+  padding: 2px;
+  color: var(--app-text);
+}
+.AssistantScroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.AssistantComposerDock {
+  position: relative;
+}
+.AssistantComposerDock .AIComposerStatus > .ThinkingStatus {
+  flex: 0 0 auto;
+  padding: 0;
+}
+.AssistantTranscript {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--app-border);
+}
+/* The transcript is a SCROLL container, not a sizer: every item keeps its natural height and the column
+   scrolls. Without this, flex-shrink compresses tall cards (tables/logs) toward min-content as the
+   thread grows — collapsing them into thin "lines". min-width:0 lets a wide table scroll inside
+   its own card instead of stretching the row. */
+.AssistantTranscript > * {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.AssistantJump.AssistantJump {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent) 50%, transparent) !important;
+  color: var(--app-accent-fg);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--app-text) 30%, transparent);
+}
+.AssistantJump.AssistantJump:hover {
+  background: color-mix(in srgb, var(--app-accent) 50%, transparent) !important;
+  filter: brightness(1.12);
+}
+.AssistantJump--blink {
+  animation: assistant-jump-blink 1.05s ease-in-out infinite;
+}
+@keyframes assistant-jump-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    opacity: 0.45;
+    transform: translateX(-50%) translateY(2px);
+  }
+}
+.AssistantMessage {
+  margin-bottom: 4px;
+}
+.AssistantMessageContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.AssistantMessageContent > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.AssistantMessageBranch {
+  flex: 0 0 auto;
+  opacity: 0;
+}
+.AssistantMessage:hover .AssistantMessageBranch,
+.AssistantMessage:focus-within .AssistantMessageBranch {
+  opacity: 1;
+}
+.AssistantMessage--user {
+  font-weight: 600;
+}
+.AssistantMessageStatus {
+  display: block;
+  margin-top: 2px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.AssistantCode {
+  font-family: var(--monospace-font);
+  font-size: var(--monospace-font-size, 11px);
+}
+.AssistantStep {
+  margin: 0;
+}
+.AssistantCommand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.AssistantStepHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  color: var(--app-text);
+  overflow-x: auto;
+}
+.AssistantStepHead > .bp6-icon {
+  flex: 0 0 auto;
+  color: var(--app-text-muted);
+}
+.AssistantStepHead .AssistantCode {
+  white-space: pre;
+}
+.AssistantReason {
+  font-size: 12px;
+  opacity: 0.8;
+}
+/* Transcript callouts (rejected / error / tool-error / action result) — tight density, not Blueprint's
+   airy default padding (~4x smaller), keeping just enough left room for the intent icon. */
+.AssistantThread .bp6-callout {
+  padding: 4px 4px 4px 10px;
+}
+.AssistantThread .bp6-callout > .bp6-icon:first-child {
+  position: static;
+  float: left;
+  margin: 1px 6px 0 0;
+}
+.AssistantApproval {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.AssistantOutput {
+  flex-shrink: 0;
+  font-family: var(--monospace-font);
+  font-size: var(--monospace-font-size, 11px);
+  line-height: 1.5;
+  white-space: pre;
+  overflow: auto;
+  max-height: 260px;
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  color: var(--app-text);
+}
+.AssistantOutput::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.AssistantOutput::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: 5px;
+}
+.AssistantOutput::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+}
+.AssistantOutput::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* per-screen starter chips shown in the empty state */
+.AssistantEmpty {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.AssistantStarters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 560px;
+}
+.AssistantStarterChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  cursor: pointer;
+  font-size: 12.5px;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background 120ms ease;
+}
+.AssistantStarterChip:hover {
+  border-color: var(--app-accent);
+  color: var(--app-accent-text);
+  background: color-mix(in srgb, var(--app-accent) 14%, transparent);
+}

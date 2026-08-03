@@ -1,15 +1,43 @@
 .AIComposer {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 4px;
   border: none;
   border-radius: 4px;
-  background: var(--code-bg, rgba(0, 0, 0, 0.18));
+  background: var(--app-chrome);
+  color: var(--app-text);
+}
+.AIComposerStatus {
+  position: absolute;
+  left: 4px;
+  bottom: calc(100% - 4px);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100% - 8px);
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--app-border);
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+  pointer-events: none;
 }
 .AIComposerHint {
+  min-width: 0;
+  margin-left: 8px;
   font-size: 12px;
   opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.AIComposerHint:first-child {
+  margin-left: 0;
 }
 .AIComposerInput.AIComposerInput {
   border: none;
@@ -24,6 +52,14 @@
   outline: none;
   border: 1px solid var(--app-border);
 }
+.AIComposerInputCompletionTarget {
+  display: block;
+  width: 100%;
+}
+.AIComposerCommandPopover--input,
+.AIComposerCommandPopover--input .AssistantCommandPalette {
+  width: 100%;
+}
 .AIComposerToolbar {
   display: flex;
   align-items: center;
@@ -35,11 +71,184 @@
 .AIComposerToolbar .AIComposerTool {
   font-size: 12px;
 }
+.AIComposerToolbar .AIComposerTool .bp6-button-text,
+.AIComposerToolbar .ModelPickerTriggerLabel {
+  color: var(--app-text-muted);
+}
+.AIComposerCompactMenu .bp6-menu-item > .bp6-fill {
+  font-size: 12px;
+}
+.AIComposerCompactMenu .bp6-menu-item-label {
+  margin-left: 30px;
+  font-size: 11px;
+}
+.AIComposerCommandTrigger .bp6-icon {
+  color: var(--app-text);
+}
+.AssistantCommandPalette {
+  width: min(560px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--app-chrome) 72%, transparent);
+}
+.AssistantCommandPaletteHeader,
+.AssistantCommandPaletteFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+.AssistantCommandPaletteHeader > :first-child {
+  color: var(--app-text);
+  font-weight: 600;
+}
+.AssistantCommandPaletteHeader > :last-child {
+  font-variant-numeric: tabular-nums;
+}
+.AssistantCommandPaletteFooter {
+  justify-content: flex-start;
+  border-top: 1px solid var(--app-border);
+}
+.AssistantCommandPaletteFooter span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.AssistantCommandPaletteFooter kbd {
+  min-width: 20px;
+  padding: 1px 4px;
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  text-align: center;
+}
+.AssistantCommandPaletteList {
+  max-height: min(420px, calc(100vh - 180px));
+  padding: 4px;
+  overflow-y: auto;
+}
+.AssistantCommandPaletteCategory {
+  padding: 7px 8px 3px;
+  color: var(--app-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.AssistantCommandPaletteRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+}
+.AssistantCommandPaletteRow:hover,
+.AssistantCommandPaletteRow.is-selected {
+  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
+  box-shadow: inset 2px 0 var(--app-accent);
+}
+.AssistantCommandPaletteRow.is-unavailable {
+  color: var(--app-text-muted);
+}
+.AssistantCommandPaletteIcon {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--app-border);
+  border-radius: 5px;
+  background: var(--app-surface-strong);
+}
+.AssistantCommandPaletteIcon > .bp6-icon {
+  flex: 0 0 auto;
+  color: var(--app-accent-text);
+}
+.AssistantCommandPaletteRow.is-unavailable .AssistantCommandPaletteIcon > .bp6-icon {
+  color: var(--app-text-muted);
+}
+.AssistantCommandPaletteBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.AssistantCommandPaletteCommand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.AssistantCommandPaletteCommand code {
+  color: var(--app-text);
+  font-family: var(--monospace-font);
+  font-size: var(--monospace-font-size, 12px);
+  font-weight: 600;
+}
+.AssistantCommandPaletteCommand mark,
+.AssistantCommandPaletteDescription mark {
+  background: transparent;
+  color: var(--app-accent-text);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--app-accent);
+  text-underline-offset: 2px;
+}
+.AssistantCommandPaletteCommand span,
+.AssistantCommandPaletteDescription,
+.AssistantCommandPaletteMeta,
+.AssistantCommandPaletteState {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+.AssistantCommandPaletteDescription {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.AssistantCommandPaletteMeta {
+  color: var(--app-text-muted);
+  font-size: 10px;
+}
+.AssistantCommandPaletteState {
+  flex: 0 0 auto;
+  max-width: 180px;
+  text-align: right;
+}
+.AssistantCommandPaletteEmpty {
+  padding: 24px 10px;
+  color: var(--app-text-muted);
+  text-align: center;
+}
+.AIComposerCommandQueue {
+  max-width: 360px;
+}
+.AIComposerCommandQueue .bp6-menu-item-label {
+  margin-left: 18px;
+}
 .AIComposerStopHint {
   font-size: 12px;
   color: var(--app-text-muted);
 }
-.AIComposerSend.AIComposerSend {
+.AIComposerAction.AIComposerAction {
   border-radius: 50%;
   min-width: 24px;
   min-height: 24px;

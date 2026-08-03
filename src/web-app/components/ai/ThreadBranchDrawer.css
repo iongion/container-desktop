@@ -1,0 +1,71 @@
+.ThreadBranchDrawer .bp6-dialog-body {
+  margin: 0;
+}
+
+.ThreadBranchForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ThreadBranchForm .bp6-form-group {
+  margin-bottom: 0;
+}
+
+.ThreadBranchLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  color: var(--app-text-muted);
+}
+
+.ThreadBranchBindings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
+.ThreadBranchBindings > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.ThreadBranchBindings > div:nth-child(odd) {
+  border-right: 1px solid var(--app-border);
+}
+
+.ThreadBranchBindings > div:last-child {
+  border-bottom: 0;
+}
+
+.ThreadBranchBindings span {
+  color: var(--app-text-muted);
+}
+
+.ThreadBranchBindings strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .ThreadBranchBindings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ThreadBranchBindings > div:nth-child(odd) {
+    border-right: 0;
+  }
+}

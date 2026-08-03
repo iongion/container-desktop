@@ -77,7 +77,7 @@
       "suggestions": ["Why is my connection failing?", "Is my engine reachable?", "How do I add a remote engine?"]
     },
     "troubleshoot": {
-      "focus": "The user is troubleshooting. Use searchKnowledge first, then give step-by-step, verifiable fixes.",
+      "focus": "The user is troubleshooting. Inspect the available context and use registered read tools first, then give step-by-step, verifiable fixes.",
       "suggestions": ["Help me fix my current problem", "Run the common diagnostics", "Why isn't my engine working?"]
     },
     "ai": {

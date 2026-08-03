@@ -93,7 +93,8 @@
 }
 .AppSettingsForm[data-form="configuration"],
 .AppSettingsForm[data-form="logging"],
-.AppSettingsForm[data-form="network"] {
+.AppSettingsForm[data-form="network"],
+.AppSettingsForm[data-form="avatars"] {
   display: flex;
   flex-direction: column;
   row-gap: 12px;

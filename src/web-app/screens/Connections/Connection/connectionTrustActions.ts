@@ -5,10 +5,10 @@
 // failure must not fail the form save; each write is caught and logged.
 
 import { Application } from "@/container-client/Application";
-import type { ProxyConfig } from "@/container-client/proxy";
 import { resolveConnectionProxy } from "@/container-client/registryTrust/proxyResolution";
-import type { EngineConnectorSettings } from "@/env/Types";
-import { createLogger } from "@/platform/logger";
+import type { EngineConnectorSettings } from "@/container-client/types/connection";
+import type { ProxyConfig } from "@/container-client/types/network";
+import { createLogger } from "@/logger";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { diffCertificates, removedRegistryLocations } from "./connectionTrust";
 

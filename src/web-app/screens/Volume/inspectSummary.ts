@@ -1,4 +1,4 @@
-import type { Volume } from "@/env/Types";
+import type { Volume } from "@/container-client/types/volume";
 import { t } from "@/i18n";
 import type { InspectSummaryRow } from "@/web-app/components/InspectSummary";
 import { inspectDate } from "@/web-app/components/inspectSummary.helpers";

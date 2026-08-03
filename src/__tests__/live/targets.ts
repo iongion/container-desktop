@@ -5,9 +5,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as dotenvConfig } from "dotenv";
+import { CURRENT_OS_TYPE } from "@/__tests__/setup/nodeTestHost";
 import { parseRemoteConnectionsEnv, type RemoteEnvConnection } from "@/container-client/remote-env";
-import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
-import { CURRENT_OS_TYPE } from "@/platform/electron/host";
+import { ContainerEngine, ContainerEngineHost } from "@/container-client/types/engine";
+import { OperatingSystem } from "@/container-client/types/os";
 
 export interface TestTarget {
   id: string;

@@ -4,7 +4,8 @@ import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Connector, Secret } from "@/env/Types";
+import type { Connector } from "@/container-client/types/connection";
+import type { Secret } from "@/container-client/types/secret";
 import i18n from "@/i18n";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";

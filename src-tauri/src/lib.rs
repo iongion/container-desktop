@@ -1,13 +1,15 @@
 // Tauri backend entry. Registers the native host-I/O commands (the Rust side of the ICommand/IPlatform/
 // IFileSystem port) and runs the single frameless window that loads the shared renderer. The renderer's
 // Tauri binding (src/platform/tauri/) calls these over `invoke` and exposes them as the same window.* globals
-// the Electron preload provides, so nothing above the port changes.
+// the host bridge provides, so nothing above the port changes.
 
 mod bridge;
 mod host;
 mod keychain;
 mod process;
+mod provider_transport;
 mod proxy;
+mod public_web_fetch;
 mod shell;
 mod spawn_hidden;
 mod ssh_config;
@@ -18,10 +20,10 @@ use tauri_plugin_window_state::StateFlags;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Dev parity with Electron's `yarn dev`: start from the project root so RELATIVE paths — e.g. the
+    // Dev ergonomics: start from the project root so RELATIVE paths — e.g. the
     // ./support/image-builders sample build context, or a "." build context — resolve against the sources dir,
     // not the src-tauri/ dir where `tauri dev` / `cargo run` launches the binary. Without this an image build's
-    // relative context is spawned with the wrong cwd and fails (it works under Electron, whose dev cwd is the
+    // relative context is spawned with the wrong cwd and fails (the dev cwd must be the
     // repo root). CARGO_MANIFEST_DIR is src-tauri/ at compile time; its parent is the repo root. Compiled out of
     // release builds — packaged apps use absolute, user-picked context paths.
     #[cfg(debug_assertions)]
@@ -63,12 +65,17 @@ pub fn run() {
                     // The persistent app log: ONLY webview (renderer) records — the ones the
                     // @/platform/logger façade forwards, already gated to the user's level. Filtering to
                     // WEBVIEW_TARGET keeps reqwest/hyper/tokio Rust-internal spam OUT of the user's file (parity
-                    // with the Electron electron-log file, which logs app records, not the HTTP client's guts).
+                    // with the app log file, which logs app records, not the HTTP client's guts).
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Folder {
-                        path: std::path::PathBuf::from(host::get_user_data_path()).join("logs"),
+                        path: std::path::PathBuf::from(host::platform::get_user_data_path())
+                            .join("logs"),
                         file_name: Some("container-desktop".into()),
                     })
-                    .filter(|metadata| metadata.target().starts_with(tauri_plugin_log::WEBVIEW_TARGET)),
+                    .filter(|metadata| {
+                        metadata
+                            .target()
+                            .starts_with(tauri_plugin_log::WEBVIEW_TARGET)
+                    }),
                     // Dev convenience: unfiltered console stream (no persistent file; a packaged app has no console).
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
                 ])
@@ -95,12 +102,16 @@ pub fn run() {
         .manage(proxy::ProxyState::default())
         // Live-process registry for ExecuteStreaming / ExecuteAsBackgroundService (kill by processId).
         .manage(process::ProcessState::default())
+        // Live-stream registry for the native AI provider transport (teardown by streamId).
+        .manage(provider_transport::ProviderTransportState::default())
+        // Live-stream registry for the address-pinned public web fetch (AI web-search; teardown by streamId).
+        .manage(public_web_fetch::PublicWebFetchState::default())
         // Persistent SSH/WSL dial-stdio bridge registry (survives webview reloads; keyed per connection).
         .manage(bridge::BridgeState::default())
         // The single native tray icon (built on first tray_update from the webview's projected menu).
         .manage(tray::TrayState::default())
         // Hide-to-tray: while the tray is up, closing the window HIDES it (keeps the webview + the in-realm
-        // engine hub alive), matching Electron's default. A true quit goes through application.exit
+        // engine hub alive). A true quit goes through application.exit
         // (process.exit) or the tray's Quit item — both terminate without firing this.
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
@@ -111,27 +122,46 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            host::get_os_type,
-            host::get_os_arch,
-            host::get_darwin_major,
-            host::get_env_var,
-            host::get_home_dir,
-            host::get_picker_base_dir,
-            host::is_flatpak,
-            host::get_user_data_path,
-            host::fs_read_text_file,
-            host::fs_write_text_file,
-            host::fs_write_private_text_file,
-            host::fs_is_file_present,
-            host::fs_mkdir,
-            host::fs_rename,
-            host::command_execute,
-            host::dns_lookup,
+            host::platform::get_os_type,
+            host::platform::get_os_arch,
+            host::platform::get_darwin_major,
+            host::platform::get_env_var,
+            host::platform::get_home_dir,
+            host::platform::get_picker_base_dir,
+            host::platform::is_flatpak,
+            host::platform::get_user_data_path,
+            host::fs::fs_read_text_file,
+            host::fs::fs_write_text_file,
+            host::fs::fs_write_private_text_file,
+            host::fs::fs_is_file_present,
+            host::fs::fs_mkdir,
+            host::fs::fs_rename,
+            host::fs::fs_list_directory,
+            host::fs::fs_lstat,
+            host::fs::fs_real_path,
+            host::fs::fs_is_path_within,
+            host::command::command_execute,
+            host::dns::dns_lookup,
+            host::workspace::workspace_root,
+            host::workspace::workspace_read,
+            host::workspace::workspace_write,
+            host::workspace::workspace_write_new,
+            host::workspace::workspace_edit,
+            host::workspace::workspace_list,
+            host::workspace::workspace_stat,
+            host::workspace::workspace_remove,
+            host::workspace::workspace_glob,
+            host::workspace::workspace_grep,
+            host::workspace::workspace_exec,
             ssh_config::get_ssh_config,
             proxy::proxy_request,
             proxy::proxy_request_stream,
             proxy::proxy_stream_destroy,
-            proxy::proxy_test_connectivity,
+            proxy::connectivity::proxy_test_connectivity,
+            provider_transport::provider_transport_request,
+            provider_transport::provider_transport_destroy,
+            public_web_fetch::public_web_fetch_request,
+            public_web_fetch::public_web_fetch_destroy,
             process::process_spawn,
             process::process_kill,
             bridge::proxy_bridge_stop,
@@ -144,7 +174,6 @@ pub fn run() {
             shell::logging_reveal,
             keychain::keychain_status,
             keychain::keychain_has,
-            keychain::keychain_get,
             keychain::keychain_set,
             keychain::keychain_clear,
             tray::tray_update,

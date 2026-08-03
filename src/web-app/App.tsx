@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { AppBootstrapPhase, AppTheme } from "@/web-app/App.types";
 import { bootTimeline } from "@/web-app/bootTimeline";
 import AppErrorBoundary from "@/web-app/components/AppErrorBoundary";
@@ -34,7 +34,9 @@ import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { waitForPreload } from "@/web-app/Native";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as AIAssistantScreen } from "@/web-app/screens/AI/AssistantScreen";
-import { Screen as AIGeneratorScreen } from "@/web-app/screens/AI/GeneratorScreen";
+import { Screen as AIRunsScreen } from "@/web-app/screens/AI/Run/ManageScreen";
+import { Screen as AIRunScreen } from "@/web-app/screens/AI/Run/RunScreen";
+import { Screen as AIWorkersScreen } from "@/web-app/screens/AI/Worker/ManageScreen";
 import { Screen as BuildScreen } from "@/web-app/screens/Build/ManageScreen";
 import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Connections/ConnectionInfoScreen";
 import { Screen as ConnectionsScreen } from "@/web-app/screens/Connections/ManageScreen";
@@ -82,7 +84,9 @@ const logger = createLogger("web.app");
 const Screens = [
   DashboardScreen,
   AIAssistantScreen,
-  AIGeneratorScreen,
+  AIRunsScreen,
+  AIRunScreen,
+  AIWorkersScreen,
   ContainersScreen,
   ContainerLogsScreen,
   ContainerInspectScreen,

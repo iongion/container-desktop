@@ -1,0 +1,14 @@
+[
+  {
+    "id": "mock-avatar-1",
+    "name": "team-lead.png",
+    "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGNIWPqLJMQwqmFUw/DVAAAO4v8Qpc0koAAAAABJRU5ErkJggg==",
+    "createdDaysAgo": 12
+  },
+  {
+    "id": "mock-avatar-2",
+    "name": "scout.png",
+    "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGP4UrSNJMQwqmFUw/DVAABRhRwfbHb/CAAAAABJRU5ErkJggg==",
+    "createdDaysAgo": 4
+  }
+]

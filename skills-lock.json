@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "clean-code": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/clean-code/SKILL.md",
+      "computedHash": "74bf6ded4f61ddcb593e7a29beb96c284f888cbe0639ad6e23710447c36ff19a"
+    },
+    "code-reviewer": {
+      "source": "google-gemini/gemini-cli",
+      "sourceType": "github",
+      "skillPath": ".gemini/skills/code-reviewer/SKILL.md",
+      "computedHash": "270f0dd1d4c15a798bad5253a309cdc2056fe5322f99ba06ca22ce50581adc02"
+    },
+    "domain-modeling": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/domain-modeling/SKILL.md",
+      "computedHash": "67343881f5def98487d56243155716110afbcbf22ec92421c882d532b941cb17"
+    },
+    "fp-ts-pragmatic": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/fp-ts-pragmatic/SKILL.md",
+      "computedHash": "05657f503cda3701c9cd2f7d3b16dff3070e063b552a7d0ba002caddd3985764"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
+    },
+    "handoff": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/handoff/SKILL.md",
+      "computedHash": "87e353708ab36062eac54ddb593a97ca553c0cb4bfa1ed1fdaf68520700723f1"
+    },
+    "refactor": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/refactor/SKILL.md",
+      "computedHash": "87789a786b96f99ba0680e89345a975106e10e7db1071c7cdc2e76d507c449d6"
+    },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-creator/SKILL.md",
+      "computedHash": "5ea13a6d9f0d4bb694405d79acd00cadec0d21bb138c4dd10fcf3c500cb835c2"
+    }
+  }
+}

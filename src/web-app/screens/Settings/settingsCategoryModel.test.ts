@@ -12,6 +12,7 @@ describe("settingsCategoryModel", () => {
       "ai",
       "policy",
       "appearance",
+      "avatars",
       "config",
       "logging",
       "network",
@@ -39,6 +40,7 @@ describe("settingsCategoryModel", () => {
   it("resolves valid deep-link categories and falls back for unknown ones", () => {
     expect(resolveSettingsCategoryId("config")).toBe("config");
     expect(resolveSettingsCategoryId("network")).toBe("network");
+    expect(resolveSettingsCategoryId("avatars")).toBe("avatars");
     expect(resolveSettingsCategoryId("nope")).toBe(DEFAULT_SETTINGS_CATEGORY_ID);
     expect(resolveSettingsCategoryId(undefined)).toBe(DEFAULT_SETTINGS_CATEGORY_ID);
   });

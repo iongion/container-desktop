@@ -20,7 +20,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Single source of truth for app branding + packaging metadata (shared with electron-builder-config.cjs and,
+// Single source of truth for app branding + packaging metadata (shared with the Tauri packaging helpers and,
 // via `yarn cli sync-manifests`, src-tauri/tauri.conf.json) + the canonical artifact-naming helpers (shared
 // with the release/website matrix). Both are CommonJS → require them from this ESM file.
 const requireCjs = createRequire(import.meta.url);

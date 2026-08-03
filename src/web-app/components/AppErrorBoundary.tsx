@@ -4,7 +4,7 @@ import { mdiEmoticonSad } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import React from "react";
 import i18n from "@/i18n";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.AppErrorBoundary");
 

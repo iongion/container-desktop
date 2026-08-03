@@ -9,7 +9,7 @@ import "../../Registry/RegistriesTrust.css";
 
 // Air-gap & policy — APP-WIDE supply-chain policy, in global Settings (not per-connection) because it governs
 // the whole workspace: offline pull gate, run-only-signed (cosign), and the allowed-registry allowlist. A
-// design preview until the policy backend wires in (handover Step 5); toggles are local-only for now.
+// design preview until the policy backend wires in; toggles are local-only for now.
 const ALLOWED_REGISTRIES: { name: string; note: string; allowed: boolean }[] = [
   { name: "registry.corp.local:5000", note: t("mirror · internal"), allowed: true },
   { name: "quay.io", note: t("base images"), allowed: true },

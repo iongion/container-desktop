@@ -1,5 +1,5 @@
 // DEV-only debug hook. `window.__assistantDemo.seed()` loads a synthetic transcript into the active AI
-// session so the assistant's rendering — markdown, code, tables, generative cards, approvals, errors,
+// Thread so the assistant's rendering — markdown, code, tables, generative cards, approvals, errors,
 // streaming — can be exercised deterministically without a live model, then opens the console. Installed
 // only under import.meta.env.DEV (see index.tsx), so it is tree-shaken from production.
 //
@@ -9,43 +9,51 @@
 // RELATIVE paths (like templateRegistry.vite.ts): TS resolves a relative "?raw" specifier to Vite's ambient
 // string module, whereas an aliased "@/…?raw" is treated as a missing file.
 
-import type { TranscriptItem } from "@/ai-system/ui/core/transcript";
-import { useAIStore } from "@/ai-system/ui/react/stores/useAIStore";
+import type { ThreadTimelineItem, ThreadView } from "@/ai-system/core/threadEvents";
+import { emptyThreadView } from "@/ai-system/core/threadReducer";
 import { useUIStore } from "@/web-app/stores/uiStore";
+import { replaceAIViewForDev, useAIStore } from "@/web-app/stores/useAIStore";
 import demoTranscriptJson from "../../../resources/configs/demoTranscript.json?raw";
 import demoAssistantMarkdown from "../../../resources/prompts/demo-assistant-message.md?raw";
 
-function demoItems(): TranscriptItem[] {
+function demoItems(): ThreadTimelineItem[] {
   const items = JSON.parse(demoTranscriptJson) as Array<Record<string, unknown>>;
   return items.map((it) =>
     it.content === "@demo-assistant-message" ? { ...it, content: demoAssistantMarkdown } : it,
-  ) as TranscriptItem[];
+  ) as ThreadTimelineItem[];
 }
 
 export function installAssistantDemo(): void {
   (window as any).__assistantDemo = {
-    seed(open = true) {
-      const ai = useAIStore.getState() as any;
-      if (!ai.activeSessionId) {
-        ai.newSession();
+    async seed(open = true) {
+      const ai = useAIStore.getState();
+      if (!ai.activeThreadId) {
+        await ai.newThread();
       }
-      const sid = (useAIStore.getState() as any).activeSessionId;
-      useAIStore.setState((s: any) => ({ timelines: { ...s.timelines, [sid]: demoItems() } }));
+      const state = useAIStore.getState();
+      const sid = state.activeThreadId as string;
+      replaceAIViewForDev(sid, { ...(state.views[sid] ?? emptyThreadView(sid)), timeline: demoItems() });
       if (open) {
         useUIStore.getState().setAssistantConsoleOpen(true);
       }
       return sid;
     },
     clear() {
-      const sid = (useAIStore.getState() as any).activeSessionId;
+      const state = useAIStore.getState();
+      const sid = state.activeThreadId;
       if (sid) {
-        useAIStore.setState((s: any) => ({ timelines: { ...s.timelines, [sid]: [] } }));
+        replaceAIViewForDev(sid, { ...(state.views[sid] ?? emptyThreadView(sid)), timeline: [] });
       }
     },
     setBusy(on = true) {
-      const sid = (useAIStore.getState() as any).activeSessionId;
+      const state = useAIStore.getState();
+      const sid = state.activeThreadId;
       if (sid) {
-        useAIStore.setState((s: any) => ({ busy: { ...s.busy, [sid]: on } }));
+        const view: ThreadView = {
+          ...(state.views[sid] ?? emptyThreadView(sid)),
+          phase: on ? "model" : "idle",
+        };
+        replaceAIViewForDev(sid, view);
       }
       return sid;
     },

@@ -1,0 +1,165 @@
+[workspace]
+resolver = "3"
+members = [
+  # The runtime: host-agnostic, portable to wasm32. It declares capabilities; it implements none.
+  "crates/cdc-runtime",
+  # One host crate per SUBSYSTEM per platform. A host depends on its subsystem, never the reverse, so
+  # a second platform (browser, embedder, a Go caller's bridge) is additive and changes nothing above.
+  "crates/cdc-runtime-host-native",
+  # Tracing, the same way round: what a trace says is generic, where it goes is a host's answer.
+  "crates/cdc-telemetry",
+  "crates/cdc-telemetry-host-native",
+  # The headless server. A server IS a host, so this is the crate that picks the platform.
+  "crates/cdc-server",
+  # The protocol's client side: the three transports, and the mux that makes a forwarded engine API out
+  # of them. Depended on by every client; it depends on no client.
+  "crates/cdc-client",
+]
+
+[workspace.package]
+edition = "2024"
+# The floor, and cargo's MSRV-aware resolver reads it: leave it stale and a new dependency is silently
+# capped to whatever version still supported it. 1.77 capped `tokio-tungstenite` to 0.29 and `clap` to
+# 4.5 while 0.30 and 4.6 were current — and every one of those caps is invisible, because what you get
+# still compiles. CI installs `stable` (CorePipeline.yml), so nothing pins an older toolchain.
+rust-version = "1.88"
+license = "MIT"
+repository = "https://github.com/iongion/container-desktop"
+
+[workspace.dependencies]
+cdc-runtime = { path = "crates/cdc-runtime", default-features = false }
+cdc-runtime-host-native = { path = "crates/cdc-runtime-host-native" }
+cdc-telemetry = { path = "crates/cdc-telemetry" }
+cdc-telemetry-host-native = { path = "crates/cdc-telemetry-host-native" }
+# Depended on by every client of it — the arrow points from a client to
+# the protocol and never back. A server that knew about one client would be a server with one client.
+cdc-server = { path = "crates/cdc-server" }
+# Depended on by whatever drives a server. It knows about no client of its own.
+cdc-client = { path = "crates/cdc-client" }
+
+serde = { version = "=1.0.229", features = ["derive"] }
+# `preserve_order` is load-bearing, not a preference: user-settings.json is written by
+# JSON.stringify, which emits insertion order. With the default BTreeMap the core would re-sort the
+# user's entire configuration file on the first connection edit — not data loss, but a diff nobody
+# can read, and it would break byte-identical comparison against the oracle's recordings.
+serde_json = { version = "=1.0.151", features = ["preserve_order"] }
+thiserror = "=2.0.19"
+# Advisory file locking, cross-platform (flock / LockFileEx). The alternative is `unsafe` libc and
+# windows-sys calls, and the workspace forbids unsafe.
+fs4 = { version = "=1.1.0", default-features = false, features = ["sync"] }
+# Same-directory temporaries plus the atomic persist. Doing this by hand is how a "safe" write ends
+# up crossing a filesystem boundary, where rename is not atomic.
+tempfile = "=3.27.0"
+# The `~/.ssh/config` grammar. Bought rather than written: `Include`, `Match`,
+# quoting and pattern semantics are what a hand-rolled line splitter gets wrong, and the app's three
+# backends each carry one that does. Runtime deps are pure Rust (bitflags, dirs, glob, log, thiserror,
+# wildmatch) and nothing native ships — but note its build script pulls `git2`, so libgit2/libssh2/
+# openssl compile at BUILD time for a step that is env-gated off. Upstream packaging flaw, not a
+# runtime cost; do NOT "fix" it by pinning back to 0.4.0, which silently drops `Key=Value` directives.
+ssh2-config = "=0.7.1"
+# `killpg` without `unsafe`, which this workspace forbids. Killing a service's direct child leaves
+# `ssh -NL`'s tree reparented to init with no handle anywhere, and the group is the
+# only thing that takes all of it. Confined to `cdc-runtime` and to unix targets — Windows has no
+# process group to signal. Pure Rust over the libc bindings tokio already pulls in; nothing else is added.
+nix = { version = "=0.31.3", default-features = false, features = ["signal"] }
+async-trait = "=0.1.91"
+# The userinfo percent-encode set, for the one place this port builds a URL by hand: a proxy's
+# credentials in `HTTP_PROXY`, which Go engines parse as a URL. The original gets the encoding free
+# from `new URL()`; hand-writing the WHATWG set is how a password with an `@` in it silently names a
+# different host. No dependencies of its own, `no_std`-capable so the wasm gate is unaffected, and
+# already in this lockfile via `url` (tungstenite), so it costs the tree nothing new.
+percent-encoding = "=2.3.2"
+# Swarm's `Data` fields, which Docker takes base64 and answers base64. The original gets it from `btoa`;
+# hand-rolling the alphabet and the `=` padding is how a secret is created with a body the engine reads
+# as something else. No dependencies of its own and `no_std`-capable, so the wasm gate is unaffected —
+# and already in this lockfile via `rustls-pemfile`, though it is declared here because a crate that
+# compiles because a sibling asked for something breaks when the sibling stops.
+base64 = "=0.22.1"
+# The jitter in the reconnect back-off, and nothing else. `fastrand` rather than
+# `rand`: this draw is not cryptographic — it decides whether two dropped connections retry in the same
+# millisecond — and `rand` costs `rand_core`, `rand_chacha`, `ppv-lite86`, `zerocopy` and `getrandom`
+# for a `f64` in `[0, 1)`. `fastrand` has NO dependencies and is already in this lockfile via
+# `tempfile`, so it is a direct dependency on a crate the tree already builds. It must never be used
+# for a token or a key; `subtle` and the TLS stack own everything that is.
+fastrand = "=2.5.0"
+# The PORTABLE feature set, deliberately: these four are the ones tokio supports on
+# wasm32-unknown-unknown, so the runtime can use them on every target. A host adds `process`, `fs`,
+# `io-util` and `rt-multi-thread` for itself — put them here and the wasm gate breaks, which is the
+# point.
+tokio = { version = "=1.53.1", default-features = false, features = ["sync", "macros", "time", "rt"] }
+# Logging/instrumentation for the impure layers. NOT for cdc-domain — see core/rust/README.md:
+# the domain emits structured diagnostics, which are assertable; log lines are not.
+tracing = "=0.1.44"
+# OpenTelemetry export. Confined to cdc-otel; forbidden in cdc-domain.
+opentelemetry = "=0.32.0"
+opentelemetry_sdk = "=0.32.1"
+tracing-opentelemetry = "=0.33.0"
+# tracing-subscriber belongs to whichever crate installs a subscriber — that is a binary's job, and
+# `cdc-server`'s is the first: the foreground process with structured logging. `env-filter` is
+# what makes a level per module reachable without a rebuild, and `json` is what makes the output
+# machine-readable for the one caller that is not a terminal.
+tracing-subscriber = { version = "=0.3.23", features = ["env-filter", "json"] }
+# RFC 6455, bought rather than written. The handshake, masking, fragmentation, close and ping/pong are
+# exactly the class of detail a hand-rolled framer gets subtly wrong, and this one carries a listener
+# that grants full container-engine control. `default-features = false` keeps its own TLS stacks out:
+# `wss://` is provided by wrapping the stream in `tokio-rustls` below, on BOTH ends, so one crate
+# decides what a certificate means for the listener and for the client that dials it.
+tokio-tungstenite = { version = "=0.30.0", default-features = false, features = [
+  "handshake",
+] }
+# TLS, so a bearer token that grants full container-engine control stops crossing the wire in the
+# clear. Bought rather than written, and rustls rather than an OpenSSL binding for two reasons this
+# workspace already holds elsewhere: there is no system library to find at build or at run time — which
+# is what makes the four packaging targets and the `x86_64-pc-windows-gnu` gate the same build — and it
+# is memory-safe Rust where the alternative is a C library reached through `unsafe`, which is forbidden
+# here. It is used from both ends: `TlsAcceptor` in `cdc-server`, `TlsConnector` in `cdc-client`.
+#
+# **`ring` rather than the default `aws_lc_rs`, and that was measured rather than assumed.** Both
+# cross-compile to `x86_64-pc-windows-gnu` on this machine; `aws_lc_rs` gets there by building a large C
+# codebase through `cmake`, which becomes a system prerequisite of every build host — a CI image, a
+# packaging runner, a contributor's laptop — for a server whose remote listener is an opt-in. `ring`
+# needs only the `cc` that the target's toolchain already provides. `prefer-post-quantum` is what is
+# given up, and it buys nothing against the certificate this actually terminates: an operator's own,
+# for a listener on a trusted network.
+tokio-rustls = { version = "=0.26.4", default-features = false, features = [
+  "logging",
+  "tls12",
+  "ring",
+] }
+# PEM, because that is the shape a certificate and a key arrive in from every tool that makes one —
+# `openssl req`, `mkcert`, `step`, cert-manager, an ACME client. Parsing it by hand means base64 inside
+# a label grammar with three legal spellings of a private key (PKCS#8, PKCS#1, SEC1), and picking the
+# wrong one is a server that refuses a key that is perfectly good.
+rustls-pemfile = "=2.2.0"
+# The client's trust store when it is not given one: Mozilla's root programme, compiled in. The
+# alternative is the platform store, which is a native dependency per OS and a different answer on each
+# — and this client's realistic case is a certificate the operator issued, reached with `--tls-ca`,
+# where neither store is consulted.
+webpki-roots = "=1.0.9"
+# Certificates for the tests, generated at run time. A PEM checked into the tree is a PEM that expires,
+# and the failure it produces is a suite that goes red on a date nobody chose. Dev-only; `ring` is its
+# default provider, which is the same one rustls is built with here.
+rcgen = "=0.14.8"
+# `CancellationToken` and `TaskTracker`: the shutdown pair tokio itself documents. Rolling either from a
+# `broadcast` channel and a counter is how a graceful shutdown ends up not waiting for the task that
+# was still writing.
+tokio-util = { version = "=0.7.19", default-features = false, features = ["rt"] }
+# `StreamExt`/`SinkExt` for the WebSocket stream — tungstenite speaks `futures` traits, so this is its
+# API surface rather than an addition of ours.
+futures-util = { version = "=0.3.33", default-features = false, features = ["sink"] }
+# Constant-time comparison for the bearer token. `==` on a token short-circuits at
+# the first differing byte, which is a timing oracle that recovers it byte by byte.
+subtle = "=2.6.1"
+# The token as a type that CANNOT be logged: `Debug` renders a redaction and the buffer is zeroed on
+# drop. A token must never be logged, and a rule a type enforces cannot be forgotten in
+# review — which is the same reason `Push::is_droppable` lives on the frame.
+secrecy = "=0.10.3"
+# The server binary's command line. `env` is what lets the token arrive as `CDC_SERVER_TOKEN` instead of
+# as an argv the whole machine can read in `ps`.
+clap = { version = "=4.6.4", features = ["derive", "env"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }

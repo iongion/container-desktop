@@ -1,7 +1,7 @@
 // Native-shell commands (Phase D): the Rust side of the window/lifecycle integrations the webview reaches
 // through MessageBus channels — reveal the storage folder, toggle devtools, open an external URL (gated
-// JS-side by the shared urlPolicy), and launch a per-OS terminal. Ports src/platform/node/node.ts launchTerminal
-// + the shell.openPath/openExternal handlers from src/platform/electron/main.ts.
+// JS-side by the shared urlPolicy), and launch a per-OS terminal. Wails' terminal_*.go must match these argv
+// templates emulator for emulator — the two shells launch the same terminals the same way.
 
 use std::path::Path;
 
@@ -25,20 +25,24 @@ pub struct LaunchResult {
 /// the SAME path get_user_data_path computes, so it's the dir the app actually reads/writes.
 #[tauri::command]
 pub fn open_storage_folder(app: AppHandle) -> Result<(), String> {
-    let dir = crate::host::get_user_data_path();
+    let dir = crate::host::platform::get_user_data_path();
     let _ = std::fs::create_dir_all(&dir);
-    app.opener().open_path(dir, None::<&str>).map_err(|e| e.to_string())
+    app.opener()
+        .open_path(dir, None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// Open an external URL in the OS browser. The webview gates this with the shared urlPolicy.shouldOpenExternally
 /// BEFORE invoking, so this only ever receives vetted URLs.
 #[tauri::command]
 pub fn open_external(app: AppHandle, url: String) -> Result<(), String> {
-    app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// Toggle the webview devtools (the footer console button). Always available because the `tauri` crate is built
-/// with the `devtools` feature (prod-enabled, matching Electron's unconditional devTools:true).
+/// with the `devtools` feature (prod-enabled for now).
 #[tauri::command]
 pub fn toggle_devtools(window: WebviewWindow) {
     if window.is_devtools_open() {
@@ -48,11 +52,13 @@ pub fn toggle_devtools(window: WebviewWindow) {
     }
 }
 
-// logging (logging:apply / open / reveal — loggingIpc.ts + electronLogMain.ts return shapes)
+// logging (logging:apply / open / reveal — the loggingIpc.ts return shapes)
 
-// userData/logs/container-desktop.log (getLogFilePath, electronLogMain.ts:32-34).
+// userData/logs/container-desktop.log (getLogFilePath).
 fn log_file_path() -> std::path::PathBuf {
-    Path::new(&crate::host::get_user_data_path()).join("logs").join("container-desktop.log")
+    Path::new(&crate::host::platform::get_user_data_path())
+        .join("logs")
+        .join("container-desktop.log")
 }
 
 #[derive(Serialize)]
@@ -65,10 +71,12 @@ pub struct LogApplyResult {
 /// (The Rust file-transport that actually writes entries to this path is a follow-up.)
 #[tauri::command]
 pub fn logging_apply() -> LogApplyResult {
-    LogApplyResult { log_file: log_file_path().to_string_lossy().into_owned() }
+    LogApplyResult {
+        log_file: log_file_path().to_string_lossy().into_owned(),
+    }
 }
 
-// { ok, reason?: "missing" | "error", detail? } (electronLogMain.ts:87-102).
+// { ok, reason?: "missing" | "error", detail? }.
 #[derive(Serialize)]
 pub struct LogOpResult {
     ok: bool,
@@ -79,13 +87,25 @@ pub struct LogOpResult {
 }
 impl LogOpResult {
     fn missing() -> Self {
-        Self { ok: false, reason: Some("missing".into()), detail: None }
+        Self {
+            ok: false,
+            reason: Some("missing".into()),
+            detail: None,
+        }
     }
     fn ok() -> Self {
-        Self { ok: true, reason: None, detail: None }
+        Self {
+            ok: true,
+            reason: None,
+            detail: None,
+        }
     }
     fn error(detail: String) -> Self {
-        Self { ok: false, reason: Some("error".into()), detail: Some(detail) }
+        Self {
+            ok: false,
+            reason: Some("error".into()),
+            detail: Some(detail),
+        }
     }
 }
 
@@ -96,7 +116,10 @@ pub fn logging_open(app: AppHandle) -> LogOpResult {
     if !path.exists() {
         return LogOpResult::missing();
     }
-    match app.opener().open_path(path.to_string_lossy().to_string(), None::<&str>) {
+    match app
+        .opener()
+        .open_path(path.to_string_lossy().to_string(), None::<&str>)
+    {
         Ok(()) => LogOpResult::ok(),
         Err(err) => LogOpResult::error(err.to_string()),
     }
@@ -109,13 +132,16 @@ pub fn logging_reveal(app: AppHandle) -> LogOpResult {
     if !path.exists() {
         return LogOpResult::missing();
     }
-    match app.opener().reveal_item_in_dir(path.to_string_lossy().to_string()) {
+    match app
+        .opener()
+        .reveal_item_in_dir(path.to_string_lossy().to_string())
+    {
         Ok(()) => LogOpResult::ok(),
         Err(err) => LogOpResult::error(err.to_string()),
     }
 }
 
-// launch_terminal (port of platform/node/node.ts)
+// launch_terminal
 
 #[derive(Deserialize)]
 pub struct TerminalLaunch {
@@ -125,8 +151,8 @@ pub struct TerminalLaunch {
     title: Option<String>,
 }
 
-/// Launch a system terminal running `launcher args…`. Per-OS (Terminal.app via osascript / Windows Terminal /
-/// a probed Linux emulator), mirroring node.ts:279-323 exactly.
+/// Launch a system terminal running `launcher args…`. Per-OS: Terminal.app via osascript, Windows Terminal, or a
+/// probed Linux emulator.
 #[tauri::command]
 pub fn launch_terminal(payload: TerminalLaunch) -> LaunchResult {
     let title = payload.title.unwrap_or_else(|| "Container Desktop".into());
@@ -169,8 +195,11 @@ fn spawn_detached(program: &str, args: &[String]) -> LaunchResult {
 
 #[cfg(target_os = "macos")]
 fn launch_terminal_macos(launcher: &str, args: &[String]) -> LaunchResult {
-    let cmd = std::iter::once(launcher.to_string()).chain(args.iter().cloned()).collect::<Vec<_>>().join(" ");
-    // escapeAppleScriptString (node.ts:148-150): \ → \\, " → \"
+    let cmd = std::iter::once(launcher.to_string())
+        .chain(args.iter().cloned())
+        .collect::<Vec<_>>()
+        .join(" ");
+    // AppleScript string escaping: \ → \\, " → \"
     let escaped = cmd.replace('\\', "\\\\").replace('"', "\\\"");
     let script = format!("tell app \"Terminal\" to do script \"{escaped}\"");
     spawn_detached("osascript", &["-e".to_string(), script])
@@ -197,7 +226,7 @@ fn launch_terminal_windows(launcher: &str, args: &[String], title: &str) -> Laun
 
 #[cfg(all(unix, not(target_os = "macos")))]
 fn launch_terminal_linux(launcher: &str, args: &[String], title: &str) -> LaunchResult {
-    // $TERMINAL first, then the candidate list (node.ts:51-61).
+    // $TERMINAL first, then the candidate list.
     let mut candidates: Vec<String> = Vec::new();
     if let Ok(pref) = std::env::var("TERMINAL") {
         if !pref.is_empty() {
@@ -205,9 +234,19 @@ fn launch_terminal_linux(launcher: &str, args: &[String], title: &str) -> Launch
         }
     }
     candidates.extend(
-        ["ptyxis", "gnome-terminal", "kgx", "konsole", "kitty", "alacritty", "wezterm", "x-terminal-emulator", "xterm"]
-            .iter()
-            .map(|s| s.to_string()),
+        [
+            "ptyxis",
+            "gnome-terminal",
+            "kgx",
+            "konsole",
+            "kitty",
+            "alacritty",
+            "wezterm",
+            "x-terminal-emulator",
+            "xterm",
+        ]
+        .iter()
+        .map(|s| s.to_string()),
     );
     for candidate in candidates {
         if let Some(resolved) = resolve_executable(&candidate) {
@@ -226,7 +265,7 @@ fn launch_terminal_linux(launcher: &str, args: &[String], title: &str) -> Launch
     }
 }
 
-// resolveExecutable (node.ts:77-91): absolute → check X_OK; else walk PATH.
+// Resolve an executable: absolute → check X_OK; else walk PATH.
 #[cfg(all(unix, not(target_os = "macos")))]
 fn resolve_executable(cmd: &str) -> Option<String> {
     let path = Path::new(cmd);
@@ -248,25 +287,41 @@ fn resolve_executable(cmd: &str) -> Option<String> {
 #[cfg(all(unix, not(target_os = "macos")))]
 fn is_executable(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
-    std::fs::metadata(path).map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0).unwrap_or(false)
+    std::fs::metadata(path)
+        .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
 }
 
-// realpathSync.native + basename (node.ts:93-99): resolve symlinks so the arg template matches the real binary.
+// Canonicalize + basename: resolve symlinks so the arg template matches the real binary.
 #[cfg(all(unix, not(target_os = "macos")))]
 fn real_basename(path: &str) -> String {
     let real = std::fs::canonicalize(path).unwrap_or_else(|_| Path::new(path).to_path_buf());
-    real.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+    real.file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }
 
-// linuxTerminalArgs (node.ts:101-121).
+// The per-emulator argv template. Asserted per emulator in this file's test module.
 #[cfg(all(unix, not(target_os = "macos")))]
 fn linux_terminal_args(name: &str, title: &str, launcher: &str, params: &[String]) -> Vec<String> {
     let title = title.to_string();
     let launcher = launcher.to_string();
     let mut base: Vec<String> = match name {
-        "ptyxis" => vec!["--new-window".into(), "-T".into(), title, "--".into(), launcher],
+        "ptyxis" => vec![
+            "--new-window".into(),
+            "-T".into(),
+            title,
+            "--".into(),
+            launcher,
+        ],
         "gnome-terminal" | "kgx" => vec!["--title".into(), title, "--".into(), launcher],
-        "konsole" => vec!["--new-tab".into(), "--title".into(), title, "-e".into(), launcher],
+        "konsole" => vec![
+            "--new-tab".into(),
+            "--title".into(),
+            title,
+            "-e".into(),
+            launcher,
+        ],
         "kitty" => vec!["--title".into(), title, launcher],
         "alacritty" => vec!["--title".into(), title, "-e".into(), launcher],
         "wezterm" => vec!["start".into(), "--".into(), launcher],
@@ -275,4 +330,48 @@ fn linux_terminal_args(name: &str, title: &str, launcher: &str, params: &[String
     };
     base.extend(params.iter().cloned());
     base
+}
+
+#[cfg(all(test, unix, not(target_os = "macos")))]
+mod tests {
+    use super::{linux_terminal_args, real_basename};
+
+    // The per-emulator argv templates are the whole contract of launch_terminal_linux: each terminal takes the
+    // title and the command in its own shape, and the caller's params are always appended last.
+    #[test]
+    fn linux_terminal_args_match_each_emulator_template() {
+        let params = vec!["ps".to_string(), "-a".to_string()];
+        let expected: &[(&str, &[&str])] = &[
+            ("ptyxis", &["--new-window", "-T", "Containers", "--", "podman"]),
+            ("gnome-terminal", &["--title", "Containers", "--", "podman"]),
+            ("kgx", &["--title", "Containers", "--", "podman"]),
+            ("konsole", &["--new-tab", "--title", "Containers", "-e", "podman"]),
+            ("kitty", &["--title", "Containers", "podman"]),
+            ("alacritty", &["--title", "Containers", "-e", "podman"]),
+            ("wezterm", &["start", "--", "podman"]),
+            ("xterm", &["-T", "Containers", "-e", "podman"]),
+        ];
+        for (name, base) in expected {
+            let mut want: Vec<String> = base.iter().map(|s| s.to_string()).collect();
+            want.extend(params.iter().cloned());
+            assert_eq!(
+                linux_terminal_args(name, "Containers", "podman", &params),
+                want,
+                "argv template for {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unknown_emulator_falls_back_to_dash_e() {
+        assert_eq!(
+            linux_terminal_args("some-new-terminal", "Containers", "podman", &[]),
+            vec!["-e", "podman"]
+        );
+    }
+
+    #[test]
+    fn real_basename_survives_a_path_that_cannot_be_canonicalized() {
+        assert_eq!(real_basename("/definitely/not/here/gnome-terminal"), "gnome-terminal");
+    }
 }

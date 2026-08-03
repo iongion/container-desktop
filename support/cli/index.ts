@@ -125,7 +125,7 @@ program
 program
   .command("update-screenshots")
   .description("Regenerate deterministic website screenshots")
-  .option("--backend <backend>", "electron | tauri (defaults to CONTAINER_DESKTOP_CAPTURE_BACKEND, else electron)")
+  .option("--backend <backend>", "tauri | wails (defaults to CONTAINER_DESKTOP_CAPTURE_BACKEND, else tauri)")
   .option("--engine <engines>", "comma-separated engines to capture (podman,docker,unified)")
   .option("--only <files>", "comma-separated screenshot filenames to capture")
   .option("--mode <mode>", "dev | built", "dev")

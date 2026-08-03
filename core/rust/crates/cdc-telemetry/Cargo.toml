@@ -1,0 +1,19 @@
+[package]
+name = "cdc-telemetry"
+version = "0.1.0"
+description = "Connection tracing: the vocabulary, the privacy allowlist, and the record a host exports."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Nothing. Not OpenTelemetry, not tracing, not tokio: this crate decides WHAT a trace says and what may
+# leave the process, and a host decides where it goes. Adding a backend here would pick one for every
+# embedding — the coupling `cdc-telemetry-host-native` exists to hold on its own.
+
+[lints]
+workspace = true
+
+[lib]
+test = false

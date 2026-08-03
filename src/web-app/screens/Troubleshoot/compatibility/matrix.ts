@@ -7,8 +7,8 @@
 import semver from "semver";
 
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { ConnectorCapabilities } from "@/env/Types";
-import { ContainerEngine } from "@/env/Types";
+import type { ConnectorCapabilities } from "@/container-client/types/connection";
+import { ContainerEngine } from "@/container-client/types/engine";
 import i18n from "@/i18n";
 
 export type CellKind = "yes" | "partial" | "no" | "planned" | "value";
@@ -87,7 +87,7 @@ const BASE_CAPABILITIES: Record<string, ConnectorCapabilities> = {
     extensions: {
       machines: false,
       kube: false,
-      contexts: false,
+      contexts: true,
       swarm: true,
       builders: false,
       compose: true,
@@ -195,11 +195,9 @@ const CATALOG: { title: string; caps: CapSpec[] }[] = [
       {
         key: "contexts",
         label: i18n.t("Docker contexts"),
-        // Docker has read-only context inspect wired (partial); switching is planned. Other engines: N/A.
-        compute: gated(
-          (c) => c.extensions.contexts,
-          (v) => (isDocker(v) ? partial(3) : NO),
-        ),
+        // Docker lists and inspects contexts, and a connection pins the one it uses; switching the CLI's global
+        // selection is deliberately not offered → partial. Same shape as registryTrust below. Other engines: N/A.
+        compute: (v) => (v.capabilities.extensions.contexts ? (isDocker(v) ? partial(3) : YES) : NO),
       },
       {
         key: "registries",

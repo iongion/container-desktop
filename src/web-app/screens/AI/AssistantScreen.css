@@ -1,5 +1,5 @@
-/* The full-page Assistant surface. The conversation (transcript + composer) and its styles live in the
-   shared components/ai/AssistantConversation.{tsx,css}; this screen only provides the full-height column. */
+/* The full-page Assistant surface. The Thread (transcript + composer) and its styles live in the
+   shared components/ai/AssistantThread.{tsx,css}; this screen only provides the full-height column. */
 .AppScreen[data-screen="ai.assistant"] {
   display: flex;
   flex-direction: column;

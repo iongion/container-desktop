@@ -9,7 +9,7 @@ import (
 
 // launchTerminal opens a Linux terminal emulator running `launcher args…`. Probes $TERMINAL then a candidate
 // list, resolves the executable on PATH, and applies the per-emulator arg template. Mirrors shell.rs
-// launch_terminal_linux (a port of node.ts:279-323).
+// launch_terminal_linux.
 func launchTerminal(launcher string, args []string, title string) LaunchResult {
 	candidates := []string{}
 	if pref := os.Getenv("TERMINAL"); pref != "" {
@@ -29,7 +29,7 @@ func launchTerminal(launcher string, args []string, title string) LaunchResult {
 	return LaunchResult{Code: &code, Success: false, Stderr: "No supported terminal emulator found on PATH"}
 }
 
-// resolveExecutable: absolute → check executable; else walk PATH (node.ts resolveExecutable).
+// resolveExecutable: absolute → check executable; else walk PATH.
 func resolveExecutable(cmd string) string {
 	if filepath.IsAbs(cmd) {
 		if isExecutable(cmd) {
@@ -63,7 +63,8 @@ func realBasename(path string) string {
 	return filepath.Base(resolved)
 }
 
-// linuxTerminalArgs is the per-emulator arg template (node.ts linuxTerminalArgs).
+// linuxTerminalArgs is the per-emulator arg template. shell.rs::linux_terminal_args must match it emulator for
+// emulator; the Rust side asserts the table (this half is the deferral in docs/todo.md).
 func linuxTerminalArgs(name, title, launcher string, params []string) []string {
 	var base []string
 	switch name {

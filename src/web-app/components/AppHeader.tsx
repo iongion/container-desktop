@@ -1,14 +1,4 @@
-import {
-  AnchorButton,
-  Button,
-  ButtonGroup,
-  Divider,
-  Menu,
-  MenuItem,
-  Navbar,
-  NavbarGroup,
-  PopoverNext,
-} from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, Divider, Navbar, NavbarGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiBug, mdiRobot } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -16,9 +6,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
-import { OperatingSystem, type Program, type WindowAction } from "@/env/Types";
+import type { Program } from "@/container-client/types/engine";
+import { OperatingSystem, type WindowAction } from "@/container-client/types/os";
 import { WINDOW_CONTROLS } from "@/web-app/chrome/appChrome";
-import { aiNavScreens } from "@/web-app/screenVisibility";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 import { useUIStore } from "@/web-app/stores/uiStore";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
@@ -28,7 +18,7 @@ import { AppHeaderLogo } from "./AppHeaderLogo";
 import { ProvisionButton } from "./ProvisioningWizard/ProvisionButton";
 
 import "./AppHeader.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.AppHeader");
 
@@ -62,7 +52,6 @@ const WINDOW_ACTIONS_MAP = {
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   osType,
-  screens,
   currentScreen,
   program,
   running,
@@ -104,52 +93,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     });
   }
 
-  // AI navigation lives here (not the sidebar): a split button — the main button opens the Assistant,
-  // the caret opens a menu of every AI screen. AI is always on, so it is always present.
-  const aiScreens = aiNavScreens(screens ?? []);
-  const aiActions =
-    aiScreens.length > 0 ? (
-      <ButtonGroup variant="minimal" className="AppHeaderAIActions">
-        <Button
-          className="AppHeaderActionButton"
-          data-action="ai-assistant"
-          icon={<ReactIcon.Icon className="ReactIcon" path={mdiRobot} size={0.75} />}
-          title={t("AI Assistant")}
-          aria-label={t("AI Assistant")}
-          onClick={() => {
-            if (wizardOpen) {
-              closeWizard();
-            }
-            toggleAssistantConsole();
-          }}
-        />
-        <PopoverNext
-          placement="bottom-end"
-          portalClassName="AppHeaderPopoverAboveWizard"
-          content={
-            <Menu>
-              {aiScreens.map((s) => (
-                <MenuItem
-                  key={s.ID}
-                  icon={s.Metadata?.LeftIcon as any}
-                  text={t(s.Title)}
-                  href={pathTo(s.Route.Path)}
-                  onClick={wizardOpen ? closeWizard : undefined}
-                />
-              ))}
-            </Menu>
+  // AI lives here as a single button that opens the Assistant. The other AI screens are reached through the
+  // "Work" sidebar entry (→ Workers) and its section tab bar (→ Runs), not a header menu. AI is always on.
+  const aiActions = (
+    <ButtonGroup variant="minimal" className="AppHeaderAIActions">
+      <Button
+        className="AppHeaderActionButton"
+        data-action="ai-assistant"
+        icon={<ReactIcon.Icon className="ReactIcon" path={mdiRobot} size={0.75} />}
+        title={t("AI Assistant")}
+        aria-label={t("AI Assistant")}
+        onClick={() => {
+          if (wizardOpen) {
+            closeWizard();
           }
-        >
-          <Button
-            className="AppHeaderActionButton"
-            data-action="ai-tools"
-            icon={IconNames.CARET_DOWN}
-            title={t("AI tools")}
-            aria-label={t("AI tools")}
-          />
-        </PopoverNext>
-      </ButtonGroup>
-    ) : null;
+          toggleAssistantConsole();
+        }}
+      />
+    </ButtonGroup>
+  );
 
   const disabledHeaderActions = !(provisioned && running);
   const utilityActions = (

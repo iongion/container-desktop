@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { type CreateNetworkOptions, NetworksAdapter } from "@/container-client/adapters/networks";
-import type { Network } from "@/env/Types";
+import type { Network } from "@/container-client/types/network";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 

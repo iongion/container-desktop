@@ -2,8 +2,8 @@
 
 The "backend" is everything that turns *"connect me to this engine"* into a live,
 pingable API the UI can call. It lives in [`src/container-client/`](../../src/container-client/)
-and — despite the name — runs **in the renderer process**, reaching the OS through
-the preload bridge (see [overview.md](overview.md)).
+and — despite the name — runs **in the webview realm**, reaching the OS through the
+`window.*` host ports the shell's bridge installs (see [overview.md](overview.md)).
 
 Its whole job: given a **Connection** (which engine, which host), produce a
 **HostClient** that knows how to start the scope, find the engine socket, start
@@ -47,7 +47,7 @@ flowchart TB
     cfg["userConfiguration<br/>(config.ts)<br/>connections, settings"]:::component
   end
 
-  bridge["Preload bridge: Command · FS · Platform · Path<br/>(window.* via contextBridge)"]:::external
+  bridge["Host bridge: Command · FS · Platform · Path<br/>(window.* → invoke into Rust/Go)"]:::external
   engine[(Engine API socket)]:::external
 
   appStore -->|start / CRUD / settings| app
@@ -96,12 +96,12 @@ flowchart TB
 - **Api.clients** — [`Api.clients.ts`](../../src/container-client/Api.clients.ts).
   `createApplicationApiDriver()` returns an Axios instance whose every request is
   routed through `Command.ProxyRequest(req, connection)` — i.e. HTTP spoken over a
-  unix socket / named pipe / SSH tunnel, executed in the preload's Node world. The
+  unix socket / named pipe / SSH tunnel, executed natively in Rust or Go. The
   SSH transport injects a `getSSHConnection` hook so the tunnel comes up lazily on
   first request.
 - **userConfiguration** — [`config.ts`](../../src/container-client/config.ts).
-  Persisted settings and the saved connection list (the one piece the main process
-  also imports).
+  Persisted settings and the saved connection list, read by the host bridge before
+  the app mounts.
 
 ## Resource data layer (lists + freshness)
 
@@ -114,34 +114,37 @@ The `HostClientFacade` is the raw operations surface; screens don't call it dire
   `list()/start()/stop()/…` over the engine REST API; `getActiveHostClient()` resolves the current host.
 - **Resource vocabulary** — [`resourceDomains.ts`](../../src/container-client/resourceDomains.ts): the
   canonical `RESOURCE_DOMAINS`, `ResourceDomain`/`ResourceItemsByDomain` types, and the engine-event →
-  domain mapping (`normalizeResourceEventDomains`). Neutral (no Zustand/Electron) so **both** the renderer
-  and the main process import it. The renderer's `resourceEvents`/`resourceStore` consume it (see
+  domain mapping (`normalizeResourceEventDomains`). Neutral (no Zustand, no shell) so **both** the renderer
+  and the engine service import it. The renderer's `resourceEvents`/`resourceStore` consume it (see
   [frontend.md](frontend.md)).
 
-### Main-owned data layer
+### Service-owned data layer
 
-The **main process is the single engine authority**: it owns the connection, the engine `/events` stream and
-all list fetching, **and** it executes the renderer's engine HTTP. The renderer runs no event manager and
-opens no second connection — `resourceEvents` is a thin client that starts the mirror and forwards "refresh
-now" nudges, and `Command.ProxyRequest` is forwarded to main so there is **one** tunnel / relay / socket
-pool, in main. Reads are pushed to the app window; the native tray menu is built in main from that same
-owned data (see [system-tray.md](system-tray.md)).
+The **`EngineDataService` is the single engine authority**: it owns the connection, the engine `/events`
+stream and all list fetching. The screens run no event manager and open no second connection —
+`resourceEvents` is a thin client that starts the mirror and forwards "refresh now" nudges. Engine HTTP
+resolves in the native backend, so there is **one** tunnel / relay / socket pool per connection, held in Rust
+or Go and surviving a webview reload. Reads are pushed to the stores; the native tray menu is projected from
+that same owned data (see [system-tray.md](system-tray.md)).
+
+The service and its clients share the **webview realm**, so their "channels" are direct calls over an
+in-memory bus ([`inRealmBus.ts`](../../src/packages/platform/src/inRealmBus.ts)) rather than IPC. The channel
+names survive because the store code reads `window.MessageBus` / `window.ResourceBus` ambiently and does not
+care which transport is underneath.
 
 | Piece | Path | Role |
 | --- | --- | --- |
-| `EngineDataService` | [`platform/engineDataService.ts`](../../src/platform/engineDataService.ts) | Runtime-owned service over `Application`: connection/runtime + per-connection resource state, initial lists + `/events` -> debounced refresh, plus tray action execution and a machines cache for the native tray menu. Idempotent `ensureConnected` lets a runtime connect before forwarded requests. |
-| `ResourceSyncBroker` | [`platform/resourceSyncBroker.ts`](../../src/platform/resourceSyncBroker.ts) | Pushes a `ResourceSyncSnapshot` on change; answers `resource:get-snapshot` + awaitable `resource:ensure-connected`; accepts a `resource:refresh` nudge. |
-| `CommandProxyBroker` | [`platform/commandProxyBroker.ts`](../../src/platform/commandProxyBroker.ts) | Serves forwarded `Command.ProxyRequest` calls against the active host-client driver (one connection). Non-stream is request/response; container-log streams are opened here and chunked to the requester, with orphan cleanup. |
-| `resourceSyncHost` | [`platform/electron/resourceSyncHost.ts`](../../src/platform/electron/resourceSyncHost.ts) | Runtime wiring for the shared service/brokers. |
-| `ResourceBus` | [`platform/electron/resourceBus.ts`](../../src/platform/electron/resourceBus.ts) | Allowlisted receive bridge (mirrors `TrayBus`) for resource pushes. |
-| `commandProxyClient` | [`platform/electron/commandProxyClient.ts`](../../src/platform/electron/commandProxyClient.ts) | Forwards or invokes `Command.ProxyRequest` through the runtime's engine API data plane. |
-| `resourceMirror` (renderer) | [`web-app/stores/resourceMirror.ts`](../../src/web-app/stores/resourceMirror.ts) | Applies main's pushed snapshots into the **same** `resourceStore` the screens read (the seam). |
-| Shared protocols | [`resourceSyncProtocol.ts`](../../src/container-client/resourceSyncProtocol.ts) · [`commandProxyProtocol.ts`](../../src/container-client/commandProxyProtocol.ts) | Channels + `AppRuntimeSnapshot`/`ResourceSyncSnapshot` + command-proxy payload types. |
+| `EngineDataService` | [`platform/engineDataService.ts`](../../src/packages/platform/src/engineDataService.ts) | The service over `Application`: connection/runtime + per-connection resource state, initial lists + `/events` -> debounced refresh, plus tray action execution and a machines cache for the native tray menu. Idempotent `ensureConnected`. |
+| `ResourceSyncBroker` | [`platform/resourceSyncBroker.ts`](../../src/packages/platform/src/resourceSyncBroker.ts) | Pushes a `ResourceSyncSnapshot` on change; answers `resource:get-snapshot` + awaitable `resource:ensure-connected`; accepts a `resource:refresh` nudge. |
+| `resourceSyncHost` | [`tauri/resourceSyncHost.ts`](../../src/packages/platform/src/tauri/resourceSyncHost.ts) · [`wails/…`](../../src/packages/platform/src/wails/resourceSyncHost.ts) | Hosts the service + broker in the realm and wires them to the in-realm bus. |
+| `ResourceBus` | [`tauri/resourceBus.ts`](../../src/packages/platform/src/tauri/resourceBus.ts) · [`wails/…`](../../src/packages/platform/src/wails/resourceBus.ts) | Allowlisted receive bridge (mirrors `TrayBus`) for resource pushes. |
+| `commandProxyClient` | [`tauri/commandProxyClient.ts`](../../src/packages/platform/src/tauri/commandProxyClient.ts) · [`wails/…`](../../src/packages/platform/src/wails/commandProxyClient.ts) | Invokes `Command.ProxyRequest` through the native engine-API data plane; container-log streams arrive as chunked channel events. |
+| `resourceMirror` | [`web-app/stores/resourceMirror.ts`](../../src/web-app/stores/resourceMirror.ts) | Applies the service's pushed snapshots into the **same** `resourceStore` the screens read (the seam). |
+| Shared protocols | [`resourceSyncProtocol.ts`](../../src/packages/container-client/src/resourceSyncProtocol.ts) · [`commandProxyProtocol.ts`](../../src/packages/container-client/src/commandProxyProtocol.ts) | Channels + `AppRuntimeSnapshot`/`ResourceSyncSnapshot` + command-proxy payload types. |
 
-Both the read layer and command execution are owned by main and live-verified (CDP smoke). The renderer
-still composes a `HostClient` for typing + per-engine normalizers, but its HTTP executes in main — so there
-is exactly **one** engine connection whether the app window is open, closed (hidden to tray), or the tray
-menu is acting on its own.
+The renderer still composes a `HostClient` for typing + per-engine normalizers, but the actual socket work
+happens natively — so there is exactly **one** engine connection whether the app window is open, closed
+(hidden to tray), or the tray menu is acting on its own.
 
 ## Key types (the vocabulary)
 

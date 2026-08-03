@@ -1,0 +1,233 @@
+.ProjectContextPanel,
+.ProjectContextStack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ProjectContextPanel > .bp6-spinner {
+  margin: 32px auto;
+}
+
+.ProjectContextStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.ProjectContextStats > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+}
+
+.ProjectContextStats > div + div {
+  border-left: 1px solid var(--app-border);
+}
+
+.ProjectContextStats span,
+.ProjectContextSourceList small,
+.ProjectMemoryEntryBody > div,
+.ProjectRuleList small,
+.ProjectRulesControl p {
+  color: var(--app-text-muted);
+}
+
+.ProjectContextStats span,
+.ProjectContextSourceList small,
+.ProjectRuleList small {
+  font-size: 11px;
+}
+
+.ProjectContextStats strong {
+  overflow: hidden;
+  color: var(--app-accent-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ProjectContextCard,
+.ProjectRulesControl,
+.ProjectMemoryComposer {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.ProjectContextCard > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+}
+
+.ProjectContextSourceList details + details,
+.ProjectMemoryList article + article,
+.ProjectRuleList > div + div {
+  border-top: 1px solid var(--app-border);
+}
+
+.ProjectContextSourceList summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.ProjectContextSourceList summary > span,
+.ProjectRuleList > div > span {
+  min-width: 0;
+}
+
+.ProjectContextSourceList summary strong,
+.ProjectContextSourceList summary small,
+.ProjectRuleList strong,
+.ProjectRuleList small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ProjectContextSourceList time,
+.ProjectMemoryEntryBody time {
+  color: var(--app-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.ProjectContextSourceMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+.ProjectContextSourceMeta code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ProjectContextSourceList pre {
+  max-height: 220px;
+  margin: 0;
+  overflow: auto;
+  padding: 10px;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-bg);
+  color: var(--app-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ProjectContextEmpty {
+  padding: 16px;
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+.ProjectMemoryComposer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.ProjectMemoryComposer textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
+.ProjectMemoryComposer > .bp6-button {
+  align-self: flex-end;
+}
+
+.ProjectContextToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ProjectMemoryList article {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 6px 8px 10px;
+}
+
+.ProjectMemoryList article.is-targeted {
+  box-shadow: inset 3px 0 var(--app-accent);
+  background: var(--app-group-bg);
+}
+
+.ProjectMemoryEntryBody {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ProjectMemoryEntryBody p {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ProjectMemoryEntryBody > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.ProjectMemoryEntryBody code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ProjectRulesControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 10px;
+}
+
+.ProjectRulesControl .bp6-control {
+  margin: 0;
+}
+
+.ProjectRulesControl p {
+  grid-column: 1;
+  margin: 0;
+  font-size: 12px;
+}
+
+.ProjectRulesControl > .bp6-button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.ProjectRuleList > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 6px 10px;
+}

@@ -68,16 +68,16 @@ describe("website download model", () => {
     expect(published.some((name: string) => name.endsWith(".exe"))).toBe(false);
   });
 
-  it("keeps legacy Electron builder targets compatible with public formats", () => {
+  it("keeps the per-platform artifact targets compatible with public formats", () => {
     for (const platform of ["linux", "mac", "win"] as const) {
-      const targets = matrix.electronBuilderTargets(platform);
+      const targets = matrix.publicArtifactTargets(platform);
       const publicTargets = matrix.PLATFORMS[platform].formats
         .filter((f: { public?: boolean }) => f.public !== false)
         .map((f: { target: string }) => f.target);
       // Every publishable format is something the builder is told to emit.
       for (const target of publicTargets) expect(targets).toContain(target);
     }
-    expect(matrix.electronBuilderTargets("linux")).toEqual(["deb", "rpm", "tar.gz", "AppImage", "pacman"]);
+    expect(matrix.publicArtifactTargets("linux")).toEqual(["deb", "rpm", "tar.gz", "AppImage", "pacman"]);
   });
 
   it("uses the per-format arch tokens published artifacts keep for parity", () => {

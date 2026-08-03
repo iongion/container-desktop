@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import type { Box, CaptureDriver, Nth, Viewport } from "./types";
 
 // CaptureDriver over Wails v3's built-in MCP server (HTTP JSON-RPC at /mcp; app built with `-tags mcp`).
-// The Wails counterpart of the Playwright (Electron/CDP) and WebdriverIO (Tauri/WebDriver) adapters — Wails
+// The Wails counterpart of the WebdriverIO (Tauri/WebDriver) adapter — Wails
 // has NEITHER CDP (WebKit2GTK) nor WebDriver, so its remote-control surface is the MCP toolset. Seams:
 //  - Every DOM read/write reduces to the `js_eval` tool: the (tsx-transpiled) page function is reconstructed
 //    from its source via indirect eval and run in the app realm, like webdriverDriver's evaluateAsync. js_eval

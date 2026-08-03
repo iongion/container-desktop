@@ -1,4 +1,4 @@
-// The full-page Assistant surface: a thin wrapper around the shared <AssistantConversation>, which owns the
+// The full-page Assistant surface: a thin wrapper around the shared <AssistantThread>, which owns the
 // transcript (prose, command steps, results, approval cards, tool → generative-UI cards) and the AIComposer.
 // The same component backs the summonable quake console, so both surfaces render one continuous session from
 // useAIStore. Gated by Metadata.RequiresAI; reached via the header AI menu (ExcludeFromSidebar).
@@ -6,7 +6,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { AssistantConversation } from "@/web-app/components/ai/AssistantConversation";
+import { AssistantThread } from "@/web-app/components/ai/AssistantThread";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import "./AssistantScreen.css";
@@ -27,9 +27,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, []);
   return (
     <div className="AppScreen" data-screen={ID} ref={rootRef}>
-      <AssistantConversation
-        composerPlaceholder={t("Message the assistant… (Enter to send, Shift+Enter for newline)")}
-      />
+      <AssistantThread composerPlaceholder={t("Message the assistant… (Enter to send, Shift+Enter for newline)")} />
     </div>
   );
 };

@@ -22,11 +22,11 @@ describe("aiNavScreens", () => {
   const screens = [
     screen("dashboard"),
     screen("ai.assistant", { RequiresAI: true }),
-    screen("ai.generator", { RequiresAI: true }),
+    screen("ai.runs", { RequiresAI: true }),
     screen("ai.diagnostics", { RequiresAI: true, ExcludeFromSidebar: true }),
   ];
 
   it("returns all AI screens for the header menu — even ones hidden from the sidebar", () => {
-    expect(aiNavScreens(screens).map((s) => s.ID)).toEqual(["ai.assistant", "ai.generator", "ai.diagnostics"]);
+    expect(aiNavScreens(screens).map((s) => s.ID)).toEqual(["ai.assistant", "ai.runs", "ai.diagnostics"]);
   });
 });

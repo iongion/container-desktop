@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getDefaultConnectors } from "@/container-client";
 import { Application } from "@/container-client/Application";
-import type { Connection, Connector } from "@/env/Types";
+import type { Connection, Connector } from "@/container-client/types/connection";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";

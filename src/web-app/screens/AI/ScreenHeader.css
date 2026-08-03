@@ -1,0 +1,5 @@
+/* The AI family is the only section header with BOTH a search box and a section switcher, so the switcher needs
+   breathing room from the search input (the withoutSearch siblings sit flush at the start). */
+.AppScreenHeader .AISectionTabBar {
+  margin-left: 12px;
+}

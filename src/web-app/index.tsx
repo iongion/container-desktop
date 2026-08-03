@@ -1,7 +1,7 @@
-// Renderer entry. A single window loads this bundle: the main app. (The tray is a native OS menu built in
-// the main process — there is no tray renderer.) Global CSS is imported here.
+// Renderer entry. A single window loads this bundle: the main app. (The tray is a native OS menu built by the
+// native backend — there is no tray renderer.) Global CSS is imported here.
 
-import type { LoggerBackend } from "@/platform/logger";
+import type { LoggerBackend } from "@/logger";
 import { bootTimeline } from "./bootTimeline";
 import "./index.css";
 // Cascade order: universal → tokens (semantic palette + Blueprint bridge + shared structure)
@@ -18,19 +18,17 @@ const rootEl = document.getElementById("root");
 
 async function boot() {
   bootTimeline.mark("script-start");
-  // Shell selection: under Wails/Tauri there is no Electron preload, so install the matching host bridge (the
-  // same window.* globals, backed by the native Go/Rust port) before rendering. Under Electron the preload
-  // already exposed those globals, so those branches are skipped. Wails is checked FIRST: it also sets
-  // window.Preloaded, and isElectronRuntime() excludes both the Wails and Tauri markers to stay exclusive.
+  // Shell selection: install the matching host bridge (the window.* globals, backed by the native Go/Rust
+  // ports) before rendering. Wails is checked FIRST — both shells set window.Preloaded, so each detector keys
+  // off its own marker to stay exclusive.
   const { isWailsRuntime } = await import("@/platform/wails/detect");
   const { isTauriRuntime } = await import("@/platform/tauri/detect");
-  const { isElectronRuntime } = await import("@/platform/electron/detect");
   let loggerBackend: LoggerBackend | undefined;
   if (isWailsRuntime()) {
     const { installWailsHostBridge } = await import("@/platform/wails/bridge");
     await installWailsHostBridge();
     bootTimeline.mark("wails-bridge-installed");
-    // Symmetric to the Tauri/Electron backends: route the façade's persisted records to the Wails log backend
+    // Symmetric to the Tauri backend: route the façade's persisted records to the Wails log backend
     // (a Phase-1 no-op until the Go LogService lands). Dynamic so it never loads under the other shells.
     const { wailsLogBackend } = await import("@/platform/wails/log/wailsLog");
     loggerBackend = wailsLogBackend;
@@ -38,14 +36,10 @@ async function boot() {
     const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
     await installTauriHostBridge();
     bootTimeline.mark("tauri-bridge-installed");
-    // Symmetric to the Electron renderer backend below: route the façade's persisted records to the native Rust
-    // file sink (@tauri-apps/plugin-log). Dynamic so plugin-log never loads under Electron.
+    // Symmetric to the Wails backend above: route the façade's persisted records to the native Rust
+    // file sink (@tauri-apps/plugin-log). Dynamic so plugin-log never loads under Wails.
     const { tauriLogBackend } = await import("@/platform/tauri/log/tauriLog");
     loggerBackend = tauriLogBackend;
-  } else if (isElectronRuntime()) {
-    // Electron branch only — dynamic so the electron-log backend never loads under Tauri.
-    const { electronLogRendererBackend } = await import("@/platform/electron/log/electronLogRenderer");
-    loggerBackend = electronLogRendererBackend;
   } else {
     throw new Error("No supported desktop host runtime detected");
   }
@@ -54,6 +48,10 @@ async function boot() {
     // rendering can be exercised without a live model. Dynamic import → tree-shaken from production.
     const { installAssistantDemo } = await import("@/web-app/components/ai/assistantDemo");
     installAssistantDemo();
+    // DEV-only: window.__cdLiveProbe, the real-engine probes the WebDriver live specs drive. They run against
+    // whichever shell installed the host globals, so one probe covers both backends.
+    const { installLiveProbes } = await import("@/web-app/liveProbes");
+    installLiveProbes();
   }
   const { renderApplication } = await import("./App.render");
   bootTimeline.mark("app-render-imported");

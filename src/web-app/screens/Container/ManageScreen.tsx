@@ -12,10 +12,10 @@ import {
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type Container, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerStateList } from "@/container-client/types/container";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
@@ -43,7 +43,6 @@ import { pathTo } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
-import { useStackHandoffStore } from "@/web-app/stores/stackHandoffStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ActionsMenu } from ".";
 import { useContainerBulkActions } from "./bulkActions";
@@ -219,25 +218,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const composeConnId = podmanConnections.some((c) => c.id === importConnId)
     ? importConnId
     : (podmanConnections[0]?.id ?? "");
-  const [handoffText, setHandoffText] = useState<string | null>(null);
   const openImport = useCallback(() => {
-    setHandoffText(null);
     setWithImport(true);
   }, []);
   const closeImport = useCallback(() => {
     setWithImport(false);
-    setHandoffText(null);
   }, []);
-  // AI "Open in Stacks" handoff: raw generated compose text opens the Import drawer pre-filled.
-  const pendingComposeText = useStackHandoffStore((s) => s.pendingComposeText);
-  const setPendingComposeText = useStackHandoffStore((s) => s.setPendingComposeText);
-  useEffect(() => {
-    if (pendingComposeText) {
-      setHandoffText(pendingComposeText);
-      setPendingComposeText(null);
-      setWithImport(true);
-    }
-  }, [pendingComposeText, setPendingComposeText]);
   // Tear a stack down from its compose-group header — removes the project's containers, networks and pod.
   const onStackTeardown = useCallback(
     async (project: string, connId: string, groupKey: string) => {
@@ -729,12 +715,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         )}
       </div>
       {withImport ? (
-        <ImportStackDrawer
-          connectionId={composeConnId}
-          onConnectionChange={setImportConnId}
-          initialText={handoffText ?? undefined}
-          onClose={closeImport}
-        />
+        <ImportStackDrawer connectionId={composeConnId} onConnectionChange={setImportConnId} onClose={closeImport} />
       ) : null}
     </div>
   );

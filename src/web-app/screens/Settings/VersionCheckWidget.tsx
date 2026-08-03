@@ -4,8 +4,8 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { OnlineApi } from "@/container-client/Api.clients";
-import { OperatingSystem } from "@/env/Types";
-import { createLogger } from "@/platform/logger";
+import { OperatingSystem } from "@/container-client/types/os";
+import { createLogger } from "@/logger";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 

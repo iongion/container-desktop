@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ContainerEngine } from "@/env/Types";
+import { ContainerEngine } from "@/container-client/types/engine";
 
 import { buildSystemInfoSummary } from "./systemInfoSummary";
 

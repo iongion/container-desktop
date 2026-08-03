@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-// SSHHost mirrors env/Types.ts SSHHost (PascalCase wire keys). GetSSHConfig parses ~/.ssh/config into these so the
-// SSH controller-scope picker lists configured hosts — a faithful port of src-tauri/src/ssh_config.rs (itself a
-// port of the subset node.ts reads from the ssh-config npm parser, which can't bundle into the webview). Fidelity
-// (do NOT "improve"): only Host blocks; HostName/Port/User/IdentityFile via case-insensitive FIRST match; one
-// host per CONCRETE pattern (`*`, `!neg`, glob tokens dropped); Port defaults 22; HostName defaults to the alias.
+// SSHHost mirrors container-client/types/connection.ts SSHHost (PascalCase wire keys). GetSSHConfig parses
+// ~/.ssh/config into these so the SSH controller-scope picker lists configured hosts — a byte-faithful port of
+// src-tauri/src/ssh_config.rs. The parsed subset is deliberately narrow (do NOT "improve" it): only Host blocks;
+// HostName/Port/User/IdentityFile via case-insensitive FIRST match; one host per CONCRETE pattern (`*`, `!neg`,
+// glob tokens dropped); Port defaults 22; HostName defaults to the alias.
 type SSHHost struct {
 	Name         string `json:"Name"`
 	Host         string `json:"Host"`

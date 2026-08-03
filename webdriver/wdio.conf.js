@@ -17,7 +17,7 @@
 // instead of forwarding-and-exiting. That env is set in beforeSession and inherited down the process chain.
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,9 +25,16 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 
-const APP_BINARY = process.env.CONTAINER_DESKTOP_E2E_APP ?? path.join(repoRoot, "src-tauri/target/debug/container-desktop");
+const APP_BINARY =
+  process.env.CONTAINER_DESKTOP_E2E_APP ?? path.join(repoRoot, "src-tauri/target/debug/container-desktop");
 const NATIVE_DRIVER = process.env.WEBKIT_WEB_DRIVER ?? "/usr/bin/WebKitWebDriver";
 const TAURI_DRIVER = process.env.TAURI_DRIVER ?? path.join(os.homedir(), ".cargo", "bin", "tauri-driver");
+
+// A throwaway user-data dir the e2e app is pinned to (see beforeSession), so it never touches the developer's
+// daily release-app data. get_user_data_path honors this on every shell.
+const E2E_USER_DATA = process.env.CONTAINER_DESKTOP_USER_DATA_DIR ?? path.join(repoRoot, "webdriver", ".e2e-user-data");
+// Where workspace-access.e2e.js's fixture workspace lives (a subdir of the isolated data dir).
+const E2E_WORKSPACE = path.join(E2E_USER_DATA, "workspace-fixture");
 
 let tauriDriver;
 
@@ -72,12 +79,37 @@ export const config = {
           "Install it (`cargo install tauri-driver --locked`) or set TAURI_DRIVER.",
       );
     }
+    // Seed the isolated user-data dir BEFORE the app launches. Doing this at runtime from a spec races the app's
+    // own first-run settings write (which clobbered ai.workspaceRoot); pre-seeding wins the race deterministically.
+    // Start clean so every run has an identical fixture + settings, then let the app merge its own keys on top.
+    rmSync(E2E_USER_DATA, { recursive: true, force: true });
+    mkdirSync(E2E_WORKSPACE, { recursive: true });
+    writeFileSync(path.join(E2E_WORKSPACE, "package.json"), '{ "name": "demo" }\n');
+    writeFileSync(path.join(E2E_WORKSPACE, "greeting.txt"), "hello world\nsecond line\n");
+    // Pre-set ai.workspaceRoot (for workspace-access) and mark first-run handled so the app does not overwrite
+    // settings during boot. The app reads user-settings.json fresh per getAISettings call, so this is authoritative.
+    writeFileSync(
+      path.join(E2E_USER_DATA, "user-settings.json"),
+      `${JSON.stringify({ ai: { workspaceRoot: E2E_WORKSPACE }, wizard: { skipAtStartup: true } }, null, 2)}\n`,
+    );
   },
 
   beforeSession: () => {
     // Run standalone next to the developer's app (see the single-instance note above). Inherited by
     // tauri-driver → WebKitWebDriver → the app.
     process.env.CONTAINER_DESKTOP_E2E = "1";
+    // The AI specs (ai-flows, workspace-access) require the mock app — the renderer reads CONTAINER_DESKTOP_MOCK
+    // from the APP's process env via the Tauri bridge, so it must be set HERE (on the wdio process that spawns the
+    // app), not merely on the Vite dev server. CONTAINER_DESKTOP_MOCK_SCALE seeds the Runs-at-scale set the
+    // goalsList flow asserts (bridged into the webview realm since there is no `process` there). Preserve any
+    // caller override so a non-mock run stays possible.
+    process.env.CONTAINER_DESKTOP_MOCK ??= "1";
+    process.env.CONTAINER_DESKTOP_MOCK_SCALE ??= "goals:300,tasks:32";
+    // Isolate ALL app state (settings, logs, workspace fixtures) in a throwaway dir so the e2e app never touches
+    // the developer's daily release-app data. get_user_data_path honors this override on every shell (the Tauri
+    // Rust path has no `-dev` suffix of its own, so without this the debug binary would
+    // read/write ~/.config/container-desktop — the release app's dir).
+    process.env.CONTAINER_DESKTOP_USER_DATA_DIR ??= E2E_USER_DATA;
     tauriDriver = spawn(TAURI_DRIVER, ["--native-driver", NATIVE_DRIVER], {
       stdio: [null, process.stdout, process.stderr],
       env: process.env,

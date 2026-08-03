@@ -2,7 +2,7 @@
 // renders — with honest defaults (verify TLS, anonymous auth, no mirror) when the optional fields aren't
 // populated, so real connections read sensibly until the registries.conf/auth.json backends are wired.
 
-import type { Registry, RegistryAuthInfo, RegistryTlsState } from "@/env/Types";
+import type { Registry, RegistryAuthInfo, RegistryTlsState } from "@/container-client/types/registry";
 
 export interface RegistryTrustView {
   tls: RegistryTlsState;

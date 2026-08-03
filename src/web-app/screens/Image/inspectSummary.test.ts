@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/container-client/types/image";
 
 import { buildImageSummary } from "./inspectSummary";
 

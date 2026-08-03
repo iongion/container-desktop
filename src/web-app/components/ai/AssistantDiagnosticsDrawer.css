@@ -1,0 +1,173 @@
+.AssistantDiagnosticsDrawer .bp6-dialog-body,
+.AssistantDiagnosticsSections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.AssistantDiagnosticsToolbar,
+.AssistantDiagnosticProvider,
+.AssistantDiagnosticRow,
+.AssistantDiagnosticsLoading {
+  display: flex;
+  align-items: center;
+}
+
+.AssistantDiagnosticsToolbar {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.AssistantDiagnosticsToolbar > span,
+.AssistantDiagnosticProvider span,
+.AssistantDiagnosticsLoading {
+  color: var(--app-text-muted);
+}
+
+.AssistantDiagnosticPanel {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.AssistantDiagnosticPanel > h5 {
+  margin: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+}
+
+.AssistantDiagnosticErrors > h5 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.AssistantDiagnosticProvider {
+  gap: 10px;
+  padding: 12px;
+}
+
+.AssistantDiagnosticProvider > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.AssistantDiagnosticProvider strong,
+.AssistantDiagnosticProvider span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssistantDiagnosticProvider span {
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.AssistantDiagnosticMeta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--app-border);
+}
+
+.AssistantDiagnosticMeta > span {
+  color: var(--app-text-muted);
+}
+
+.AssistantDiagnosticRow {
+  gap: 9px;
+  min-height: 38px;
+  padding: 7px 10px;
+}
+
+.AssistantDiagnosticRow + .AssistantDiagnosticRow {
+  border-top: 1px solid var(--app-border);
+}
+
+.AssistantDiagnosticRow > span:nth-child(2) {
+  flex: 1 1 auto;
+}
+
+.AssistantDiagnosticPanel > .bp6-callout {
+  margin: 8px;
+  padding: 8px 10px;
+}
+
+.AssistantDiagnosticPanel > .bp6-callout span {
+  display: block;
+  margin-top: 3px;
+}
+
+.AssistantDiagnosticError + .AssistantDiagnosticError {
+  border-top: 1px solid var(--app-border);
+}
+
+.AssistantDiagnosticError > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 5px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.AssistantDiagnosticError > summary::-webkit-details-marker {
+  display: none;
+}
+
+.AssistantDiagnosticError > summary > span:nth-child(2) {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssistantDiagnosticError time,
+.AssistantDiagnosticErrorChevron {
+  flex: 0 0 auto;
+  color: var(--app-text-muted);
+}
+
+.AssistantDiagnosticErrorChevron {
+  transition: transform 120ms ease;
+}
+
+.AssistantDiagnosticError[open] .AssistantDiagnosticErrorChevron {
+  transform: rotate(180deg);
+}
+
+.AssistantDiagnosticError > div {
+  padding: 8px 10px 10px 34px;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-bg);
+}
+
+.AssistantDiagnosticError code,
+.AssistantDiagnosticError p {
+  overflow-wrap: anywhere;
+}
+
+.AssistantDiagnosticError code {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+.AssistantDiagnosticError p {
+  margin: 4px 0 0;
+  color: var(--app-text);
+}
+
+.AssistantDiagnosticsLoading {
+  justify-content: center;
+  gap: 8px;
+  min-height: 160px;
+}

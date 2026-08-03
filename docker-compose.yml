@@ -1,0 +1,38 @@
+# Dev/test-only stack for container-desktop. NOT shipped and NOT loaded by the app at runtime.
+#
+# `remote-engine` is a self-contained, SSH-reachable docker-in-docker host used to exercise — on a real
+# transport and with ZERO external machines:
+#   - remote (SSH) engine connections in the app and the live connection matrix
+#     (src/__tests__/live/connection-matrix.live.test.ts), and
+#   - the agentic worker "Runs on" targets — remote / remote-sandbox / remote-container — in
+#     src/__tests__/live/runs-on.live.test.ts.
+#
+# Bring it up with `support/ssh-remote-sandbox.sh up` (generates an ephemeral keypair and writes the
+# live suite's targets.env), and tear it down with `support/ssh-remote-sandbox.sh down`.
+# See docs/testing-runs-on.md → "Remote / remote-container".
+name: container-desktop-dev
+
+services:
+  remote-engine:
+    build:
+      context: ./support/ssh-remote-sandbox
+      dockerfile: Containerfile
+    image: container-desktop-ssh-remote:dev
+    container_name: cd-remote-engine
+    hostname: cd-remote-engine
+    # docker-in-docker needs privileged; this is a throwaway, localhost-only sandbox — same trade-off as
+    # support/swarm-sandbox.sh.
+    privileged: true
+    environment:
+      # Plain unix socket, no TLS — the daemon is only reachable inside the container (over SSH).
+      DOCKER_TLS_CERTDIR: ""
+    ports:
+      # Bound to loopback only; the driver writes 2222 into targets.env as the remote's SSH port.
+      - "127.0.0.1:2222:22"
+    volumes:
+      - ./temp/ssh-remote-sandbox/authorized_keys:/root/.ssh/authorized_keys:ro
+      - remote-engine-data:/var/lib/docker
+    restart: unless-stopped
+
+volumes:
+  remote-engine-data:

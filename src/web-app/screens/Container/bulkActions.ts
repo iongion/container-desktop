@@ -13,7 +13,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ContainersAdapter } from "@/container-client/adapters/containers";
-import { type Container, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerStateList } from "@/container-client/types/container";
 import type { BulkAction } from "@/web-app/components/Bulk";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";

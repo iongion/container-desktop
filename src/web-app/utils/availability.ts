@@ -1,4 +1,4 @@
-import type { EngineConnectorAvailability } from "@/env/Types";
+import type { EngineConnectorAvailability } from "@/container-client/types/engine";
 
 export type AvailabilityDimension = "host" | "controller" | "controllerScope" | "program" | "api";
 

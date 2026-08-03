@@ -4,10 +4,10 @@ import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import type { ContainerImagePortMapping } from "@/env/Types";
+import type { ContainerImagePortMapping } from "@/container-client/types/image";
 
 // locals
-import { createPortMapping } from "@/utils";
+import { createPortMapping } from "@/web-app/screens/Image/portMappings";
 import "./PortMappingsForm.css";
 
 export interface PortMappingFormAction {

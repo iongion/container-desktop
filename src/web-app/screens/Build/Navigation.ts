@@ -4,7 +4,8 @@
 // native (local), scoped (WSL/Lima/podman-machine, engine inside the guest), and remote (SSH) — so
 // isBuildSupported gates the Images CTA/ConnectionSelect only against connectivity; see adapters/build.ts.
 
-import { type Connection, ContainerEngineHost } from "@/env/Types";
+import type { Connection } from "@/container-client/types/connection";
+import { ContainerEngineHost } from "@/container-client/types/engine";
 import { type AppBreadcrumb, connectionCrumb, crumb, rootCrumb } from "@/web-app/components/AppBreadcrumbs";
 import { pathTo } from "@/web-app/Navigator";
 

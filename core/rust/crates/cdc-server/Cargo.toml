@@ -1,0 +1,76 @@
+[package]
+name = "cdc-server"
+version = "0.1.0"
+description = "Headless connection server: the app's resource-sync and command-proxy shapes over a local socket."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# The whole server against the real engine on this machine (the design's exit criterion). Opt-in and never
+# part of a hermetic run: it starts an engine API service, and it is not reproducible on a machine with no
+# engine.
+live-server = []
+
+[dependencies]
+cdc-runtime.workspace = true
+# A server IS a host, so this is the crate that picks the platform. The
+# library stays generic over its capabilities — `host` is the one module that names the native ones,
+# and it is what the binary composes.
+cdc-runtime-host-native.workspace = true
+cdc-telemetry-host-native.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# `net` and a multi-thread scheduler are this crate's to add is where that was
+# decided: a listener needs real sockets, `signal` is what makes shutdown graceful rather than abrupt,
+# and `fs` is what removes a stale socket file. The PORTABLE four remain all `cdc-runtime` may have.
+tokio = { workspace = true, features = [
+  "net",
+  "io-util",
+  "rt-multi-thread",
+  "signal",
+  "fs",
+] }
+tokio-tungstenite.workspace = true
+# `wss://` for the remote listener: the TLS handshake happens BELOW the WebSocket one, so this wraps the
+# accepted stream and tungstenite is handed the result. Nothing above the wrap knows which it got.
+tokio-rustls.workspace = true
+# Reading the operator's certificate and key. The FORMAT decisions — an empty chain, three legal
+# spellings of a key — are `listen::tls`'s, and this is what they are made against.
+rustls-pemfile.workspace = true
+tokio-util.workspace = true
+futures-util.workspace = true
+subtle.workspace = true
+secrecy.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+# The fake capabilities are `cdc-runtime`'s, reached with `#[path]` rather than copied — one fake set,
+# parameterized, is the rule. These are what that file needs to compile here.
+async-trait.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+# A test is a CLIENT of this protocol, and it speaks it the way any client would: the same handshake
+# over an in-memory duplex, so the session is covered without binding anything.
+tokio-tungstenite.workspace = true
+futures-util.workspace = true
+tempfile.workspace = true
+# A certificate and a key for the `wss://` tests, made when the test runs. See the workspace manifest:
+# a PEM in the tree is a PEM that expires.
+rcgen.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+# Tests live in `tests/`, never in a `#[cfg(test)] mod tests`.
+test = false
+
+[[bin]]
+name = "cdc-server"
+path = "src/main.rs"

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { RegistriesAdapter } from "@/container-client/adapters/registries";
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { Registry } from "@/env/Types";
+import type { Registry } from "@/container-client/types/registry";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 

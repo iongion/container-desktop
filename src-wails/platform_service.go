@@ -79,7 +79,7 @@ func (s *PlatformService) IsFlatpak() bool {
 
 // GetUserDataPath returns the per-OS config dir + "container-desktop", honoring the
 // CONTAINER_DESKTOP_USER_DATA_DIR override (mirrors host.rs get_user_data_path). NOTE: must resolve
-// to the SAME path Electron/Tauri use so all backends share one config — cross-checked in Phase 1.
+// to the SAME path Tauri uses so both backends share one config — cross-checked in Phase 1.
 func (s *PlatformService) GetUserDataPath() (string, error) {
 	return userDataPath()
 }

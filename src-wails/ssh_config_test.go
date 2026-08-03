@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-// Ported from src-tauri/src/ssh_config.rs tests — the parser must stay byte-faithful to the node.ts subset.
+// Ported from src-tauri/src/ssh_config.rs tests — the two shells must parse the same subset identically.
 
 func TestParseSSHConfigBasicBlock(t *testing.T) {
 	hosts := parseSSHConfig("Host prod\n  HostName 10.0.0.1\n  Port 2222\n  User deploy\n  IdentityFile ~/.ssh/id_ed25519\n")

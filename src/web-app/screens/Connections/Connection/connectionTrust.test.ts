@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-
-import type { ProxyConfig } from "@/container-client/proxy";
-import { type CertAuthority, ContainerEngineHost, type RegistryTrustEntry } from "@/env/Types";
+import { ContainerEngineHost } from "@/container-client/types/engine";
+import type { ProxyConfig } from "@/container-client/types/network";
+import type { CertAuthority, RegistryTrustEntry } from "@/container-client/types/registry";
 import {
   connectionProxySummary,
   diffCertificates,

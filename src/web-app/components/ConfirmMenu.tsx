@@ -96,6 +96,7 @@ export interface ConfirmMenuProps {
   disabled?: boolean;
   children?: any;
   title?: string;
+  actionText?: string;
   tag?: any;
   onConfirm: ConfirmMenuRemoveHandler;
   // Notified whenever the popover opens/closes. The container list uses this to keep the (hover-gated) row
@@ -108,6 +109,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
   disabled,
   tag,
   title,
+  actionText,
   children,
   onConfirm,
   onOpenChange,
@@ -161,6 +163,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
       <ConfirmMenuItem
         tag={tag}
         title={title}
+        text={actionText}
         disabled={disabled}
         onConfirm={onActionConfirm}
         onCancel={onActionCancel}

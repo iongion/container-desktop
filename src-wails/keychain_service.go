@@ -17,7 +17,7 @@ import (
 //
 // Degraded fallback: when the OS vault is UNREACHABLE and the caller explicitly opts into degraded storage,
 // secrets are kept in a 0600 file (keychain-fallback.json, base64 per account) instead — the Tauri parity for
-// Electron's credentialsFs (safeStorage basic_text) path. This is NOT OS encryption (the opt-in gate warns the
+// degraded-vault path. This is NOT OS encryption (the opt-in gate warns the
 // user); the owner-only file mode is the real protection, base64 only keeps keys off disk in plaintext.
 type KeychainService struct{}
 
@@ -131,7 +131,7 @@ func keychainFallbackClear(account string) {
 }
 
 // Status round-trips a sentinel secret through the vault (set→get→delete). Any failure ⇒ unavailable +
-// degraded (the consumer then requires explicit opt-in before storing a key, mirroring Electron's safeStorage
+// degraded (the consumer then requires explicit opt-in before storing a key, mirroring the shared
 // degraded path). backend names the platform vault regardless of reachability. The renderer caches this per
 // session, so the one write probe never causes repeated keychain-access prompts.
 func (s *KeychainService) Status() EncryptionStatus {
@@ -174,7 +174,7 @@ func (s *KeychainService) Get(req KeychainAccountRequest) (*string, error) {
 }
 
 // KeychainSetRequest carries the secret to store. AllowDegraded is the renderer's opt-in for storing while the
-// vault is unavailable: on a vault-write failure the secret goes to the 0600 file instead (Electron basic_text
+// vault is unavailable: on a vault-write failure the secret goes to the 0600 file instead (the shared
 // parity); on a healthy vault the flag is inert and any stale degraded copy is dropped.
 type KeychainSetRequest struct {
 	Account       string `json:"account"`

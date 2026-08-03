@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { type ContainerLogsStream, ContainersAdapter } from "@/container-client/adapters/containers";
 import { createContainerLogDecoder } from "@/container-client/logs";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import type { TerminalHandle } from "@/web-app/components/Terminal";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 

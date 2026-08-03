@@ -1,15 +1,20 @@
 import { Intent } from "@blueprintjs/core";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import i18n from "@/i18n";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { formatQueryErrorMessage } from "@/web-app/domain/queryError";
 import CurrentEnvironment, { POLL_RATE_DEFAULT } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 
 const logger = createLogger("web.queryClient");
 
+export function shouldNotifyQueryError(query: { meta?: Record<string, unknown> }): boolean {
+  return query.meta?.suppressGlobalError !== true;
+}
+
 const queryCache = new QueryCache({
   onError: (error, query) => {
+    if (!shouldNotifyQueryError(query)) return;
     logger.error("Query error", query?.queryHash, error);
     Notification.show({
       intent: Intent.DANGER,

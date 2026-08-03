@@ -3,7 +3,9 @@ import { IconNames } from "@blueprintjs/icons";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngineHost, ContainerStateList, OperatingSystem } from "@/env/Types";
+import { ContainerStateList } from "@/container-client/types/container";
+import { ContainerEngineHost } from "@/container-client/types/engine";
+import { OperatingSystem } from "@/container-client/types/os";
 import i18n from "@/i18n";
 import { CopyButton } from "@/web-app/components/CopyButton";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";

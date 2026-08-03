@@ -22,13 +22,13 @@ describe("resolveCaptureBackend", () => {
   });
 
   it("reads the env var (case-insensitive)", () => {
-    process.env[ENV_KEY] = "ELECTRON";
-    expect(resolveCaptureBackend()).toBe("electron");
+    process.env[ENV_KEY] = "WAILS";
+    expect(resolveCaptureBackend()).toBe("wails");
   });
 
   it("prefers an explicit override over the env var", () => {
     process.env[ENV_KEY] = "tauri";
-    expect(resolveCaptureBackend("electron")).toBe("electron");
+    expect(resolveCaptureBackend("wails")).toBe("wails");
   });
 
   it("throws on an unknown backend", () => {

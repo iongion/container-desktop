@@ -65,23 +65,13 @@
   bottom: calc(var(--app-footer-height, 32px) + 5px);
   left: 5px;
   right: 5px;
-  height: 56%;
+  height: var(--console-height, 56%);
+  /* hard pixel floor mirroring CONSOLE_MIN_PX — guards the 250px minimum after a viewport shrink */
+  min-height: 250px;
   transform: translateY(calc(100% + 60px));
 }
 .AssistantConsoleRoot[data-variant="bottom"][data-open="true"] .AssistantConsole {
   transform: translateY(0);
-}
-.AssistantConsoleRoot[data-variant="bottom"] .AssistantConsole::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -1px;
-  width: 46px;
-  height: 4px;
-  transform: translateX(-50%);
-  border-radius: 3px;
-  background: var(--app-accent);
-  opacity: 0.7;
 }
 
 /* --- variant: TOP quake drop-down — full app width, under the header, 5px margins --- */
@@ -89,23 +79,59 @@
   top: calc(var(--app-header-height, 50px) + 5px);
   left: 5px;
   right: 5px;
-  height: 56%;
+  height: var(--console-height, 56%);
+  /* hard pixel floor mirroring CONSOLE_MIN_PX — guards the 250px minimum after a viewport shrink */
+  min-height: 250px;
   transform: translateY(calc(-100% - 60px));
 }
 .AssistantConsoleRoot[data-variant="top"][data-open="true"] .AssistantConsole {
   transform: translateY(0);
 }
-.AssistantConsoleRoot[data-variant="top"] .AssistantConsole::after {
-  content: "";
+
+/* --- drag-resize grip — a real element (replaces the old decorative ::after) that straddles the quake
+   panel's free edge so the pointer can resize the console vertically. The bottom quake's free edge is its
+   top (at the header); the top quake's is its bottom. Hidden for the right/center variants. --- */
+.AssistantConsoleResizeHandle {
   position: absolute;
-  left: 50%;
-  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  z-index: 2;
+}
+.AssistantConsoleResizeHandle::after {
+  content: "";
   width: 46px;
   height: 4px;
-  transform: translateX(-50%);
   border-radius: 3px;
   background: var(--app-accent);
   opacity: 0.7;
+  transition:
+    opacity 120ms ease,
+    width 120ms ease;
+}
+.AssistantConsoleResizeHandle:hover::after,
+.AssistantConsoleResizeHandle:active::after {
+  opacity: 1;
+  width: 62px;
+}
+.AssistantConsoleRoot[data-variant="bottom"] .AssistantConsoleResizeHandle {
+  top: -7px;
+}
+.AssistantConsoleRoot[data-variant="top"] .AssistantConsoleResizeHandle {
+  bottom: -8px;
+}
+.AssistantConsoleRoot:not([data-variant="top"]):not([data-variant="bottom"]) .AssistantConsoleResizeHandle {
+  display: none;
 }
 
 /* transparency preview — quake (top/bottom) variants only; the header slider drives --console-opacity. */
@@ -218,8 +244,8 @@
   display: none;
 }
 
-/* the shared conversation fills the console below the header */
-.AssistantConsole .AssistantConversation {
+/* the shared thread fills the console below the header */
+.AssistantConsole .AssistantThread {
   flex: 1;
   min-height: 0;
 }

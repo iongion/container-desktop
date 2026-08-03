@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { getDefaultConnectors } from "@/container-client/connection";
 import { createComposedHostClient } from "@/container-client/runtimes/registry";
-import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
+import { ContainerEngine, ContainerEngineHost } from "@/container-client/types/engine";
+import { OperatingSystem } from "@/container-client/types/os";
 
 describe("headless bootstrap", () => {
-  it("constructs a PODMAN_NATIVE host client under plain Node (globals wired, no Electron)", async () => {
+  it("constructs a PODMAN_NATIVE host client under plain Node (globals wired, no shell)", async () => {
     const connector = getDefaultConnectors(OperatingSystem.Linux).find(
       (c) => c.engine === ContainerEngine.PODMAN && c.host === ContainerEngineHost.PODMAN_NATIVE,
     );

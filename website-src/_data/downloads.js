@@ -1,8 +1,8 @@
 // Per-OS download matrix for the website.
 //
 // This is intentionally tiny: the actual list of platforms, arches and package
-// formats lives in support/build-matrix.cjs — the same module electron-builder
-// reads to decide what to build — so the download cards can never drift from
+// formats lives in support/build-matrix.cjs — the same module the Tauri packaging scripts
+// read to decide what to build — so the download cards can never drift from
 // what CI actually publishes. Add a format there and it shows up here for free.
 //
 // site.version tracks package.json, so links always match the current release

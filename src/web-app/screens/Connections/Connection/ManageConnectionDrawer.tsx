@@ -4,7 +4,7 @@ import type React from "react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Connection } from "@/env/Types";
+import type { Connection } from "@/container-client/types/connection";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ManageConnectionForm } from "./ManageConnectionForm";
 

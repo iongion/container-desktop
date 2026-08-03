@@ -3,8 +3,8 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Volume } from "@/env/Types";
-import { createLogger } from "@/platform/logger";
+import type { Volume } from "@/container-client/types/volume";
+import { createLogger } from "@/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";

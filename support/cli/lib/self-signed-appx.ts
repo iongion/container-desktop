@@ -4,7 +4,7 @@ import { PROJECT_HOME, projectVersion } from "@/cli/lib/paths";
 import { capture, run, runEnv } from "@/cli/lib/process";
 
 // Windows-only self-signed AppX signing chain (openssl -> jsign), ported 1:1 from tasks.py. Kept
-// for parity; the artifact names are the Electron-era `.exe`/`.appx` in release/.
+// for parity; the artifact names are the published `.exe`/`.appx` in release/.
 
 const TIMESTAMP_URLS = [
   "http://timestamp.sectigo.com/rfc3161",

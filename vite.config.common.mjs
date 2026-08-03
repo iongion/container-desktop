@@ -12,19 +12,17 @@ import pkg from "./package.json";
 // Injected into index.html's boot splash via the EJS context below so the static, pre-React chrome never
 // drifts from the live one. Dependency-free strings, safe to import at config-load time.
 import { BOOT_CHROME_BODY, BOOT_CHROME_SCRIPT, BOOT_CHROME_STYLE } from "./src/web-app/chrome/appChrome";
+import { makeAliases } from "./support/aliases.mjs";
 
 // module
 export const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 export const PROJECT_HOME = path.resolve(__dirname);
 export const APP_MAIN = "application";
-export const ELECTRON_VENDORS_CACHE_PATH = path.join(PROJECT_HOME, ".electron-vendors.cache.json");
-export function getElectronVendorsCache() {
-  if (fs.existsSync(ELECTRON_VENDORS_CACHE_PATH)) {
-    const cache = JSON.parse(fs.readFileSync(ELECTRON_VENDORS_CACHE_PATH, "utf8"));
-    return cache;
-  }
-  return { chrome: "128", node: "24" };
-}
+// The oldest engine the app must run on. Tauri's Linux target is WebKitGTK (the floor); Windows WebView2 and
+// macOS WKWebView are newer. Kept explicit so the renderer's downlevelling is a decision, not a side effect of
+// whatever browser some toolchain happened to bundle.
+export const WEBVIEW_BUILD_TARGET = ["safari17", "chrome120"];
+
 export function sourceEnv(env) {
   // template
   dotenv.config({ path: path.join(PROJECT_HOME, ".env") });
@@ -125,22 +123,8 @@ export function getCommonViteConfig({
     },
     resolve: merge.all([
       {
-        alias: {
-          // Build tooling lives in support/cli (run via tsx, not bundled here); kept in sync
-          // with tsconfig `paths` and vitest so `@/cli/*` resolves everywhere. Must precede the
-          // "@" -> src entry: alias matching is first-hit, and "@" would otherwise swallow "@/cli".
-          "@/cli": path.resolve(__dirname, "support/cli"),
-          "@": path.resolve(__dirname, "src"),
-          "@/container-client": path.resolve(__dirname, "src/container-client"),
-          "@/container-provisioning": path.resolve(__dirname, "src/container-provisioning"),
-          "@/env": path.resolve(__dirname, "src/env"),
-          "@/platform": path.resolve(__dirname, "src/platform"),
-          "@/resources": path.resolve(__dirname, "src/resources"),
-          "@/rpc": path.resolve(__dirname, "src/rpc"),
-          "@/utils": path.resolve(__dirname, "src/utils"),
-          "@/web-app": path.resolve(__dirname, "src/web-app"),
-          "@/ai-system": path.resolve(__dirname, "src/ai-system"),
-        },
+        // The @/… alias map is the single source in support/aliases.mjs (shared with the vitest configs).
+        alias: makeAliases(__dirname),
       },
       resolve ?? {},
     ]),

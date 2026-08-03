@@ -1,6 +1,6 @@
-import type { ProxyConfig } from "@/container-client/proxy";
 import { validateProxy } from "@/container-client/proxy";
-import type { GlobalUserSettingsOptions } from "@/env/Types";
+import type { ProxyConfig } from "@/container-client/types/network";
+import type { GlobalUserSettingsOptions } from "@/container-client/userSettings";
 
 export interface ProxyReachabilityResult {
   ok: boolean;

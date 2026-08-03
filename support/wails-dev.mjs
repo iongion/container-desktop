@@ -1,5 +1,5 @@
-// Wails dev launcher — the Wails analog of support/watch.mjs (Electron) and Tauri's beforeDevCommand.
-// It starts the SHARED Vite renderer dev server on :3000 (hot reload — the same server Electron and Tauri use),
+// Wails dev launcher — the Wails analog of Tauri's beforeDevCommand.
+// It starts the SHARED Vite renderer dev server on :3000 (hot reload — the same server Tauri uses),
 // waits for it to accept connections, then runs the Go shell (`go run`) with ENVIRONMENT=development so main.go's
 // appURL() points the Wails window at http://localhost:3000 instead of the embedded bundle. CONTAINER_DESKTOP_MOCK
 // (set by `yarn wails:dev:mock`) is inherited by the Go process. Ctrl-C / a child exit tears both down.
@@ -79,7 +79,7 @@ try {
 // WAILS_MCP=1 additionally builds with the `mcp` tag → Wails v3's built-in MCP server starts on
 // WAILS_MCP_PORT (default 9099) at http://127.0.0.1:<port>/mcp. That is the cross-platform remote-control
 // surface for Wails (WebKit2GTK/WKWebView have no CDP, and Wails has no WebDriver/automation), driven by
-// support/wails-mcp.mjs — the Wails analog of support/cdp.mjs (Electron) / webdriver/wdio.conf.js (Tauri).
+// support/wails-mcp.mjs — the Wails analog of webdriver/wdio.conf.js (Tauri).
 const mcpOn = ["1", "true", "yes"].includes(String(process.env.WAILS_MCP ?? "").toLowerCase());
 const goTags = mcpOn ? "gtk3,mcp" : "gtk3";
 const mcpEnv = mcpOn ? { WAILS_MCP_PORT: process.env.WAILS_MCP_PORT ?? "9099" } : {};
