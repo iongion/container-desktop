@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { agentImageBuildArgv, bundleAgentHost } from "@/cli/lib/agent-image";
 import { fetchAppx, fetchMsix } from "@/cli/lib/fetch-appx";
 import { commitRelease } from "@/cli/lib/git";
 import { createIcons } from "@/cli/lib/icons";
@@ -11,6 +12,7 @@ import { runBump, runManifestSync } from "@/cli/lib/release";
 import { publishMeta } from "@/cli/lib/release-meta";
 import { executeBundle } from "@/cli/lib/remote-build";
 import { installSelfSignedAppx, uninstallSelfSignedAppx } from "@/cli/lib/self-signed-appx";
+import { agentImageTag } from "@/pi-bridge/image";
 
 // Thin action layer: one function per invoke task. The heavy logic lives in lib/*; these wire the
 // commander options to it and keep index.ts pure wiring.
@@ -156,3 +158,15 @@ export {
   runManifestSync,
   uninstallSelfSignedAppx,
 };
+
+export async function runAgentImage(options: { engine?: string } = {}): Promise<void> {
+  const engine = options.engine ?? "podman";
+  const contextDir = path.join(PROJECT_HOME, "build/agent-image");
+  await bundleAgentHost({ root: PROJECT_HOME, outDir: contextDir });
+  const argv = agentImageBuildArgv({
+    tag: agentImageTag(projectVersion()),
+    contextDir,
+    dockerfile: path.join(contextDir, "Dockerfile"),
+  });
+  runEnv(`${engine} ${argv.join(" ")}`);
+}
