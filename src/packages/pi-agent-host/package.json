@@ -1,0 +1,11 @@
+{
+  "name": "@container-desktop/pi-agent-host",
+  "version": "6.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/main.ts",
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.83.0",
+    "ws": "8.18.3"
+  }
+}

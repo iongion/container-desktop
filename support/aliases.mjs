@@ -10,6 +10,7 @@ const PACKAGES = [
   "container-provisioning",
   "host-contract",
   "logger",
+  "pi-agent-host",
   "pi-bridge",
   "i18n",
   "platform",

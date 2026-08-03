@@ -176,6 +176,7 @@
   "devDependencies": {
     "@11ty/eleventy": "3.1.6",
     "@biomejs/biome": "2.5.5",
+    "@earendil-works/pi-coding-agent": "0.83.0",
     "@faker-js/faker": "10.5.0",
     "@tanstack/react-query-devtools": "5.101.4",
     "@tauri-apps/cli": "2.11.4",
