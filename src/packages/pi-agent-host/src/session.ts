@@ -1,6 +1,7 @@
 import {
   createAgentSessionFromServices,
   createAgentSessionServices,
+  DefaultPackageManager,
   type ExtensionAPI,
   type InlineExtension,
   initTheme,
@@ -15,6 +16,8 @@ import { GuiTui } from "@/pi-agent-host/guiTui";
 import { createHostRpc } from "@/pi-agent-host/hostRpc";
 import { createPermissionGateExtension } from "@/pi-agent-host/permissionGate";
 import { buildPiTheme, normalizeAppThemePalette } from "@/pi-agent-host/piTheme";
+import { createPluginService } from "@/pi-agent-host/plugins";
+import { collectResources } from "@/pi-agent-host/resources";
 import type { BridgeSessionHandle } from "@/pi-agent-host/server";
 import { createSurfaceRegistry } from "@/pi-agent-host/surfaces";
 import { createToolSurfaceRenderer, routeToolSurfaces } from "@/pi-agent-host/toolSurfaces";
@@ -87,9 +90,10 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
 
   const rpc = createHostRpc(emit);
 
-  // In-memory settings: the agent container has no user settings file to honour, and this keeps the
-  // session from writing one into the mounted plugin volume.
-  const settingsManager = SettingsManager.inMemory({});
+  // Settings are file-backed at `agentDir`, which is the named plugin volume: installing a plugin writes its
+  // source into `packages` there, so the set survives the session that installed it. `projectTrusted` stays
+  // false, so pi refuses project-scoped package storage — nothing is written into the user's workspace.
+  const settingsManager = SettingsManager.create(cwd, agentDir);
   const services = await createAgentSessionServices({
     cwd,
     agentDir,
@@ -155,6 +159,12 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     for (const mapped of mapAgentEvent(piEvent)) emit(mapped);
   });
 
+  // A second package manager over the same settings and agent dir. pi's resource loader keeps its own for
+  // resolution; this one exists so the GUI's install, remove and update run through the manager's public
+  // surface, including its progress callback.
+  const packageManager = new DefaultPackageManager({ cwd, agentDir, settingsManager });
+  const plugins = createPluginService({ packageManager, settings: settingsManager, emit });
+
   // `tui` is what the extensions see now: dialogs are answered by the app AND components render, because
   // every one of them is drawn to lines here and painted by an xterm surface in the renderer. A plugin
   // guarding on `mode === "tui"` takes its rich path and gets a surface that works.
@@ -164,6 +174,17 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     sessionId: session.sessionId,
     cwd,
     model: `${GATEWAY_PROVIDER_ID}/${modelId}`,
+    plugins,
+    listResources() {
+      return collectResources(services.resourceLoader);
+    },
+    async reload() {
+      await session.reload();
+      // The extensions that owned the open surfaces are gone; their frames would otherwise sit on screen
+      // with nothing behind them, taking keys no component reads.
+      surfaces.closeAll();
+      emit({ type: "plugins_changed" });
+    },
     surfaceInput(surfaceId, data) {
       guiUi.handleSurfaceInput(surfaceId, data);
     },

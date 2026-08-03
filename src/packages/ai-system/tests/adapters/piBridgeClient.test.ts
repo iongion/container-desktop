@@ -183,4 +183,73 @@ describe("createPiBridgeClient", () => {
     await client.respond("r2", { ok: false, error: "dismissed" });
     expect(JSON.parse(sent.at(-1) as string)).toMatchObject({ type: "host_response", ok: false, error: "dismissed" });
   });
+
+  // Plugin management needs answers, not fire-and-forget: the table renders what the container reports and an
+  // install that failed has to say so.
+  async function connectedClient() {
+    const { socket, sent } = fakeSocket();
+    const client = createPiBridgeClient({ url: "ws://127.0.0.1:1/", token: "tok", socketFactory: () => socket });
+    const connected = client.connect();
+    socket.onopen?.();
+    socket.onmessage?.({ data: READY });
+    await connected;
+    sent.length = 0;
+    return { socket, sent, client };
+  }
+
+  const lastId = (sent: string[]) => JSON.parse(sent.at(-1) as string).id as string;
+
+  it("resolves listPlugins with the result of the matching response", async () => {
+    const { socket, sent, client } = await connectedClient();
+    const payload = client.listPlugins();
+    const configured = [{ source: "npm:@foo/bar", scope: "user" as const, filtered: false }];
+    socket.onmessage?.({ data: encodeEvent({ type: "response", id: lastId(sent), success: true, result: { configured } }) });
+    await expect(payload).resolves.toEqual({ configured });
+  });
+
+  it("rejects a request whose response reports a failure", async () => {
+    const { socket, sent, client } = await connectedClient();
+    const install = client.installPlugin("npm:@foo/bar", "user");
+    socket.onmessage?.({
+      data: encodeEvent({ type: "response", id: lastId(sent), success: false, error: "registry down" }),
+    });
+    await expect(install).rejects.toThrow("registry down");
+  });
+
+  it("leaves a request pending when another command is answered", async () => {
+    const { socket, sent, client } = await connectedClient();
+    const settled: string[] = [];
+    void client.listResources().then(() => settled.push("resources"));
+    socket.onmessage?.({ data: encodeEvent({ type: "response", id: "someone-else", success: true }) });
+    await Promise.resolve();
+    expect(settled).toEqual([]);
+    socket.onmessage?.({ data: encodeEvent({ type: "response", id: lastId(sent), success: true, result: {} }) });
+    await Promise.resolve();
+    expect(settled).toEqual(["resources"]);
+  });
+
+  it("fails an in-flight request when the bridge closes", async () => {
+    const { socket, client } = await connectedClient();
+    const install = client.installPlugin("npm:@foo/bar", "user");
+    socket.onclose?.();
+    await expect(install).rejects.toThrow(/closed/i);
+  });
+
+  it("fails an in-flight request when the session is stopped", async () => {
+    const { client } = await connectedClient();
+    const install = client.installPlugin("npm:@foo/bar", "user");
+    client.close();
+    await expect(install).rejects.toThrow(/stopped/i);
+  });
+
+  it("sends plugins_update with no source when updating everything", async () => {
+    const { sent, client } = await connectedClient();
+    void client.updatePlugins();
+    expect(JSON.parse(sent.at(-1) as string)).toEqual({ id: expect.any(String), type: "plugins_update" });
+  });
+
+  it("refuses a request before the bridge is connected", async () => {
+    const client = createPiBridgeClient({ url: "ws://127.0.0.1:1/", token: "tok", socketFactory: () => fakeSocket().socket });
+    await expect(client.listPlugins()).rejects.toThrow(/not connected/i);
+  });
 });

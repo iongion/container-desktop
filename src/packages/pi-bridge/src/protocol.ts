@@ -63,6 +63,40 @@ export interface AppThemePalette {
   error: string;
 }
 
+// Which of pi's two package scopes an operation targets. `user` writes the agent-wide settings in the
+// mounted plugin volume; `project` writes the workspace's own, which pi only allows on a trusted project.
+export type PluginScope = "user" | "project";
+
+// One entry of pi's package settings, as the GUI sees it: `ConfiguredPackage` plus the one field
+// `listConfiguredPackages` flattens away — whether the entry has autoload turned off, which is what a
+// disabled plugin is.
+export interface ConfiguredPluginPackage {
+  source: string;
+  scope: PluginScope;
+  filtered: boolean;
+  installedPath?: string;
+  autoload?: boolean;
+}
+
+export interface PluginListPayload {
+  configured: ConfiguredPluginPackage[];
+}
+
+// What a loaded package contributes. `source` is the package that declared it, absent for anything the
+// user dropped straight into the agent directory.
+export interface ContributedResource {
+  name: string;
+  description?: string;
+  source?: string;
+}
+
+export interface ContributedResources {
+  extensions: Array<{ path: string; source?: string }>;
+  commands: ContributedResource[];
+  skills: ContributedResource[];
+  prompts: ContributedResource[];
+}
+
 export type BridgeCommand =
   | { id: string; type: "hello"; token: string; protocolVersion: number }
   | { id: string; type: "prompt"; text: string; streamingBehavior?: "steer" | "followUp" }
@@ -72,11 +106,26 @@ export type BridgeCommand =
   | { id: string; type: "surface_resize"; surfaceId: string; columns: number }
   // Partial on purpose: a token the webview could not resolve to a colour is left out, and the host
   // fills it from the app's own defaults rather than the renderer inventing one.
-  | { id: string; type: "set_theme"; palette: Partial<AppThemePalette> };
+  | { id: string; type: "set_theme"; palette: Partial<AppThemePalette> }
+  | { id: string; type: "plugins_list" }
+  | { id: string; type: "plugins_install"; source: string; scope: PluginScope }
+  | { id: string; type: "plugins_remove"; source: string; scope: PluginScope }
+  // No source means every configured package, which is what pi's own `update` does.
+  | { id: string; type: "plugins_update"; source?: string }
+  | { id: string; type: "plugins_check_updates" }
+  | { id: string; type: "plugins_set_enabled"; source: string; enabled: boolean; scope: PluginScope }
+  | { id: string; type: "resources_list" }
+  | { id: string; type: "session_reload" };
+
+// pi's ProgressEvent, split the way it reads: `action` is what is being done, `phase` how far along it is.
+export type PluginProgressAction = "install" | "remove" | "update" | "clone" | "pull";
+export type PluginProgressPhase = "start" | "progress" | "complete" | "error";
 
 export type BridgeEvent =
   | { type: "ready"; protocolVersion: number; sessionId: string; cwd: string; model?: string }
-  | { type: "response"; id: string; success: boolean; error?: string }
+  // `result` carries a command's answer: the plugin and resource lists are requests, not fire-and-forget
+  // notifications, so the client settles its pending call on this frame.
+  | { type: "response"; id: string; success: boolean; error?: string; result?: unknown }
   | { type: "assistant_delta"; text: string }
   | { type: "assistant_end"; text: string; stopReason: string }
   | { type: "tool_start"; toolCallId: string; toolName: string; args: unknown }
@@ -102,6 +151,17 @@ export type BridgeEvent =
       placement?: SurfaceOverlayPlacement;
     }
   | { type: "surface_closed"; surfaceId: string }
+  // Install and update run npm or git inside the container; these are the lines that make the wait legible.
+  | {
+      type: "plugin_progress";
+      source: string;
+      action: PluginProgressAction;
+      phase: PluginProgressPhase;
+      message?: string;
+    }
+  // Something about the installed set changed. Deliberately payload-free: the GUI refetches rather than
+  // patching a row from an event and drifting from what pi actually has.
+  | { type: "plugins_changed" }
   | {
       type: "host_request";
       requestId: string;
@@ -118,6 +178,14 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "surface_input",
   "surface_resize",
   "set_theme",
+  "plugins_list",
+  "plugins_install",
+  "plugins_remove",
+  "plugins_update",
+  "plugins_check_updates",
+  "plugins_set_enabled",
+  "resources_list",
+  "session_reload",
 ]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
@@ -136,6 +204,8 @@ export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "custom_message",
   "surface_frame",
   "surface_closed",
+  "plugin_progress",
+  "plugins_changed",
 ]);
 
 export class BridgeProtocolError extends Error {

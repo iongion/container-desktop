@@ -120,6 +120,57 @@ describe("pi-bridge codec", () => {
     });
   });
 
+  it("round-trips the plugin commands with their scope", () => {
+    const install = encodeCommand({ id: "c1", type: "plugins_install", source: "npm:@foo/bar", scope: "user" });
+    expect(decodeCommand(install)).toEqual({
+      id: "c1",
+      type: "plugins_install",
+      source: "npm:@foo/bar",
+      scope: "user",
+    });
+    const toggle = encodeCommand({
+      id: "c2",
+      type: "plugins_set_enabled",
+      source: "npm:@foo/bar",
+      enabled: false,
+      scope: "project",
+    });
+    expect(decodeCommand(toggle)).toEqual({
+      id: "c2",
+      type: "plugins_set_enabled",
+      source: "npm:@foo/bar",
+      enabled: false,
+      scope: "project",
+    });
+    for (const type of ["plugins_list", "plugins_update", "plugins_check_updates", "resources_list", "session_reload"]) {
+      expect(decodeCommand(JSON.stringify({ id: "c3", type }))).toMatchObject({ type });
+    }
+  });
+
+  it("round-trips a response carrying a result payload", () => {
+    const configured = [{ source: "npm:@foo/bar", scope: "user" as const, filtered: true, autoload: false }];
+    const decoded = decodeEvent(encodeEvent({ type: "response", id: "c1", success: true, result: { configured } }));
+    expect(decoded).toEqual({ type: "response", id: "c1", success: true, result: { configured } });
+  });
+
+  it("round-trips the plugin progress and change events", () => {
+    const progress = encodeEvent({
+      type: "plugin_progress",
+      source: "npm:@foo/bar",
+      action: "install",
+      phase: "progress",
+      message: "fetching",
+    });
+    expect(decodeEvent(progress)).toEqual({
+      type: "plugin_progress",
+      source: "npm:@foo/bar",
+      action: "install",
+      phase: "progress",
+      message: "fetching",
+    });
+    expect(decodeEvent(encodeEvent({ type: "plugins_changed" }))).toEqual({ type: "plugins_changed" });
+  });
+
   it("no longer accepts the superseded ui_request event", () => {
     expect(() => decodeEvent(JSON.stringify({ type: "ui_request", requestId: "r1", method: "confirm" }))).toThrow(
       BridgeProtocolError,

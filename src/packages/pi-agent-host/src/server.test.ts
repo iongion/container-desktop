@@ -16,6 +16,16 @@ function harness(token = "tok") {
     surfaceInput: vi.fn(),
     surfaceResize: vi.fn(),
     setThemePalette: vi.fn(),
+    plugins: {
+      list: vi.fn(() => ({ configured: [{ source: "npm:@foo/bar", scope: "user" as const, filtered: false }] })),
+      install: vi.fn(async () => {}),
+      remove: vi.fn(async () => {}),
+      update: vi.fn(async () => {}),
+      checkUpdates: vi.fn(async () => ["npm:@foo/bar"]),
+      setEnabled: vi.fn(async () => {}),
+    },
+    listResources: vi.fn(() => ({ extensions: [], commands: [{ name: "probe" }], skills: [], prompts: [] })),
+    reload: vi.fn(async () => {}),
   };
   const attached = attachBridgeConnection(
     {
@@ -89,6 +99,61 @@ describe("attachBridgeConnection", () => {
       encodeCommand({ id: "c2", type: "host_response", requestId: "r1", ok: true, value: "yes" }),
     );
     expect(h.session.settleHostResponse).toHaveBeenCalledWith("r1", { ok: true, value: "yes", error: undefined });
+  });
+
+  it("answers plugins_list with the payload as the response result", async () => {
+    const h = harness();
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    h.sent.length = 0;
+    await h.attached.handleFrame(encodeCommand({ id: "c2", type: "plugins_list" }));
+    expect(parsed(h.sent)).toEqual([
+      {
+        type: "response",
+        id: "c2",
+        success: true,
+        result: { configured: [{ source: "npm:@foo/bar", scope: "user", filtered: false }] },
+      },
+    ]);
+  });
+
+  it("answers resources_list with the contributed resources", async () => {
+    const h = harness();
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    h.sent.length = 0;
+    await h.attached.handleFrame(encodeCommand({ id: "c2", type: "resources_list" }));
+    expect(parsed(h.sent)[0].result.commands).toEqual([{ name: "probe" }]);
+  });
+
+  it("routes the plugin mutations to the service with their scope", async () => {
+    const h = harness();
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c2", type: "plugins_install", source: "npm:@foo/baz", scope: "user" }),
+    );
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c3", type: "plugins_remove", source: "npm:@foo/bar", scope: "user" }),
+    );
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c4", type: "plugins_set_enabled", source: "npm:@foo/bar", enabled: false, scope: "user" }),
+    );
+    await h.attached.handleFrame(encodeCommand({ id: "c5", type: "plugins_update" }));
+    await h.attached.handleFrame(encodeCommand({ id: "c6", type: "session_reload" }));
+    expect(h.session.plugins.install).toHaveBeenCalledWith("npm:@foo/baz", "user");
+    expect(h.session.plugins.remove).toHaveBeenCalledWith("npm:@foo/bar", "user");
+    expect(h.session.plugins.setEnabled).toHaveBeenCalledWith("npm:@foo/bar", false, "user");
+    expect(h.session.plugins.update).toHaveBeenCalledWith(undefined);
+    expect(h.session.reload).toHaveBeenCalled();
+  });
+
+  it("reports a failing plugin install as an unsuccessful response", async () => {
+    const h = harness();
+    (h.session.plugins.install as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("registry down"));
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    h.sent.length = 0;
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c2", type: "plugins_install", source: "npm:@foo/baz", scope: "user" }),
+    );
+    expect(parsed(h.sent)).toEqual([{ type: "response", id: "c2", success: false, error: "registry down" }]);
   });
 
   it("emit() only reaches the client after the handshake", async () => {

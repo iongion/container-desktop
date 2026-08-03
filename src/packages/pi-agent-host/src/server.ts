@@ -1,9 +1,11 @@
 import type { HostResponse } from "@/pi-agent-host/hostRpc";
+import type { PluginService } from "@/pi-agent-host/plugins";
 import { decodeCommand, encodeEvent } from "@/pi-bridge/codec";
 import {
   type AppThemePalette,
   type BridgeCommand,
   type BridgeEvent,
+  type ContributedResources,
   PI_BRIDGE_PROTOCOL_VERSION,
 } from "@/pi-bridge/protocol";
 
@@ -22,6 +24,11 @@ export interface BridgeSessionHandle {
   surfaceInput(surfaceId: string, data: string): void;
   surfaceResize(surfaceId: string, columns: number): void;
   setThemePalette(palette: Partial<AppThemePalette>): void;
+  plugins: PluginService;
+  listResources(): ContributedResources;
+  // pi's own reload: settings, resources and the tool runtime, keeping the UI bindings. What makes a
+  // freshly installed plugin live without restarting the container.
+  reload(): Promise<void>;
 }
 
 export interface AttachedBridgeConnection {
@@ -42,8 +49,15 @@ export function attachBridgeConnection(
     if (!greeted && event.type !== "error" && event.type !== "response") return;
     connection.send(encodeEvent(event));
   };
-  const respond = (id: string, success: boolean, error?: string) =>
-    connection.send(encodeEvent(error ? { type: "response", id, success, error } : { type: "response", id, success }));
+  const respond = (id: string, success: boolean, error?: string, result?: unknown) => {
+    if (error) {
+      connection.send(encodeEvent({ type: "response", id, success, error }));
+      return;
+    }
+    connection.send(
+      encodeEvent(result === undefined ? { type: "response", id, success } : { type: "response", id, success, result }),
+    );
+  };
 
   const handshake = (command: Extract<BridgeCommand, { type: "hello" }>) => {
     if (command.token !== token) {
@@ -65,7 +79,8 @@ export function attachBridgeConnection(
     });
   };
 
-  const dispatch = async (command: BridgeCommand): Promise<void> => {
+  // A command that answers with data returns it; the rest return undefined and the response carries no result.
+  const dispatch = async (command: BridgeCommand): Promise<unknown> => {
     switch (command.type) {
       case "prompt":
         await session.prompt(command.text, command.streamingBehavior);
@@ -88,6 +103,27 @@ export function attachBridgeConnection(
         return;
       case "set_theme":
         session.setThemePalette(command.palette);
+        return;
+      case "plugins_list":
+        return session.plugins.list();
+      case "plugins_install":
+        await session.plugins.install(command.source, command.scope);
+        return;
+      case "plugins_remove":
+        await session.plugins.remove(command.source, command.scope);
+        return;
+      case "plugins_update":
+        await session.plugins.update(command.source);
+        return;
+      case "plugins_check_updates":
+        return session.plugins.checkUpdates();
+      case "plugins_set_enabled":
+        await session.plugins.setEnabled(command.source, command.enabled, command.scope);
+        return;
+      case "resources_list":
+        return session.listResources();
+      case "session_reload":
+        await session.reload();
         return;
       case "hello":
         return;
@@ -113,8 +149,8 @@ export function attachBridgeConnection(
         return;
       }
       try {
-        await dispatch(command);
-        respond(command.id, true);
+        const result = await dispatch(command);
+        respond(command.id, true, undefined, result);
       } catch (error) {
         respond(command.id, false, (error as Error).message);
       }

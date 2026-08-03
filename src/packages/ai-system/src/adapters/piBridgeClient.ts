@@ -1,6 +1,14 @@
 import { createLogger } from "@/logger";
 import { decodeEvent, encodeCommand } from "@/pi-bridge/codec";
-import { type AppThemePalette, type BridgeEvent, PI_BRIDGE_PROTOCOL_VERSION } from "@/pi-bridge/protocol";
+import {
+  type AppThemePalette,
+  type BridgeCommand,
+  type BridgeEvent,
+  type ContributedResources,
+  PI_BRIDGE_PROTOCOL_VERSION,
+  type PluginListPayload,
+  type PluginScope,
+} from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 
 const logger = createLogger("ai.piBridgeClient");
@@ -33,6 +41,16 @@ export interface PiBridgeClient {
   surfaceResize(surfaceId: string, columns: number): Promise<void>;
   // The app's `--app-*` colours, so the container can derive a pi theme that matches the running app.
   setTheme(palette: Partial<AppThemePalette>): Promise<void>;
+  // Plugin management. Unlike the fire-and-forget commands above these are real requests: the caller needs
+  // the answer, or needs to know an install failed and why.
+  listPlugins(): Promise<PluginListPayload>;
+  installPlugin(source: string, scope: PluginScope): Promise<void>;
+  removePlugin(source: string, scope: PluginScope): Promise<void>;
+  updatePlugins(source?: string): Promise<void>;
+  checkPluginUpdates(): Promise<string[]>;
+  setPluginEnabled(source: string, enabled: boolean, scope: PluginScope): Promise<void>;
+  listResources(): Promise<ContributedResources>;
+  reloadSession(): Promise<void>;
   onEvent(listener: (event: BridgeEvent) => void): () => void;
   close(): void;
 }
@@ -43,6 +61,11 @@ export interface PiBridgeClient {
 const CONNECT_ATTEMPTS = 40;
 const CONNECT_DELAY_MS = 250;
 
+// A read is answered from memory, so a slow one means something is wrong. An install runs npm or git inside
+// the container against a registry, which legitimately takes minutes.
+const READ_TIMEOUT_MS = 30_000;
+const MUTATION_TIMEOUT_MS = 600_000;
+
 export function createPiBridgeClient(options: {
   url: string;
   token: string;
@@ -51,6 +74,10 @@ export function createPiBridgeClient(options: {
 }): PiBridgeClient {
   const listeners = new Set<(event: BridgeEvent) => void>();
   let socket: WebSocketLike | undefined;
+  const pending = new Map<
+    string,
+    { settle: (result: unknown) => void; fail: (error: Error) => void; timer: ReturnType<typeof setTimeout> }
+  >();
 
   const fanout = (event: BridgeEvent) => {
     for (const listener of [...listeners]) {
@@ -61,6 +88,36 @@ export function createPiBridgeClient(options: {
         logger.error("bridge listener threw", error);
       }
     }
+  };
+
+  const settleResponse = (event: Extract<BridgeEvent, { type: "response" }>) => {
+    const waiting = pending.get(event.id);
+    if (!waiting) return;
+    pending.delete(event.id);
+    clearTimeout(waiting.timer);
+    if (event.success) waiting.settle(event.result);
+    else waiting.fail(new Error(event.error ?? "the agent rejected the command"));
+  };
+
+  // A socket that dies mid-install must fail the call, not leave a spinner up until the timeout.
+  const failAllPending = (reason: string) => {
+    for (const [id, waiting] of [...pending]) {
+      pending.delete(id);
+      clearTimeout(waiting.timer);
+      waiting.fail(new Error(reason));
+    }
+  };
+
+  const request = <T>(command: BridgeCommand, timeoutMs: number): Promise<T> => {
+    if (!socket) return Promise.reject(new Error("the agent bridge is not connected"));
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pending.delete(command.id);
+        reject(new Error(`${command.type} timed out after ${Math.round(timeoutMs / 1000)}s`));
+      }, timeoutMs);
+      pending.set(command.id, { settle: (result) => resolve(result as T), fail: reject, timer });
+      socket?.send(encodeCommand(command));
+    });
   };
 
   return {
@@ -113,9 +170,13 @@ export function createPiBridgeClient(options: {
               done = true;
               resolve();
             }
+            if (event.type === "response") settleResponse(event);
             fanout(event);
           };
-          created.onclose = () => failed(new Error("bridge closed before ready"));
+          created.onclose = () => {
+            failAllPending("the agent bridge closed");
+            failed(new Error("bridge closed before ready"));
+          };
           created.onerror = (error) => {
             logger.error("bridge socket error", error);
             failed(new Error("bridge socket error"));
@@ -143,11 +204,37 @@ export function createPiBridgeClient(options: {
     async setTheme(palette: Partial<AppThemePalette>): Promise<void> {
       socket?.send(encodeCommand({ id: randomUUID(), type: "set_theme", palette }));
     },
+    listPlugins(): Promise<PluginListPayload> {
+      return request({ id: randomUUID(), type: "plugins_list" }, READ_TIMEOUT_MS);
+    },
+    installPlugin(source: string, scope: PluginScope): Promise<void> {
+      return request({ id: randomUUID(), type: "plugins_install", source, scope }, MUTATION_TIMEOUT_MS);
+    },
+    removePlugin(source: string, scope: PluginScope): Promise<void> {
+      return request({ id: randomUUID(), type: "plugins_remove", source, scope }, MUTATION_TIMEOUT_MS);
+    },
+    updatePlugins(source?: string): Promise<void> {
+      const id = randomUUID();
+      return request(source ? { id, type: "plugins_update", source } : { id, type: "plugins_update" }, MUTATION_TIMEOUT_MS);
+    },
+    checkPluginUpdates(): Promise<string[]> {
+      return request({ id: randomUUID(), type: "plugins_check_updates" }, MUTATION_TIMEOUT_MS);
+    },
+    setPluginEnabled(source: string, enabled: boolean, scope: PluginScope): Promise<void> {
+      return request({ id: randomUUID(), type: "plugins_set_enabled", source, enabled, scope }, READ_TIMEOUT_MS);
+    },
+    listResources(): Promise<ContributedResources> {
+      return request({ id: randomUUID(), type: "resources_list" }, READ_TIMEOUT_MS);
+    },
+    reloadSession(): Promise<void> {
+      return request({ id: randomUUID(), type: "session_reload" }, MUTATION_TIMEOUT_MS);
+    },
     onEvent(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
     close() {
+      failAllPending("the agent session was stopped");
       socket?.close();
       listeners.clear();
     },
