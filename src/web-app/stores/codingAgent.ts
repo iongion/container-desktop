@@ -98,6 +98,18 @@ async function rememberedVerdict(rule: PermissionRule) {
   }
 }
 
+// A rejection has to stop the agent, not just answer it. pi hands the block back to the model as a tool error
+// and the model retries the same command straight away — measured against a real model, that turns one "no"
+// into an approval card every second. Aborting makes one "no" mean stop, and the user can then steer.
+async function stopAfterRejection(client: PiBridgeClient | undefined): Promise<void> {
+  try {
+    await client?.abort();
+  } catch (error) {
+    // The rejection itself already reached the container; a failed abort must not surface as a failed answer.
+    logger.error("unable to stop the agent after a rejection", error);
+  }
+}
+
 // A rule needs the session's workspace and connection to be scoped, so there is nothing to remember before a
 // session exists.
 function approvalRule(
@@ -302,6 +314,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
           set((state) => ({
             view: projectPiThreadView(state.view, { type: "approval_settled", requestId, allowed: false }),
           }));
+          await stopAfterRejection(get().client);
         }
         return;
       }
@@ -326,6 +339,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     set((state) => ({
       view: projectPiThreadView(state.view, { type: "approval_settled", requestId: approvalId, allowed: allow }),
     }));
+    if (!allow) await stopAfterRejection(get().client);
     if (permissionMode() !== "remember") return;
     await rememberVerdict(get(), approvalId, allow);
   },

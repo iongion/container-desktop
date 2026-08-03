@@ -144,6 +144,23 @@ describe("projectPiThreadView", () => {
     expect(view.timeline).toEqual([]);
   });
 
+  it("marks an aborted turn stopped and goes idle, with no error item", () => {
+    const view = project([
+      { type: "assistant_delta", text: "half a th" },
+      { type: "assistant_end", text: "half a th", stopReason: "aborted" },
+    ]);
+    expect(view.timeline).toHaveLength(1);
+    expect(view.timeline[0]).toMatchObject({ kind: "message", status: "stopped", content: "half a th" });
+    expect(view.phase).toBe("idle");
+    expect(() => threadViewSchema.parse(view)).not.toThrow();
+  });
+
+  it("adds no bubble when an aborted turn produced nothing", () => {
+    const view = project([{ type: "assistant_end", text: "", stopReason: "aborted" }]);
+    expect(view.timeline).toEqual([]);
+    expect(view.phase).toBe("idle");
+  });
+
   it("ignores a settle for an approval it never saw", () => {
     const view = projectPiThreadView(emptyPiThreadView("t1"), {
       type: "approval_settled",

@@ -32,10 +32,17 @@ export interface PiBridgeClient {
   close(): void;
 }
 
+// The container's bridge binds its port a few hundred milliseconds AFTER `podman run --detach` returns, so a
+// single-shot connect is a coin flip: the first attempt is reset and the session start fails for a reason that
+// has nothing to do with the session. Retry until the port answers, then behave exactly as before.
+const CONNECT_ATTEMPTS = 40;
+const CONNECT_DELAY_MS = 250;
+
 export function createPiBridgeClient(options: {
   url: string;
   token: string;
   socketFactory?: (url: string) => WebSocketLike;
+  connectRetry?: { attempts: number; delayMs: number };
 }): PiBridgeClient {
   const listeners = new Set<(event: BridgeEvent) => void>();
   let socket: WebSocketLike | undefined;
@@ -53,43 +60,64 @@ export function createPiBridgeClient(options: {
 
   return {
     connect(): Promise<void> {
+      const attempts = options.connectRetry?.attempts ?? CONNECT_ATTEMPTS;
+      const delayMs = options.connectRetry?.delayMs ?? CONNECT_DELAY_MS;
       return new Promise<void>((resolve, reject) => {
-        const created = options.socketFactory
-          ? options.socketFactory(options.url)
-          : (new WebSocket(options.url) as unknown as WebSocketLike);
-        socket = created;
+        let attempt = 0;
         let ready = false;
-        created.onopen = () => {
-          created.send(
-            encodeCommand({
-              id: randomUUID(),
-              type: "hello",
-              token: options.token,
-              protocolVersion: PI_BRIDGE_PROTOCOL_VERSION,
-            }),
-          );
+
+        const open = () => {
+          attempt += 1;
+          const created = options.socketFactory
+            ? options.socketFactory(options.url)
+            : (new WebSocket(options.url) as unknown as WebSocketLike);
+          socket = created;
+          // One attempt reports one outcome: a refused socket fires both error and close, and each must not
+          // schedule its own retry.
+          let done = false;
+          const failed = (error: Error) => {
+            if (ready || done) return;
+            done = true;
+            if (attempt >= attempts) {
+              reject(error);
+              return;
+            }
+            setTimeout(open, delayMs);
+          };
+
+          created.onopen = () => {
+            created.send(
+              encodeCommand({
+                id: randomUUID(),
+                type: "hello",
+                token: options.token,
+                protocolVersion: PI_BRIDGE_PROTOCOL_VERSION,
+              }),
+            );
+          };
+          created.onmessage = (message) => {
+            let event: BridgeEvent;
+            try {
+              event = decodeEvent(String(message.data));
+            } catch (error) {
+              fanout({ type: "error", message: (error as Error).message });
+              return;
+            }
+            if (event.type === "ready" && !ready) {
+              ready = true;
+              done = true;
+              resolve();
+            }
+            fanout(event);
+          };
+          created.onclose = () => failed(new Error("bridge closed before ready"));
+          created.onerror = (error) => {
+            logger.error("bridge socket error", error);
+            failed(new Error("bridge socket error"));
+          };
         };
-        created.onmessage = (message) => {
-          let event: BridgeEvent;
-          try {
-            event = decodeEvent(String(message.data));
-          } catch (error) {
-            fanout({ type: "error", message: (error as Error).message });
-            return;
-          }
-          if (event.type === "ready" && !ready) {
-            ready = true;
-            resolve();
-          }
-          fanout(event);
-        };
-        created.onclose = () => {
-          if (!ready) reject(new Error("bridge closed before ready"));
-        };
-        created.onerror = (error) => {
-          logger.error("bridge socket error", error);
-          if (!ready) reject(new Error("bridge socket error"));
-        };
+
+        open();
       });
     },
     async prompt(text: string): Promise<void> {

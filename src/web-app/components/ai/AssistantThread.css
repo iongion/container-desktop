@@ -269,6 +269,10 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  align-items: flex-start;
+}
+.AssistantApproval .bp6-tag {
+  max-width: 100%;
 }
 .AssistantOutput {
   flex-shrink: 0;

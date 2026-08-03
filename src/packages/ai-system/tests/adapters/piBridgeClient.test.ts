@@ -32,11 +32,75 @@ describe("createPiBridgeClient", () => {
 
   it("rejects connect when the socket closes before ready", async () => {
     const { socket } = fakeSocket();
-    const client = createPiBridgeClient({ url: "ws://127.0.0.1:1/", token: "tok", socketFactory: () => socket });
+    const client = createPiBridgeClient({
+      url: "ws://127.0.0.1:1/",
+      token: "tok",
+      socketFactory: () => socket,
+      connectRetry: { attempts: 1, delayMs: 0 },
+    });
     const connected = client.connect();
     socket.onopen?.();
     socket.onclose?.();
     await expect(connected).rejects.toThrow(/closed/i);
+  });
+
+  // The container's bridge binds its port a few hundred milliseconds after `podman run --detach` returns, so
+  // a single-shot connect loses the race and the whole session start fails. Measured: the first attempt is
+  // reset, the next one 250ms later is accepted.
+  it("retries a connection that is refused before the container's bridge is listening", async () => {
+    const sockets = [fakeSocket(), fakeSocket()];
+    let created = 0;
+    const client = createPiBridgeClient({
+      url: "ws://127.0.0.1:1/",
+      token: "tok",
+      socketFactory: () => sockets[created++].socket,
+      connectRetry: { attempts: 5, delayMs: 1 },
+    });
+    const connected = client.connect();
+    sockets[0].socket.onerror?.(new Error("ECONNRESET"));
+    await vi.waitFor(() => expect(created).toBe(2));
+    sockets[1].socket.onopen?.();
+    sockets[1].socket.onmessage?.({ data: READY });
+    await expect(connected).resolves.toBeUndefined();
+    expect(JSON.parse(sockets[1].sent[0])).toMatchObject({ type: "hello" });
+  });
+
+  it("gives up after the configured number of attempts", async () => {
+    let created = 0;
+    const client = createPiBridgeClient({
+      url: "ws://127.0.0.1:1/",
+      token: "tok",
+      socketFactory: () => {
+        created += 1;
+        const { socket } = fakeSocket();
+        setTimeout(() => socket.onerror?.(new Error("ECONNRESET")), 0);
+        return socket;
+      },
+      connectRetry: { attempts: 3, delayMs: 1 },
+    });
+    await expect(client.connect()).rejects.toThrow(/socket error/i);
+    expect(created).toBe(3);
+  });
+
+  it("does not reconnect when the socket drops after it was ready", async () => {
+    let created = 0;
+    const { socket } = fakeSocket();
+    const client = createPiBridgeClient({
+      url: "ws://127.0.0.1:1/",
+      token: "tok",
+      socketFactory: () => {
+        created += 1;
+        return socket;
+      },
+      connectRetry: { attempts: 5, delayMs: 1 },
+    });
+    const connected = client.connect();
+    socket.onopen?.();
+    socket.onmessage?.({ data: READY });
+    await connected;
+    socket.onclose?.();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(created).toBe(1);
   });
 
   it("forwards decoded events to listeners and stops after unsubscribe", async () => {

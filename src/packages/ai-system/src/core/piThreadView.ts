@@ -83,10 +83,22 @@ export function projectPiThreadView(view: ThreadView, event: PiThreadViewEvent):
     }
 
     case "assistant_end": {
+      // An abort is the user's own Stop or tool rejection: the turn reads as stopped and the session is idle
+      // again, never as a model error.
+      const aborted = event.stopReason === "aborted";
+      const status = aborted
+        ? ("stopped" as const)
+        : event.stopReason === "error"
+          ? ("error" as const)
+          : ("complete" as const);
       const streaming = view.streamingAssistant;
       if (!streaming) {
+        // Nothing was said and nothing is streaming — an empty bubble is noise, which is exactly what an
+        // aborted turn with no output produces.
+        if (!event.text) return { ...next, ...(aborted ? { phase: "idle" as const } : {}) };
         return {
           ...next,
+          ...(aborted ? { phase: "idle" as const } : {}),
           timeline: [
             ...view.timeline,
             {
@@ -95,20 +107,17 @@ export function projectPiThreadView(view: ThreadView, event: PiThreadViewEvent):
               role: "assistant",
               content: event.text,
               delivery: "applied",
-              status: event.stopReason === "error" ? "error" : "complete",
+              status,
             },
           ],
         };
       }
       return {
         ...next,
+        ...(aborted ? { phase: "idle" as const } : {}),
         timeline: view.timeline.map((item, index) =>
           index === streaming.timelineIndex && item.kind === "message"
-            ? {
-                ...item,
-                content: event.text || item.content,
-                status: event.stopReason === "error" ? "error" : "complete",
-              }
+            ? { ...item, content: event.text || item.content, status }
             : item,
         ),
         streamingAssistant: undefined,

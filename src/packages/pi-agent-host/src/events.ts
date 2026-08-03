@@ -44,6 +44,12 @@ export function mapAgentEvent(event: PiAgentEvent): BridgeEvent[] {
       const message = event.message;
       if (message?.role !== "assistant") return [];
       const text = textOf(message.content);
+      // An abort is the user stopping the agent — pressing Stop, or rejecting a tool call. pi reports it as
+      // stopReason "aborted" WITH an errorMessage, so it must be recognised before the error branch or the
+      // user's own decision comes back as a red error callout.
+      if (message.stopReason === "aborted") {
+        return [{ type: "assistant_end", text, stopReason: "aborted" }];
+      }
       // A provider failure arrives as a finished assistant message with stopReason "error" — not as a
       // thrown prompt. Mapping it to assistant_end alone renders as a silent empty reply, which is
       // indistinguishable from a hung UI, so surface the error too.

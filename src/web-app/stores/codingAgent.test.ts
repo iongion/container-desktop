@@ -1,12 +1,25 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import type { PiBridgeClient } from "@/ai-system/adapters/piBridgeClient";
-import type { AIPermissionMode } from "@/ai-system/core/permissions";
+import type { AIPermissionMode, PermissionsSnapshot } from "@/ai-system/core/permissions";
+import { toolRule } from "@/ai-system/core/permissions";
+import { piPermissionContext } from "@/ai-system/core/piApprovals";
 import { emptyPiThreadView } from "@/ai-system/core/piThreadView";
 import type { HostRequestEvent } from "@/ai-system/core/uiRequests";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { emptyCodingAgentChrome, useCodingAgentStore } from "@/web-app/stores/codingAgent";
+
+// The permissions cache lives behind window.AI; the hermetic suite has no webview, so the bridge is installed
+// per test and removed again rather than left on the global.
+function withAIBridge(snapshot: PermissionsSnapshot) {
+  const bridge = {
+    listPermissions: vi.fn(async () => snapshot),
+    addPermission: vi.fn(async () => snapshot),
+  };
+  (globalThis as { window?: unknown }).window = { AI: bridge };
+  return bridge;
+}
 
 const spec = { workspacePath: "/work", agentContainerName: "cd-agent-abc" } as PiAgentSessionSpec;
 
@@ -45,6 +58,10 @@ function setPermissionMode(permissionMode: AIPermissionMode) {
 describe("useCodingAgentStore host requests", () => {
   beforeEach(() => {
     setPermissionMode("ask");
+  });
+
+  afterEach(() => {
+    delete (globalThis as { window?: unknown }).window;
   });
 
   it("shows an approval card and answers nothing until the user decides", async () => {
@@ -91,14 +108,66 @@ describe("useCodingAgentStore host requests", () => {
     expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({ status: "rejected" });
   });
 
+  // Measured against a real model: pi feeds the block back as a tool error and the agent immediately retries
+  // the same command, so a rejection that only answers "no" asks the user again every second.
+  it("stops the agent after a rejection instead of letting it retry the same call", async () => {
+    const { client } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "bash", args: { command: "rm -rf /" } }));
+    await useCodingAgentStore.getState().resolveApproval("r1", "reject");
+    expect(client.abort).toHaveBeenCalledTimes(1);
+  });
+
   it("sends the user's approval to the container and settles the card", async () => {
-    const { responses } = attachFakeClient();
+    const { responses, client } = attachFakeClient();
     await useCodingAgentStore
       .getState()
       .handleHostRequest(hostRequest("approval", { toolName: "bash", args: { command: "ls" } }));
     await useCodingAgentStore.getState().resolveApproval("r1", "allow");
     expect(responses[0].response).toEqual({ ok: true, value: { allow: true } });
     expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({ status: "allowed" });
+    expect(client.abort).not.toHaveBeenCalled();
+  });
+
+  it("honours a remembered block without a card, and stops the agent", async () => {
+    setPermissionMode("remember");
+    const blocked = toolRule(piPermissionContext({ workspacePath: "/work", connectionId: "podman-1" }), "bash", {
+      command: "rm -rf /",
+    });
+    withAIBridge({ version: "2.0.0", allowed: [], blocked: [blocked], status: "ok", path: "/tmp/p.json" });
+    const { client, responses } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "bash", args: { command: "rm -rf /" } }));
+    expect(responses[0].response).toMatchObject({ ok: true, value: { allow: false } });
+    expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({ kind: "approval", status: "rejected" });
+    expect(client.abort).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs a remembered allow with no card at all", async () => {
+    setPermissionMode("remember");
+    const allowed = toolRule(piPermissionContext({ workspacePath: "/work", connectionId: "podman-1" }), "bash", {
+      command: "ls",
+    });
+    withAIBridge({ version: "2.0.0", allowed: [allowed], blocked: [], status: "ok", path: "/tmp/p.json" });
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "bash", args: { command: "ls" } }));
+    expect(responses[0].response).toEqual({ ok: true, value: { allow: true } });
+    expect(useCodingAgentStore.getState().view.timeline).toEqual([]);
+  });
+
+  it("remembers the user's decision when the mode says to", async () => {
+    setPermissionMode("remember");
+    const bridge = withAIBridge({ version: "2.0.0", allowed: [], blocked: [], status: "ok", path: "/tmp/p.json" });
+    attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "bash", args: { command: "ls" } }));
+    await useCodingAgentStore.getState().resolveApproval("r1", "allow");
+    expect(bridge.addPermission).toHaveBeenCalledWith("allowed", expect.objectContaining({ workspaceId: "/work" }));
   });
 
   it("holds a dialog request until it is answered, then clears it", async () => {

@@ -101,6 +101,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Rejecting a tool call now stops the coding agent, instead of it asking again for the same command every second
+- A coding agent session no longer fails to start while the agent container is still opening its port
+- Stopping a turn reads as stopped, not as a model error
 - A container the engine reports with no name at all is no longer listed and grouped as "undefined"
 - Container ports, container statistics and a container's health block are now typed the way both engines really answer them, so nothing reads a field that is not there
 - A container's published ports are read from the shape both engines actually send, so a mapped port is no longer reported as unpublished

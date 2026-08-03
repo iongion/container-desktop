@@ -96,7 +96,10 @@
     "test:e2e:tauri:swarm:none": "cross-env CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=none wdio run webdriver/wdio.conf.js --spec webdriver/specs/swarm-ui.e2e.js",
     "dev:mock": "yarn tauri:dev:mock",
     "test:e2e:tauri:connections": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/connection-matrix.e2e.js",
-    "test:e2e:tauri:swarm:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/swarm.e2e.js"
+    "test:e2e:tauri:swarm:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/swarm.e2e.js",
+    "test:e2e:tauri:pi:extension-ui": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/extension-ui.e2e.js",
+    "test:e2e:tauri:pi:extension:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-extension-live.e2e.js",
+    "test:e2e:tauri:pi:gate:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-gate-live.e2e.js"
   },
   "license": "MIT",
   "private": true,

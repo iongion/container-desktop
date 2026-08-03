@@ -56,6 +56,26 @@ describe("mapAgentEvent", () => {
     ).toEqual({ type: "error", message: "the model returned an error" });
   });
 
+  // An abort is a user decision, not a model failure: pi reports stopReason "aborted" with an
+  // errorMessage, and turning that into an error item puts a red callout on the user's own Stop or Reject.
+  it("reports an aborted turn as aborted rather than as an error", () => {
+    expect(
+      mapAgentEvent({
+        type: "message_end",
+        message: { role: "assistant", content: [], stopReason: "aborted", errorMessage: "Request aborted" },
+      }),
+    ).toEqual([{ type: "assistant_end", text: "", stopReason: "aborted" }]);
+  });
+
+  it("keeps partial text from an aborted turn", () => {
+    expect(
+      mapAgentEvent({
+        type: "message_end",
+        message: { role: "assistant", content: [{ type: "text", text: "half a th" }], stopReason: "aborted" },
+      }),
+    ).toEqual([{ type: "assistant_end", text: "half a th", stopReason: "aborted" }]);
+  });
+
   it("ignores a user message_end", () => {
     expect(mapAgentEvent({ type: "message_end", message: { role: "user", content: [] } })).toEqual([]);
   });
