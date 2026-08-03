@@ -125,3 +125,9 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     set({ status: "idle", client: undefined, spec: undefined, connectionId: undefined });
   },
 }));
+
+// DEV-only handle for the WebDriver spec, mirroring window.__cdLiveProbe: the spec drives the store
+// directly so the screen's rendering can be asserted without a live container session.
+export function installCodingAgentProbe(): void {
+  (globalThis as { __cdCodingAgentStore?: typeof useCodingAgentStore }).__cdCodingAgentStore = useCodingAgentStore;
+}

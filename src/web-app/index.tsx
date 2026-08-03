@@ -52,6 +52,10 @@ async function boot() {
     // whichever shell installed the host globals, so one probe covers both backends.
     const { installLiveProbes } = await import("@/web-app/liveProbes");
     installLiveProbes();
+    // DEV-only: window.__cdCodingAgentStore, so the Coding Agent spec can render a transcript without
+    // starting a real container session.
+    const { installCodingAgentProbe } = await import("@/web-app/stores/codingAgent");
+    installCodingAgentProbe();
   }
   const { renderApplication } = await import("./App.render");
   bootTimeline.mark("app-render-imported");

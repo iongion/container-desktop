@@ -83,14 +83,14 @@
 }
 
 .CodingAgentScreen .CodingAgentTool[data-state="error"] {
-  border-color: var(--app-danger, var(--app-border));
+  border-color: var(--app-intent-danger-rest);
 }
 
 .CodingAgentScreen .CodingAgentError {
   padding: 6px 8px;
-  border: 1px solid var(--app-danger, var(--app-border));
+  border: 1px solid var(--app-intent-danger-rest);
   border-radius: 3px;
-  color: var(--app-danger, var(--app-text));
+  color: var(--app-intent-danger-text);
 }
 
 .CodingAgentScreen .CodingAgentComposer {
