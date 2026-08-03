@@ -384,7 +384,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         // Only "remember" consults the cache, so the other modes never pay for a broker round-trip.
         const rule = approvalRule(get(), toolName, args);
         const cached = mode === "remember" && rule ? await rememberedVerdict(rule) : undefined;
-        const action = decidePiToolCall({ toolName, mode, cached });
+        const action = decidePiToolCall({ toolName, mode, cached, boundary: "tool-call" });
         if (action === "run") {
           await get().respondToRequest(requestId, { ok: true, value: { allow: true } });
           return;
@@ -408,13 +408,14 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         const mode = permissionMode();
         const rule = approvalRule(get(), op, args);
         const cached = mode === "remember" && rule ? await rememberedVerdict(rule) : undefined;
-        // The same decision path as a pi tool call: reads run unattended, mutations ask. There is no second gate.
-        const action = decidePiToolCall({ toolName: op, mode, cached });
+        // The same decision path as a pi tool call: reads run unattended, mutations ask. This is the boundary that
+        // decides for a container operation — the app performs it, so the pre-call gate deferred to here.
+        const action = decidePiToolCall({ toolName: op, mode, cached, boundary: "engine-op" });
         if (action === "run") {
           await get().runEngineOp(requestId, { op, args });
           return;
         }
-        set((state) => ({ view: projectPiThreadView(state.view, event) }));
+        set((state) => ({ view: projectPiThreadView(state.view, event, { connectionId: get().connectionId }) }));
         if (action === "reject") {
           await get().respondToRequest(requestId, {
             ok: true,

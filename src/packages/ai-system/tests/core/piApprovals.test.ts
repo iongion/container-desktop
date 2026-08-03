@@ -78,6 +78,25 @@ describe("decidePiToolCall", () => {
     expect(decidePiToolCall({ toolName: "bash", mode: "remember", cached: "block" })).toBe("reject");
     expect(decidePiToolCall({ toolName: "bash", mode: "remember" })).toBe("ask");
   });
+
+  // A container mutation reaches the app TWICE — first as pi's pre-call gate, then as the operation the app
+  // performs itself — so only the boundary that can hold the request and run it may ask. Gating both asked the
+  // user twice for one removal, measured against a real model.
+  it("leaves a container mutation to the boundary that performs it", () => {
+    expect(decidePiToolCall({ toolName: "removeContainer", mode: "ask", boundary: "tool-call" })).toBe("run");
+    expect(decidePiToolCall({ toolName: "removeContainer", mode: "ask", boundary: "engine-op" })).toBe("ask");
+  });
+
+  it("keeps deciding pi's own tools at the pre-call boundary", () => {
+    expect(decidePiToolCall({ toolName: "bash", mode: "ask", boundary: "tool-call" })).toBe("ask");
+    expect(decidePiToolCall({ toolName: "read", mode: "ask", boundary: "tool-call" })).toBe("run");
+  });
+
+  it("does not defer a remembered container block, which no second boundary would see", () => {
+    expect(
+      decidePiToolCall({ toolName: "removeContainer", mode: "remember", cached: "block", boundary: "engine-op" }),
+    ).toBe("reject");
+  });
 });
 
 describe("piApprovalSummary", () => {

@@ -104,7 +104,8 @@
     "test:e2e:tauri:pi:container-tools": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-container-tools.e2e.js",
     "test:e2e:tauri:pi:extension:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-extension-live.e2e.js",
     "test:e2e:tauri:pi:gate:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-gate-live.e2e.js",
-    "test:e2e:tauri:pi:data:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-plugin-data-live.e2e.js"
+    "test:e2e:tauri:pi:data:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-plugin-data-live.e2e.js",
+    "test:e2e:tauri:pi:container:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-container-live.e2e.js"
   },
   "license": "MIT",
   "private": true,

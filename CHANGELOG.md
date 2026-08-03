@@ -117,6 +117,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Rejecting a tool call now stops the coding agent, instead of it asking again for the same command every second
+- A container change the coding agent asks for is now approved once, not twice — the same removal no longer raises a second identical card after you have already allowed it
+- An approval card for a container change now names the connection it will act on even when the agent did not name one, so it is clear which engine is about to lose a container
 - A coding agent session no longer fails to start while the agent container is still opening its port
 - The agent container no longer fails to start because one of pi's packages was missing from the image
 - The AI section tabs no longer link to two screens that no longer exist

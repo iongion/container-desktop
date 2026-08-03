@@ -37,7 +37,13 @@ function withTool(view: ThreadView, toolCallId: string, patch: (item: ToolItem) 
   return view.timeline.map((item) => (item.kind === "tool" && item.toolCallId === toolCallId ? patch(item) : item));
 }
 
-export function projectPiThreadView(view: ThreadView, event: PiThreadViewEvent): ThreadView {
+// `session` carries what the transcript cannot read off the event: the connection the asking session runs on, so an
+// approval card can name where a container mutation lands even when the agent left it to the app to decide.
+export function projectPiThreadView(
+  view: ThreadView,
+  event: PiThreadViewEvent,
+  session?: { connectionId?: string },
+): ThreadView {
   const next = { ...view, lastSeq: view.lastSeq + 1 };
 
   switch (event.type) {
@@ -226,7 +232,7 @@ export function projectPiThreadView(view: ThreadView, event: PiThreadViewEvent):
             tool: toolName,
             title: toolName,
             args: (args ?? {}) as Record<string, unknown>,
-            reason: piApprovalSummary(toolName, args),
+            reason: piApprovalSummary(toolName, args, session?.connectionId),
             status: "pending",
           },
         ],

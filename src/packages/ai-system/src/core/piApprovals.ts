@@ -31,11 +31,20 @@ export function isPiToolGated(toolName: string): boolean {
   return !PI_UNGATED_TOOLS.has(toolName);
 }
 
+// Which of the two requests a call arrives as. pi asks for a verdict on EVERY tool call, so a container operation
+// is decided twice: once before pi runs the tool, and once when the app performs the operation itself. Only the
+// second can hold the request and run it on approval, so the first must not ask — asking at both turns one removal
+// into two identical cards, the second appearing after the user already said yes. The pre-call gate could not be
+// the security boundary anyway: an extension can call `engine_op` without registering a tool at all.
+export type PiToolCallBoundary = "tool-call" | "engine-op";
+
 export function decidePiToolCall(input: {
   toolName: string;
   mode: AIPermissionMode;
   cached?: CachedVerdict;
+  boundary?: PiToolCallBoundary;
 }): ToolAction {
+  if (input.boundary === "tool-call" && CONTAINER_TOOL_GATING.has(input.toolName)) return "run";
   if (!isPiToolGated(input.toolName)) return "run";
   return resolveToolAction({ mode: input.mode, floorBlocked: false, cached: input.cached });
 }
@@ -49,16 +58,25 @@ function argText(args: unknown, key: string): string | undefined {
 // What the user reads on the approval card: the shell command, the file the call would touch, or — for a
 // container mutation — the entity and the connection it lands on. The card already shows the tool name, so
 // repeating it there would say nothing; naming the connection matters because a session may act on any of them.
-function containerSummary(toolName: string, args: unknown): string | undefined {
+//
+// A model usually omits the connection, and the app then fills in the session's own — so the fallback is what
+// keeps the card truthful about where a removal lands, on a machine with more than one engine connected. Only the
+// TEXT resolves it: the call's arguments stay exactly as the agent sent them, because they are also the identity a
+// remembered decision is keyed on.
+function containerSummary(toolName: string, args: unknown, defaultConnectionId?: string): string | undefined {
   if (!CONTAINER_TOOL_GATING.has(toolName)) return undefined;
   const entity = argText(args, "id") ?? argText(args, "reference");
   if (!entity) return undefined;
-  const connectionId = argText(args, "connectionId");
+  const connectionId = argText(args, "connectionId") ?? defaultConnectionId;
   return connectionId ? `${entity} on ${connectionId}` : entity;
 }
 
-export function piApprovalSummary(toolName: string, args: unknown): string {
-  const summary = argText(args, "command") ?? argText(args, "path") ?? containerSummary(toolName, args) ?? toolName;
+export function piApprovalSummary(toolName: string, args: unknown, defaultConnectionId?: string): string {
+  const summary =
+    argText(args, "command") ??
+    argText(args, "path") ??
+    containerSummary(toolName, args, defaultConnectionId) ??
+    toolName;
   return summary.length > MAX_SUMMARY_CHARS ? `${summary.slice(0, MAX_SUMMARY_CHARS - 1)}…` : summary;
 }
 

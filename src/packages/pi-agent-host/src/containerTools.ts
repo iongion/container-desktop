@@ -2,8 +2,9 @@
 // they live in the app, on the other side of the bridge — so each tool is a thin caller: it asks the app to
 // perform one operation over `engine_op` and turns the answer into a tool result.
 //
-// The app gates these calls through the same permission path as every other tool (`tool_call` → `approval`),
-// so there is no gate here. Registering a tool does not grant it.
+// There is no gate here, and registering a tool grants nothing: the app decides when it performs the operation, on
+// the `engine_op` request below. It deliberately does NOT decide at pi's pre-call `tool_call` gate — one operation
+// asked at both boundaries showed the user two identical cards for a single removal.
 
 import type { ExtensionFactory, InlineExtension } from "@earendil-works/pi-coding-agent";
 

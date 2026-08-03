@@ -357,6 +357,32 @@ describe("useCodingAgentStore container operations", () => {
     expect(useCodingAgentStore.getState().view.timeline).toEqual([]);
   });
 
+  // Measured against a real model: pi asks the app for a verdict on EVERY tool call, so a container mutation
+  // arrived here as an `approval` and then again as the `engine_op` — one removal, two cards, the second appearing
+  // only after the user had already said yes.
+  it("does not ask about a container mutation at pi's pre-call gate", async () => {
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(
+        hostRequest("approval", { toolName: "removeContainer", toolCallId: "tc1", args: { id: "c1" } }),
+      );
+    expect(useCodingAgentStore.getState().view.timeline).toEqual([]);
+    expect(responses).toEqual([{ requestId: "r1", response: { ok: true, value: { allow: true } } }]);
+  });
+
+  // The card is the last thing the user sees before a container is destroyed, and this app can hold several
+  // engines at once, so it has to say which one — including when the model never named it.
+  it("names the connection the operation will reach, even when the model omitted it", async () => {
+    withEngineOps({ ok: true, value: true });
+    attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("removeContainer", { id: "c1" }));
+    expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({
+      kind: "approval",
+      reason: "c1 on podman-1",
+    });
+  });
+
   it("blocks a remembered rejection without asking again, and shows why", async () => {
     setPermissionMode("remember");
     const rule = toolRule(piPermissionContext({ workspacePath: "/work", connectionId: "podman-1" }), "removeImage", {
