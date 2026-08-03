@@ -19,7 +19,7 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const status = useCodingAgentStore((state) => state.status);
-  const items = useCodingAgentStore((state) => state.items);
+  const timeline = useCodingAgentStore((state) => state.view.timeline);
   const startLog = useCodingAgentStore((state) => state.startLog);
   const submit = useCodingAgentStore((state) => state.submit);
   const stop = useCodingAgentStore((state) => state.stop);
@@ -39,12 +39,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <pre className="CodingAgentStartLog">{startLog.join("\n")}</pre>
       ) : null}
       <div className="CodingAgentTranscript">
-        {items.map((item) => {
+        {timeline.map((item) => {
           if (item.kind === "tool") {
             return (
-              <div className="CodingAgentTool" key={item.id} data-state={item.state}>
-                <div className="CodingAgentToolName">{item.toolName}</div>
-                <pre className="CodingAgentToolOutput">{item.output}</pre>
+              <div className="CodingAgentTool" key={item.id} data-state={item.status}>
+                <div className="CodingAgentToolName">{item.tool}</div>
+                <pre className="CodingAgentToolOutput">{item.message}</pre>
               </div>
             );
           }
@@ -55,9 +55,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </div>
             );
           }
+          if (item.kind !== "message") return null;
           return (
-            <div className={`CodingAgentMessage CodingAgentMessage--${item.kind}`} key={item.id}>
-              {item.text}
+            <div className={`CodingAgentMessage CodingAgentMessage--${item.role}`} key={item.id}>
+              {item.content}
             </div>
           );
         })}

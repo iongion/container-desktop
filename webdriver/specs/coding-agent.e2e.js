@@ -53,20 +53,34 @@ describe("Coding Agent screen", () => {
       if (!store) return { store: false };
       store.setState({
         status: "ready",
-        items: [
-          { kind: "user", id: "u1", text: "hello agent" },
-          { kind: "assistant", id: "a1", text: "PI-GUI-OK", streaming: false },
-          {
-            kind: "tool",
-            id: "t1",
-            toolCallId: "c1",
-            toolName: "bash",
-            args: { command: "ls" },
-            output: "README.md",
-            state: "ok",
-          },
-          { kind: "error", id: "e1", message: "boom" },
-        ],
+        view: {
+          threadId: "spec",
+          phase: "idle",
+          lastSeq: 4,
+          timeline: [
+            { kind: "message", id: "u1", role: "user", content: "hello agent", delivery: "applied", status: "complete" },
+            {
+              kind: "message",
+              id: "a1",
+              role: "assistant",
+              content: "PI-GUI-OK",
+              delivery: "applied",
+              status: "complete",
+            },
+            {
+              kind: "tool",
+              id: "t1",
+              toolCallId: "c1",
+              tool: "bash",
+              title: "bash",
+              args: { command: "ls" },
+              status: "complete",
+              ok: true,
+              message: "README.md",
+            },
+            { kind: "error", id: "e1", scope: "model", message: "boom" },
+          ],
+        },
       });
       return { store: true };
     });
@@ -86,7 +100,7 @@ describe("Coding Agent screen", () => {
     assert.deepEqual(messages, ["hello agent", "PI-GUI-OK"], "user and assistant text did not render");
     assert.equal(toolName, "bash");
     assert.equal(toolOutput, "README.md");
-    assert.equal(toolState, "ok");
+    assert.equal(toolState, "complete");
     assert.equal(errorText, "boom");
     // getText() returns RENDERED text and the status chip is uppercased by --app theme styling, so compare
     // case-insensitively rather than encoding the CSS transform into the assertion.
@@ -120,7 +134,12 @@ describe("Coding Agent error item", () => {
       });
       window.__cdCodingAgentStore.setState({
         status: "ready",
-        items: [{ kind: "error", id: "e1", message: "boom" }],
+        view: {
+          threadId: "spec",
+          phase: "error",
+          lastSeq: 1,
+          timeline: [{ kind: "error", id: "e1", scope: "model", message: "boom" }],
+        },
       });
     });
     await browser.pause(800);

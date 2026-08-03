@@ -6,7 +6,8 @@ import { create } from "zustand";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import { startPiAgentSession, stopPiAgentSession } from "@/ai-system/adapters/piAgentContainer";
 import { createPiBridgeClient, type PiBridgeClient } from "@/ai-system/adapters/piBridgeClient";
-import { type CodingTranscriptItem, projectTranscript } from "@/ai-system/core/codingTranscript";
+import { emptyPiThreadView, projectPiThreadView } from "@/ai-system/core/piThreadView";
+import type { ThreadView } from "@/ai-system/core/threadEvents";
 import { createLogger } from "@/logger";
 import { agentImageTag } from "@/pi-bridge/image";
 import { randomUUID } from "@/utils/randomUUID";
@@ -27,7 +28,7 @@ export interface StartCodingAgentOptions {
 
 export interface CodingAgentState {
   status: "idle" | "starting" | "ready" | "error";
-  items: CodingTranscriptItem[];
+  view: ThreadView;
   startLog: string[];
   error?: string;
   spec?: PiAgentSessionSpec;
@@ -56,11 +57,11 @@ async function writePrivateEnvFile(name: string, contents: string): Promise<stri
 
 export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   status: "idle",
-  items: [],
+  view: emptyPiThreadView("pi-session"),
   startLog: [],
 
   async start(options) {
-    set({ status: "starting", startLog: [], items: [], error: undefined });
+    set({ status: "starting", startLog: [], view: emptyPiThreadView("pi-session"), error: undefined });
     const suffix = randomUUID().slice(0, 8);
     const host = await resolveConnectionHost(options.connectionId);
     if (!host) {
@@ -91,7 +92,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
 
       const client = createPiBridgeClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
       client.onEvent((event) => {
-        set((state) => ({ items: projectTranscript(state.items, event) }));
+        set((state) => ({ view: projectPiThreadView(state.view, event) }));
         if (event.type === "ready") set({ status: "ready" });
       });
       await client.connect();
@@ -111,7 +112,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   async submit(text) {
     const { client } = get();
     if (!client) return;
-    set((state) => ({ items: [...state.items, { kind: "user", id: randomUUID(), text }] }));
+    set((state) => ({ view: projectPiThreadView(state.view, { type: "user_message", text }) }));
     await client.prompt(text);
   },
 
