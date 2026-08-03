@@ -3,7 +3,6 @@
 // in-webview broker handlers, since the broker shares their realm. The shell-specific aiClient.ts /
 // aiBus.ts modules stay thin and parallel by construction. Neutral: no @tauri-apps/@wailsio here.
 
-import type { AvatarRecord } from "@/ai-system/core/avatars";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -16,7 +15,6 @@ import {
 } from "@/ai-system/core/channels";
 import type { PermissionsList, PermissionsSnapshot } from "@/ai-system/core/permissions";
 import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
-import type { ResolveRunPlanResult, RunView, StartRunRequest, StartRunResult } from "@/ai-system/core/runEvents";
 import { validateAIInvokeResponse, validateAIPushPayload } from "@/ai-system/core/schemas";
 import type { ResolveSkillInvocationRequest, SkillHostSnapshot } from "@/ai-system/core/skills";
 import type {
@@ -39,8 +37,6 @@ import type {
   ThreadSummary,
 } from "@/ai-system/core/threads";
 import type { ToolArtifactRecord } from "@/ai-system/core/toolArtifacts";
-import type { ApprovalDecision } from "@/ai-system/core/types";
-import type { WorkerDefinition } from "@/ai-system/core/workers";
 import type { WorkspaceChangeSnapshot, WorkspaceDiff } from "@/ai-system/core/workspaceChanges";
 
 export interface IAI {
@@ -76,13 +72,6 @@ export interface IAI {
   removeProjectMemory: (id: string) => Promise<ProjectContextSnapshot>;
   clearProjectMemory: () => Promise<ProjectContextSnapshot>;
   importProjectMemory: (content: string) => Promise<ProjectContextSnapshot>;
-  startRun: (request: StartRunRequest) => Promise<StartRunResult>;
-  approveRunPlan: (runId: string, decision: ApprovalDecision) => Promise<ResolveRunPlanResult>;
-  approveRunTool: (runId: string, approvalId: string, decision: ApprovalDecision) => Promise<ResolveRunPlanResult>;
-  stopRun: (runId: string) => Promise<{ ok: true }>;
-  getRunSnapshot: (runId: string) => Promise<RunView | null>;
-  // Runs the HOST still holds — how the Runs screen re-attaches after a renderer reload.
-  listRuns: () => Promise<{ runs: RunView[] }>;
   listModels: (providerId?: string, requestId?: string) => Promise<ModelsListResult>;
   cancelModelList: (requestId: string) => Promise<{ ok: true }>;
   listPermissions: () => Promise<PermissionsSnapshot>;
@@ -93,13 +82,7 @@ export interface IAI {
   setProjectSkillTrust: (skillId: string, expectedFingerprint: string, trusted: boolean) => Promise<SkillHostSnapshot>;
   invokeSkill: (request: ResolveSkillInvocationRequest & { threadId: string }) => Promise<SubmitThreadResult>;
   // The workers library. Every mutation answers with the whole library, so the renderer never merges by hand.
-  listWorkers: () => Promise<{ workers: WorkerDefinition[] }>;
-  saveWorker: (worker: WorkerDefinition) => Promise<{ workers: WorkerDefinition[] }>;
-  removeWorker: (id: string) => Promise<{ workers: WorkerDefinition[] }>;
   // The avatar library — custom uploaded faces. Every mutation answers with the whole library, like workers.
-  listAvatars: () => Promise<{ avatars: AvatarRecord[] }>;
-  saveAvatar: (avatar: AvatarRecord) => Promise<{ avatars: AvatarRecord[] }>;
-  removeAvatar: (id: string) => Promise<{ avatars: AvatarRecord[] }>;
 }
 
 export interface IAIBus {
@@ -152,13 +135,6 @@ export function createAIClient(transport: AIClientTransport) {
     removeProjectMemory: (id) => invoke(AI_CHANNELS.projectMemoryRemove, { id }),
     clearProjectMemory: () => invoke(AI_CHANNELS.projectMemoryClear),
     importProjectMemory: (content) => invoke(AI_CHANNELS.projectMemoryImport, content),
-    startRun: (request) => invoke(AI_CHANNELS.runStart, request),
-    approveRunPlan: (runId, decision) => invoke(AI_CHANNELS.runApprovePlan, { runId, decision }),
-    approveRunTool: (runId, approvalId, decision) =>
-      invoke(AI_CHANNELS.runApproveTool, { runId, approvalId, decision }),
-    stopRun: (runId) => invoke(AI_CHANNELS.runCancel, { runId }),
-    getRunSnapshot: (runId) => invoke(AI_CHANNELS.runSnapshot, { runId }),
-    listRuns: () => invoke(AI_CHANNELS.runList),
     listModels: (providerId, requestId = crypto.randomUUID()) =>
       invoke(AI_CHANNELS.modelsList, { providerId, requestId }),
     cancelModelList: (requestId) => invoke(AI_CHANNELS.modelsCancel, { requestId }),
@@ -171,12 +147,6 @@ export function createAIClient(transport: AIClientTransport) {
     setProjectSkillTrust: (skillId, expectedFingerprint, trusted) =>
       invoke(AI_CHANNELS.skillsSetProjectTrust, { skillId, expectedFingerprint, trusted }),
     invokeSkill: (request) => invoke(AI_CHANNELS.skillsInvoke, request),
-    listWorkers: () => invoke(AI_CHANNELS.workersList),
-    saveWorker: (worker) => invoke(AI_CHANNELS.workersSave, { worker }),
-    removeWorker: (id) => invoke(AI_CHANNELS.workersRemove, { id }),
-    listAvatars: () => invoke(AI_CHANNELS.avatarsList),
-    saveAvatar: (avatar) => invoke(AI_CHANNELS.avatarsSave, { avatar }),
-    removeAvatar: (id) => invoke(AI_CHANNELS.avatarsRemove, { id }),
   } satisfies IAI;
 }
 

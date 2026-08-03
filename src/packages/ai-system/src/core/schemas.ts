@@ -1263,7 +1263,6 @@ export const responseSchemas = {
       capabilities: z
         .object({
           agentSessions: z.boolean(),
-          teamRuns: z.boolean(),
           sandbox: z.boolean(),
           containerTools: z.boolean(),
           workspaceTools: z.boolean(),

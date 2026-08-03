@@ -55,7 +55,6 @@ function DiagnosticsContent({ snapshot }: { snapshot: AIDiagnosticsSnapshot }) {
   );
   const capabilities = [
     ["Agent Sessions", snapshot.capabilities.agentSessions],
-    ["Team Runs", snapshot.capabilities.teamRuns],
     ["Sandboxed commands", snapshot.capabilities.sandbox],
     ["Container tools", snapshot.capabilities.containerTools],
     ["Workspace tools", snapshot.capabilities.workspaceTools],

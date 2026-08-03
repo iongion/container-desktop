@@ -22,26 +22,21 @@ import type {
   AISettings,
   CompactThreadContext,
   CreateAgentSession,
-  CreateTeamRun,
   DiagnosticsBundle,
   EngineOps,
   ListedModel,
   ProviderTransport,
-  TeamRunPort,
 } from "@/ai-system/core/types";
 import type { WorkspaceChangesPort } from "@/ai-system/core/workspaceChanges";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
 import { randomUUID } from "@/utils/randomUUID";
-import type { AvatarHost } from "./avatarHost";
 import { createDiagnosticsHost } from "./diagnosticsHost";
 import { createModelDiscoveryHost } from "./modelDiscoveryHost";
 import type { ProjectContextHost } from "./projectContextHost";
-import { createRunHost } from "./runHost";
 import type { SkillHost } from "./skillHost";
 import { createThreadHost } from "./threadHost";
 import type { ThreadRepository } from "./threadRepository";
 import type { ToolArtifactRepository } from "./toolArtifactRepository";
-import type { WorkerHost } from "./workerHost";
 
 export interface AIBrokerDeps<TEvent = unknown> {
   keyStore: AIKeyStore;
@@ -63,7 +58,6 @@ export interface AIBrokerDeps<TEvent = unknown> {
   projectContextHost?: ProjectContextHost;
   createAgentSession?: CreateAgentSession;
   compactThreadContext?: CompactThreadContext;
-  createTeamRun?: CreateTeamRun;
   runSandboxed?: SandboxRunner;
   engineOps?: EngineOps;
   workspaceAccess?: IWorkspaceAccess;
@@ -74,10 +68,6 @@ export interface AIBrokerDeps<TEvent = unknown> {
   webSearcher?: (query: string) => Promise<{ text: string }>;
   threadRepository: ThreadRepository;
   toolArtifactRepository?: ToolArtifactRepository;
-  // The workers library. Absent ⇒ the channels reject and team runs ignore any requested roster.
-  workerHost?: WorkerHost;
-  // The avatar library. Absent ⇒ the avatar channels reject loudly (never a silent empty list).
-  avatarHost?: AvatarHost;
   skillHost?: SkillHost;
   buildSkillInvocationPrompt?: (context: {
     command: string;
@@ -88,7 +78,6 @@ export interface AIBrokerDeps<TEvent = unknown> {
   }) => string;
   // CONTAINER_DESKTOP_MOCK only — runs the host starts life already holding, so the Runs list has
   // content in every phase without the user starting one first.
-  seedRuns?: TeamRunPort[];
   logger?: { error: (...args: unknown[]) => void };
 }
 
@@ -174,26 +163,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     if (!deps.projectContextHost) throw new Error("AI: project context is unavailable");
     return deps.projectContextHost;
   };
-  const runHost = createRunHost<TEvent>({
-    senderId: deps.senderId,
-    send: deps.send,
-    getAISettings: deps.getAISettings,
-    resolveProviderAccess,
-    providerTransport: deps.providerTransport,
-    buildAgentPrompt: deps.buildAgentPrompt,
-    createTeamRun: deps.createTeamRun,
-    workerHost: deps.workerHost,
-    seedRuns: deps.seedRuns,
-    runSandboxed: deps.runSandboxed,
-    engineOps: deps.engineOps,
-    workspaceAccess: deps.workspaceAccess,
-    createExecutionSelector: deps.createExecutionSelector,
-    permissionsStore: deps.permissionsStore,
-    knowledgeBank: deps.knowledgeBank,
-    webSearcher: deps.webSearcher,
-    reportError,
-    logger: deps.logger,
-  });
   const models = createModelDiscoveryHost<TEvent>({
     senderId: deps.senderId,
     resolveProviderAccess,
@@ -215,7 +184,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     webSearchAvailable: !!deps.webSearcher,
     capabilities: {
       agentSessions: !!deps.createAgentSession,
-      teamRuns: !!deps.createTeamRun,
       sandbox: !!deps.runSandboxed,
       containerTools: !!deps.engineOps,
       workspaceTools: !!deps.workspaceAccess,
@@ -229,14 +197,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
   };
   // A shell that offers no workers library must fail the channel loudly. Answering with an empty list would look
   // to the editor like "you have no workers", and its next save would appear to succeed while persisting nothing.
-  const requireWorkers = (): WorkerHost => {
-    if (!deps.workerHost) throw new Error("AI: the workers library is unavailable on this runtime");
-    return deps.workerHost;
-  };
-  const requireAvatars = (): AvatarHost => {
-    if (!deps.avatarHost) throw new Error("AI: the avatar library is unavailable on this runtime");
-    return deps.avatarHost;
-  };
   const requireSkills = (): SkillHost => {
     if (!deps.skillHost) throw new Error("AI: the skills library is unavailable on this runtime");
     return deps.skillHost;
@@ -358,26 +318,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     onInvoke(AI_CHANNELS.projectMemoryImport, (event, content) =>
       guarded(event, () => requireProjectContext().importMemory(content)),
     );
-    onInvoke(AI_CHANNELS.runStart, (event, request) => guarded(event, () => runHost.start(event, request)));
-    onInvoke(AI_CHANNELS.runApprovePlan, (event, request) => guarded(event, () => runHost.resolvePlan(event, request)));
-    onInvoke(AI_CHANNELS.runApproveTool, (event, request) => guarded(event, () => runHost.resolveTool(event, request)));
-    onInvoke(AI_CHANNELS.runCancel, (event, request) => guarded(event, () => runHost.cancel(event, request.runId)));
-    onInvoke(AI_CHANNELS.runSnapshot, (event, request) => guarded(event, () => runHost.snapshot(event, request.runId)));
-    onInvoke(AI_CHANNELS.runList, (event) => guarded(event, () => ({ runs: runHost.list(event) })));
-    onInvoke(AI_CHANNELS.workersList, (event) => guarded(event, () => ({ workers: requireWorkers().list() })));
-    onInvoke(AI_CHANNELS.workersSave, (event, request) =>
-      guarded(event, async () => ({ workers: await requireWorkers().save(request.worker) })),
-    );
-    onInvoke(AI_CHANNELS.workersRemove, (event, request) =>
-      guarded(event, async () => ({ workers: await requireWorkers().remove(request.id) })),
-    );
-    onInvoke(AI_CHANNELS.avatarsList, (event) => guarded(event, () => ({ avatars: requireAvatars().list() })));
-    onInvoke(AI_CHANNELS.avatarsSave, (event, request) =>
-      guarded(event, async () => ({ avatars: await requireAvatars().save(request.avatar) })),
-    );
-    onInvoke(AI_CHANNELS.avatarsRemove, (event, request) =>
-      guarded(event, async () => ({ avatars: await requireAvatars().remove(request.id) })),
-    );
     onInvoke(AI_CHANNELS.modelsList, (event, request) =>
       guarded(event, () => models.list(event, request.requestId, request.providerId)),
     );
@@ -467,13 +407,11 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     register,
     disposeForSender(senderId: number | string): void {
       threadHost.disposeForSender(senderId);
-      runHost.disposeForSender(senderId);
       models.disposeForSender(senderId);
       skillObservers.delete(senderId);
     },
     dispose(): void {
       threadHost.dispose();
-      runHost.dispose();
       models.dispose();
       unsubscribeSkills?.();
       deps.skillHost?.dispose();

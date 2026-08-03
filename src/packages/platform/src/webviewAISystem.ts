@@ -100,44 +100,6 @@ export async function createWebviewAISystem<TEvent = unknown>(deps: WebviewAISys
   // the mock probe above it runs on this shell's SHIPPED adapters — engineOps, connectionExec and workspaceAccess
   // are the ones the app itself uses, so it proves the Rust/Go off-host path against live engines. Returns the
   // shared verification's failures; [] means the matrix passed.
-  if (import.meta.env.ENVIRONMENT !== "production" && connectionExec && deps.engineOps && deps.workspaceAccess) {
-    const liveConnectionExec = connectionExec;
-    const liveEngineOps = deps.engineOps;
-    const liveWorkspace = deps.workspaceAccess;
-    type MatrixSpec = {
-      connectionId: string;
-      image: string;
-      supportsRemote: boolean;
-      supportsEngine?: boolean;
-      existingContainerId?: string;
-      sandboxLabel: string;
-    };
-    (globalThis as { __cdExecutionMatrixProbe?: (spec: MatrixSpec) => Promise<string[]> }).__cdExecutionMatrixProbe =
-      async (spec) => {
-        const { observeExecutionTargets, verifyExecutionTargets } = await import(
-          "@/__tests__/support/executionTargetMatrix"
-        );
-        // Ask the ENGINE how many of this run's sandboxes are still alive, so teardown is proven against reality
-        // rather than against bookkeeping.
-        const pendingSandboxes = async () => {
-          const containers = await liveEngineOps.listContainers({ connectionId: spec.connectionId });
-          return containers.filter((container) =>
-            JSON.stringify((container as { Labels?: unknown }).Labels ?? {}).includes(spec.sandboxLabel),
-          ).length;
-        };
-        const observations = await observeExecutionTargets("live", {
-          connectionId: spec.connectionId,
-          connectionExec: liveConnectionExec,
-          localWorkspace: liveWorkspace,
-          image: spec.image,
-          supportsRemote: spec.supportsRemote,
-          supportsEngine: spec.supportsEngine,
-          existingContainerId: spec.existingContainerId,
-          pendingSandboxes,
-        });
-        return verifyExecutionTargets(observations);
-      };
-  }
 
   const createExecutionSelectorFactory = connectionExec
     ? (runId: string) =>

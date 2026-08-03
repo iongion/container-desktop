@@ -226,7 +226,6 @@ describe("AI protocol boundary validation", () => {
         },
         capabilities: {
           agentSessions: true,
-          teamRuns: true,
           sandbox: true,
           containerTools: true,
           workspaceTools: false,

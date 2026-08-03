@@ -1,4 +1,3 @@
-import { createAvatarFileStore } from "@/ai-system/adapters/avatarFileStore";
 import { createKnowledgeFileStorage } from "@/ai-system/adapters/knowledgeFileStorage";
 import { listModels } from "@/ai-system/adapters/localModels";
 import { createPermissionsStore } from "@/ai-system/adapters/permissionsStoreCore";
@@ -9,25 +8,16 @@ import { createSkillTrustFileStore } from "@/ai-system/adapters/skillTrustFileSt
 import { createThreadFileStore } from "@/ai-system/adapters/threadFileStore";
 import { createToolArtifactFileStore } from "@/ai-system/adapters/toolArtifactFileStore";
 import { type ResolvedFetch, webSearch } from "@/ai-system/adapters/webSearch";
-import { createWorkerFileStore } from "@/ai-system/adapters/workerFileStore";
 import { createGitWorkspaceChanges } from "@/ai-system/adapters/workspaceChanges";
 import type { AIInvokeChannel, AIInvokeResponse, AIPushChannel, AIPushPayload } from "@/ai-system/core/channels";
 import type { ExecutionSelectorFactory } from "@/ai-system/core/ports";
-import type {
-  AISettings,
-  CompactThreadContext,
-  CreateAgentSession,
-  CreateTeamRun,
-  EngineOps,
-} from "@/ai-system/core/types";
-import { createAvatarHost } from "@/ai-system/host/avatarHost";
+import type { AISettings, CompactThreadContext, CreateAgentSession, EngineOps } from "@/ai-system/core/types";
 import { type AIBroker, createAIBroker } from "@/ai-system/host/broker";
 import { createKnowledgeBank } from "@/ai-system/host/knowledgeBank";
 import { createProjectContextHost } from "@/ai-system/host/projectContextHost";
 import { createSkillHost } from "@/ai-system/host/skillHost";
 import { createThreadRepository } from "@/ai-system/host/threadRepository";
 import { createToolArtifactRepository } from "@/ai-system/host/toolArtifactRepository";
-import { createWorkerHost } from "@/ai-system/host/workerHost";
 import { buildAgentPrompt, buildProjectContextPrompt, buildSkillInvocationPrompt } from "@/template/prompts";
 import "@/template/templateRegistry.vite";
 import type { ProviderTransport } from "@/ai-system/core/types";
@@ -78,9 +68,6 @@ export interface AISystemDeps<TEvent = unknown> {
   // containerized agent supplies neither. The broker already rejects thread work when they are absent.
   createAgentSession?: CreateAgentSession;
   compactThreadContext?: CompactThreadContext;
-  // Team-run driver. Optional because a shell may legitimately not offer Runs; when absent the
-  // host rejects a run start with a clear error rather than falling back to anything.
-  createTeamRun?: CreateTeamRun;
   // CONTAINER_DESKTOP_MOCK — swap real streamers/stores for scripted mocks.
   mock?: boolean;
   logger?: { error: (...args: unknown[]) => void };
@@ -104,7 +91,7 @@ export async function createAISystem<TEvent = unknown>(
   const threadsPath = await deps.path.join(deps.userDataDir, "ai-threads.json");
   const legacyThreadsPath = await deps.path.join(deps.userDataDir, "ai-conversations.json");
   const toolArtifactsPath = await deps.path.join(deps.userDataDir, "ai-tool-artifacts.json");
-  const workersPath = await deps.path.join(deps.userDataDir, "ai-workers.json");
+  const _workersPath = await deps.path.join(deps.userDataDir, "ai-workers.json");
   const skillTrustPath = await deps.path.join(deps.userDataDir, "ai-skill-trust.json");
   const projectContextPath = await deps.path.join(deps.userDataDir, "ai-project-context.json");
   const userSkillsRoot = await deps.path.join(deps.userDataDir, "ai-skills");
@@ -124,28 +111,6 @@ export async function createAISystem<TEvent = unknown>(
   const permissionsStore = mockModule
     ? mockModule.createMockPermissionsStore(permissionsPath)
     : createPermissionsStore(permissionsPath, deps.fs, deps.path);
-
-  // The Workers library — reusable agent definitions Team Runs draw their roster from. Read once at startup;
-  // writes go through the broker so a definition (which carries a tool policy) is never renderer-writable.
-  // Mock mode swaps the file store for an in-memory one seeded with sample workers, as permissions does above.
-  const workerHost = createWorkerHost({
-    store: mockModule
-      ? mockModule.createMockWorkerStore(workersPath)
-      : createWorkerFileStore(workersPath, deps.fs, deps.path),
-    logger: deps.logger,
-  });
-  await workerHost.ready();
-
-  // The avatar library — custom uploaded faces workers reference by id. Broker-owned writes, parallel to the
-  // workers store. Mock mode swaps the file store for an in-memory one seeded with sample avatars.
-  const avatarsPath = await deps.path.join(deps.userDataDir, "ai-avatars.json");
-  const avatarHost = createAvatarHost({
-    store: mockModule
-      ? mockModule.createMockAvatarStore(avatarsPath)
-      : createAvatarFileStore(avatarsPath, deps.fs, deps.path),
-    logger: deps.logger,
-  });
-  await avatarHost.ready();
 
   const skillHost = createSkillHost({
     userRoot: userSkillsRoot,
@@ -203,7 +168,6 @@ export async function createAISystem<TEvent = unknown>(
       : (provider, opts) => listModels(provider, opts),
     createAgentSession: deps.createAgentSession,
     compactThreadContext: deps.compactThreadContext,
-    createTeamRun: deps.createTeamRun,
     // The sandbox POLICY (floor/redaction/timeout/cap + the scrubbed-env allowlist) is reused as-is; only the
     // executor + base env are the shell's ExecuteIsolated capability, and the cwd is the shell's sandbox root.
     runSandboxed: mocks
@@ -223,13 +187,10 @@ export async function createAISystem<TEvent = unknown>(
     // instead of the host-only fallback. Shells with no off-host execution pass undefined.
     createExecutionSelector: deps.createExecutionSelector,
     permissionsStore,
-    workerHost,
-    avatarHost,
     skillHost,
     buildSkillInvocationPrompt,
     projectContextHost,
     buildProjectContextPrompt,
-    seedRuns: mockModule ? mockModule.createMockTeamRuns() : undefined,
     knowledgeBank: mocks ? mocks.knowledgeBank : knowledgeBank,
     webSearcher: mocks
       ? (query) => mocks.webSearcher(query)

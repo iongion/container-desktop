@@ -15,7 +15,6 @@ import type {
 import type { AgentExecutionDeps } from "./ports";
 import type { ProviderKind, ResolvedProvider } from "./providers";
 import type { ReasoningThinking } from "./reasoning";
-import type { ResolveRunPlanResult, RunEventEnvelope, RunView, StartRunResult } from "./runEvents";
 import type { approvalDecision, diagnosticsBundle } from "./schemas";
 import type { SkillInvocationProvenance } from "./skills";
 import type { ResolveThreadApprovalResult, SubmitThreadResult, ThreadEventEnvelope, ThreadView } from "./threadEvents";
@@ -336,25 +335,3 @@ export interface TeamRunTaskSettings {
   // pre-workers behaviour byte for byte.
   workers?: readonly ResolvedWorker[];
 }
-
-export interface TeamRunPort {
-  start(): Promise<StartRunResult>;
-  resolvePlan(decision: ApprovalDecision): Promise<ResolveRunPlanResult>;
-  // Resolve ONE worker's gated tool call. Keyed by approvalId rather than by run, because workers execute in
-  // parallel and several can be blocked at once — the run keeps making progress on its other branches meanwhile.
-  resolveToolApproval(approvalId: string, decision: ApprovalDecision): Promise<ResolveRunPlanResult>;
-  cancel(): Promise<void>;
-  snapshot(): RunView;
-  dispose(): Promise<void>;
-}
-
-export interface TeamRunCreationOptions {
-  runId: string;
-  goal: string;
-  taskSettings: TeamRunTaskSettings;
-  permissionsStore?: PermissionsStoreLike;
-  emit: (envelope: RunEventEnvelope) => void;
-  logger?: { error: (...args: unknown[]) => void };
-}
-
-export type CreateTeamRun = (options: TeamRunCreationOptions) => TeamRunPort;

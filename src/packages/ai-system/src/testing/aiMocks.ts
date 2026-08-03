@@ -3,7 +3,6 @@
 // production AgentSession path instead of a parallel broker-only event script.
 
 import type { LanguageModel } from "ai";
-import type { AvatarRecord, AvatarStore, AvatarStoreSnapshot } from "@/ai-system/core/avatars";
 import {
   AI_PERMISSIONS_VERSION,
   type AIPermissionsCache,
@@ -15,20 +14,14 @@ import {
 } from "@/ai-system/core/permissions";
 import type { AIKeyStore, KnowledgeEntry, SandboxCommand, SandboxExecResult } from "@/ai-system/core/ports";
 import type { ResolvedProvider } from "@/ai-system/core/providers";
-import type { RunEvent, RunEventEnvelope, RunView } from "@/ai-system/core/runEvents";
 import { permissionRule } from "@/ai-system/core/schemas";
-import type { EngineOps, ListedModel, TeamRunPort } from "@/ai-system/core/types";
-import type { WorkerDefinition, WorkerStore, WorkerStoreSnapshot } from "@/ai-system/core/workers";
-import mockAvatars from "@/resources/ai/mock-avatars.json";
+import type { EngineOps, ListedModel } from "@/ai-system/core/types";
 import mockEngine from "@/resources/ai/mock-engine.json";
 import mockKnowledge from "@/resources/ai/mock-knowledge.json";
 import mockModels from "@/resources/ai/mock-models.json";
 import mockPermissions from "@/resources/ai/mock-permissions.json";
-import mockTeamRuns from "@/resources/ai/mock-team-runs.json";
 import mockAssistantResponse from "@/resources/prompts/mock-assistant-response.md?raw";
 import mockToolResultResponse from "@/resources/prompts/mock-tool-result-response.md?raw";
-import { CANONICAL_WORKERS, materializeWorkers } from "./agents";
-import { buildScaleRuns, readMockScaleSpec } from "./scaleRuns";
 
 let mockCallId = 0;
 // Mock-only §18 acceptance triggers (production providers never see aiMocks): "hold the tool" makes the next
@@ -419,132 +412,9 @@ export function createMockPermissionsStore(filePath: string): PermissionsStoreLi
   };
 }
 
-// An in-memory workers library, so the Workers screen and a run roster are populated without writing to disk —
-// exactly how createMockPermissionsStore serves the permissions UI. Saves and removes behave for real within the
-// session; nothing survives a restart.
-export function createMockWorkerStore(filePath: string): WorkerStore {
-  // Seeded from the SHARED canonical roster (testing/agents.ts) so the mock app and the live agent tests
-  // exercise identical worker definitions; materializeWorkers resolves the days-ago ages against now.
-  let cache: WorkerDefinition[] = materializeWorkers(CANONICAL_WORKERS, { now: Date.now() });
-  return {
-    async load(): Promise<WorkerStoreSnapshot> {
-      return { status: "ok", workers: cache.map((worker) => ({ ...worker })), path: filePath };
-    },
-    async save(workers: WorkerDefinition[]) {
-      cache = workers.map((worker) => ({ ...worker }));
-    },
-  };
-}
-
-// An in-memory avatar library, seeded with sample custom faces so the Workers avatar UI is populated without
-// writing to disk — parallel to createMockWorkerStore. Saves/removes behave for real within the session only.
-export function createMockAvatarStore(filePath: string): AvatarStore {
-  const day = 24 * 60 * 60 * 1000;
-  const now = Date.now();
-  let cache: AvatarRecord[] = (mockAvatars as Array<Omit<AvatarRecord, "createdAt"> & { createdDaysAgo: number }>).map(
-    ({ createdDaysAgo, ...avatar }) => ({ ...avatar, createdAt: now - createdDaysAgo * day }),
-  );
-  return {
-    async load(): Promise<AvatarStoreSnapshot> {
-      return { status: "ok", avatars: cache.map((avatar) => ({ ...avatar })), path: filePath };
-    },
-    async save(avatars: AvatarRecord[]) {
-      cache = avatars.map((avatar) => ({ ...avatar }));
-    },
-  };
-}
-
-// Team runs the host "already holds", one per board column, so the Runs kanban and table are populated on a cold
-// start. Each is a real TeamRunPort rather than a static snapshot: stopping one genuinely moves it to `stopped`
-// and approving a plan genuinely moves it to `running`, so the list actions are exercisable instead of erroring
-// against a run the host cannot find.
-// A seed TeamRunPort that can also stream its state changes to the host, the way a real orchestrated run does.
-// The host wires attachEmit → its per-run broadcast during seeding, so a baked run reacts to gate actions in the
-// LIVE UI (not just host-side): reject clears the plan gate, a tool decision resolves the prompt, Stop settles it.
-export type SeedTeamRunPort = TeamRunPort & {
-  attachEmit: (emit: (envelope: RunEventEnvelope) => void) => void;
-};
-
-// Wrap a seed RunView as a SeedTeamRunPort whose snapshot mirrors the real gate reactions (approve→running,
-// reject/cancel→stopped, tool approval→running) AND emits the matching granular RunEvents so the renderer's
-// reducer converges to the same view. Shared by the baked fixtures and the scale seeds.
-function seedTeamRunPort(seed: RunView): SeedTeamRunPort {
-  let view: RunView = structuredClone(seed);
-  let seq = view.lastSeq;
-  let emit: ((envelope: RunEventEnvelope) => void) | undefined;
-  // Emit an event under a fresh seq and advance the view's cursor so folds stay ordered on top of the snapshot.
-  const push = (event: RunEvent): void => {
-    seq += 1;
-    view = { ...view, lastSeq: seq };
-    emit?.({ version: 1, runId: view.runId, seq, event });
-  };
-  return {
-    attachEmit(fn) {
-      emit = fn;
-    },
-    async start() {
-      return { accepted: true as const, runId: view.runId, phase: view.phase };
-    },
-    async resolvePlan(decision) {
-      // Mirrors the real gate: approving releases the plan and the tasks begin, rejecting settles the run.
-      view =
-        decision === "allow"
-          ? { ...view, phase: "running", planPending: false }
-          : { ...view, phase: "stopped", planPending: false };
-      push({ type: "plan-resolved", decision });
-      push(decision === "allow" ? { type: "phase-changed", phase: "running" } : { type: "run-stopped" });
-      return { accepted: true, phase: view.phase };
-    },
-    async resolveToolApproval(approvalId, decision) {
-      const resolved = view.approvals.find((approval) => approval.approvalId === approvalId);
-      view = {
-        ...view,
-        approvals: view.approvals.map((approval) =>
-          approval.approvalId === approvalId
-            ? { ...approval, status: decision === "allow" ? ("allowed" as const) : ("rejected" as const) }
-            : approval,
-        ),
-        // Only the resolved task resumes — matches reduceRunEvent, which keys the transition off the approval.
-        tasks: view.tasks.map((task) =>
-          resolved && task.id === resolved.taskId ? { ...task, status: "running" as const } : task,
-        ),
-      };
-      push({ type: "tool-approval-resolved", approvalId, decision });
-      return { accepted: true, phase: view.phase };
-    },
-    async cancel() {
-      view = { ...view, phase: "stopped", planPending: false };
-      push({ type: "run-stopped" });
-    },
-    snapshot() {
-      return structuredClone(view);
-    },
-    async dispose() {},
-  } satisfies SeedTeamRunPort;
-}
-
-// Seed the run host with the baked sample runs, plus — when CONTAINER_DESKTOP_MOCK_SCALE is set — synthetic
-// scale runs (one large plan + a long Runs list) so the Runs UI can be driven at scale in the mock app.
-export function createMockTeamRuns(): TeamRunPort[] {
-  const seeds: RunView[] = [...(mockTeamRuns as RunView[])];
-  const scale = readMockScaleSpec();
-  if (scale) seeds.push(...buildScaleRuns(scale));
-  return seeds.map(seedTeamRunPort);
-}
-
-// Full deps factory
-
-export interface MockAIDeps {
-  languageModel: LanguageModel;
-  listModels: (provider: ResolvedProvider, opts?: unknown) => Promise<ListedModel[]>;
-  runSandboxed: (cmd: SandboxCommand, opts?: { enforceFloor?: boolean }) => Promise<SandboxExecResult>;
-  knowledgeBank: { search: (query: string) => Promise<KnowledgeEntry[]> };
-  webSearcher: (query: string) => Promise<{ text: string }>;
-  keyStore: AIKeyStore;
-  engineOps: EngineOps;
-}
-
-export function createMockAIDeps(): MockAIDeps {
+// The mock dependency bundle CONTAINER_DESKTOP_MOCK wires in. Inferred rather than declared: the run-era
+// MockAIDeps interface named ports that no longer exist.
+export function createMockAIDeps() {
   return {
     languageModel: createMockLanguageModel(),
     listModels: createMockModelLister(),

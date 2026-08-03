@@ -30,7 +30,6 @@ export interface AIDiagnosticsSnapshot {
   };
   capabilities: {
     agentSessions: boolean;
-    teamRuns: boolean;
     sandbox: boolean;
     containerTools: boolean;
     workspaceTools: boolean;
