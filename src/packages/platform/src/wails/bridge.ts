@@ -284,6 +284,11 @@ export async function installWailsHostBridge(): Promise<void> {
     // scaled run set under Wails too, mirroring the Tauri bridge. Absent ⇒ "" ⇒ no scaled seed (the default).
     target.CONTAINER_DESKTOP_MOCK_SWARM =
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SWARM" })) ?? "";
+    // The same flag that turns the single-instance guard off (main.go) so the harness runs beside a dev app. The
+    // webview needs it because work that assumes "only this app is running" — reaping orphaned agent sessions —
+    // must stand down when a second instance may hold a live one.
+    target.CONTAINER_DESKTOP_E2E =
+      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_E2E" })) ?? "";
     // CURRENT_DARWIN_MAJOR (uname-derived natively) so macOS Apple-Container network gating
     // works under Wails too; null/undefined off Darwin.
     const darwinMajor = (await invoke<number | null>("get_darwin_major")) ?? undefined;

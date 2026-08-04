@@ -7,9 +7,7 @@ import { Button, Callout, Icon, Intent, NonIdealState } from "@blueprintjs/core"
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { isAccessProfileId } from "@/ai-system/core/accessProfiles";
 import type { AIPermissionMode } from "@/ai-system/core/permissions";
-import { isReasoningLevel } from "@/ai-system/core/reasoning";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import { latestAssistantResponse } from "@/ai-system/core/threadExport";
 import type { AISettings } from "@/ai-system/core/types";
@@ -308,18 +306,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
           return undefined;
         },
         "model.open": () => ({ kind: "open-model-picker" }),
-        "access.set": (command) => {
-          const value = command.args[0]?.toLowerCase();
-          if (!value) return { kind: "open-access-profile" };
-          if (!isAccessProfileId(value)) throw new Error(t("Unknown access profile: {{value}}", { value }));
-          return { kind: "set-access-profile", value };
-        },
-        "reasoning.set": (command) => {
-          const value = command.args[0]?.toLowerCase();
-          if (!value) return { kind: "open-reasoning-level" };
-          if (!isReasoningLevel(value)) throw new Error(t("Unknown reasoning level: {{value}}", { value }));
-          return { kind: "set-reasoning-level", value };
-        },
         "permissions.open": () => {
           navigate(getSettingsUrl("ai"));
           return undefined;

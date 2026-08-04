@@ -96,6 +96,7 @@ export function toEffectiveContext(
             status: "known",
             maxInputTokens: Math.max(0, report.contextWindow - report.maxOutputTokens),
             reservedOutputTokens: report.maxOutputTokens,
+            reservedFromProvider: report.providerMaxOutputTokens > 0,
           }
         : { status: "unknown" },
     sections: parts,

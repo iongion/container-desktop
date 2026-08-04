@@ -8,6 +8,7 @@ const report = (patch: Partial<SessionContextReport> = {}): SessionContextReport
   contextTokens: 5000,
   contextWindow: 128000,
   maxOutputTokens: 4096,
+  providerMaxOutputTokens: 0,
   systemPromptChars: 400,
   tools: [
     { name: "read", description: "read a file" },
@@ -57,10 +58,22 @@ describe("toEffectiveContext", () => {
   });
 
   it("reserves the model's own output budget out of its window", () => {
-    expect(toEffectiveContext(report(), facts, 1000).window).toEqual({
+    expect(toEffectiveContext(report({ providerMaxOutputTokens: 4096 }), facts, 1000).window).toEqual({
       status: "known",
       maxInputTokens: 128000 - 4096,
       reservedOutputTokens: 4096,
+      reservedFromProvider: true,
+    });
+  });
+
+  // The cap is real — it is what pi registered and what bounds every answer — but nothing on this server said so.
+  // Presenting our own default as the provider's is the same fiction the context window used to tell.
+  it("says when the reserved output is our default rather than the provider's word", () => {
+    expect(toEffectiveContext(report({ providerMaxOutputTokens: 0 }), facts, 1000).window).toEqual({
+      status: "known",
+      maxInputTokens: 128000 - 4096,
+      reservedOutputTokens: 4096,
+      reservedFromProvider: false,
     });
   });
 

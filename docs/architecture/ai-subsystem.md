@@ -134,8 +134,10 @@ not at startup.
 **Ports.** `pickHostPort()` is `41000 + random(4000)` with no retry — probing from the renderer was judged
 worse. A collision surfaces as `failed to bind host port … address already in use` in the start log.
 
-**Egress** is on by default (a coding agent needs package managers); `egress: false` adds `--internal`, leaving
-only the gateway reachable.
+**Egress** is on by default (a coding agent needs package managers). `egress: false` creates the agent's network
+`--internal` — an internal bridge has no gateway address, so nothing on it reaches the internet or this machine —
+and attaches the gateway to a second `…-egress` network so inference still works. The agent keeps its published
+bridge port either way; both networks are removed on stop.
 
 ## The agent container
 

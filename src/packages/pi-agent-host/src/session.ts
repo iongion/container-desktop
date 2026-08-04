@@ -86,6 +86,9 @@ export interface CreatePiSessionOptions {
   // then REPORTED as unknown, rather than as the invented 128000/4096 every model used to be registered with.
   contextWindow?: number;
   maxOutputTokens?: number;
+  // The provider's rates in dollars per million tokens, as pi's model config wants them. Absent for a free or
+  // unpriced model, where pi's own zeroes are the truth.
+  pricing?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number };
   emit: (event: BridgeEvent) => void;
   streamOverride?: PiStreamFn;
   // The app's `--app-*` colours, so plugin components are painted in the theme the rest of the app is.
@@ -121,7 +124,14 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
             name: modelId,
             reasoning: false,
             input: ["text"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            // pi multiplies these by the token counts to bill a turn, so all-zero is what made every session report
+            // $0.00 whatever it really cost. Zero stays the honest answer for a free model.
+            cost: {
+              input: options.pricing?.input ?? 0,
+              output: options.pricing?.output ?? 0,
+              cacheRead: options.pricing?.cacheRead ?? 0,
+              cacheWrite: options.pricing?.cacheWrite ?? 0,
+            },
             // What the PROVIDER said, falling back to pi's own defaults because its ProviderModelConfig requires both
             // numbers and pi needs them for its compaction maths. The fallback is NOT passed on to the user: the
             // report carries only what the provider actually published, so the panel says "unknown" rather than
@@ -238,8 +248,10 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
           : {}),
       },
       maxOutputTokens: model.maxTokens ?? 0,
-      // Only what the provider published — never pi's fallback, which `model.contextWindow` would carry.
+      // Only what the provider published — never pi's fallback, which `model.contextWindow` and `model.maxTokens`
+      // would both carry.
       ...(options.contextWindow ? { providerContextWindow: options.contextWindow } : {}),
+      ...(options.maxOutputTokens ? { providerMaxOutputTokens: options.maxOutputTokens } : {}),
       compacted,
     };
   };

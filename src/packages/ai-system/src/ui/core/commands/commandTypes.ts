@@ -1,6 +1,3 @@
-import type { AccessProfileId } from "@/ai-system/core/accessProfiles";
-import type { ReasoningLevel } from "@/ai-system/core/reasoning";
-
 export type BuiltinAssistantCommandId =
   | "help"
   | "skills.open"
@@ -23,8 +20,6 @@ export type BuiltinAssistantCommandId =
   | "session.export"
   | "turn.stop"
   | "model.open"
-  | "access.set"
-  | "reasoning.set"
   | "permissions.open";
 
 export type AssistantCommandId = string;
@@ -174,12 +169,6 @@ export interface AssistantCommandMatch {
   matchedBy: string;
 }
 
-export type AssistantCommandUIEffect =
-  | { kind: "open-command-palette"; query: string }
-  | { kind: "open-model-picker" }
-  | { kind: "open-access-profile" }
-  | { kind: "set-access-profile"; value: AccessProfileId }
-  | { kind: "open-reasoning-level" }
-  | { kind: "set-reasoning-level"; value: ReasoningLevel };
+export type AssistantCommandUIEffect = { kind: "open-command-palette"; query: string } | { kind: "open-model-picker" };
 
 export type AssistantCommandExecutionResult = AssistantCommandUIEffect | undefined;

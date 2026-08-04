@@ -62,9 +62,6 @@ const historyMessage = z
   })
   .strict();
 
-export const accessProfileId = z.enum(["observe", "workspace", "operator"]);
-export const reasoningLevel = z.enum(["default", "low", "medium", "high"]);
-
 export const submitThreadRequest = z
   .object({
     threadId: id,
@@ -82,8 +79,6 @@ export const submitThreadRequest = z
     history: z.array(historyMessage).max(MAX_INITIAL_THREAD_HISTORY_MESSAGES, "AI: Thread history is too large"),
     providerId: optionalProvider,
     model,
-    accessProfile: accessProfileId.optional(),
-    reasoningLevel: reasoningLevel.optional(),
     bundle: diagnosticsBundle.optional(),
   })
   .strict();
@@ -506,8 +501,6 @@ export const threadSummarySchema = z
     updatedAt: z.number().nonnegative(),
     providerId: optionalProvider,
     model,
-    accessProfile: accessProfileId.optional(),
-    reasoningLevel: reasoningLevel.optional(),
     phase: threadPhase,
     lastSeq: z.number().int().nonnegative(),
   })
@@ -555,6 +548,8 @@ const effectiveContext = z
           status: z.literal("known"),
           maxInputTokens: z.number().int().nonnegative(),
           reservedOutputTokens: z.number().int().nonnegative(),
+          // Whether that reservation is the provider's published cap or our own default standing in for one.
+          reservedFromProvider: z.boolean(),
         })
         .strict(),
     ]),
@@ -832,6 +827,16 @@ export const responseSchemas = {
     .object({
       contextWindow: z.number().int().positive().optional(),
       maxOutputTokens: z.number().int().positive().optional(),
+      // Dollars per million tokens, so fractional by nature — a rate of 0.01 is a real price, not a rounding error.
+      pricing: z
+        .object({
+          input: z.number().nonnegative(),
+          output: z.number().nonnegative(),
+          cacheRead: z.number().positive().optional(),
+          cacheWrite: z.number().positive().optional(),
+        })
+        .strict()
+        .optional(),
     })
     .strict(),
   [AI_CHANNELS.engineOp]: engineOpResult,

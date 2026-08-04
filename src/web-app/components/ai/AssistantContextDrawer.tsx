@@ -120,6 +120,17 @@ function UsageOverview({ view }: { view: ThreadView }) {
               })
             : t("This provider does not publish a verified context window to the app.")}
         </div>
+        {context?.window.status === "known" ? (
+          <div className="AssistantContextNotice">
+            {context.window.reservedFromProvider
+              ? t("{{reserved}} reserved for the answer, as this provider publishes it", {
+                  reserved: compactTokens(context.window.reservedOutputTokens),
+                })
+              : t("{{reserved}} reserved for the answer — our default, since this provider publishes no cap", {
+                  reserved: compactTokens(context.window.reservedOutputTokens),
+                })}
+          </div>
+        ) : null}
       </section>
       <section className="AssistantContextPanel">
         <div className="AssistantContextPanelHeader">

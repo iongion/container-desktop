@@ -212,6 +212,8 @@ export function createMockPiBridgeClient(): PiBridgeClient {
         contextTokens: 1200 * turns,
         contextWindow: 128000,
         maxOutputTokens: 4096,
+        // Nothing publishes a cap for a mock model, so the one in force is our default — which is what the panel says.
+        providerMaxOutputTokens: 0,
         systemPromptChars: 1800 + systemContext.length,
         tools: [
           { name: "listContainers", description: "List containers in all states for a connection." },

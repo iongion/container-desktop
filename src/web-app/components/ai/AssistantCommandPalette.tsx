@@ -52,8 +52,6 @@ const BUILTIN_COMMAND_ICONS: Record<BuiltinAssistantCommandId, IconName> = {
   "session.export": IconNames.EXPORT,
   "turn.stop": IconNames.STOP,
   "model.open": IconNames.MODEL,
-  "access.set": IconNames.EYE_OPEN,
-  "reasoning.set": IconNames.LIGHTBULB,
   "permissions.open": IconNames.SHIELD,
 };
 

@@ -57,8 +57,6 @@ describe("assistant command registry", () => {
       "session.copy",
       "session.export",
       "model.open",
-      "access.set",
-      "reasoning.set",
       "permissions.open",
     ]);
     const names = BUILTIN_ASSISTANT_COMMANDS.flatMap((command) => [command.path, ...command.aliases]);
@@ -84,8 +82,6 @@ describe("assistant command registry", () => {
       "session.info",
       "session.export",
       "model.open",
-      "access.set",
-      "reasoning.set",
       "permissions.open",
     ]);
     // Every name the app owns is reserved against a skill claiming it. `/resume` is NOT among them: it is pi's, and
@@ -213,23 +209,23 @@ describe("parseAssistantInput", () => {
       kind: "command",
       id: "session.copy",
     });
-    for (const gone of ["/clear", "/cls", "/branch", "/offload", "/thread list", "/context"]) {
+    // A pi session takes its access and reasoning AT START, so the app no longer offers a command that could
+    // only have changed a value nothing reads.
+    for (const gone of [
+      "/clear",
+      "/cls",
+      "/branch",
+      "/offload",
+      "/thread list",
+      "/context",
+      "/access",
+      "/security",
+      "/reasoning",
+      "/effort",
+      "/thinking",
+      "/think",
+    ]) {
       expect(parseAssistantInput(gone, BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({ kind: "error" });
-    }
-  });
-
-  it("resolves access and reasoning compatibility aliases", () => {
-    expect(parseAssistantInput("/security workspace", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "access.set",
-      args: ["workspace"],
-    });
-    for (const alias of ["/effort", "/thinking", "/think"]) {
-      expect(parseAssistantInput(`${alias} high`, BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-        kind: "command",
-        id: "reasoning.set",
-        args: ["high"],
-      });
     }
   });
 

@@ -2,7 +2,7 @@
 
 <!-- Generated from commandCatalog.ts. Update the registry, then regenerate this document. -->
 
-Registry revision: `builtin-v9`
+Registry revision: `builtin-v10`
 
 | Command | Aliases | Description | Arguments | Bypass tier | Availability | Confirmation |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -27,6 +27,4 @@ Registry revision: `builtin-v9`
 | `/copy` | — | Copy last agent message to clipboard | — | `side-effect-free` | `thread` | `none` |
 | `/export` | — | Export session (HTML default, or specify path: .html/.jsonl) | — | `immediate-ui` | `thread` | `none` |
 | `/model` | — | Select model (opens selector UI) | — | `immediate-ui` | `thread-idle-only` | `none` |
-| `/access` | `/security` | Choose the Assistant access profile | [observe\|workspace\|operator] | `immediate-ui` | `thread-idle-only` | `none` |
-| `/reasoning` | `/effort`, `/thinking`, `/think` | Choose the Thread reasoning level | [default\|low\|medium\|high] | `immediate-ui` | `thread-idle-only` | `none` |
 | `/permissions` | — | Open AI permissions settings | — | `immediate-ui` | `always` | `none` |

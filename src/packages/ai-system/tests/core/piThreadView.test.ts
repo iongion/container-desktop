@@ -216,6 +216,7 @@ describe("projectPiThreadView", () => {
           contextTokens: 1200,
           contextWindow: 128000,
           maxOutputTokens: 4096,
+          providerMaxOutputTokens: 0,
           systemPromptChars: 800,
           tools: [{ name: "listContainers", description: "list containers" }],
           messages: { user: 1, assistant: 2, toolCalls: 1 },

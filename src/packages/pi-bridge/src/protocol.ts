@@ -102,8 +102,12 @@ export interface SessionContextReport {
   // pi's own estimate for the whole context, and null right after a compaction (before the next response).
   contextTokens: number | null;
   contextWindow: number;
-  // What the model may answer with, so the app can show a budget rather than just a ceiling.
+  // What the model may answer with, so the app can show a budget rather than just a ceiling. This is the cap in
+  // FORCE — true whoever chose it.
   maxOutputTokens: number;
+  // What the PROVIDER published as that cap, and 0 when it published none: pi's model config demands a number, so
+  // the cap in force can be our own default, and saying so is the difference between a fact and a fiction.
+  providerMaxOutputTokens: number;
   systemPromptChars: number;
   // Only the tools the model was actually offered this turn — the active set, not everything registered.
   tools: Array<{ name: string; description?: string }>;

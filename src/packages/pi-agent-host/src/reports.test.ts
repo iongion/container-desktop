@@ -50,6 +50,15 @@ describe("sessionContextReport", () => {
     expect(report.contextTokens).toBe(5000);
   });
 
+  // Same distinction as the window, for the other half of the budget: 4096 is what the cap IS, because we register
+  // it, but it is pi's default rather than anything this server published.
+  it("separates the output cap the provider published from the one we defaulted to", () => {
+    expect(sessionContextReport(facts()).providerMaxOutputTokens).toBe(0);
+    expect(sessionContextReport(facts({ providerMaxOutputTokens: 8192 })).providerMaxOutputTokens).toBe(8192);
+    // The cap in force is reported either way — it bounds every answer, whoever chose it.
+    expect(sessionContextReport(facts()).maxOutputTokens).toBe(4096);
+  });
+
   it("reports the model, its window, and only the tools the model was offered", () => {
     const report = sessionContextReport(facts());
     expect(report).toMatchObject({

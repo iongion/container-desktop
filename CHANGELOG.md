@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Context panel reports the model's real budget, asked of the provider: a local server's loaded context length, not the 128k every model used to claim regardless of what the server would accept. A provider that publishes nothing now says so
 - The provider key has only one route to the gateway container: the app reads it from the OS keychain and writes the file itself, and there is no longer any field it could travel in from the web view
 - The agent's bridge token is protected like the provider key beside it: both env files now live in the one directory the web view cannot read back, instead of the token sitting in a second unguarded one
+- Starting a session with network access turned off works at all: the agent's own network is created internal and the gateway is given a routable one of its own, instead of handing the engine a flag `run` does not have
+- A session no longer fails because something else already holds the port it picked — the agent's bridge port is re-picked and tried again when the engine says it is in use
+- Assistant sessions a crash or a force-quit left behind are removed at startup, together with the networks they were holding: enough of those and the engine refuses to create another for anything
+- The Context panel says whether the budget reserved for the answer is the provider's published cap or the app's own default, instead of presenting one as the other
+- Estimated cost is a real number: the provider's published rates now reach the session, so a priced model reports what it charged instead of nothing
 
 - Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
 - A local model server session starts again — asking for a key a keyless provider never had used to stop it
@@ -38,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - pi's own slash commands, all of them, under pi's own names — the ones this architecture cannot honour are listed with the reason rather than hidden
 - `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog` and `/reload` run against the session itself
 - `/fork` and `/tree` open a picker: your earlier messages to start again from, or the session's branches with the one you are on marked
+- Ollama and llama.cpp report their real context window — the length the server actually loaded, not the maximum the model could do
 - The assistant reports what it has spent and what it is sending the model, after every turn
 - One Assistant: the full screen and the quake console are the same conversation, with the same transcript, cards and composer — the separate Coding Agent screen is gone
 - Start a session from wherever you are — the console offers it too, instead of a composer that leads nowhere
@@ -119,6 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - A session is one conversation: the thread list, rename, delete, branch and compaction drawers are gone, replaced by pi's own `/resume`, `/name`, `/fork`, `/tree` and `/compact`
+- The access-profile and reasoning-level pickers are gone, with `/access` and `/reasoning`: a session takes both when it starts and neither can be changed afterwards, so the controls only ever looked live
 - The in-app agent engine's whole path is gone — its thread store, tool-artifact store, knowledge bank and fifteen IPC channels had no caller left once the assistant moved into a container
 - The left sidebar now starts collapsed, giving screens their full width until you expand it
 - Eleven unused libraries are gone from the app, including the retired multi-agent engine — a smaller install and a faster build

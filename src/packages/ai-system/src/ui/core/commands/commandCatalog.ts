@@ -277,30 +277,6 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     arguments: { kind: "none" },
   }),
   control({
-    id: "access.set",
-    path: "/access",
-    aliases: ["/security"],
-    categoryKey: "Access",
-    descriptionKey: "Choose the Assistant access profile",
-    hiddenSearchTerms: ["tools", "capabilities", "profile"],
-    argumentHintKey: "[observe|workspace|operator]",
-    bypassTier: "immediate-ui",
-    availabilityId: "thread-idle-only",
-    arguments: { kind: "tokens", min: 0, max: 1 },
-  }),
-  control({
-    id: "reasoning.set",
-    path: "/reasoning",
-    aliases: ["/effort", "/thinking", "/think"],
-    categoryKey: "Model",
-    descriptionKey: "Choose the Thread reasoning level",
-    hiddenSearchTerms: ["effort", "thinking", "model"],
-    argumentHintKey: "[default|low|medium|high]",
-    bypassTier: "immediate-ui",
-    availabilityId: "thread-idle-only",
-    arguments: { kind: "tokens", min: 0, max: 1 },
-  }),
-  control({
     id: "permissions.open",
     path: "/permissions",
     categoryKey: "Permissions",
@@ -312,6 +288,6 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
   }),
 ];
 
-export const BUILTIN_ASSISTANT_COMMAND_REGISTRY = createAssistantCommandRegistry("builtin-v9", [
+export const BUILTIN_ASSISTANT_COMMAND_REGISTRY = createAssistantCommandRegistry("builtin-v10", [
   BUILTIN_ASSISTANT_COMMANDS,
 ]);

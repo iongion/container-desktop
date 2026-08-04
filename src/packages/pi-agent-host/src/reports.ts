@@ -26,6 +26,8 @@ export interface PiSessionFacts {
   // purpose: pi's model config requires a window even when nobody knows one, so its number can be a fallback, and
   // relaying a fallback is what told the user they had 124k of input room on a server holding 8192.
   providerContextWindow?: number;
+  // Likewise for the completion cap: absent means the provider published none and the cap in force is pi's default.
+  providerMaxOutputTokens?: number;
   compacted: boolean;
 }
 
@@ -49,6 +51,8 @@ export function sessionContextReport(facts: PiSessionFacts): SessionContextRepor
     // for pi's compaction maths and is not a fact about this server.
     contextWindow: facts.providerContextWindow ?? 0,
     maxOutputTokens: facts.maxOutputTokens,
+    // Zero means our default is in force, which the panel says in words rather than crediting it to the server.
+    providerMaxOutputTokens: facts.providerMaxOutputTokens ?? 0,
     systemPromptChars: facts.systemPrompt.length,
     // Active names first, resolved through the registry: a name with no definition is one the app cannot describe,
     // and listing it would promise the model a tool nobody can explain.

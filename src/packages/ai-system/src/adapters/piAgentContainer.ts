@@ -1,3 +1,4 @@
+import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
 import { composeGatewayEnv, gatewayBaseUrl, upstreamModelApi } from "@/ai-system/core/piAgentEnv";
 import { isLoopbackProviderHost, type ProviderKind } from "@/ai-system/core/providers";
 import type { AIAuthSettings } from "@/ai-system/core/types";
@@ -36,6 +37,9 @@ export interface PiAgentSessionSpec {
   // unknown — the session used to register an invented 128000/4096 for every model on every server.
   contextWindow?: number;
   maxOutputTokens?: number;
+  // What the provider charges, per million tokens. Absent for a free or unpriced model — pi already defaults every
+  // rate to zero, which is why a session used to report $0.00 whatever it actually cost.
+  pricing?: ModelPricing;
   egress: boolean;
   // The DNS name that resolves to THIS machine from inside a container on this engine — podman's
   // host.containers.internal, docker's host.docker.internal. A provider running on the host (LM Studio,
@@ -70,6 +74,23 @@ export function userMappingArgv(mapping: PiAgentSessionSpec["userMapping"]): str
 export interface PiAgentSessionContainers {
   agentContainerId: string;
   gatewayContainerId: string;
+  // The port the agent's bridge ENDED UP on. A published port cannot be reserved, so a taken one is re-picked
+  // here and the caller has to dial what it settled on rather than what it asked for.
+  hostPort: number;
+}
+
+// Random, and deliberately not probed for: a free port at probe time can be taken by the time the container runs,
+// so the engine's own refusal is the only reliable signal. This range holds real servers on a developer's machine
+// (LM Studio listens inside it), which is why one attempt is not enough.
+export function pickHostPort(): number {
+  return 41000 + Math.floor(Math.random() * 4000);
+}
+
+const HOST_PORT_ATTEMPTS = 5;
+
+function portAlreadyTaken(error: unknown): boolean {
+  // podman's rootlessport and docker's proxy word it differently; both say "already in use"/"already allocated".
+  return /address already in use|already allocated/i.test(`${(error as Error)?.message ?? error}`);
 }
 
 export function agentRunArgv(spec: PiAgentSessionSpec, guestWorkspacePath: string, envFilePath: string): string[] {
@@ -89,11 +110,29 @@ export function agentRunArgv(spec: PiAgentSessionSpec, guestWorkspacePath: strin
     "--env-file",
     envFilePath,
     ...userMappingArgv(spec.userMapping),
-    ...(spec.egress ? [] : ["--internal"]),
     spec.imageTag,
     "--mode",
     "agent",
   ];
+}
+
+// The agent's own network, and the only one it is ever attached to. `--internal` builds the bridge with no gateway
+// address, so a container on it resolves and reaches its siblings by name and has no route anywhere else — neither
+// the internet nor this machine. It is a network-create flag: `run` rejects it outright.
+export function networkCreateArgv(spec: PiAgentSessionSpec): string[] {
+  return ["network", "create", ...(spec.egress ? [] : ["--internal"]), spec.networkName];
+}
+
+// The second network, which exists only when egress is off. The gateway still has to reach the provider, so it is
+// given a routable NIC the agent does not have — that asymmetry IS "only the gateway is reachable".
+export function egressNetworkName(spec: PiAgentSessionSpec): string {
+  return `${spec.networkName}-egress`;
+}
+
+// Attached after the gateway is running, so it keeps the internal network as its first: the agent addresses the
+// gateway by container name, which only resolves on the network they share.
+export function egressAttachArgv(spec: PiAgentSessionSpec): string[] {
+  return ["network", "connect", egressNetworkName(spec), spec.gatewayContainerName];
 }
 
 function upstreamIsOnThisMachine(spec: PiAgentSessionSpec): boolean {
@@ -161,12 +200,18 @@ export async function startPiAgentSession(
     ? await host.resolveGuestPath(spec.workspacePath, spec.scope)
     : spec.workspacePath;
 
-  await run(host, ["network", "create", spec.networkName], spec.scope).catch((error) => {
+  await run(host, networkCreateArgv(spec), spec.scope).catch((error) => {
     // A pre-existing network is not an error: the name is session-scoped, so a retry can find its own
     // leftovers from a crashed run.
     logger.debug("network create skipped", error);
     return "";
   });
+  if (!spec.egress) {
+    await run(host, ["network", "create", egressNetworkName(spec)], spec.scope).catch((error) => {
+      logger.debug("egress network create skipped", error);
+      return "";
+    });
+  }
 
   const gatewayEnvFile = options?.gatewayEnvFile
     ? await options.gatewayEnvFile()
@@ -183,6 +228,11 @@ export async function startPiAgentSession(
         }),
       );
   const gatewayContainerId = await run(host, gatewayRunArgv(spec, gatewayEnvFile), spec.scope);
+  if (!spec.egress) {
+    // NOT tolerated the way a pre-existing network is: without this the gateway has no route to the provider at
+    // all, and a session that starts anyway fails on its first turn with a connect error instead.
+    await run(host, egressAttachArgv(spec), spec.scope);
+  }
 
   // The agent's env file deliberately omits the provider key: plugin code runs in this container.
   const modelApi = upstreamModelApi(spec.providerKind);
@@ -196,13 +246,88 @@ export async function startPiAgentSession(
       // Omitted entirely when the provider did not say, so the container can tell "unknown" from "zero".
       ...(spec.contextWindow ? [`CD_MODEL_CONTEXT_WINDOW=${spec.contextWindow}`] : []),
       ...(spec.maxOutputTokens ? [`CD_MODEL_MAX_OUTPUT_TOKENS=${spec.maxOutputTokens}`] : []),
+      // Each rate is omitted when the provider published none, so the container can tell an unpriced model from a
+      // free one and pi's own zeroes stand only where they are true.
+      ...(spec.pricing?.input ? [`CD_MODEL_COST_INPUT=${spec.pricing.input}`] : []),
+      ...(spec.pricing?.output ? [`CD_MODEL_COST_OUTPUT=${spec.pricing.output}`] : []),
+      ...(spec.pricing?.cacheRead ? [`CD_MODEL_COST_CACHE_READ=${spec.pricing.cacheRead}`] : []),
+      ...(spec.pricing?.cacheWrite ? [`CD_MODEL_COST_CACHE_WRITE=${spec.pricing.cacheWrite}`] : []),
       "CD_WORKSPACE=/workspace",
       `CD_AGENT_DIR=${AGENT_DIR_IN_IMAGE}`,
     ].join("\n"),
   );
-  const agentContainerId = await run(host, agentRunArgv(spec, guestWorkspacePath, agentEnvFile), spec.scope);
+  let hostPort = spec.hostPort;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const agentContainerId = await run(
+        host,
+        agentRunArgv({ ...spec, hostPort }, guestWorkspacePath, agentEnvFile),
+        spec.scope,
+      );
+      return { agentContainerId, gatewayContainerId, hostPort };
+    } catch (error) {
+      if (attempt >= HOST_PORT_ATTEMPTS || !portAlreadyTaken(error)) throw error;
+      // The engine can leave the container behind when only its port mapping failed, and the name goes with it.
+      await run(host, ["rm", "--force", spec.agentContainerName], spec.scope).catch(() => "");
+      logger.debug(`bridge port ${hostPort} was taken, trying another`);
+      hostPort = pickHostPort();
+    }
+  }
+}
 
-  return { agentContainerId, gatewayContainerId };
+// A session's name is the only evidence a later app run has that a container was ours, so the patterns are strict:
+// the suffix is the first 8 characters of a UUID. `cd-agent-mine` is the user's, and the shared plugin VOLUME is
+// never in scope — it holds what they installed.
+const SESSION_SUFFIX = "[0-9a-f]{8}";
+const SESSION_CONTAINER = new RegExp(`^cd-(agent|gateway)-${SESSION_SUFFIX}$`);
+const SESSION_NETWORK = new RegExp(`^cd-agent-net-${SESSION_SUFFIX}(-egress)?$`);
+
+function matching(output: string, pattern: RegExp): string[] {
+  return output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((name) => pattern.test(name));
+}
+
+// Remove every session container and network on this engine that no longer belongs to a running session.
+//
+// Called at startup, where the question answers itself: a pi session lives only as long as the app holds its bridge
+// client, so anything still standing when the app boots was orphaned by a crash or a force-quit. Each orphan holds a
+// published port, and each network a /24 out of the engine's pool — around sixteen of them and podman refuses to
+// create another, which surfaces as "IPAM error: failed to get ips for container" on a session that did nothing
+// wrong. Housekeeping, so an engine that refuses is reported and never raised: the app must still start.
+export async function reapOrphanPiAgentSessions(
+  host: HostClientFacade,
+  scope?: string,
+): Promise<{ containers: string[]; networks: string[] }> {
+  const reaped: { containers: string[]; networks: string[] } = { containers: [], networks: [] };
+  const containers = await run(host, ["ps", "--all", "--format", "{{.Names}}"], scope).catch(() => "");
+  for (const name of matching(containers, SESSION_CONTAINER)) {
+    const removed = await run(host, ["rm", "--force", name], scope).then(
+      () => true,
+      (error) => {
+        logger.debug(`reaping ${name} failed`, error);
+        return false;
+      },
+    );
+    if (removed) reaped.containers.push(name);
+  }
+  // After the containers: a network still in use cannot be removed.
+  const networks = await run(host, ["network", "ls", "--format", "{{.Name}}"], scope).catch(() => "");
+  for (const name of matching(networks, SESSION_NETWORK)) {
+    const removed = await run(host, ["network", "rm", name], scope).then(
+      () => true,
+      (error) => {
+        logger.debug(`reaping network ${name} failed`, error);
+        return false;
+      },
+    );
+    if (removed) reaped.networks.push(name);
+  }
+  if (reaped.containers.length || reaped.networks.length) {
+    logger.info(`reaped ${reaped.containers.length} orphaned session containers, ${reaped.networks.length} networks`);
+  }
+  return reaped;
 }
 
 export async function stopPiAgentSession(host: HostClientFacade, spec: PiAgentSessionSpec): Promise<void> {
@@ -212,8 +337,12 @@ export async function stopPiAgentSession(host: HostClientFacade, spec: PiAgentSe
       return "";
     });
   }
-  await run(host, ["network", "rm", spec.networkName], spec.scope).catch((error) => {
-    logger.debug("network rm failed", error);
-    return "";
-  });
+  // Both networks a no-egress session created, each of which holds a /24 out of the engine's pool.
+  const networks = spec.egress ? [spec.networkName] : [spec.networkName, egressNetworkName(spec)];
+  for (const network of networks) {
+    await run(host, ["network", "rm", network], spec.scope).catch((error) => {
+      logger.debug("network rm failed", error);
+      return "";
+    });
+  }
 }

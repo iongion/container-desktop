@@ -3,6 +3,7 @@
 // in-webview broker handlers, since the broker shares their realm. The shell-specific aiClient.ts /
 // aiBus.ts modules stay thin and parallel by construction. Neutral: no @tauri-apps/@wailsio here.
 
+import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -49,7 +50,10 @@ export interface IAI {
   importProjectMemory: (content: string) => Promise<ProjectContextSnapshot>;
   listModels: (providerId?: string, requestId?: string) => Promise<ModelsListResult>;
   // What the provider says the chosen model's window is. `{}` when it does not publish one.
-  modelWindow: (model: string, providerId?: string) => Promise<{ contextWindow?: number; maxOutputTokens?: number }>;
+  modelWindow: (
+    model: string,
+    providerId?: string,
+  ) => Promise<{ contextWindow?: number; maxOutputTokens?: number; pricing?: ModelPricing }>;
   cancelModelList: (requestId: string) => Promise<{ ok: true }>;
   // One container-engine operation on the coding agent's behalf. Answers with a result rather than throwing:
   // the caller is settling a request a containerized agent is blocked on.

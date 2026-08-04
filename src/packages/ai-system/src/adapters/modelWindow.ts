@@ -8,9 +8,9 @@
 // Only providers with a documented endpoint are asked, and only for the model in use. Everything else answers
 // `undefined`, which the panel renders as "unknown" rather than as a confident fiction.
 //
-// Known gaps, deliberately not guessed at because they cannot be verified on this machine: Ollama publishes it at
-// `POST /api/show` (`model_info["<arch>.context_length"]`) and llama.cpp at `GET /props` (`n_ctx`). Both belong here
-// once there is a server to prove them against.
+// Every probe here was driven against a real server, because the shapes are not guessable: llama.cpp keeps its number
+// under `default_generation_settings`, not at the top level of `/props`, and Ollama has two numbers in two endpoints
+// where only `/api/ps` reports the one a request is actually bounded by.
 
 import type { ResolvedProvider } from "@/ai-system/core/providers";
 
@@ -18,6 +18,16 @@ export interface ModelWindow {
   contextWindow: number;
   // Only some providers publish a completion cap. Absent means pi's own default stands.
   maxOutputTokens?: number;
+  // What the provider charges, in DOLLARS PER MILLION TOKENS — the unit pi's model config takes, which is not the
+  // unit any provider publishes. Absent for a free or unpriced model, where pi's own zeroes are already right.
+  pricing?: ModelPricing;
+}
+
+export interface ModelPricing {
+  input: number;
+  output: number;
+  cacheRead?: number;
+  cacheWrite?: number;
 }
 
 export interface ModelWindowOptions {
@@ -48,9 +58,16 @@ function entryFor(payload: unknown, model: string): Record<string, unknown> | un
 
 async function readJSON(
   url: string,
-  opts: { fetchImpl: typeof fetch; signal?: AbortSignal },
+  opts: { fetchImpl: typeof fetch; signal?: AbortSignal; body?: unknown },
 ): Promise<unknown | undefined> {
-  const response = await opts.fetchImpl(url, opts.signal ? { signal: opts.signal } : {});
+  const init: RequestInit = {
+    ...(opts.signal ? { signal: opts.signal } : {}),
+    // A body means the endpoint takes the model as an argument rather than listing every model it knows.
+    ...(opts.body === undefined
+      ? {}
+      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opts.body) }),
+  };
+  const response = await opts.fetchImpl(url, init);
   if (!response.ok) return undefined;
   return await response.json();
 }
@@ -66,7 +83,33 @@ async function lmStudioWindow(
   return window ? { contextWindow: window } : undefined;
 }
 
-// OpenRouter publishes the window and the completion cap in its own listing, so a cloud model is no different in kind.
+// Dollars per token, as a string, into dollars per million, as a number. pi divides its rate by 1e6 before applying
+// it (`pi-ai/models.js`: `(rates.input / 1000000) * usage.input`), so passing a per-token price straight through
+// under-reports a real bill by a factor of a million.
+function perMillion(value: unknown): number | undefined {
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : typeof value === "number" ? value : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed * 1_000_000 : undefined;
+}
+
+// The rates ride along with the window because they come from the same entry. A model that charges nothing yields
+// nothing: pi already defaults every rate to zero, so there is no difference to carry.
+function pricingOf(entry: Record<string, unknown> | undefined): ModelPricing | undefined {
+  const published = entry?.pricing as Record<string, unknown> | undefined;
+  const input = perMillion(published?.prompt);
+  const output = perMillion(published?.completion);
+  if (!input && !output) return undefined;
+  const cacheRead = perMillion(published?.input_cache_read);
+  const cacheWrite = perMillion(published?.input_cache_write);
+  return {
+    input: input ?? 0,
+    output: output ?? 0,
+    ...(cacheRead ? { cacheRead } : {}),
+    ...(cacheWrite ? { cacheWrite } : {}),
+  };
+}
+
+// OpenRouter publishes the window, the completion cap and the price in its own listing, so a cloud model is no
+// different in kind.
 async function openRouterWindow(
   resolved: ResolvedProvider,
   opts: { fetchImpl: typeof fetch; signal?: AbortSignal },
@@ -75,12 +118,58 @@ async function openRouterWindow(
   const window = usable(entry?.context_length);
   if (!window) return undefined;
   const cap = usable((entry?.top_provider as { max_completion_tokens?: unknown } | undefined)?.max_completion_tokens);
-  return { contextWindow: window, ...(cap ? { maxOutputTokens: cap } : {}) };
+  const pricing = pricingOf(entry);
+  return { contextWindow: window, ...(cap ? { maxOutputTokens: cap } : {}), ...(pricing ? { pricing } : {}) };
+}
+
+// Ollama says it twice, and only one of them bounds a request. `/api/ps` describes the RESIDENT copy — the context
+// length it was loaded with, which defaults well below what the model could do — and `/api/show` describes the model
+// itself, under a key named after its architecture. Same relationship as LM Studio's loaded vs maximum, so the
+// preference is the same.
+//
+// Ollama is also the one provider that can refuse this app by ORIGIN: it runs a CORS allow-list, and every request
+// from a webview whose scheme is not on it fails as an opaque network error rather than an HTTP status. Its defaults
+// include `tauri://*`, so the Tauri shell is fine; `wails://` is not, and cannot be added either — Ollama PANICS at
+// startup on an origin whose scheme is not http/https/*-extension, so the only opening is `OLLAMA_ORIGINS=*`.
+async function ollamaWindow(
+  resolved: ResolvedProvider,
+  opts: { fetchImpl: typeof fetch; signal?: AbortSignal },
+): Promise<ModelWindow | undefined> {
+  const base = origin(resolved.baseURL);
+  const resident = (await readJSON(`${base}/api/ps`, opts)) as { models?: Array<Record<string, unknown>> } | undefined;
+  const running = resident?.models?.find((entry) => entry.model === resolved.model || entry.name === resolved.model);
+  const loaded = usable(running?.context_length);
+  if (loaded) return { contextWindow: loaded };
+
+  // Nothing resident: the model still has a maximum, and the key it lives under is named after the architecture the
+  // payload itself reports — there is no way to know it in advance.
+  const shown = (await readJSON(`${base}/api/show`, { ...opts, body: { model: resolved.model } })) as
+    | { model_info?: Record<string, unknown> }
+    | undefined;
+  const info = shown?.model_info;
+  const architecture = info?.["general.architecture"];
+  const declared = typeof architecture === "string" ? usable(info?.[`${architecture}.context_length`]) : undefined;
+  return declared ? { contextWindow: declared } : undefined;
+}
+
+// llama.cpp serves ONE model at whatever `-c` it was started with, so the model id plays no part. The number lives
+// under the default generation settings and NOT at the top level of `/props`, where a guess would have looked.
+async function llamaCppWindow(
+  resolved: ResolvedProvider,
+  opts: { fetchImpl: typeof fetch; signal?: AbortSignal },
+): Promise<ModelWindow | undefined> {
+  const props = (await readJSON(`${origin(resolved.baseURL)}/props`, opts)) as
+    | { default_generation_settings?: Record<string, unknown> }
+    | undefined;
+  const window = usable(props?.default_generation_settings?.n_ctx);
+  return window ? { contextWindow: window } : undefined;
 }
 
 const PROBES: Record<string, typeof lmStudioWindow> = {
   lmstudio: lmStudioWindow,
   openrouter: openRouterWindow,
+  ollama: ollamaWindow,
+  llamacpp: llamaCppWindow,
 };
 
 export async function fetchModelWindow(

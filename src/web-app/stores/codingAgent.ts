@@ -4,10 +4,13 @@
 import { Intent } from "@blueprintjs/core";
 import { create } from "zustand";
 
+import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   GATEWAY_PORT_IN_IMAGE,
   gatewayUpstreamUrl,
+  pickHostPort,
+  reapOrphanPiAgentSessions,
   startPiAgentSession,
   stopPiAgentSession,
 } from "@/ai-system/adapters/piAgentContainer";
@@ -45,11 +48,13 @@ import type {
   WebSearchAnswer,
 } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
+import { connectedConnections } from "@/web-app/components/ConnectionSelect.logic";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { applySurfaceEvent, type CodingAgentSurfaces, noSurfaces } from "@/web-app/stores/codingAgentSurfaces";
 import { composeSessionSystemContext, type SessionSystemContext } from "@/web-app/stores/codingAgentSystemContext";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { readAppPiThemePalette } from "@/web-app/themes/appPiTheme";
 
 const logger = createLogger("web-app.codingAgent");
@@ -341,10 +346,27 @@ export function noContributedResources(): ContributedResources {
   return { extensions: [], commands: [], skills: [], prompts: [], builtins: [] };
 }
 
-// The published port is picked per session. A collision surfaces as an engine error on run, which the
-// start log shows verbatim — cheaper and clearer than probing for a free port from the renderer.
-function pickHostPort(): number {
-  return 41000 + Math.floor(Math.random() * 4000);
+// Remove the container pairs and networks a previous run left behind — the app is the only thing that would have,
+// and enough leaked networks make the engine refuse to create another one for anybody.
+//
+// Every running connection is swept, because a session could have been started on any of them. Safe only while the
+// app is single-instance: a pi session lives as long as the app holds its bridge client, so at boot anything still
+// standing is an orphan. The E2E harness deliberately turns single-instance OFF to run beside a dev app, and its
+// second instance must not reap the first one's live session — so the flag that gates the guard gates this too.
+export async function reapOrphanedAgentSessions(): Promise<void> {
+  const e2e = (globalThis as unknown as { CONTAINER_DESKTOP_E2E?: string }).CONTAINER_DESKTOP_E2E;
+  if (isMockMode() || e2e) return;
+  // The same source the start drawer's connection picker uses, so the sweep covers exactly the engines a session
+  // could have been started on. No scope: sessions are started unscoped, so their leftovers are unscoped too.
+  const connections = connectedConnections(
+    useAppStore.getState().connections,
+    useResourceStore.getState().activeRuntime,
+  );
+  for (const connection of connections) {
+    const host = await resolveConnectionHost(connection.id);
+    if (!host) continue;
+    await reapOrphanPiAgentSessions(host).catch((error) => logger.debug(`reaping ${connection.id} failed`, error));
+  }
 }
 
 // The gateway's env file carries the provider key, so the HOST composes and writes it: it reads the key from
@@ -367,7 +389,7 @@ async function writeGatewayEnvFile(providerId: string, fileName: string, spec: P
 async function readModelWindow(
   modelId: string,
   providerId?: string,
-): Promise<{ contextWindow?: number; maxOutputTokens?: number }> {
+): Promise<{ contextWindow?: number; maxOutputTokens?: number; pricing?: ModelPricing }> {
   const bridge = typeof window !== "undefined" ? window.AI : undefined;
   if (!bridge || !modelId.trim()) return {};
   try {
@@ -473,14 +495,20 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       const gatewayEnvFile = options.providerId
         ? () => writeGatewayEnvFile(options.providerId as string, `${suffix}-gateway.env`, spec)
         : undefined;
-      await startPiAgentSession(host, spec, (contents) => writeAgentEnvFile(`${suffix}.env`, contents), {
-        gatewayEnvFile,
-      });
+      const started = await startPiAgentSession(
+        host,
+        spec,
+        (contents) => writeAgentEnvFile(`${suffix}.env`, contents),
+        { gatewayEnvFile },
+      );
+      // The port the agent ENDED UP on: a taken one is re-picked during the run, so dialing the port that was
+      // asked for would reach nothing. The spec is corrected too, since stop() and the panels read it.
+      const running: PiAgentSessionSpec = { ...spec, hostPort: started.hostPort };
 
-      const client = createPiBridgeClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
+      const client = createPiBridgeClient({ url: `ws://127.0.0.1:${running.hostPort}/`, token: running.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));
       await client.connect();
-      set({ client, spec, connectionId: options.connectionId });
+      set({ client, spec: running, connectionId: options.connectionId });
       // Before the first plugin component can render: a component that draws once with pi's built-in
       // palette and only then hears about the app's would flash the wrong colours.
       await get().publishTheme();

@@ -21,6 +21,19 @@ function positiveEnv(name: string, key: "contextWindow" | "maxOutputTokens"): Re
   return Number.isFinite(value) && value > 0 ? { [key]: Math.floor(value) } : {};
 }
 
+// The provider's rates, in dollars per million tokens. Fractional, unlike a token count, and absent entirely for a
+// model nobody charges for — pi's own rate table is already zeroes, so there is nothing to say about a free model.
+function pricingEnv(): Record<string, number> | undefined {
+  const rates = {
+    input: Number(process.env.CD_MODEL_COST_INPUT),
+    output: Number(process.env.CD_MODEL_COST_OUTPUT),
+    cacheRead: Number(process.env.CD_MODEL_COST_CACHE_READ),
+    cacheWrite: Number(process.env.CD_MODEL_COST_CACHE_WRITE),
+  };
+  const published = Object.entries(rates).filter(([, value]) => Number.isFinite(value) && value > 0);
+  return published.length ? Object.fromEntries(published) : undefined;
+}
+
 function argValue(flag: string): string | undefined {
   const index = process.argv.indexOf(flag);
   return index === -1 ? undefined : process.argv[index + 1];
@@ -55,6 +68,7 @@ async function runAgent(): Promise<void> {
       // registering a window a server would refuse.
       ...positiveEnv("CD_MODEL_CONTEXT_WINDOW", "contextWindow"),
       ...positiveEnv("CD_MODEL_MAX_OUTPUT_TOKENS", "maxOutputTokens"),
+      pricing: pricingEnv(),
       emit: (event) => attached?.emit(event),
       containerToolDescriptions: containerToolDescriptions(),
     })
