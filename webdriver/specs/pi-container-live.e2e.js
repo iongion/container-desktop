@@ -40,9 +40,13 @@ let program = "";
 const READ_PROMPT =
   "List the containers on my container engine, then reply with the container NAMES you saw, one per line. " +
   "Use your listContainers tool with no arguments at all — do not pass connectionId, and do not guess.";
+// Identified by NAME, which removeContainer's own prose offers ("by id or name"). Demanding the id made the run
+// depend on a small model transcribing 64 hex characters: one dropped the final character, the engine answered 404,
+// and the app was blamed for relaying it. The connectionId is still withheld — the app filling in the session's own
+// is the behaviour under test.
 const REMOVE_PROMPT =
-  `Remove the container named ${VICTIM}. Call your removeContainer tool exactly once, with only that container's ` +
-  "id — no connectionId. Do not stop it first, do not use bash, and do not touch any other container.";
+  `Remove the container named ${VICTIM}. Call your removeContainer tool exactly once, passing that exact name as ` +
+  "the id — no connectionId. Do not stop it first, do not use bash, and do not touch any other container.";
 
 // The model decides when to call a tool, so every wait on its behalf is generous.
 const TURN_TIMEOUT = 150000;
@@ -82,13 +86,21 @@ function removeVictim() {
   }
 }
 
-// Every identity the model could legitimately name the throwaway by. A card that matches none of these is aimed at
-// something else on a REAL engine, so it must fail the run rather than be approved.
+// Every identity the model could legitimately name the throwaway by — its name, its full id, its short id. The tool's
+// own prose offers all three.
 let victimIdentities = [];
 
+// Compared as a WHOLE VALUE, never as a substring: a model that drops one character while copying a 64-character id
+// still produces text CONTAINING the short id, so substring matching approved a removal aimed at nothing and the
+// engine answered 404. Exact equality is the only check that tells the throwaway apart from a mis-copy of it.
 function cardNamesVictim(card) {
-  const text = `${card.args} ${card.reason}`;
-  return victimIdentities.some((identity) => identity.length > 5 && text.includes(identity));
+  let named;
+  try {
+    named = JSON.parse(card.args || "{}").id;
+  } catch {
+    return false;
+  }
+  return typeof named === "string" && victimIdentities.includes(named);
 }
 
 // A container read answers with the engine's own JSON for every container on it, which runs to tens of kilobytes.
@@ -290,13 +302,24 @@ describe("the container toolset against a real model", () => {
     // Where a container operation lands when the agent names no connection — asserted without a model, because
     // this box has two engines connected and only the app decides which one an unqualified read reaches.
     defaultRouting = await browser.executeAsync(
-      (connectionId, done) => {
+      (connectionId, needle, done) => {
         window.AI.runEngineOp({ op: "listContainers", args: {}, defaultConnectionId: connectionId }).then(
-          (result) => done({ ok: result.ok === true, text: JSON.stringify(result.value ?? result.error).slice(0, 20000) }),
-          (failure) => done({ ok: false, text: String(failure) }),
+          (result) =>
+            done({
+              ok: result.ok === true,
+              // Matched HERE, against the whole answer, for the reason `state()` gives below: an engine holding a
+              // few dozen containers answers with tens of kilobytes, and asserting on a truncated copy is how a
+              // spec reports "the container is missing" about a container that is plainly there. Only the verdict,
+              // the count and a short excerpt travel back.
+              found: JSON.stringify(result.value ?? "").includes(needle),
+              count: Array.isArray(result.value) ? result.value.length : -1,
+              text: JSON.stringify(result.value ?? result.error ?? "").slice(0, 400),
+            }),
+          (failure) => done({ ok: false, found: false, count: -1, text: String(failure) }),
         );
       },
       sessionConnectionId,
+      VICTIM,
     );
   });
 
@@ -306,9 +329,10 @@ describe("the container toolset against a real model", () => {
 
   it("sends an unqualified container read to the session's own connection", () => {
     assert.equal(defaultRouting.ok, true, `the read failed: ${defaultRouting.text}`);
-    assert.ok(
-      defaultRouting.text.includes(VICTIM),
-      `an unqualified read did not reach ${sessionConnectionId}: ${defaultRouting.text.slice(0, 400)}`,
+    assert.equal(
+      defaultRouting.found,
+      true,
+      `an unqualified read did not reach ${sessionConnectionId}: ${defaultRouting.count} containers, e.g. ${defaultRouting.text}`,
     );
   });
 
@@ -369,15 +393,20 @@ describe("the container toolset against a real model", () => {
       }
     });
     await browser.pause(600);
-    cards = await browser.execute(() =>
-      Array.from(document.querySelectorAll(".AICard")).map((element) => ({
-        title: element.querySelector(".AICardTitle")?.textContent ?? "",
-        open: element.querySelector(".AICardHead")?.getAttribute("aria-expanded") === "true",
-        rows: element.querySelectorAll(".AICardTable tbody tr").length,
-        empty: element.querySelector(".AICardEmpty") !== null,
-        json: element.querySelector(".AICardJson") !== null,
-        text: (element.textContent ?? "").slice(0, 600),
-      })),
+    cards = await browser.execute(
+      (needle) =>
+        Array.from(document.querySelectorAll(".AICard")).map((element) => ({
+          title: element.querySelector(".AICardTitle")?.textContent ?? "",
+          open: element.querySelector(".AICardHead")?.getAttribute("aria-expanded") === "true",
+          rows: element.querySelectorAll(".AICardTable tbody tr").length,
+          empty: element.querySelector(".AICardEmpty") !== null,
+          json: element.querySelector(".AICardJson") !== null,
+          // Matched in the page for the same reason the read is: the table renders every container on the engine,
+          // so the throwaway's row sits well past any excerpt short enough to travel back.
+          names: (element.textContent ?? "").includes(needle),
+          text: (element.textContent ?? "").slice(0, 600),
+        })),
+      VICTIM,
     );
     console.log(`CARDS ${JSON.stringify(cards, null, 2)}`);
     // The listContainers result reached the transcript as data, not just as text the model can read.
@@ -387,7 +416,7 @@ describe("the container toolset against a real model", () => {
     const card = cards.find((entry) => entry.rows > 0);
     assert.ok(card, `no card rendered the container table, got ${JSON.stringify(cards.map((e) => e.title))}`);
     assert.equal(card.json, false, "a real container result fell back to the generic JSON card");
-    assert.ok(card.text.includes(VICTIM), `the table did not name the container: ${card.text}`);
+    assert.ok(card.names, `the table did not name the container: ${card.text}`);
   });
 
   it("asks before a model-chosen removal, and refuses it without touching the engine", async () => {
