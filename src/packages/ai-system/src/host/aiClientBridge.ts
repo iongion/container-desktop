@@ -45,6 +45,8 @@ export interface IAI {
   clearProjectMemory: () => Promise<ProjectContextSnapshot>;
   importProjectMemory: (content: string) => Promise<ProjectContextSnapshot>;
   listModels: (providerId?: string, requestId?: string) => Promise<ModelsListResult>;
+  // What the provider says the chosen model's window is. `{}` when it does not publish one.
+  modelWindow: (model: string, providerId?: string) => Promise<{ contextWindow?: number; maxOutputTokens?: number }>;
   cancelModelList: (requestId: string) => Promise<{ ok: true }>;
   // One container-engine operation on the coding agent's behalf. Answers with a result rather than throwing:
   // the caller is settling a request a containerized agent is blocked on.
@@ -108,6 +110,7 @@ export function createAIClient(transport: AIClientTransport) {
     listModels: (providerId, requestId = crypto.randomUUID()) =>
       invoke(AI_CHANNELS.modelsList, { providerId, requestId }),
     cancelModelList: (requestId) => invoke(AI_CHANNELS.modelsCancel, { requestId }),
+    modelWindow: (model, providerId) => invoke(AI_CHANNELS.modelWindow, { model, providerId }),
     runEngineOp: (request) => invoke(AI_CHANNELS.engineOp, request),
     runWebSearch: (query) => invoke(AI_CHANNELS.webSearch, { query }),
     // The user-managed allow/reject record — managed from Settings → AI permissions.

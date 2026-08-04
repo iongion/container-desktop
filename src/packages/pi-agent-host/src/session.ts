@@ -46,6 +46,12 @@ const DEFAULT_SURFACE_ROWS = 30;
 // never learns a real key: the gateway container owns the credential.
 export const GATEWAY_PROVIDER_ID = "container-desktop-gateway";
 
+// pi's own defaults, mirrored because its ProviderModelConfig requires both numbers even when nobody knows them
+// (provider-composer.js: `definition.contextWindow ?? 128000`). Used ONLY so pi has something to compact against —
+// never reported to the user as this model's budget.
+const PI_FALLBACK_CONTEXT_WINDOW = 128000;
+const PI_FALLBACK_MAX_OUTPUT_TOKENS = 4096;
+
 // pi's ProviderConfigInput.streamSimple, kept loose here so the test can inject a canned generator
 // without reconstructing pi-ai's Context and Model types.
 export type PiStreamFn = (...args: never[]) => AsyncGenerator<unknown>;
@@ -76,6 +82,10 @@ export interface CreatePiSessionOptions {
   // Which wire shape the upstream behind the gateway speaks. The app derives it from the provider's kind and
   // sends it in the agent's env file; `gatewayUrl` is already the base that shape's client expects.
   modelApi?: PiModelApi;
+  // What the PROVIDER said about this model's budget, when it publishes one. Absent means unknown — and unknown is
+  // then REPORTED as unknown, rather than as the invented 128000/4096 every model used to be registered with.
+  contextWindow?: number;
+  maxOutputTokens?: number;
   emit: (event: BridgeEvent) => void;
   streamOverride?: PiStreamFn;
   // The app's `--app-*` colours, so plugin components are painted in the theme the rest of the app is.
@@ -112,8 +122,13 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
             reasoning: false,
             input: ["text"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 128000,
-            maxTokens: 4096,
+            // What the PROVIDER said, falling back to pi's own defaults because its ProviderModelConfig requires both
+            // numbers and pi needs them for its compaction maths. The fallback is NOT passed on to the user: the
+            // report carries only what the provider actually published, so the panel says "unknown" rather than
+            // repeating a guess. This pair used to be hardcoded for every model on every server, which is where the
+            // Context panel's "123,904 input tokens" came from while LM Studio had 8192 loaded.
+            contextWindow: options.contextWindow ?? PI_FALLBACK_CONTEXT_WINDOW,
+            maxTokens: options.maxOutputTokens ?? PI_FALLBACK_MAX_OUTPUT_TOKENS,
           },
         ],
       });
@@ -223,6 +238,8 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
           : {}),
       },
       maxOutputTokens: model.maxTokens ?? 0,
+      // Only what the provider published — never pi's fallback, which `model.contextWindow` would carry.
+      ...(options.contextWindow ? { providerContextWindow: options.contextWindow } : {}),
       compacted,
     };
   };

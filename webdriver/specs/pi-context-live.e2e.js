@@ -51,13 +51,26 @@ const ASK = "What is the project's deploy codeword? Reply with only the codeword
 // small)" — no number of small turns changes that, it is a token count. pi's default is 20000
 // (settings-manager.js: `keepRecentTokens ?? 20000`), so the conversation is deliberately grown past it.
 const COMPACTION_KEEP_RECENT_TOKENS = 20000;
-// Deliberately well clear of the threshold, not just over it: the number the session REPORTS counts the system prompt
-// and the tool definitions, while pi's cut point walks MESSAGE entries only. A conversation reporting 21149 tokens had
-// nothing to summarise because ~1400 of those were system and tools, leaving the messages just under the cut.
-const FILL_TARGET_TOKENS = COMPACTION_KEEP_RECENT_TOKENS + 5000;
-// A backstop, not a budget: the loop below stops on pi's OWN reported total, and this only keeps a model that
-// answers nothing from filling forever.
-const MAX_FILL_TURNS = 6;
+// Just clear of the threshold, not far past it: the number the session REPORTS counts the system prompt and the tool
+// definitions (~1400 here), while pi's cut point walks MESSAGE entries only. A conversation reporting 21148 tokens had
+// nothing to summarise because the messages alone were still under the cut.
+// +4000 measured, not guessed: pi reports the context total through `getContextUsage` (the provider's own token
+// counts) while its cut point walks entries with a char/4 ESTIMATE, so the two disagree by a few thousand. A
+// conversation reporting 22077 still had nothing to summarise; the margin has to cover that gap and stay under
+// the auto-compaction ceiling, which on a 40960 window is 24576.
+const FILL_TARGET_TOKENS = COMPACTION_KEEP_RECENT_TOKENS + 4000;
+// pi's own reserve, mirrored from settings-manager.js (`reserveTokens ?? 16384`). AUTO-compaction fires above
+// `contextWindow - reserveTokens`, so the band this spec has to land in is bounded at both ends: above
+// keepRecentTokens, where a manual /compact has something to summarise, and below the auto threshold, where pi has
+// not already done it. Overshooting collapses the conversation to a summary and the manual compaction then has
+// nothing left — which is exactly what a fill calibrated for a bigger window did.
+const PI_COMPACTION_RESERVE_TOKENS = 16384;
+// Small rounds so the band can actually be hit. The band is only a few thousand tokens wide on a 40960 window, and a
+// round of 400 notes (~10k tokens) jumps straight over it.
+const FILL_NOTES_PER_ROUND = 100;
+// A backstop, not a budget: the loop stops on pi's OWN reported total, and this only keeps a model that answers
+// nothing from filling forever.
+const MAX_FILL_TURNS = 14;
 
 // The local server must have room for the whole grown conversation — pi reports the model's CATALOGUE window (128k
 // for this one), not the context LM Studio actually loaded, so it will happily let a session outgrow the server.
@@ -130,11 +143,20 @@ function reportedContextTokens() {
   return browser.execute(() => window.__cdCodingAgentStore.getState().view.context?.totals?.estimatedTokens ?? 0);
 }
 
+// The window the PROVIDER published, as the session reports it back. Zero when unknown, in which case the band cannot
+// be computed and the fill is bounded only by the loop.
+function reportedContextWindow() {
+  return browser.execute(() => {
+    const view = window.__cdCodingAgentStore.getState().view.context?.window;
+    return view?.status === "known" ? view.maxInputTokens + view.reservedOutputTokens : 0;
+  });
+}
+
 // Distinct lines rather than one repeated sentence: identical text invites a model to loop, and gives the server's
 // prefix cache a reason to answer without reading any of it.
 function filler(round) {
   const lines = [];
-  for (let index = 0; index < 400; index += 1) {
+  for (let index = 0; index < FILL_NOTES_PER_ROUND; index += 1) {
     lines.push(`Note ${round}.${index}: the operator inspected container ${index} and recorded its state as steady.`);
   }
   return `Acknowledge these notes with the single word ACK, nothing else.\n\n${lines.join("\n")}`;
@@ -264,13 +286,31 @@ describe("what a real session reports about itself", () => {
     report("USAGE", usage);
     report("CONTEXT", { ...context, tools: context.tools?.map((tool) => tool.name) });
 
-    // Grown past pi's cut, on pi's OWN accounting rather than a guess at how many characters make a token. Last,
-    // because compaction rewrites the very conversation the reports above describe.
+    // Grown into the band where a manual /compact means something, on pi's OWN accounting rather than a guess at how
+    // many characters make a token. Last, because compaction rewrites the very conversation the reports above describe.
+    const providerWindow = await reportedContextWindow();
+    const autoCompactAbove = providerWindow > 0 ? providerWindow - PI_COMPACTION_RESERVE_TOKENS : Number.MAX_SAFE_INTEGER;
+    assert.ok(
+      autoCompactAbove > FILL_TARGET_TOKENS,
+      `this server's context (${providerWindow}) leaves no room to fill: pi would auto-compact above ` +
+        `${autoCompactAbove}, before a conversation could reach ${FILL_TARGET_TOKENS}. Load the model with more ` +
+        "room (lms load <model> --context-length 40960) and run again.",
+    );
+
     let filled = await reportedContextTokens();
     for (let round = 1; round <= MAX_FILL_TURNS && filled <= FILL_TARGET_TOKENS; round += 1) {
       await askAndSettle(filler(round), `the fill turn ${round} never finished`);
+      const previous = filled;
       filled = await reportedContextTokens();
       console.log(`FILL round ${round}: the session reports ${filled} context tokens`);
+      // A total that FELL is pi having compacted on its own, which leaves the manual compaction below nothing to do.
+      // Reported as what it is rather than pursued: another round would only trigger it again.
+      assert.ok(
+        filled >= previous,
+        `pi auto-compacted mid-fill (${previous} → ${filled} tokens): this server's ${providerWindow}-token window ` +
+          `puts its threshold at ${autoCompactAbove}, too close to pi's ${COMPACTION_KEEP_RECENT_TOKENS}-token cut ` +
+          "for a manual compaction to be reachable. Load the model with more room and run again.",
+      );
     }
     assert.ok(
       filled > COMPACTION_KEEP_RECENT_TOKENS,

@@ -1,3 +1,4 @@
+import { fetchModelWindow } from "@/ai-system/adapters/modelWindow";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -246,6 +247,14 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     );
     onInvoke(AI_CHANNELS.modelsCancel, (event, request) =>
       guarded(event, () => models.cancel(event, request.requestId)),
+    );
+    // What the PROVIDER says its window is. Answered host-side because only this realm holds the credential and can
+    // reach a provider's own endpoint; an unknown provider answers `{}`, which the panel shows as "unknown".
+    onInvoke(AI_CHANNELS.modelWindow, (event, request) =>
+      guarded(event, async () => {
+        const resolved = resolveProvider(await deps.getAISettings(), request.providerId);
+        return (await fetchModelWindow({ ...resolved, model: request.model })) ?? {};
+      }),
     );
     // The coding agent's container toolset lands here. dispatchEngineOp answers with a reason instead of
     // throwing, so an unbound port or a dead connection reaches the agent as a tool error it can act on.

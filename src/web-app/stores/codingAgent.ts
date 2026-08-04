@@ -362,6 +362,22 @@ async function writeGatewayEnvFile(providerId: string, fileName: string, spec: P
   return path;
 }
 
+// What the provider says this model's budget is. Never fatal: a provider that will not answer leaves the window
+// unknown, which the panel states plainly, and the session starts either way.
+async function readModelWindow(
+  modelId: string,
+  providerId?: string,
+): Promise<{ contextWindow?: number; maxOutputTokens?: number }> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge || !modelId.trim()) return {};
+  try {
+    return await bridge.modelWindow(modelId, providerId);
+  } catch (error) {
+    logger.debug("the provider did not report a context window", error);
+    return {};
+  }
+}
+
 async function writePrivateEnvFile(name: string, contents: string): Promise<string> {
   const home = await Platform.getHomeDir();
   const dir = await Path.join(home, ".local/share/container-desktop/agent");
@@ -418,6 +434,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       set({ status: "error", error: `no engine host for connection ${options.connectionId}` });
       return;
     }
+    // Asked of the PROVIDER, before the session exists: an OpenAI-shaped `/models` listing carries no window, so the
+    // only honest source is the provider's own endpoint — LM Studio serves whatever context length it was LOADED with,
+    // which is routinely a fraction of what the model could do. Unknown is fine and reported as unknown; what is not
+    // fine is the invented number this replaces.
+    const modelWindow = await readModelWindow(options.modelId, options.providerId);
     const spec: PiAgentSessionSpec = {
       imageTag: agentImageTag(options.appVersion),
       workspacePath: options.workspacePath,
@@ -428,6 +449,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       gatewayContainerName: `cd-gateway-${suffix}`,
       pluginVolumeName: "cd-agent-plugins",
       upstreamBaseUrl: options.upstreamBaseUrl,
+      ...modelWindow,
       // An endpoint with no declared provider is treated as an OpenAI-shaped bearer upstream — what every
       // provider but Anthropic speaks, and what this pair did before the shape was carried at all.
       providerKind: options.providerKind ?? "openai-compatible",

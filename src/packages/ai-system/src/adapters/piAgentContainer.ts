@@ -32,6 +32,10 @@ export interface PiAgentSessionSpec {
   providerKind: ProviderKind;
   upstreamAuth: AIAuthSettings;
   modelId: string;
+  // What the PROVIDER said about this model, when it says anything. Absent means unknown, and unknown is reported as
+  // unknown — the session used to register an invented 128000/4096 for every model on every server.
+  contextWindow?: number;
+  maxOutputTokens?: number;
   egress: boolean;
   // The DNS name that resolves to THIS machine from inside a container on this engine — podman's
   // host.containers.internal, docker's host.docker.internal. A provider running on the host (LM Studio,
@@ -189,6 +193,9 @@ export async function startPiAgentSession(
       `CD_GATEWAY_URL=${gatewayBaseUrl(`http://${spec.gatewayContainerName}:${GATEWAY_PORT_IN_IMAGE}`, modelApi)}`,
       `CD_MODEL_API=${modelApi}`,
       `CD_MODEL_ID=${spec.modelId}`,
+      // Omitted entirely when the provider did not say, so the container can tell "unknown" from "zero".
+      ...(spec.contextWindow ? [`CD_MODEL_CONTEXT_WINDOW=${spec.contextWindow}`] : []),
+      ...(spec.maxOutputTokens ? [`CD_MODEL_MAX_OUTPUT_TOKENS=${spec.maxOutputTokens}`] : []),
       "CD_WORKSPACE=/workspace",
       `CD_AGENT_DIR=${AGENT_DIR_IN_IMAGE}`,
     ].join("\n"),

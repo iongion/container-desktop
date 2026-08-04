@@ -22,6 +22,10 @@ export interface PiSessionFacts {
     contextUsage?: { tokens: number | null; contextWindow: number };
   };
   maxOutputTokens: number;
+  // What the PROVIDER published for this model, when it publishes anything. Separate from `stats.contextUsage` on
+  // purpose: pi's model config requires a window even when nobody knows one, so its number can be a fallback, and
+  // relaying a fallback is what told the user they had 124k of input room on a server holding 8192.
+  providerContextWindow?: number;
   compacted: boolean;
 }
 
@@ -41,7 +45,9 @@ export function sessionContextReport(facts: PiSessionFacts): SessionContextRepor
   return {
     model: facts.model,
     contextTokens: facts.stats.contextUsage?.tokens ?? null,
-    contextWindow: facts.stats.contextUsage?.contextWindow ?? 0,
+    // Only what the provider itself said. Zero means unknown, which the panel says in words — pi's own fallback is
+    // for pi's compaction maths and is not a fact about this server.
+    contextWindow: facts.providerContextWindow ?? 0,
     maxOutputTokens: facts.maxOutputTokens,
     systemPromptChars: facts.systemPrompt.length,
     // Active names first, resolved through the registry: a name with no definition is one the app cannot describe,

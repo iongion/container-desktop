@@ -14,6 +14,13 @@ function required(name: string): string {
   return value;
 }
 
+// A token count from the environment, kept only when it is a usable positive number: an env var is a string from
+// another process, and a zero or a typo must read as "the provider did not say", not as a window of nothing.
+function positiveEnv(name: string, key: "contextWindow" | "maxOutputTokens"): Record<string, number> {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? { [key]: Math.floor(value) } : {};
+}
+
 function argValue(flag: string): string | undefined {
   const index = process.argv.indexOf(flag);
   return index === -1 ? undefined : process.argv[index + 1];
@@ -44,6 +51,10 @@ async function runAgent(): Promise<void> {
       gatewayToken: token,
       modelId: required("CD_MODEL_ID"),
       modelApi: parseModelApi(process.env.CD_MODEL_API),
+      // Absent when the provider did not publish one. Passing nothing is how the session says "unknown" rather than
+      // registering a window a server would refuse.
+      ...positiveEnv("CD_MODEL_CONTEXT_WINDOW", "contextWindow"),
+      ...positiveEnv("CD_MODEL_MAX_OUTPUT_TOKENS", "maxOutputTokens"),
       emit: (event) => attached?.emit(event),
       containerToolDescriptions: containerToolDescriptions(),
     })

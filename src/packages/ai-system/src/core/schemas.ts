@@ -455,6 +455,9 @@ export const invokeSchemas = {
   [AI_CHANNELS.projectMemoryImport]: z.string().max(PROJECT_CONTEXT_LIMITS.storeBytes),
   [AI_CHANNELS.modelsList]: z.object({ providerId: optionalProvider, requestId: id }).strict(),
   [AI_CHANNELS.modelsCancel]: z.object({ requestId: id }).strict(),
+  [AI_CHANNELS.modelWindow]: z
+    .object({ providerId: optionalProvider, model: z.string().trim().min(1).max(MAX_MODEL_CHARS) })
+    .strict(),
   [AI_CHANNELS.engineOp]: engineOpRequest,
   [AI_CHANNELS.webSearch]: webSearchRequest,
   [AI_CHANNELS.permissionsList]: empty,
@@ -808,6 +811,13 @@ export const responseSchemas = {
     .object({ models: z.array(z.object({ id: z.string().trim().min(1).max(MAX_MODEL_CHARS) }).strict()).max(10_000) })
     .strict(),
   [AI_CHANNELS.modelsCancel]: ok,
+  // Both absent means the provider did not say — rendered as "unknown", never as a confident number.
+  [AI_CHANNELS.modelWindow]: z
+    .object({
+      contextWindow: z.number().int().positive().optional(),
+      maxOutputTokens: z.number().int().positive().optional(),
+    })
+    .strict(),
   [AI_CHANNELS.engineOp]: engineOpResult,
   [AI_CHANNELS.webSearch]: webSearchResult,
   [AI_CHANNELS.permissionsList]: permissionsSnapshot,

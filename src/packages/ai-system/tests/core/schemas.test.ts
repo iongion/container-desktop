@@ -92,6 +92,7 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.projectMemoryImport]: JSON.stringify({ version: 1, entries: [] }),
       [AI_CHANNELS.modelsList]: { providerId: "openai", requestId: "request-1" },
       [AI_CHANNELS.modelsCancel]: { requestId: "request-1" },
+      [AI_CHANNELS.modelWindow]: { providerId: "lmstudio", model: "qwen3-4b-instruct-2507" },
       [AI_CHANNELS.engineOp]: { op: "listContainers", args: { connectionId: "podman-1" } },
       [AI_CHANNELS.webSearch]: { query: "podman rootless" },
       [AI_CHANNELS.permissionsList]: undefined,
@@ -221,6 +222,8 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.projectMemoryImport]: readyProjectContext,
       [AI_CHANNELS.modelsList]: { models: [{ id: "model-1" }] },
       [AI_CHANNELS.modelsCancel]: { ok: true },
+      // Both fields optional: a provider that publishes no window answers `{}`, which is rendered as "unknown".
+      [AI_CHANNELS.modelWindow]: { contextWindow: 40960 },
       [AI_CHANNELS.engineOp]: { ok: true, value: [{ Id: "c1" }] },
       [AI_CHANNELS.webSearch]: { text: "rootless means no daemon" },
       [AI_CHANNELS.permissionsList]: {

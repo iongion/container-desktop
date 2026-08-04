@@ -21,6 +21,9 @@ const facts = (patch: Partial<PiSessionFacts> = {}): PiSessionFacts => ({
   },
   maxOutputTokens: 4096,
   compacted: false,
+  // What the provider itself published. pi's own contextUsage above carries its internal fallback, which must never
+  // be mistaken for this.
+  providerContextWindow: 40960,
   ...patch,
 });
 
@@ -38,12 +41,23 @@ describe("sessionUsageReport", () => {
 });
 
 describe("sessionContextReport", () => {
+  // Unknown is a legitimate answer and the only honest one for a provider that publishes nothing. The panel renders a
+  // zero window as "unknown"; a confident wrong number is what this replaces.
+  it("reports no window at all when the provider published none", () => {
+    const report = sessionContextReport(facts({ providerContextWindow: undefined }));
+    expect(report.contextWindow).toBe(0);
+    // pi's own estimate of what the conversation currently holds is still true and still reported.
+    expect(report.contextTokens).toBe(5000);
+  });
+
   it("reports the model, its window, and only the tools the model was offered", () => {
     const report = sessionContextReport(facts());
     expect(report).toMatchObject({
       model: "qwen3-4b",
       contextTokens: 5000,
-      contextWindow: 128000,
+      // The provider's number, NOT pi's. pi reported 128000 for its own compaction maths because its model config
+      // demands a number; repeating that to the user is what promised 124k of room on a server holding 8192.
+      contextWindow: 40960,
       maxOutputTokens: 4096,
       systemPromptChars: "you are a container assistant".length,
       messages: { user: 2, assistant: 3, toolCalls: 4 },
@@ -61,7 +75,9 @@ describe("sessionContextReport", () => {
   it("passes on an unknown estimate rather than inventing a zero", () => {
     const report = sessionContextReport(facts({ stats: { ...facts().stats, contextUsage: undefined } }));
     expect(report.contextTokens).toBeNull();
-    expect(report.contextWindow).toBe(0);
+    // The two are independent: how full the context is right now is pi's running estimate, while how large it can get
+    // is the provider's published fact. Not knowing the first says nothing about the second.
+    expect(report.contextWindow).toBe(40960);
   });
 
   it("says when the session has been compacted, since part of the history is then a summary", () => {

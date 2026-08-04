@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Wails backend no longer lets the web view read a provider key, which Tauri has always refused
 - A command a container image is too old to know now fails immediately with the reason, instead of hanging for thirty seconds
 - Rejecting a tool call no longer leaves "Connection error." in the transcript — stopping the agent was reported as the model failing, several times over
+- The Context panel reports the model's real budget, asked of the provider: a local server's loaded context length, not the 128k every model used to claim regardless of what the server would accept. A provider that publishes nothing now says so
 - The provider key has only one route to the gateway container: the app reads it from the OS keychain and writes the file itself, and there is no longer any field it could travel in from the web view
 
 - Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
