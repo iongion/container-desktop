@@ -114,6 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - A session is one conversation: the thread list, rename, delete, branch and compaction drawers are gone, replaced by pi's own `/resume`, `/name`, `/fork`, `/tree` and `/compact`
+- The in-app agent engine's whole path is gone — its thread store, tool-artifact store, knowledge bank and fifteen IPC channels had no caller left once the assistant moved into a container
 - The left sidebar now starts collapsed, giving screens their full width until you expand it
 - Eleven unused libraries are gone from the app, including the retired multi-agent engine — a smaller install and a faster build
 - Container and pod lists no longer refetch on every health-check probe — only real lifecycle events and health-status changes trigger a refresh

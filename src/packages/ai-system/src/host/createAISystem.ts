@@ -25,7 +25,7 @@ import { randomUUID } from "@/utils/randomUUID";
 // `TEvent` is the shell's IPC invoke event, a type parameter so this shared composition root never names an
 // Tauri/Wails type; each shell supplies its own concrete event through the transport callbacks.
 export interface AISystemDeps<TEvent = unknown> {
-  // OS app-data dir — where the AI permission + knowledge JSON stores live.
+  // OS app-data dir — where the AI permission, project-context and skill-trust JSON stores live.
   userDataDir: string;
   // The renderer-safe file/path ports (the shell's FS/Path, exposed as window.FS/window.Path).
   // The stores write PRIVATELY (0600 on the Node impl).

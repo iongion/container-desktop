@@ -398,15 +398,16 @@ session summary in the header (connection, workspace, container) and the start/s
 including the no-session empty state and its Start CTA, lives in `AssistantThread` so the console offers it
 too. A session-less surface renders no composer at all: `submit` has no bridge client to reach.
 
-`web-app/stores/useAIStore.ts` is the adapter that lets the whole Assistant UI keep working unchanged: it
-derives the old `AIState` shape from the pi session (one pi session = exactly one thread). Capabilities the
-bridge does not carry yet — new/rename/configure/branch/compact/delete/refresh — **reject by name** rather
-than silently doing nothing, so a drawer shows a real message.
+`web-app/stores/useAIStore.ts` derives the assistant's state from the pi session store (one pi session = exactly
+one thread). It declares only what the session can answer for — there is no reject-by-name list any more: what pi
+can do is offered under pi's own command names, and what this architecture cannot honour is refused where the
+command is defined, with the reason, instead of from inside a store three layers after the user was told it was
+available.
 
 ## Mock mode
 
 `CONTAINER_DESKTOP_MOCK=1` swaps the broker's real stores and streamers for `testing/aiMocks.ts`: fixture
-`EngineOps`, sandbox, knowledge, model catalog, web searcher, an every-provider-configured key store, and an
+`EngineOps`, sandbox, model catalog, web searcher, an every-provider-configured key store, and an
 **in-memory seeded** permission store (so Settings → AI permissions is exercisable without disk writes). The
 mock import is gated on a build-time constant, so a production build statically drops the whole module graph.
 
@@ -489,10 +490,9 @@ then failed from inside a store.
 | `ai-system/core/{channels,schemas}.ts` | the typed invoke/push map and its authoritative Zod schemas |
 | `ai-system/core/{providers,redact,limits,settings,toolNames}.ts` | provider resolution, redaction, ceilings, settings, tool-name unions |
 | `ai-system/adapters/{localModels,providerFetch}.ts` | bounded discovery; credential-stripping transport |
-| `ai-system/adapters/*FileStore.ts`, `permissionsStoreCore.ts` | private temp-file / atomic-rename stores |
+| `ai-system/adapters/{projectContextFileStore,skillTrustFileStore}.ts`, `permissionsStoreCore.ts` | private temp-file / atomic-rename stores |
 | `ai-system/host/{createAISystem,broker,aiClientBridge}.ts` | composition root, router, the one `window.AI` client |
-| `ai-system/host/{skillHost,projectContextHost,modelDiscoveryHost,diagnosticsHost,knowledgeBank}.ts` | the live sub-hosts |
-| `ai-system/host/{threadHost,threadRepository,toolArtifactRepository}.ts` | the orphaned thread path — no engine injected, and since the client that called it was deleted, no caller either |
+| `ai-system/host/{skillHost,projectContextHost,modelDiscoveryHost,diagnosticsHost}.ts` | the live sub-hosts |
 | `web-app/stores/{codingAgent,codingAgentSurfaces,pluginStore}.ts` | the session, its ANSI surfaces, the plugin table |
 | `web-app/stores/{useAIStore,codingAgentSystemContext}.ts` | pi session → the Assistant UI's state; the project prose the session is given |
 | `web-app/screens/AI/{AssistantScreen,AssistantActionsMenu,ScreenHeader,Navigation}.tsx` | the surface, its actions and the tab bar |

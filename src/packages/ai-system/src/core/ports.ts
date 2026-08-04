@@ -43,10 +43,6 @@ export interface KnowledgeEntry {
   tags?: string[];
 }
 
-export interface KnowledgeBankLike {
-  search(query: string): Promise<KnowledgeEntry[]>;
-}
-
 // Sandbox
 export interface SandboxCommand {
   program: string;

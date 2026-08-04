@@ -229,7 +229,6 @@ export function createMockAIDeps() {
   return {
     listModels: createMockModelLister(),
     runSandboxed: createMockSandboxRunner(),
-    knowledgeBank: createMockKnowledgeBank(),
     webSearcher: createMockWebSearcher(),
     keyStore: createMockKeyStore(),
     engineOps: createMockEngineOps(),
