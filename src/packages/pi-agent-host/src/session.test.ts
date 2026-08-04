@@ -1,12 +1,12 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionContext, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
 import { CONTAINER_TOOL_NAMES, WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
-import { createPiSession, parseModelApi } from "@/pi-agent-host/session";
-import type { BridgeEvent } from "@/pi-bridge/protocol";
+import { createPiSession, parseModelApi, sanitizeSessionFileName } from "@/pi-agent-host/session";
+import type { BridgeEvent, PiSessionSummary } from "@/pi-bridge/protocol";
 
 // The real loader reads these out of a prompt resource that only esbuild inlines, so the session takes them as an
 // argument and the suite supplies its own.
@@ -247,6 +247,103 @@ describe("replacing the session with /new", () => {
     expect(events.filter((event) => event.type === "surface_closed").length).toBeGreaterThan(0);
     const frames = events.filter((event) => event.type === "surface_frame");
     expect(frames.at(-1)).toMatchObject({ lines: ["probe header"], slot: { kind: "header" } });
+  });
+});
+
+// The three commands that REPLACE the session with one that already has a conversation. This is where the replay
+// earns its keep: without it each of these would land the user in front of an empty screen while the model still
+// holds every turn.
+describe("resuming, cloning and importing a conversation", () => {
+  async function sessionWithAHistory(events: BridgeEvent[]) {
+    const session = await createPiSession({
+      cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+      agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
+      gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
+      gatewayToken: "tok",
+      modelId: "canned",
+      emit: (event) => events.push(event),
+      streamOverride: cannedStream as never,
+    });
+    await session.prompt("the first conversation");
+    return session;
+  }
+
+  // pi persists nothing until the first assistant reply, which is why the prompt above is not optional.
+  it("clones the conversation as it stands, and replays it into the copy", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await sessionWithAHistory(events);
+    const original = session.sessionId;
+    events.length = 0;
+
+    await expect(session.runCommand("clone", "")).resolves.toEqual({ ok: true });
+
+    expect(events.find((event) => event.type === "session_replaced")).toMatchObject({ reason: "fork" });
+    expect(session.sessionId).not.toBe(original);
+    // The copy is not empty: the user's own turn and the model's reply came back through the events the live path
+    // would have produced for them.
+    expect(events.filter((event) => event.type === "user_message")).toMatchObject([{ text: "the first conversation" }]);
+    expect(events.filter((event) => event.type === "assistant_end")).toMatchObject([{ text: "Hello world" }]);
+  });
+
+  it("resumes a session it left, bringing that conversation back", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await sessionWithAHistory(events);
+    // A bare /resume is a question, and the session it is holding is marked so a picker will not offer it.
+    const listed = (await session.runCommand("resume", "")) as { ok: true; data: { sessions: PiSessionSummary[] } };
+    expect(listed.data.sessions).toMatchObject([
+      { current: true, messageCount: 2, firstMessage: "the first conversation" },
+    ]);
+    const first = listed.data.sessions[0];
+
+    // Move off it, then come back to it by path.
+    await session.runCommand("new", "");
+    events.length = 0;
+    await expect(session.runCommand("resume", first.path)).resolves.toEqual({ ok: true });
+
+    expect(events.find((event) => event.type === "session_replaced")).toMatchObject({ reason: "resume" });
+    expect(session.sessionId).toBe(first.id);
+    expect(events.filter((event) => event.type === "user_message")).toMatchObject([{ text: "the first conversation" }]);
+  });
+
+  // The JSONL a user picks is on the HOST, which the container cannot open — so the app sends its text and the
+  // session writes it where pi's importer can reach it.
+  it("imports a JSONL the app read off the host, and replays what was in it", async () => {
+    const source: BridgeEvent[] = [];
+    const donor = await sessionWithAHistory(source);
+    const listed = (await donor.runCommand("resume", "")) as { ok: true; data: { sessions: PiSessionSummary[] } };
+    const contents = readFileSync(listed.data.sessions[0].path, "utf8");
+
+    const events: BridgeEvent[] = [];
+    const session = await createPiSession({
+      cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+      agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
+      gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
+      gatewayToken: "tok",
+      modelId: "canned",
+      emit: (event) => events.push(event),
+      streamOverride: cannedStream as never,
+    });
+
+    await session.importSession("../../etc/passwd", contents);
+
+    expect(events.find((event) => event.type === "session_replaced")).toMatchObject({ reason: "import" });
+    // The donor's conversation, in a container that never saw it — and the cwd is still OURS, not the one the
+    // donor's header records, which is what the cwd override is for.
+    expect(events.filter((event) => event.type === "user_message")).toMatchObject([{ text: "the first conversation" }]);
+    expect(session.cwd).not.toBe(donor.cwd);
+  });
+});
+
+describe("sanitizeSessionFileName", () => {
+  // The app picked the file, but a file NAME is not a reason to let anything outside the session directory be
+  // written — and pi's importer only understands a .jsonl.
+  it("keeps a plain name and defuses one that tries to escape", () => {
+    expect(sanitizeSessionFileName("2026-08-04_abc.jsonl")).toBe("2026-08-04_abc.jsonl");
+    expect(sanitizeSessionFileName("../../etc/passwd")).toBe("passwd.jsonl");
+    expect(sanitizeSessionFileName("/absolute/path/notes.jsonl")).toBe("notes.jsonl");
+    expect(sanitizeSessionFileName("...")).toBe("imported.jsonl");
   });
 });
 

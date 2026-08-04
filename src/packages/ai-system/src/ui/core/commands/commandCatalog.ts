@@ -265,6 +265,51 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     arguments: { kind: "none" },
   }),
   control({
+    id: "session.import",
+    // pi's own name. The app owns the half that needs a host file dialog; the session performs pi's import.
+    path: "/import",
+    categoryKey: "Session",
+    descriptionKey: "Import and resume a session from a JSONL file",
+    hiddenSearchTerms: ["jsonl", "open", "restore", "pi"],
+    bypassTier: "queued",
+    availabilityId: "thread-idle",
+    arguments: { kind: "none" },
+  }),
+  control({
+    id: "session.share",
+    // pi's own name and purpose — the conversation as HTML. pi's gist was its TRANSPORT, and this app has none, so
+    // the file is saved where the user chooses.
+    path: "/share",
+    categoryKey: "Session",
+    descriptionKey: "Share the session as one standalone HTML file",
+    hiddenSearchTerms: ["html", "export", "save", "gist", "pi"],
+    bypassTier: "immediate-ui",
+    availabilityId: "thread",
+    arguments: { kind: "none" },
+  }),
+  control({
+    id: "provider.login",
+    path: "/login",
+    categoryKey: "Model",
+    descriptionKey: "Configure provider authentication",
+    hiddenSearchTerms: ["key", "api", "credential", "auth", "pi"],
+    bypassTier: "immediate-ui",
+    availabilityId: "always",
+    arguments: { kind: "text", required: false },
+  }),
+  control({
+    id: "provider.logout",
+    path: "/logout",
+    categoryKey: "Model",
+    descriptionKey: "Remove provider authentication",
+    hiddenSearchTerms: ["key", "api", "credential", "forget", "pi"],
+    bypassTier: "immediate-ui",
+    availabilityId: "always",
+    // Removing a key is not undoable from here — the user re-enters it.
+    confirmation: "required",
+    arguments: { kind: "text", required: false },
+  }),
+  control({
     id: "model.open",
     path: "/model",
     categoryKey: "Model",
@@ -285,6 +330,6 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
   }),
 ];
 
-export const BUILTIN_ASSISTANT_COMMAND_REGISTRY = createAssistantCommandRegistry("builtin-v10", [
+export const BUILTIN_ASSISTANT_COMMAND_REGISTRY = createAssistantCommandRegistry("builtin-v11", [
   BUILTIN_ASSISTANT_COMMANDS,
 ]);

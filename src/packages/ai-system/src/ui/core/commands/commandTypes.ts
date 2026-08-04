@@ -18,6 +18,10 @@ export type BuiltinAssistantCommandId =
   | "session.info"
   | "session.copy"
   | "session.export"
+  | "session.import"
+  | "session.share"
+  | "provider.login"
+  | "provider.logout"
   | "turn.stop"
   | "model.open"
   | "permissions.open";

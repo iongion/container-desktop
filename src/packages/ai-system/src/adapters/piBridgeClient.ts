@@ -62,6 +62,9 @@ export interface PiBridgeClient {
   // is not the one a turn runs in.
   checkProvider(): Promise<SessionProviderCheck>;
   reloadSession(): Promise<void>;
+  // pi's `/import`. The JSONL travels as text: the app read it off the HOST, and the container cannot open a host
+  // path. The session writes it beside its own sessions and imports it, which replaces the running conversation.
+  importSession(fileName: string, contents: string): Promise<void>;
   // Read back a truncated tool's full output. The path comes from the tool result's `details.fullOutputPath`
   // and names a file inside the agent container, which only the host can open.
   readToolOutput(path: string): Promise<{ text: string; truncated: boolean }>;
@@ -255,6 +258,11 @@ export function createPiBridgeClient(options: {
     },
     reloadSession(): Promise<void> {
       return request({ id: randomUUID(), type: "session_reload" }, MUTATION_TIMEOUT_MS);
+    },
+    importSession(fileName: string, contents: string): Promise<void> {
+      // A mutation timeout: the container writes the file, tears the current session down and builds another over
+      // the imported history, which is more than a read's worth of work.
+      return request({ id: randomUUID(), type: "session_import", fileName, contents }, MUTATION_TIMEOUT_MS);
     },
     readToolOutput(path: string): Promise<{ text: string; truncated: boolean }> {
       return request({ id: randomUUID(), type: "read_tool_output", path }, READ_TIMEOUT_MS);

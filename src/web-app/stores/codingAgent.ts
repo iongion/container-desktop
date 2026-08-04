@@ -32,6 +32,7 @@ import { emptyPiThreadView, type PiThreadViewSession, projectPiThreadView } from
 import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import type { ProviderKind } from "@/ai-system/core/providers";
 import type { ThreadView } from "@/ai-system/core/threadEvents";
+import { threadExportHtml, threadHtmlFilename } from "@/ai-system/core/threadExportHtml";
 import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
@@ -47,6 +48,7 @@ import type {
   SessionProviderCheck,
   WebSearchAnswer,
 } from "@/pi-bridge/protocol";
+import { getHostRuntime } from "@/platform/provider";
 import { randomUUID } from "@/utils/randomUUID";
 import { connectedConnections } from "@/web-app/components/ConnectionSelect.logic";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
@@ -105,6 +107,12 @@ function mergeChrome(chrome: CodingAgentChrome, patch: ChromePatch): CodingAgent
     next.editorDraft = { text: patch.editorText, seq: (chrome.editorDraft?.seq ?? 0) + 1 };
   }
   return next;
+}
+
+// The last segment of a host path. The renderer cannot import node:path, and the container sanitizes this again
+// anyway — this only keeps the imported file recognisable in the session directory.
+function fileNameOf(filePath: string): string {
+  return filePath.split(/[/\\]/).filter(Boolean).at(-1) ?? "imported.jsonl";
 }
 
 function permissionMode(): AIPermissionMode {
@@ -316,6 +324,12 @@ export interface CodingAgentState {
   // process, so this costs neither the image build nor the plugin load. Falls back to bringing the pair up when
   // there is no session to replace.
   newConversation(): Promise<void>;
+  // pi's `/import`: the app picks the JSONL and reads it off the host, the session writes it inside the container
+  // and imports it. Answers false when the user closed the dialog, so a caller does not report a cancel as done.
+  importSession(): Promise<boolean>;
+  // pi's `/share` — the conversation as one standalone HTML file, saved where the user chooses. No gist, no upload,
+  // no GitHub credential: pi's gist was its TRANSPORT, and this app has none.
+  shareSession(): Promise<boolean>;
   // Stop the RUNNING TURN and leave the session up. Distinct from stop(), which removes the container pair:
   // a user who asks to stop generating does not mean "throw the workspace away".
   abortTurn(): Promise<void>;
@@ -570,6 +584,42 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // event means a session pi refused to replace still shows the conversation the user actually has.
     const result = await client.runCommand("new", "");
     if (!result.ok) throw new Error(result.error);
+  },
+
+  async importSession() {
+    const { client } = get();
+    if (!client) throw new Error("there is no session to import into");
+    const runtime = getHostRuntime();
+    const selection = await runtime.dialogs.openFileSelector({
+      filters: [{ name: t("Session files"), extensions: ["jsonl"] }],
+    });
+    const filePath = selection?.filePaths?.[0];
+    if (selection?.canceled || !filePath) return false;
+    // Read HERE, not in the container: the path names a file on the host, which the agent cannot open. The
+    // container writes the contents beside its own sessions and lets pi parse them.
+    const contents = await runtime.fs.readTextFile(filePath);
+    await client.importSession(fileNameOf(filePath), contents);
+    return true;
+  },
+
+  async shareSession() {
+    const { view, spec, lastStart } = get();
+    if (!view.timeline.length) throw new Error("there is no conversation to share yet");
+    const title = view.context?.model ?? spec?.modelId ?? "Assistant session";
+    const html = threadExportHtml(
+      title,
+      lastStart?.providerId ? `${lastStart.providerId}/${spec?.modelId ?? ""}` : (spec?.modelId ?? "unknown model"),
+      new Date().toISOString(),
+      view,
+    );
+    const runtime = getHostRuntime();
+    const selection = await runtime.dialogs.saveFileSelector({
+      defaultPath: threadHtmlFilename(title),
+      filters: [{ name: t("HTML files"), extensions: ["html"] }],
+    });
+    if (selection?.canceled || !selection?.filePath) return false;
+    await runtime.fs.writeTextFile(selection.filePath, html);
+    return true;
   },
 
   async abortTurn() {

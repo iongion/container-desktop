@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import {
   type AgentSession,
   type CreateAgentSessionRuntimeFactory,
@@ -30,6 +30,12 @@ import { checkSessionProvider } from "@/pi-agent-host/providerCheck";
 import { type PiSessionFacts, sessionContextReport, sessionUsageReport } from "@/pi-agent-host/reports";
 import { collectResources } from "@/pi-agent-host/resources";
 import type { BridgeSessionHandle } from "@/pi-agent-host/server";
+import {
+  createScopedModels,
+  createSessionSettings,
+  createSessionTrust,
+  createWorkspaceSessions,
+} from "@/pi-agent-host/sessionControls";
 import { replaySessionEntries, sessionWasCompacted } from "@/pi-agent-host/sessionReplay";
 import { createSurfaceRegistry } from "@/pi-agent-host/surfaces";
 import { createSystemContextExtension } from "@/pi-agent-host/systemContext";
@@ -65,6 +71,17 @@ export type PiStreamFn = (...args: never[]) => AsyncGenerator<unknown>;
 export type PiModelApi = "openai-completions" | "anthropic-messages";
 
 const MODEL_APIS: readonly PiModelApi[] = ["openai-completions", "anthropic-messages"];
+
+// The name a chosen file is written under inside the container. `basename` alone already refuses a traversal, and
+// the rest is trimmed to what a session file may be called: the app picked the file, but a file name is not a
+// reason to let anything outside the session directory be written.
+export function sanitizeSessionFileName(fileName: string): string {
+  const base = basename(fileName)
+    .replace(/[^A-Za-z0-9._-]/g, "-")
+    .replace(/^[.-]+/, "");
+  const named = base || "imported.jsonl";
+  return named.endsWith(".jsonl") ? named : `${named}.jsonl`;
+}
 
 // Absent ⇒ OpenAI completions, which is what every other provider family speaks.
 export function parseModelApi(value: string | undefined): PiModelApi {
@@ -369,6 +386,10 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     // A replaced session is holding nothing: the replay is history, not a turn in flight.
     emit({ type: "idle" });
     publishReports();
+    // A resumed or imported session can carry a `model_change` entry naming a model this gateway does not register,
+    // and pi then falls back to ours WITHOUT failing. Silence there would leave the user believing they are talking
+    // to the model the transcript was written with.
+    if (runtime.modelFallbackMessage) emit({ type: "error", message: runtime.modelFallbackMessage });
   });
 
   // Perform one of pi's session replacements, and tell the app why. `aborting` covers the whole call because the
@@ -382,6 +403,26 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     } finally {
       aborting = false;
     }
+  };
+
+  // What pi's own commands act on besides the conversation. Every one reads through the runtime, so a replacement
+  // does not leave a control answering for the session that is gone.
+  const listWorkspaceSessions = createWorkspaceSessions({
+    cwd,
+    sessionDir: () => runtime.session.sessionManager.getSessionDir(),
+    currentPath: () => runtime.session.sessionFile,
+  });
+  const sessionTrust = createSessionTrust({ agentDir, cwd });
+  const sessionSettings = createSessionSettings(() => runtime.session);
+  const scopedModels = createScopedModels({ session: () => runtime.session, services: () => runtime.services });
+
+  // The JSONL the app read off the HOST filesystem, written where pi's importer can open it. It lands beside the
+  // sessions rather than in the workspace: an import is not a change to the user's project.
+  const importSession = async (fileName: string, contents: string) => {
+    const target = join(runtime.session.sessionManager.getSessionDir(), sanitizeSessionFileName(fileName));
+    await writeFile(target, contents, "utf8");
+    const { cancelled } = await replace("import", () => runtime.importFromJsonl(target, cwd));
+    if (cancelled) throw new Error("an extension cancelled the import");
   };
 
   // A second package manager over the same settings and agent dir. pi's resource loader keeps its own for
@@ -435,7 +476,15 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
           // a command reading the tree after a replacement reads the tree it landed in.
           runtime: {
             newSession: () => replace("new", () => runtime.newSession()),
+            clone: (entryId) => replace("fork", () => runtime.fork(entryId, { position: "at" })),
+            // The cwd override is not optional: pi opens the file, reads the cwd its header records, and refuses a
+            // session whose directory does not exist here. This container has one workspace, and it is this one.
+            switchSession: (path) => replace("resume", () => runtime.switchSession(path, { cwdOverride: cwd })),
           },
+          listSessions: () => listWorkspaceSessions(),
+          trust: sessionTrust,
+          settings: sessionSettings,
+          models: scopedModels,
           keybindings: () =>
             Object.entries(getKeybindings().getResolvedBindings()).map(([action, keys]) => ({
               action,
@@ -448,6 +497,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
         args,
       );
     },
+    importSession,
     setThemePalette(palette) {
       guiUi.applyTheme(buildPiTheme(normalizeAppThemePalette(palette)));
       // Components cache their styled lines, so a new theme only reaches the screen if every open

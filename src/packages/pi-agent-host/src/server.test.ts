@@ -18,6 +18,7 @@ function harness(token = "tok") {
     setThemePalette: vi.fn(),
     setSystemContext: vi.fn(),
     runCommand: vi.fn(async () => ({ ok: true as const, data: { ran: true } })),
+    importSession: vi.fn(async () => {}),
     checkProvider: vi.fn(async () => ({ reachable: true, status: 200 })),
     plugins: {
       list: vi.fn(() => ({ configured: [{ source: "npm:@foo/bar", scope: "user" as const, filtered: false }] })),

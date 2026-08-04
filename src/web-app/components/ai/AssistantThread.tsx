@@ -305,6 +305,32 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
           setExportOpen(true);
           return undefined;
         },
+        // pi's `/import`: the app picks the JSONL off the host and the session imports it, which replaces the
+        // conversation on screen with the one in the file.
+        "session.import": async () => {
+          if (await useCodingAgentStore.getState().importSession()) {
+            Notification.show({ message: t("Session imported"), intent: Intent.SUCCESS });
+          }
+        },
+        // pi's `/share`, without pi's gist: the conversation as one standalone HTML file, saved where the user says.
+        "session.share": async () => {
+          if (await useCodingAgentStore.getState().shareSession()) {
+            Notification.show({ message: t("Conversation saved as HTML"), intent: Intent.SUCCESS });
+          }
+        },
+        // pi's `/login` and `/logout` are provider auth, which is the app's: it owns the settings and the keychain,
+        // and the agent container never holds a credential. `/login` opens where the key is entered; `/logout`
+        // removes it, behind the palette's own confirmation.
+        "provider.login": () => {
+          navigate(getSettingsUrl("ai"));
+          return undefined;
+        },
+        "provider.logout": async (command) => {
+          const provider = command.rawArguments.trim();
+          if (!provider) throw new Error(t("Name the provider to sign out of: /logout <provider>"));
+          await window.AI.clearKey(provider);
+          Notification.show({ message: t("Provider authentication removed"), intent: Intent.SUCCESS });
+        },
         "model.open": () => ({ kind: "open-model-picker" }),
         "permissions.open": () => {
           navigate(getSettingsUrl("ai"));

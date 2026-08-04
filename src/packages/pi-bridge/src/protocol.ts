@@ -193,6 +193,53 @@ export interface PiSessionTreeNode {
   children: PiSessionTreeNode[];
 }
 
+// One session this workspace has on disk, as `/resume` needs it. pi's own `SessionInfo` carries the whole
+// conversation's text for its search; only these fields mean anything in a picker.
+export interface PiSessionSummary {
+  path: string;
+  id: string;
+  // pi's own display name, when one was set with `/name`.
+  name?: string;
+  // ISO, because a Date does not survive JSON. Newest first is the order the list arrives in.
+  modified: string;
+  messageCount: number;
+  firstMessage: string;
+  // This is the session the container is running right now, so a picker can say "you are here" instead of
+  // offering to resume what is already open.
+  current: boolean;
+}
+
+// pi's project-trust decision for the mounted workspace. It is stored in the AGENT dir — the named volume — and
+// never in the project, which is why trusting one writes nothing into the user's folder.
+export interface PiProjectTrust {
+  // null when the user has never decided, which is not the same as having decided no.
+  decision: boolean | null;
+  // Whether trust changes anything here: a workspace with no `.pi` resources and no `.agents/skills` has nothing
+  // for the decision to gate, and saying so is more use than a switch with no effect.
+  matters: boolean;
+  path: string;
+}
+
+// The session settings pi exposes at runtime. Read and written as one set so a drawer never shows half of a
+// change: pi keeps some of these on the session and some in the settings file, and the split is not the user's
+// problem.
+export interface PiSessionSettings {
+  autoCompaction: boolean;
+  steeringMode: "all" | "one-at-a-time";
+  followUpMode: "all" | "one-at-a-time";
+  thinkingLevel: string;
+  // Empty when the model does not reason at all, which is why the drawer can hide the control rather than
+  // offering a level that will be ignored.
+  availableThinkingLevels: string[];
+}
+
+// The models this session could cycle through, and which of them `/scoped-models` has narrowed it to. An empty
+// `scoped` means pi cycles everything available.
+export interface PiScopedModels {
+  available: Array<{ id: string; name: string; provider: string }>;
+  scoped: string[];
+}
+
 // What one of pi's own commands answered. `data` is structured on purpose: a GUI renders a fork point list or a
 // compaction summary, and prose composed in the container could be neither translated nor laid out.
 export type PiCommandResult = { ok: true; data?: unknown } | { ok: false; error: string };
@@ -243,7 +290,11 @@ export type BridgeCommand =
   // Read back the file pi wrote when it truncated a tool's output. The path travels from the tool result's
   // `details.fullOutputPath` and is inside the agent container, so only the host can open it. The host checks
   // the path against pi's own output-file shape before reading — a tool result is not a trusted source.
-  | { id: string; type: "read_tool_output"; path: string };
+  | { id: string; type: "read_tool_output"; path: string }
+  // pi's `/import`, which needs both halves: the app owns the file dialog and the host filesystem, the session
+  // owns the import. The JSONL travels as text rather than as a path — the app's path names a file on the HOST,
+  // which the container cannot open, and copying it in would need a capability no shell has.
+  | { id: string; type: "session_import"; fileName: string; contents: string };
 
 // pi's ProgressEvent, split the way it reads: `action` is what is being done, `phase` how far along it is.
 export type PluginProgressAction = "install" | "remove" | "update" | "clone" | "pull";
@@ -329,6 +380,7 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "check_provider",
   "session_reload",
   "read_tool_output",
+  "session_import",
 ]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([

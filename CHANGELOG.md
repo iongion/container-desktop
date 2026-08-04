@@ -45,8 +45,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - pi's own slash commands, all of them, under pi's own names — the ones this architecture cannot honour are listed with the reason rather than hidden
-- `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog`, `/reload` and `/new` run against the session itself
+- **Every one of pi's own commands works.** The nine that used to be refused — `/clone`, `/resume`, `/import`, `/trust`, `/settings`, `/scoped-models`, `/login`, `/logout`, `/share` — described this app's wiring, not pi's limits
+- `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog`, `/reload`, `/new`, `/clone`, `/resume`, `/trust`, `/settings` and `/scoped-models` run against the session itself
 - A session replaced in place brings its conversation with it: the transcript is rebuilt from the session's own history rather than left empty
+- `/resume` lists the sessions this workspace has, with the one you are in marked; `/clone` duplicates the conversation as it stands
+- `/import` opens a session JSONL you pick and continues it, in the container you are already running
+- `/share` saves the conversation as one standalone HTML file wherever you choose — no gist, no upload, no GitHub account
+- `/trust` records pi's project-trust decision, which is stored with the agent and never in your workspace
+- `/settings` reads and writes the session's own settings — auto-compaction, steering, follow-ups and the thinking level, refusing a level the model cannot reach
+- `/login` and `/logout` manage provider authentication where it actually lives: the app's settings and the OS keychain
+- A resumed or imported session says so when pi had to fall back to this session's model instead of the one its history was written with
 - `/fork` and `/tree` open a picker: your earlier messages to start again from, or the session's branches with the one you are on marked
 - llama.cpp reports its real context window — the length the server actually loaded, not the maximum the model could do
 - The assistant reports what it has spent and what it is sending the model, after every turn

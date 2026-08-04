@@ -50,8 +50,12 @@ const BUILTIN_COMMAND_ICONS: Record<BuiltinAssistantCommandId, IconName> = {
   "session.info": IconNames.INFO_SIGN,
   "session.copy": IconNames.CLIPBOARD,
   "session.export": IconNames.EXPORT,
+  "session.import": IconNames.IMPORT,
+  "session.share": IconNames.SHARE,
   "turn.stop": IconNames.STOP,
   "model.open": IconNames.MODEL,
+  "provider.login": IconNames.KEY,
+  "provider.logout": IconNames.KEY_DELETE,
   "permissions.open": IconNames.SHIELD,
 };
 

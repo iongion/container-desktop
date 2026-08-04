@@ -31,6 +31,9 @@ export interface BridgeSessionHandle {
   setSystemContext(text: string): void;
   // One of pi's own slash commands, by pi's name.
   runCommand(name: string, args: string): Promise<PiCommandResult>;
+  // pi's `/import`. The app owns the file dialog and the host filesystem, so the JSONL arrives as text and the
+  // session writes it where pi's importer can open it.
+  importSession(fileName: string, contents: string): Promise<void>;
   // Whether this session can reach the model, probed through the gateway from in here.
   checkProvider(): Promise<SessionProviderCheck>;
   plugins: PluginService;
@@ -154,6 +157,9 @@ export function attachBridgeConnection(
         return;
       case "read_tool_output":
         return readToolOutput(command.path);
+      case "session_import":
+        await session.importSession(command.fileName, command.contents);
+        return;
       case "hello":
         return;
     }

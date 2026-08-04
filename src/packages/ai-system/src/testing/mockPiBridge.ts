@@ -103,14 +103,57 @@ const MOCK_RESOURCES: ContributedResources = {
     { name: "fork", description: "Create a new fork from a previous user message", runsIn: "session" },
     { name: "tree", description: "Navigate session tree (switch branches)", runsIn: "session" },
     { name: "new", description: "Start a new session", runsIn: "session" },
-    {
-      name: "login",
-      description: "Configure provider authentication",
-      argumentHint: "<provider>",
-      runsIn: "unavailable",
-      reason: "the provider key stays in a separate gateway container; the agent never holds a credential",
-    },
+    { name: "clone", description: "Duplicate the current session at the current position", runsIn: "session" },
+    { name: "resume", description: "Resume a different session", runsIn: "session" },
+    { name: "trust", description: "Save project trust decision for future sessions", runsIn: "session" },
+    { name: "settings", description: "Open settings menu", runsIn: "session" },
+    { name: "scoped-models", description: "Enable/disable models for Ctrl+P cycling", runsIn: "session" },
+    // The four the app performs itself. Reported with their real venue so the palette resolves them to the app's
+    // own catalogue entries rather than offering a duplicate.
+    { name: "import", description: "Import and resume a session from a JSONL file", runsIn: "app" },
+    { name: "share", description: "Share session as a secret GitHub gist", runsIn: "app" },
+    { name: "login", description: "Configure provider authentication", argumentHint: "<provider>", runsIn: "app" },
+    { name: "logout", description: "Remove provider authentication", runsIn: "app" },
   ],
+};
+
+// What a bare `/resume` answers with: the sessions this workspace has, the live one marked so a picker will not
+// offer to resume what is already open.
+const MOCK_SESSIONS = [
+  {
+    path: "/home/agent/.pi/agent/sessions/2026-08-04_demo.jsonl",
+    id: "mock-pi-session-1",
+    name: "Release triage",
+    modified: "2026-08-04T10:05:00.000Z",
+    messageCount: 6,
+    firstMessage: "how many containers are running?",
+    current: true,
+  },
+  {
+    path: "/home/agent/.pi/agent/sessions/2026-08-03_earlier.jsonl",
+    id: "mock-pi-session-0",
+    modified: "2026-08-03T16:20:00.000Z",
+    messageCount: 12,
+    firstMessage: "walk me through the build",
+    current: false,
+  },
+];
+
+// pi's project trust, which lives in the agent dir. The demo workspace has resources trust would gate, so the
+// decision is offered rather than reported as moot.
+const MOCK_TRUST = { decision: null as boolean | null, matters: true, path: "/workspace" };
+
+const MOCK_SETTINGS = {
+  autoCompaction: true,
+  steeringMode: "all" as const,
+  followUpMode: "all" as const,
+  thinkingLevel: "medium",
+  availableThinkingLevels: ["minimal", "low", "medium", "high"],
+};
+
+const MOCK_MODELS = {
+  available: [{ id: "mock-assistant", name: "Mock Assistant", provider: "container-desktop-mock" }],
+  scoped: [] as string[],
 };
 
 // What a bare `/fork` answers with: the user's own messages, which are the only points pi can restart from.
@@ -167,7 +210,13 @@ export function createMockPiBridgeClient(): PiBridgeClient {
   // the mock has to move too — the renderer would otherwise never see the id change that proves a replacement.
   let sessions = 1;
 
+  // What this session has shown, kept so a replacement can replay it the way the real host replays pi's entries.
+  // Only what a transcript is made of: the reports, surfaces and requests belong to the turn that produced them.
+  const REPLAYABLE = new Set(["user_message", "assistant_end", "tool_start", "tool_end", "entry", "custom_message"]);
+  const transcript: BridgeEvent[] = [];
+
   const emit = (event: BridgeEvent) => {
+    if (REPLAYABLE.has(event.type)) transcript.push(event);
     for (const listener of listeners) listener(event);
   };
 
@@ -229,9 +278,35 @@ export function createMockPiBridgeClient(): PiBridgeClient {
     });
   };
 
+  // Every one of pi's replacements — /new, /clone, /resume, /import — reaches the app as one reset frame followed by
+  // the new session's own history. A new session holds nothing, so only the reset goes out; the other three land in a
+  // conversation that already has turns, and this mock keeps ONE transcript to replay. The counters go with the
+  // conversation: the usage panel reports THIS session, not the container's lifetime.
+  const replaceSession = (reason: "new" | "resume" | "fork" | "import", keepHistory: boolean) => {
+    sessions += 1;
+    if (!keepHistory) turns = 0;
+    // Snapshot, then CLEAR: `emit` records what it sends, so replaying straight out of `transcript` would append to
+    // the array being walked and never finish — an infinite loop that takes the whole web view with it. The replay
+    // refills it as it goes, which is right: the new session is the one holding those turns now.
+    const history = keepHistory ? [...transcript] : [];
+    transcript.length = 0;
+    emit({
+      type: "session_replaced",
+      reason,
+      sessionId: `mock-pi-session-${sessions}`,
+      cwd: "/workspace",
+      model: "container-desktop-mock/mock-assistant",
+    });
+    for (const event of history) emit(event);
+    emit({ type: "idle" });
+  };
+
   const runTurn = async (text: string) => {
     aborted = false;
     turns += 1;
+    // Recorded, never emitted. The app appends the user's own message itself on submit, so emitting one would show
+    // it twice — but pi PERSISTS it, so a replaced session replays it, and this mock has to have it to replay.
+    transcript.push({ type: "user_message", text });
     if (FORCE_ERROR_RE.test(text.toLowerCase())) {
       emit({ type: "error", message: "Mock agent failure (simulated)" });
       emit({ type: "turn_end" });
@@ -361,30 +436,37 @@ export function createMockPiBridgeClient(): PiBridgeClient {
       }
       if (name === "name" && !args.trim())
         return { ok: false as const, error: "give the session a name: /name <text>" };
-      // A fresh conversation on the same containers. The real runtime replaces the session and replays whatever the
-      // new one holds; a new session holds nothing, so the reset frame is the whole of it. The turn counters go with
-      // the conversation — the usage panel reports THIS session, not the container's lifetime.
       if (name === "new") {
-        sessions += 1;
-        turns = 0;
-        emit({
-          type: "session_replaced",
-          reason: "new",
-          sessionId: `mock-pi-session-${sessions}`,
-          cwd: "/workspace",
-          model: "container-desktop-mock/mock-assistant",
-        });
-        emit({ type: "idle" });
+        replaceSession("new", false);
         return { ok: true as const };
       }
       // The two commands that answer with DATA when given no argument, and act when given an id — the shape the
       // picker reads. Scripted here so the drawer can be driven without a container.
       if (name === "fork" && !args.trim()) return { ok: true as const, data: { forkPoints: MOCK_FORK_POINTS } };
       if (name === "tree" && !args.trim()) return { ok: true as const, data: { tree: MOCK_SESSION_TREE } };
+      if (name === "resume" && !args.trim()) return { ok: true as const, data: { sessions: MOCK_SESSIONS } };
+      if (name === "trust") {
+        if (args.trim()) MOCK_TRUST.decision = args.trim().toLowerCase() === "on";
+        return { ok: true as const, data: { trust: { ...MOCK_TRUST } } };
+      }
+      if (name === "settings") return { ok: true as const, data: { settings: { ...MOCK_SETTINGS } } };
+      if (name === "scoped-models") return { ok: true as const, data: { models: { ...MOCK_MODELS } } };
+      // The three that REPLACE the session. A real container replays the conversation the new session holds; the
+      // mock has one transcript, so `/clone` and `/resume` come back with the turns this session already had.
+      if (name === "clone" || name === "resume") {
+        replaceSession(name === "clone" ? "fork" : "resume", true);
+        return { ok: true as const };
+      }
       return { ok: true as const, data: { command: name, ...(args.trim() ? { args: args.trim() } : {}) } };
     },
     async reloadSession() {
       emit({ type: "plugins_changed" });
+    },
+    async importSession(fileName: string, contents: string) {
+      // The real host writes the file and lets pi parse it. Nothing here parses a JSONL, so an empty one is the
+      // only thing that can be recognised as wrong — and saying so beats a session that silently did nothing.
+      if (!contents.trim()) throw new Error(`${fileName} has nothing in it to import`);
+      replaceSession("import", true);
     },
     async readToolOutput() {
       return { text: "the full output of the mock command\n", truncated: false };

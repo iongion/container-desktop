@@ -14,9 +14,23 @@ import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
 const logger = createLogger("web.ai.skills");
 
-// pi's commands that the GUI performs itself, and therefore declares in its own catalogue under the same names:
-// only the app can stop one container pair and start another, open a model picker, or write a file to the host.
-const APP_PERFORMED_PI_COMMANDS = ["new", "quit", "session", "copy", "export", "model", "reload"] as const;
+// pi's commands whose PALETTE ENTRY the app owns, declared in its own catalogue under pi's own names. Two reasons a
+// name is here: the app performs the command (a host file dialog, the OS keychain, the clipboard), or the session
+// performs it but the app owns the entry — `/new` and `/reload` are session-venue and still listed, because a second
+// entry at the same path is a duplicate the registry would have to drop.
+const APP_PERFORMED_PI_COMMANDS = [
+  "new",
+  "quit",
+  "session",
+  "copy",
+  "export",
+  "model",
+  "reload",
+  "import",
+  "share",
+  "login",
+  "logout",
+] as const;
 const EMPTY_SNAPSHOT: SkillHostSnapshot = {
   revision: "0",
   user: { root: "…", status: "error" },

@@ -32,8 +32,9 @@ function userSkill(overrides: Partial<AssistantSkillCommandDefinition> = {}): As
 
 describe("assistant command registry", () => {
   // What the APP performs. Everything pi performs is reported by the session under pi's own name (see
-  // piSessionCommands.test.ts), and the six of these that share a name with one of pi's commands — /new, /quit,
-  // /session, /copy, /export, /model, /reload — carry pi's name and pi's meaning, not a variant of it.
+  // piSessionCommands.test.ts), and every one of these that shares a name with one of pi's — /new, /quit, /session,
+  // /copy, /export, /import, /share, /login, /logout, /model, /reload — carries pi's name and pi's meaning, not a
+  // variant of it.
   it("contains only the commands the app itself performs", () => {
     expect(BUILTIN_ASSISTANT_COMMANDS.map((command) => command.id)).toEqual([
       "help",
@@ -56,6 +57,10 @@ describe("assistant command registry", () => {
       "turn.stop",
       "session.copy",
       "session.export",
+      "session.import",
+      "session.share",
+      "provider.login",
+      "provider.logout",
       "model.open",
       "permissions.open",
     ]);
@@ -81,11 +86,14 @@ describe("assistant command registry", () => {
       "rules.init",
       "session.info",
       "session.export",
+      "session.share",
+      "provider.login",
+      "provider.logout",
       "model.open",
       "permissions.open",
     ]);
-    // Every name the app owns is reserved against a skill claiming it. `/resume` is NOT among them: it is pi's, and
-    // the session reports it — with the reason this architecture cannot honour it.
+    // Every name the app owns is reserved against a skill claiming it. `/resume` is NOT among them: it is pi's and the
+    // SESSION performs it, so the palette entry comes from what the session reports rather than from this catalogue.
     expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.reservedNames).toContain("/new");
     expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byName["/resume"]).toBeUndefined();
   });

@@ -2,7 +2,7 @@
 
 <!-- Generated from commandCatalog.ts. Update the registry, then regenerate this document. -->
 
-Registry revision: `builtin-v10`
+Registry revision: `builtin-v11`
 
 | Command | Aliases | Description | Arguments | Bypass tier | Availability | Confirmation |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -26,5 +26,9 @@ Registry revision: `builtin-v10`
 | `/stop` | — | Stop the active turn | — | `always` | `thread-active` | `none` |
 | `/copy` | — | Copy last agent message to clipboard | — | `side-effect-free` | `thread` | `none` |
 | `/export` | — | Export session (HTML default, or specify path: .html/.jsonl) | — | `immediate-ui` | `thread` | `none` |
+| `/import` | — | Import and resume a session from a JSONL file | — | `queued` | `thread-idle` | `none` |
+| `/share` | — | Share the session as one standalone HTML file | — | `immediate-ui` | `thread` | `none` |
+| `/login` | — | Configure provider authentication | — | `immediate-ui` | `always` | `none` |
+| `/logout` | — | Remove provider authentication | — | `immediate-ui` | `always` | `required` |
 | `/model` | — | Select model (opens selector UI) | — | `immediate-ui` | `thread-idle-only` | `none` |
 | `/permissions` | — | Open AI permissions settings | — | `immediate-ui` | `always` | `none` |
