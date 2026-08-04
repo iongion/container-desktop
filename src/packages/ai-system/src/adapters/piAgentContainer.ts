@@ -23,10 +23,9 @@ export interface PiAgentSessionSpec {
   gatewayContainerName: string;
   pluginVolumeName: string;
   upstreamBaseUrl: string;
-  // The provider key. It reaches the gateway container through an env file and must never appear in argv.
-  // Passed in rather than read from the environment: this module runs in the renderer, where there is no
-  // process.env.
-  upstreamApiKey: string;
+  // NO credential lives here, deliberately. This spec is composed in the renderer, which cannot read the OS keychain
+  // and must never hold a key: a gateway that needs one is handed an env file the HOST wrote, and the only thing
+  // that crosses back is its path. What remains for this module to compose is the keyless case.
   // The provider's catalog kind and connection auth. They decide the wire shape pi speaks and the credential
   // header the gateway signs — an Anthropic upstream wants /v1/messages and x-api-key, not a bearer token on
   // /v1/chat/completions.
@@ -170,7 +169,9 @@ export async function startPiAgentSession(
     : await writeEnvFile(
         composeGatewayEnv({
           baseUrl: gatewayUpstreamUrl(spec),
-          apiKey: spec.upstreamApiKey,
+          // Empty because this branch IS the keyless case: a local model server wants no credential, and no key can
+          // reach here. Anything that needs one arrived as `options.gatewayEnvFile`, written by the host.
+          apiKey: "",
           bridgeToken: spec.bridgeToken,
           gatewayPort: GATEWAY_PORT_IN_IMAGE,
           providerKind: spec.providerKind,

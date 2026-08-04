@@ -1,12 +1,20 @@
 // Proves the permission gate for real: a live model calls pi's bash tool, the app asks, the user rejects, and
 // pi refuses to run the tool with the app's reason. Needs a NON-mock app (real podman) and OPENROUTER_API_KEY.
 import { strict as assert } from "node:assert";
+import { openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
+import { stopAgentSession } from "../support/agentSession.js";
 
 const WORKSPACE = process.env.CD_LIVE_WORKSPACE ?? "/home/istoica/Workspace/is/container-desktop/temp/pi-live-workspace";
 const MODEL = process.env.CD_LIVE_MODEL ?? "inclusionai/ling-3.0-flash:free";
 const PROMPT = "Use your bash tool to run `ls -la /workspace` and tell me what you see. Use the tool, do not guess.";
 
 describe("the permission gate against a real model", () => {
+  // The spec stops the session on its way through, but a test that fails before that point would orphan the
+  // container pair and its /24 — the harness kills the app, so nothing else would ever remove them.
+  after(async () => {
+    await stopAgentSession(browser);
+  });
+
   it("blocks a rejected shell call inside pi and reports it in the transcript", async () => {
     await browser.execute(() => {
       window.location.hash = "#/screens/connections/manage";
@@ -20,6 +28,12 @@ describe("the permission gate against a real model", () => {
     });
     await $('[data-screen="ai.assistant"]').waitForExist({ timeout: 45000 });
 
+    // The key goes into the OS keychain and the provider into settings; `start` is then handed a provider ID and
+
+    // no credential, which is the only route a real key takes now.
+
+    await seedOpenRouterProvider(browser, { model: MODEL });
+
     const started = await browser.executeAsync(
       (options, done) => {
         window.__cdCodingAgentStore
@@ -28,14 +42,7 @@ describe("the permission gate against a real model", () => {
           .then(() => done(window.__cdCodingAgentStore.getState().status))
           .catch((error) => done(String(error)));
       },
-      {
-        connectionId: id,
-        workspacePath: WORKSPACE,
-        modelId: MODEL,
-        upstreamBaseUrl: "https://openrouter.ai/api/v1",
-        upstreamApiKey: process.env.OPENROUTER_API_KEY,
-        appVersion: "6.0.0",
-      },
+      openRouterStartOptions({ connectionId: id, workspacePath: WORKSPACE, model: MODEL }),
     );
     assert.equal(started, "ready", `the session did not become ready: ${started}`);
 

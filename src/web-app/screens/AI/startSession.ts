@@ -80,9 +80,8 @@ export function resolveCodingAgentStart(
       providerKind: resolved.kind,
       upstreamAuth: resolved.auth,
       upstreamBaseUrl: resolved.baseURL,
-      // The key lives in the OS keychain and is never readable here — the host puts it in the gateway's
-      // private env file. Callers that already hold a key (the live WebDriver specs) pass their own.
-      upstreamApiKey: "",
+      // No key travels with this: it lives in the OS keychain, unreadable here, and naming the provider is what
+      // makes the host compose the gateway's private env file from it.
       appVersion: context.appVersion,
       egress: form.egress,
     },

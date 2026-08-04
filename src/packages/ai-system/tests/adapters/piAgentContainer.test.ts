@@ -20,7 +20,6 @@ const spec: PiAgentSessionSpec = {
   gatewayContainerName: "cd-gateway-1",
   pluginVolumeName: "cd-agent-plugins",
   upstreamBaseUrl: "https://openrouter.ai/api/v1",
-  upstreamApiKey: "sk-real-secret",
   providerKind: "openai-compatible",
   upstreamAuth: { scheme: "bearer" },
   modelId: "some/model",
@@ -171,15 +170,37 @@ describe("startPiAgentSession", () => {
     expect(result.agentContainerId).toBe("container-id-abc");
   });
 
-  it("writes the provider key into the gateway env file and never the agent's", async () => {
+  // The session spec carries NO credential at all, so this path cannot compose one even by mistake. A gateway that
+  // needs a key is given a file the HOST wrote (see below); this fallback exists for a keyless local server, where an
+  // empty value is the correct one.
+  it("composes a keyless gateway env when the host wrote none, and never a key in the agent's", async () => {
     const written: string[] = [];
     await startPiAgentSession(fakeHost(), spec, async (contents) => {
       written.push(contents);
       return "/tmp/env";
     });
-    expect(written[0]).toContain("sk-real-secret");
-    expect(written[1]).not.toContain("sk-real-secret");
+    expect(written[0]).toContain("CD_UPSTREAM_API_KEY=\n");
+    expect(written[1]).not.toContain("CD_UPSTREAM_API_KEY");
     expect(written[1]).toContain("CD_BRIDGE_TOKEN=tok");
+  });
+
+  // The only route a real credential takes: the host reads it from the OS keychain and writes the file itself, so the
+  // renderer never holds one and this adapter never composes one.
+  it("uses the file the host wrote instead of composing its own", async () => {
+    const written: string[] = [];
+    await startPiAgentSession(
+      fakeHost(),
+      spec,
+      async (contents) => {
+        written.push(contents);
+        return "/tmp/env";
+      },
+      { gatewayEnvFile: async () => "/run/secrets/gateway.env" },
+    );
+    // Only the AGENT's env file was composed here; the gateway's came from the host.
+    expect(written).toHaveLength(1);
+    expect(written[0]).toContain("CD_BRIDGE_TOKEN=tok");
+    expect(written[0]).not.toContain("CD_UPSTREAM_API_KEY");
   });
 
   // pi speaks whatever shape the UPSTREAM speaks: the gateway proxies bytes, so an OpenAI-completions request

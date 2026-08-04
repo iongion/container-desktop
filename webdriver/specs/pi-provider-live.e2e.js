@@ -418,8 +418,6 @@ describe("the provider-shape contract against real containers", () => {
         providerKind: "anthropic",
         upstreamAuth: { scheme: "none" },
         upstreamBaseUrl: PROVIDER_URL,
-        // Empty on purpose: this is the keychain path, where the HOST composes the gateway's env file.
-        upstreamApiKey: "",
         appVersion: APP_VERSION,
         egress: true,
       });

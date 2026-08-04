@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A turn that has read your project's rules, an untrusted skill or a public web page no longer honours a remembered approval
 - The Wails backend no longer lets the web view read a provider key, which Tauri has always refused
 - A command a container image is too old to know now fails immediately with the reason, instead of hanging for thirty seconds
+- Rejecting a tool call no longer leaves "Connection error." in the transcript — stopping the agent was reported as the model failing, several times over
+- The provider key has only one route to the gateway container: the app reads it from the OS keychain and writes the file itself, and there is no longer any field it could travel in from the web view
 
 - Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
 - A local model server session starts again — asking for a key a keyless provider never had used to stop it

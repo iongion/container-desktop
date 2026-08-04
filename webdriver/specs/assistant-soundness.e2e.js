@@ -45,7 +45,6 @@ describe("the assistant tells the truth about its session", () => {
         workspacePath,
         modelId: "mock-assistant",
         upstreamBaseUrl: "http://127.0.0.1:1234/v1",
-        upstreamApiKey: "",
         appVersion: "0.0.0",
       });
     }, WORKSPACE);

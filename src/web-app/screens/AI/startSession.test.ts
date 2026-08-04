@@ -28,7 +28,6 @@ describe("resolveCodingAgentStart", () => {
       providerKind: "local",
       upstreamAuth: { scheme: "none" },
       upstreamBaseUrl: "http://127.0.0.1:1234/v1",
-      upstreamApiKey: "",
       appVersion: "6.0.0",
       egress: true,
     });

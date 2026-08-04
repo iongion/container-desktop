@@ -17,6 +17,7 @@
 //   • ONE saveScreenshot per session — a command after a second one hangs and takes the session with it.
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
+import { openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
 
 const WORKSPACE = process.env.CD_LIVE_WORKSPACE ?? "/home/istoica/Workspace/is/container-desktop/temp/pi-live-workspace";
 const MODEL = process.env.CD_LIVE_MODEL ?? "inclusionai/ling-3.0-flash:free";
@@ -269,6 +270,9 @@ describe("the container toolset against a real model", () => {
     // The start log and the store's own error come back with the status: a session that fails says why in there
     // (a host-port collision, a missing image, an unreachable engine), and a bare "error" sends the next reader
     // digging through `docker inspect` for a reason the app already knew.
+    // The key goes into the OS keychain and the provider into settings; `start` is then handed a provider ID and
+    // no credential, which is the only route a real key takes now.
+    await seedOpenRouterProvider(browser, { model: MODEL });
     const started = await browser.executeAsync(
       (options, done) => {
         const read = () => {
@@ -283,14 +287,7 @@ describe("the container toolset against a real model", () => {
             (failure) => done({ ...read(), reason: String(failure) }),
           );
       },
-      {
-        connectionId: target.id,
-        workspacePath: WORKSPACE,
-        modelId: MODEL,
-        upstreamBaseUrl: "https://openrouter.ai/api/v1",
-        upstreamApiKey: process.env.OPENROUTER_API_KEY,
-        appVersion: APP_VERSION,
-      },
+      openRouterStartOptions({ connectionId: target.id, workspacePath: WORKSPACE, model: MODEL, appVersion: APP_VERSION }),
     );
     assert.equal(
       started.status,

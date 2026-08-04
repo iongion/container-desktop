@@ -70,7 +70,6 @@ async function boot() {
         workspacePath: "/workspace",
         modelId: "mock-assistant",
         upstreamBaseUrl: "",
-        upstreamApiKey: "",
         appVersion: "0.0.0",
       });
     }

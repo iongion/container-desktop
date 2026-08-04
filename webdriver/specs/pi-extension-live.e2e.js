@@ -7,6 +7,8 @@ import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
+import { stopAgentSession } from "../support/agentSession.js";
 
 const WORKSPACE = process.env.CD_LIVE_WORKSPACE ?? path.resolve(import.meta.dirname, "../../temp/pi-live-workspace");
 const MODEL = process.env.CD_LIVE_MODEL ?? "inclusionai/ling-3.0-flash:free";
@@ -89,9 +91,11 @@ describe("pi extension UI against a real container", () => {
     seedExtension(source);
   });
 
-  after(() => {
+  after(async () => {
     // Leaving it behind would block every later session on a dialog nobody expects.
     removeExtension();
+    // And leaving the session behind orphans a container pair and its /24 when the harness kills the app.
+    await stopAgentSession(browser);
   });
 
   it("starts a session, and the extension's dialogs reach the app", async () => {
@@ -100,6 +104,12 @@ describe("pi extension UI against a real container", () => {
       window.location.hash = "#/screens/ai/assistant";
     });
     await $('[data-screen="ai.assistant"]').waitForExist({ timeout: 45000 });
+
+    // The key goes into the OS keychain and the provider into settings; `start` is then handed a provider ID and
+
+    // no credential, which is the only route a real key takes now.
+
+    await seedOpenRouterProvider(browser, { model: MODEL });
 
     const started = await browser.executeAsync(
       (options, done) => {
@@ -112,14 +122,7 @@ describe("pi extension UI against a real container", () => {
           })
           .catch((error) => done({ status: "throw", error: String(error) }));
       },
-      {
-        connectionId: id,
-        workspacePath: WORKSPACE,
-        modelId: MODEL,
-        upstreamBaseUrl: "https://openrouter.ai/api/v1",
-        upstreamApiKey: process.env.OPENROUTER_API_KEY,
-        appVersion: "6.0.0",
-      },
+      openRouterStartOptions({ connectionId: id, workspacePath: WORKSPACE, model: MODEL }),
     );
     assert.equal(started.status, "ready", `the session did not become ready: ${JSON.stringify(started)}`);
 

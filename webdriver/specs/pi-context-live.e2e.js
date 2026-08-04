@@ -223,7 +223,6 @@ describe("what a real session reports about itself", () => {
         workspacePath: WORKSPACE,
         modelId: MODEL,
         upstreamBaseUrl: PROVIDER_URL,
-        upstreamApiKey: "",
         upstreamAuth: { scheme: "none" },
         appVersion: APP_VERSION,
       },

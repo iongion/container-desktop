@@ -252,13 +252,14 @@ export interface StartCodingAgentOptions {
   workspacePath: string;
   modelId: string;
   upstreamBaseUrl: string;
-  upstreamApiKey: string;
   appVersion: string;
-  // Which configured AI provider the endpoint came from. Recorded so the session can name its inference
-  // source; the key itself stays in the OS keychain.
+  // Which configured AI provider the endpoint came from. Recorded so the session can name its inference source —
+  // and it is what makes the HOST compose the gateway's env file from the OS keychain, which is the only route a
+  // credential ever takes. Absent means a keyless endpoint, and there is no option here to pass a key: the renderer
+  // does not hold one.
   providerId?: string;
-  // The provider's kind and connection auth, resolved from settings by the start form. Optional so a caller
-  // that only holds an endpoint and a key (the live specs) keeps working on the OpenAI-shaped default.
+  // The provider's kind and connection auth, resolved from settings by the start form. Optional so a caller that
+  // only holds a keyless endpoint keeps working on the OpenAI-shaped default.
   providerKind?: ProviderKind;
   upstreamAuth?: AIAuthSettings;
   scope?: string;
@@ -427,7 +428,6 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       gatewayContainerName: `cd-gateway-${suffix}`,
       pluginVolumeName: "cd-agent-plugins",
       upstreamBaseUrl: options.upstreamBaseUrl,
-      upstreamApiKey: options.upstreamApiKey,
       // An endpoint with no declared provider is treated as an OpenAI-shaped bearer upstream — what every
       // provider but Anthropic speaks, and what this pair did before the shape was carried at all.
       providerKind: options.providerKind ?? "openai-compatible",
@@ -444,12 +444,12 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     };
     try {
       set((state) => ({ startLog: [...state.startLog, `starting ${spec.agentContainerName}`] }));
-      // The provider key lives in the OS keychain, which the renderer cannot read, so the host composes and
-      // writes the gateway's env file. A caller that already holds a key (the live specs) keeps the old path.
-      const gatewayEnvFile =
-        options.providerId && !options.upstreamApiKey
-          ? () => writeGatewayEnvFile(options.providerId as string, `${suffix}-gateway.env`, spec)
-          : undefined;
+      // The provider key lives in the OS keychain, which the renderer cannot read, so the host composes and writes
+      // the gateway's env file. This is now the ONLY producer of a credential-bearing one — naming a provider is
+      // what asks for it, and a caller that names none is telling us the endpoint is keyless.
+      const gatewayEnvFile = options.providerId
+        ? () => writeGatewayEnvFile(options.providerId as string, `${suffix}-gateway.env`, spec)
+        : undefined;
       await startPiAgentSession(host, spec, (contents) => writePrivateEnvFile(`${suffix}.env`, contents), {
         gatewayEnvFile,
       });

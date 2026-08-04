@@ -214,7 +214,10 @@ describe("assistant session start", () => {
     assert.ok(options.modelId, "a model must be chosen");
     assert.ok(options.upstreamBaseUrl.startsWith("http"), "the gateway needs an endpoint to dial");
     assert.ok(options.providerId, "the inference source must be recorded");
-    assert.equal(options.upstreamApiKey, "", "the provider key must never come from the renderer");
+    // There is no longer a field a key COULD arrive in: the credential is read from the OS keychain by the host, which
+    // composes the gateway's env file itself, and naming the provider is the whole request. Asserting the option is
+    // absent rather than empty is what keeps a well-meaning `upstreamApiKey` from being reintroduced.
+    assert.equal("upstreamApiKey" in options, false, "the renderer must carry no field a provider key could ride in");
     // The gateway signs the upstream from these, and pi speaks the shape they imply. An endpoint without them
     // is silently assumed to be OpenAI-shaped and bearer-authenticated, which Anthropic is not.
     assert.ok(options.providerKind, "the provider's wire shape must travel with the endpoint");

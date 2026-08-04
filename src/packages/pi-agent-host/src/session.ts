@@ -199,6 +199,9 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   // pi only says that a compaction happened, never how much it dropped, so the fact is remembered here and
   // travels with every later report — the app would otherwise keep claiming an untouched history.
   let compacted = false;
+  // Whether the APP asked this turn to stop. Held for the rest of the turn rather than cleared on the first event,
+  // because pi retries the dying request and reports each attempt.
+  let aborting = false;
 
   // What this session has spent and what it is sending the model, read off pi rather than counted from the events
   // the app happened to see: pi's stats span entries it has since compacted away, which no bridge tally could.
@@ -238,7 +241,14 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   session.subscribe((event) => {
     const piEvent = event as unknown as PiAgentEvent;
     routeToolSurfaces(toolSurfaces, piEvent);
-    for (const mapped of mapAgentEvent(piEvent)) emit(mapped);
+    for (const mapped of mapAgentEvent(piEvent)) {
+      // A turn the APP aborted — the user pressed Stop, or rejected a tool call — dies with its in-flight upstream
+      // request, and pi reports that as a finished assistant message with stopReason "error" and the transport's own
+      // wording ("Connection error."), not as stopReason "aborted". Relaying it would tell the user their assistant
+      // broke when in fact it obeyed them, and pi retries first, so they would be told several times.
+      if (mapped.type === "error" && aborting) continue;
+      emit(mapped);
+    }
     if (piEvent.type === "session_compact") compacted = true;
     // After the turn, when the numbers have moved and the tool set for the next one is settled.
     if (piEvent.type === "turn_end" || piEvent.type === "agent_settled") publishReports();
@@ -309,6 +319,8 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
       toolSurfaces.rerenderAll();
     },
     async prompt(text, streamingBehavior) {
+      // A fresh turn is nobody's abort yet: the flag belongs to the turn that was stopped, not to the session.
+      aborting = false;
       try {
         await session.prompt(text, streamingBehavior ? { streamingBehavior } : undefined);
       } catch (error) {
@@ -320,6 +332,8 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
       }
     },
     async abort() {
+      // Set BEFORE the abort lands, so the failure it causes is already recognised as ours when pi reports it.
+      aborting = true;
       await session.abort();
     },
     settleHostResponse: rpc.settle,

@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionContext, InlineExtension } from "@earendil-works/pi-coding-agent";
@@ -169,6 +169,60 @@ describe("createPiSession", () => {
     const frames = events.filter((event) => event.type === "surface_frame");
     const accent = (frames.at(-1) as { lines: string[] }).lines[0];
     expect(accent).toBe("\x1b[38;2;255;0;0mx\x1b[39m");
+  });
+});
+
+// A turn whose upstream request is cancelled rejects with whatever the transport threw — "Connection error." on a
+// real provider. When the APP asked for that cancellation, showing it is a lie about what happened.
+const failingStream = async function* () {
+  yield { type: "start", partial: assistantMessage("", "stop") };
+  // Long enough for the abort below to land first, which is what a rejected tool call does in the running app.
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  throw new Error("Connection error.");
+};
+
+describe("an aborted turn", () => {
+  // pi retries a failed stream three times with a 2s base backoff (settings-manager.js: maxRetries 3,
+  // baseDelayMs 2000), which is 14 seconds per test spent proving nothing about the mapping. Turned off through
+  // pi's OWN setting, in this test's throwaway agent dir — the retry behaviour itself is not what is under test.
+  function agentDirWithoutRetries() {
+    const agentDir = mkdtempSync(join(tmpdir(), "cd-pi-agentdir-"));
+    writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false } }));
+    return agentDir;
+  }
+
+  async function sessionOn(events: BridgeEvent[]) {
+    return await createPiSession({
+      cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+      agentDir: agentDirWithoutRetries(),
+      gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
+      gatewayToken: "tok",
+      modelId: "canned",
+      emit: (event) => events.push(event),
+      streamOverride: failingStream as never,
+    });
+  }
+
+  // The defect this closes: rejecting a tool call aborts the turn, and the abort's own "Connection error." landed in
+  // the transcript as a model error — so saying no to one command read as the assistant breaking.
+  it("is not reported as a model error", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await sessionOn(events);
+    const turn = session.prompt("run something dangerous");
+    await session.abort();
+    await turn.catch(() => undefined);
+    expect(events.filter((event) => event.type === "error")).toEqual([]);
+  });
+
+  // The other half: a turn that failed on its OWN must still say so, or a broken provider looks like a hung UI.
+  // Note it RESOLVES — pi absorbs a transport failure and reports it as a finished assistant message with
+  // stopReason "error", so the prompt call is not where a failure can be noticed.
+  it("still surfaces a failure nobody asked for", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await sessionOn(events);
+    await session.prompt("say hello");
+    expect(events.some((event) => event.type === "error")).toBe(true);
   });
 });
 
