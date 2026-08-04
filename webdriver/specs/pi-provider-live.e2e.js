@@ -330,6 +330,29 @@ describe("the provider-shape contract against real containers", () => {
       openaiShape = { agent: containerEnv(names.agent), gateway: containerEnv(names.gateway), names };
       openaiShape.turn = await askAndSettle("the openai-completions turn never finished");
       report("OPENAI-COMPLETIONS TURN", openaiShape.turn);
+
+      // The action behind the composer's New-thread button: useAIStore.newThread() is a one-line wrapper
+      // around this, and only this store is exposed to a spec.
+      const restart = await browser.executeAsync((done) => {
+        window.__cdCodingAgentStore
+          .getState()
+          .restart()
+          .then(
+            () => done({ ok: true }),
+            (failure) => done({ ok: false, reason: String(failure) }),
+          );
+      });
+      openaiShape.restartReason = restart.ok ? "" : restart.reason;
+      if (restart.ok) {
+        await browser.waitUntil(
+          async () => (await browser.execute(() => window.__cdCodingAgentStore.getState().status)) === "ready",
+          { timeout: START_TIMEOUT, interval: 1000, timeoutMsg: "the restarted session never became ready" },
+        );
+        openaiShape.restarted = await browser.execute(() => ({
+          agent: window.__cdCodingAgentStore.getState().spec?.agentContainerName ?? "",
+          timeline: window.__cdCodingAgentStore.getState().view.timeline.length,
+        }));
+      }
       await stopSession();
     });
 
@@ -369,6 +392,18 @@ describe("the provider-shape contract against real containers", () => {
     // reads as frozen for however long the model takes.
     it("shows that the agent is working while the turn runs", () => {
       assert.ok(openaiShape.turn.sawWorkingIndicator, "no working indicator ever appeared during the turn");
+    });
+
+    // "New conversation" can only mean a fresh SESSION here — pi holds the conversation inside it and the
+    // bridge carries no reset. The button used to reject into a swallowed promise and look dead.
+    it("starts a genuinely new conversation, on a new container pair", () => {
+      assert.ok(openaiShape.restarted, `the session did not come back up: ${openaiShape.restartReason}`);
+      assert.notEqual(
+        openaiShape.restarted.agent,
+        openaiShape.names.agent,
+        "a new conversation must be a new container pair, not the same one relabelled",
+      );
+      assert.equal(openaiShape.restarted.timeline, 0, "the transcript must be empty again");
     });
   });
 

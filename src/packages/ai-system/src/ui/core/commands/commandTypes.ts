@@ -54,6 +54,11 @@ export type AssistantCommandAvailabilityId =
   | "assistant-only"
   | "quake-console-only";
 
+// What a SESSION can do, as opposed to what the surface or the current phase allows. A pi session is one
+// conversation that takes its model and access at start, so it carries none of these — and a command needing
+// one must be refused with a reason BEFORE it runs, not accepted and then rejected from inside the store.
+export type AssistantCommandCapabilityId = "conversation-reset" | "threads" | "history" | "configuration";
+
 export type AssistantCommandSurface = "assistant" | "quake-console";
 
 export type AssistantCommandArgumentSpec =
@@ -72,6 +77,8 @@ interface AssistantCommandBase {
   source: AssistantCommandSource;
   bypassTier: AssistantCommandBypassTier;
   availabilityId: AssistantCommandAvailabilityId;
+  // Absent ⇒ every session can run it.
+  capabilityId?: AssistantCommandCapabilityId;
   confirmation: "none" | "required";
   arguments: AssistantCommandArgumentSpec;
   surfaces: readonly AssistantCommandSurface[];

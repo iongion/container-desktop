@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, EditableText, InputGroup, Menu, MenuItem, PopoverNext } from "@blueprintjs/core";
+import { Button, ButtonGroup, EditableText, InputGroup, Intent, Menu, MenuItem, PopoverNext } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import {
 } from "@/web-app/components/ai/threadHistory";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { computeSpacers } from "@/web-app/hooks/computeSpacers";
+import { Notification } from "@/web-app/Notification";
 import { useAIStore } from "@/web-app/stores/useAIStore";
 
 const logger = createLogger("web.ai.thread");
@@ -100,7 +101,12 @@ export function ThreadSelector({ control }: { control?: ThreadSelectorControl })
 
   const create = () => {
     setHistoryOpen(false);
-    void newThread().catch((error) => logger.error("AI: Thread creation failed", describeError(error)));
+    void newThread().catch((error) => {
+      // Silently logging left the button looking dead: a session that cannot start a new conversation has to
+      // say so where the user clicked.
+      logger.error("AI: Thread creation failed", describeError(error));
+      Notification.show({ message: describeError(error), intent: Intent.WARNING });
+    });
   };
 
   const chooseThread = (id: string) => {

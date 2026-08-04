@@ -5,7 +5,7 @@
 
 import { useMemo } from "react";
 
-import { piSessionSummary, piSessionUnavailable } from "@/ai-system/core/piAIState";
+import { PI_SESSION_CAPABILITIES, piSessionSummary, piSessionUnavailable } from "@/ai-system/core/piAIState";
 import type { ThreadView } from "@/ai-system/core/threadEvents";
 import type { AIState } from "@/ai-system/ui/core/stores/aiStore";
 import { createLogger } from "@/logger";
@@ -16,7 +16,6 @@ const logger = createLogger("ai.store");
 // Capabilities the assistant UI exposes that the pi bridge does not carry yet. They reject by name so a
 // drawer shows a real message; each is claimed by a later phase (session list, fork/tree, compact, export).
 const PENDING: Array<keyof AIState> = [
-  "newThread",
   "renameThread",
   "configureThread",
   "previewThreadBranch",
@@ -47,6 +46,7 @@ function deriveState(view: ThreadView, status: string, modelId: string, startedA
     activeThreadId: summary.id,
     views: { [summary.id]: view },
     recoveryErrors: {},
+    capabilities: PI_SESSION_CAPABILITIES,
     deletingThreads: new Set<string>(),
     setActiveThread: () => undefined,
     submitMessage: async (text: string) => {
@@ -55,7 +55,13 @@ function deriveState(view: ThreadView, status: string, modelId: string, startedA
     },
     applyThreadEvent: () => undefined,
     cancel: async () => {
-      await useCodingAgentStore.getState().stop();
+      await useCodingAgentStore.getState().abortTurn();
+    },
+    // One pi session is one conversation, so a new one is a new session — started from the options the
+    // current one was started with. The id is stable because the session projects exactly one thread.
+    newThread: async () => {
+      await useCodingAgentStore.getState().restart();
+      return useCodingAgentStore.getState().view.threadId;
     },
     // The approvalId is the container's requestId, so the card answers the exact tool call that is parked.
     resolveApproval: async (approvalId: string, decision: "allow" | "reject") => {

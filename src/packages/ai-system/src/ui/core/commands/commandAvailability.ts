@@ -1,12 +1,14 @@
 import type { ThreadPhase } from "@/ai-system/core/threadEvents";
 
-import type { AssistantCommandDefinition, AssistantCommandSurface } from "./commandTypes";
+import type { AssistantCommandCapabilityId, AssistantCommandDefinition, AssistantCommandSurface } from "./commandTypes";
 
 export interface AssistantCommandExecutionContext {
   surface: AssistantCommandSurface;
   hostStatus: "connecting" | "ready" | "error";
   hasThread: boolean;
   threadPhase: ThreadPhase;
+  // What THIS session can do. Absent ⇒ unconstrained, so a caller that never opted in keeps the whole palette.
+  capabilities?: ReadonlySet<AssistantCommandCapabilityId>;
 }
 
 export type AssistantCommandExecutionPlan =
@@ -18,11 +20,23 @@ function activeTurn(phase: ThreadPhase): boolean {
   return phase !== "idle" && phase !== "error";
 }
 
+// Why a session cannot run a command at all, however idle it is. Separate from the phase and surface reasons
+// because this answer does not change while the session lives.
+const CAPABILITY_REASON: Record<AssistantCommandCapabilityId, string> = {
+  "conversation-reset": "This session cannot start a new conversation",
+  threads: "This session is a single conversation",
+  history: "This session cannot revisit its history",
+  configuration: "The model and access are chosen when the session starts",
+};
+
 function semanticUnavailableReason(
   command: AssistantCommandDefinition,
   context: AssistantCommandExecutionContext,
 ): string | undefined {
   if (!command.surfaces.includes(context.surface)) return "Command is not available here";
+  if (command.capabilityId && context.capabilities && !context.capabilities.has(command.capabilityId)) {
+    return CAPABILITY_REASON[command.capabilityId];
+  }
   switch (command.availabilityId) {
     case "thread":
     case "thread-idle":

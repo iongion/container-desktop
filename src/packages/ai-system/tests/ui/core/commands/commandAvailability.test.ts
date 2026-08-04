@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PI_SESSION_CAPABILITIES } from "@/ai-system/core/piAIState";
 import { planCommandExecution } from "@/ai-system/ui/core/commands/commandAvailability";
 import { BUILTIN_ASSISTANT_COMMANDS } from "@/ai-system/ui/core/commands/commandCatalog";
 
@@ -119,5 +120,61 @@ describe("planCommandExecution", () => {
         threadPhase: "idle",
       }),
     ).toEqual({ kind: "unavailable", reasonKey: "The Assistant is unavailable" });
+  });
+});
+
+// A session that cannot do a thing must SAY so before the command runs. The pi session is one conversation:
+// it has no thread list, cannot rewrite its own history, and takes its model and access at start — so those
+// commands used to be offered, accepted, and only then rejected from deep inside the store.
+describe("session capabilities", () => {
+  const base = { surface: "assistant", hostStatus: "ready", hasThread: true, threadPhase: "idle" } as const;
+
+  it("refuses a command the session has no capability for, naming why", () => {
+    for (const [id, reason] of [
+      ["thread.new", "This session cannot start a new conversation"],
+      ["thread.rename", "This session is a single conversation"],
+      ["thread.branch", "This session cannot revisit its history"],
+      ["thread.compact", "This session cannot revisit its history"],
+      ["access.set", "The model and access are chosen when the session starts"],
+      ["reasoning.set", "The model and access are chosen when the session starts"],
+    ] as const) {
+      expect(planCommandExecution(command(id), { ...base, capabilities: new Set() })).toEqual({
+        kind: "unavailable",
+        reasonKey: reason,
+      });
+    }
+  });
+
+  it("executes those same commands where the session does carry the capability", () => {
+    const capabilities = new Set(["conversation-reset", "threads", "history", "configuration"] as const);
+    for (const id of ["thread.new", "thread.branch", "access.set"]) {
+      expect(planCommandExecution(command(id), { ...base, capabilities })).toEqual({ kind: "execute" });
+    }
+  });
+
+  // The set a pi session really publishes: it can start a FRESH conversation (a fresh session), but it still
+  // has no second conversation to list, switch to, rename or delete.
+  it("matches what a pi session can actually do", () => {
+    const capabilities = PI_SESSION_CAPABILITIES;
+    expect(planCommandExecution(command("thread.new"), { ...base, capabilities })).toEqual({ kind: "execute" });
+    expect(planCommandExecution(command("thread.rename"), { ...base, capabilities })).toEqual({
+      kind: "unavailable",
+      reasonKey: "This session is a single conversation",
+    });
+  });
+
+  // Stopping a turn is not a capability the session can lack — there is always an abort.
+  it("leaves capability-free commands alone", () => {
+    expect(
+      planCommandExecution(command("thread.stop"), { ...base, threadPhase: "model", capabilities: new Set() }),
+    ).toEqual({
+      kind: "execute",
+    });
+    expect(planCommandExecution(command("help"), { ...base, capabilities: new Set() })).toEqual({ kind: "execute" });
+  });
+
+  // Omitting the set entirely must not silently hide half the palette for callers that never opted in.
+  it("treats an absent capability set as 'everything is available'", () => {
+    expect(planCommandExecution(command("thread.new"), base)).toEqual({ kind: "execute" });
   });
 });

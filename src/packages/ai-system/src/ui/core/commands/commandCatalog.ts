@@ -3,6 +3,7 @@ import type {
   AssistantCommandArgumentSpec,
   AssistantCommandAvailabilityId,
   AssistantCommandBypassTier,
+  AssistantCommandCapabilityId,
   AssistantCommandText,
   AssistantControlCommandDefinition,
   BuiltinAssistantCommandId,
@@ -22,6 +23,7 @@ interface ControlInput {
   argumentHintKey?: string;
   bypassTier: AssistantCommandBypassTier;
   availabilityId: AssistantCommandAvailabilityId;
+  capabilityId?: AssistantCommandCapabilityId;
   confirmation?: "none" | "required";
   arguments: AssistantCommandArgumentSpec;
 }
@@ -40,6 +42,7 @@ function control(input: ControlInput): AssistantControlCommandDefinition {
     argumentHint: input.argumentHintKey ? i18n(input.argumentHintKey) : undefined,
     bypassTier: input.bypassTier,
     availabilityId: input.availabilityId,
+    ...(input.capabilityId ? { capabilityId: input.capabilityId } : {}),
     confirmation: input.confirmation ?? "none",
     arguments: input.arguments,
     surfaces: SURFACES,
@@ -208,6 +211,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     hiddenSearchTerms: ["history", "resume", "switch"],
     bypassTier: "immediate-ui",
     availabilityId: "always",
+    capabilityId: "threads",
     arguments: { kind: "none" },
   }),
   control({
@@ -219,6 +223,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     hiddenSearchTerms: ["clear", "reset"],
     bypassTier: "queued",
     availabilityId: "idle",
+    capabilityId: "conversation-reset",
     arguments: { kind: "none" },
   }),
   control({
@@ -231,6 +236,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     argumentHintKey: "<id-or-title>",
     bypassTier: "queued",
     availabilityId: "idle",
+    capabilityId: "threads",
     arguments: { kind: "text", required: true },
   }),
   control({
@@ -242,6 +248,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     argumentHintKey: "<title>",
     bypassTier: "queued",
     availabilityId: "thread-idle",
+    capabilityId: "threads",
     arguments: { kind: "text", required: true },
   }),
   control({
@@ -254,6 +261,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     argumentHintKey: "[checkpoint]",
     bypassTier: "immediate-ui",
     availabilityId: "thread",
+    capabilityId: "history",
     arguments: { kind: "text", required: false },
   }),
   control({
@@ -266,6 +274,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     argumentHintKey: "[instructions]",
     bypassTier: "immediate-ui",
     availabilityId: "thread-idle-only",
+    capabilityId: "history",
     arguments: { kind: "text", required: false },
   }),
   control({
@@ -277,6 +286,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     argumentHintKey: "[id-or-title]",
     bypassTier: "queued",
     availabilityId: "thread-idle",
+    capabilityId: "threads",
     confirmation: "required",
     arguments: { kind: "text", required: false },
   }),
@@ -330,6 +340,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     argumentHintKey: "[observe|workspace|operator]",
     bypassTier: "immediate-ui",
     availabilityId: "thread-idle-only",
+    capabilityId: "configuration",
     arguments: { kind: "tokens", min: 0, max: 1 },
   }),
   control({
@@ -342,6 +353,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     argumentHintKey: "[default|low|medium|high]",
     bypassTier: "immediate-ui",
     availabilityId: "thread-idle-only",
+    capabilityId: "configuration",
     arguments: { kind: "tokens", min: 0, max: 1 },
   }),
   control({

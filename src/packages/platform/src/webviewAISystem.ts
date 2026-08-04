@@ -110,9 +110,12 @@ export async function createWebviewAISystem<TEvent = unknown>(deps: WebviewAISys
 
   // This path really is a browser realm, so it keeps the Anthropic direct-browser-access header. The native
   // transport is not one and deliberately omits it.
+  // `fetch` must stay BOUND to its realm: handed over bare and invoked as `fetchImpl(...)` it loses `this`,
+  // and WebKit refuses it outright ("Can only call Window.fetch on instances of Window").
+  const boundFetch: typeof fetch = (input, init) => globalThis.fetch(input, init);
   const webviewTransport = createFetchProviderTransport({
     keychain: deps.keychain,
-    fetchImpl: globalThis.fetch,
+    fetchImpl: boundFetch,
     anthropicDirectBrowserAccess: true,
   });
   return createAISystem(
@@ -136,7 +139,7 @@ export async function createWebviewAISystem<TEvent = unknown>(deps: WebviewAISys
         ? routeByAuthScheme(deps.nativeProviderTransport, webviewTransport)
         : webviewTransport,
       publicWebFetch: deps.publicWebFetch,
-      publicWebFetchImpl: globalThis.fetch,
+      publicWebFetchImpl: boundFetch,
       engineOps: deps.engineOps,
       workspaceAccess: deps.workspaceAccess,
       createExecutionSelector: createExecutionSelectorFactory,

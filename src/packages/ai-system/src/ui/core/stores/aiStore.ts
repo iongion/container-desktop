@@ -1,3 +1,4 @@
+import type { AssistantCommandCapabilityId } from "@/ai-system/ui/core/commands/commandTypes";
 // Zustand binding over the renderer Thread-client runtime. The runtime owns lifecycle, ordered projection, and
 // request admissibility; this module only correlates command outcomes to Promises and projects state for React
 // selectors. No XState: the machine is a pure reducer (`threadClientReducer`) driven by `createThreadClientRuntime`.
@@ -30,6 +31,9 @@ export interface AIState {
   activeThreadId: string | null;
   views: Record<string, ThreadView>;
   recoveryErrors: Record<string, string>;
+  // What the SESSION behind this state can do. The command palette refuses anything outside it up front,
+  // rather than offering a command that the store would reject once it ran.
+  capabilities?: ReadonlySet<AssistantCommandCapabilityId>;
   deletingThreads: Set<string>;
   newThread: () => Promise<string>;
   renameThread: (id: string, title: string) => Promise<ThreadSummary | undefined>;

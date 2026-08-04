@@ -80,6 +80,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const setActiveThread = useAIStore((s) => s.setActiveThread);
   const resolveApproval = useAIStore((s) => s.resolveApproval);
   const cancel = useAIStore((s) => s.cancel);
+  const capabilities = useAIStore((s) => s.capabilities);
   // Extension chrome and dialogs are pi-session state with no place in the neutral ThreadView, and since the
   // Assistant surface IS the pi session they are read from its store directly rather than widening AIState.
   const extensionChrome = useCodingAgentStore((s) => s.chrome);
@@ -394,10 +395,11 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         hostStatus: lifecycle === "hydrating" ? ("connecting" as const) : ("ready" as const),
         hasThread: !!activeThreadId,
         threadPhase: composerPhase,
+        capabilities,
       },
       onExecute: executeCommand,
     }),
-    [activeThreadId, composerPhase, executeCommand, lifecycle, skillRegistry, surface],
+    [activeThreadId, capabilities, composerPhase, executeCommand, lifecycle, skillRegistry, surface],
   );
 
   // Starter chips send immediately with the saved default provider/model (the same seed the composer uses).

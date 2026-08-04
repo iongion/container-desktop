@@ -147,3 +147,36 @@ describe("listModels", () => {
     await expect(cancelled).rejects.toThrow(/caller stopped/i);
   });
 });
+
+// WebKit refuses `fetch` invoked with the wrong `this` ("Can only call Window.fetch on instances of Window"),
+// so handing the bare global reference on as `fetchImpl` broke every discovery and connection test in the
+// web view. The default must stay bound to its realm.
+describe("the default fetch implementation", () => {
+  it("calls the realm's fetch bound, not as a detached reference", async () => {
+    const realm = globalThis as { fetch: typeof fetch };
+    const original = realm.fetch;
+    const seen: unknown[] = [];
+    // Mimic the platform rule: a detached call has `this === undefined`, and is refused.
+    realm.fetch = function boundOnly(this: unknown, ...args: Parameters<typeof fetch>) {
+      if (this !== globalThis) throw new TypeError("Can only call Window.fetch on instances of Window");
+      seen.push(args[0]);
+      return Promise.resolve(new Response(JSON.stringify({ data: [{ id: "m1" }] }), { status: 200 }));
+    } as unknown as typeof fetch;
+    try {
+      const models = await listModels({
+        id: "lmstudio",
+        kind: "local",
+        baseURL: "http://127.0.0.1:1234/v1",
+        model: "",
+        isCloud: false,
+        requiresKey: false,
+        auth: { scheme: "none" },
+        discovery: "openai-compatible",
+      });
+      expect(models.map((entry) => entry.id)).toEqual(["m1"]);
+      expect(seen).toHaveLength(1);
+    } finally {
+      realm.fetch = original;
+    }
+  });
+});

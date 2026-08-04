@@ -230,10 +230,19 @@ export interface CodingAgentState {
   resources: ContributedResources;
   // The narrowing the running skill asked for, cleared when its turn ends.
   activeSkill?: ActiveSkillScope;
+  // What this session was started with, so it can be started again identically. A pi session IS the
+  // conversation, so "start a fresh conversation" can only mean starting a fresh session.
+  lastStart?: StartCodingAgentOptions;
   start(options: StartCodingAgentOptions): Promise<void>;
   submit(text: string): Promise<void>;
   submitSkill(input: SkillSubmission): Promise<void>;
   stop(): Promise<void>;
+  // Tear the session down and start an identical one — the honest meaning of "new conversation" here, since
+  // pi holds the conversation inside the session and the bridge carries no reset.
+  restart(): Promise<void>;
+  // Stop the RUNNING TURN and leave the session up. Distinct from stop(), which removes the container pair:
+  // a user who asks to stop generating does not mean "throw the workspace away".
+  abortTurn(): Promise<void>;
   applyBridgeEvent(event: BridgeEvent): void;
   handleHostRequest(event: HostRequestEvent): Promise<void>;
   // Perform a container operation and answer the container with the result. Public because approving a held
@@ -307,6 +316,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       pendingEngineOps: {},
       activeSkill: undefined,
       error: undefined,
+      lastStart: options,
     });
     const suffix = randomUUID().slice(0, 8);
     // Mock mode has no engine to run a container on, so the far end of the socket is scripted instead. Only
@@ -403,6 +413,17 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       },
     }));
     await client.prompt(input.prompt);
+  },
+
+  async restart() {
+    const options = get().lastStart;
+    if (!options) throw new Error("there is no session to start again");
+    await get().stop();
+    await get().start(options);
+  },
+
+  async abortTurn() {
+    await stopAfterRejection(get().client);
   },
 
   async stop() {
