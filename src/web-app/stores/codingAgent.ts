@@ -25,7 +25,9 @@ import {
 } from "@/ai-system/core/permissions";
 import { decidePiToolCall, piPermissionContext } from "@/ai-system/core/piApprovals";
 import { emptyPiThreadView, projectPiThreadView } from "@/ai-system/core/piThreadView";
+import type { ProviderKind } from "@/ai-system/core/providers";
 import type { ThreadView } from "@/ai-system/core/threadEvents";
+import type { AIAuthSettings } from "@/ai-system/core/types";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
 import { isMockMode } from "@/container-client/mock/mode";
 import { createLogger } from "@/logger";
@@ -196,6 +198,10 @@ export interface StartCodingAgentOptions {
   // Which configured AI provider the endpoint came from. Recorded so the session can name its inference
   // source; the key itself stays in the OS keychain.
   providerId?: string;
+  // The provider's kind and connection auth, resolved from settings by the start form. Optional so a caller
+  // that only holds an endpoint and a key (the live specs) keeps working on the OpenAI-shaped default.
+  providerKind?: ProviderKind;
+  upstreamAuth?: AIAuthSettings;
   scope?: string;
   egress?: boolean;
 }
@@ -334,6 +340,10 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       pluginVolumeName: "cd-agent-plugins",
       upstreamBaseUrl: options.upstreamBaseUrl,
       upstreamApiKey: options.upstreamApiKey,
+      // An endpoint with no declared provider is treated as an OpenAI-shaped bearer upstream — what every
+      // provider but Anthropic speaks, and what this pair did before the shape was carried at all.
+      providerKind: options.providerKind ?? "openai-compatible",
+      upstreamAuth: options.upstreamAuth ?? { scheme: "bearer" },
       modelId: options.modelId,
       egress: options.egress ?? true,
       scope: options.scope,

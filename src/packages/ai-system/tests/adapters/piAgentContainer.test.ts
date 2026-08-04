@@ -21,6 +21,8 @@ const spec: PiAgentSessionSpec = {
   pluginVolumeName: "cd-agent-plugins",
   upstreamBaseUrl: "https://openrouter.ai/api/v1",
   upstreamApiKey: "sk-real-secret",
+  providerKind: "openai-compatible",
+  upstreamAuth: { scheme: "bearer" },
   modelId: "some/model",
   egress: true,
   hostAlias: "host.containers.internal",
@@ -178,6 +180,39 @@ describe("startPiAgentSession", () => {
     expect(written[0]).toContain("sk-real-secret");
     expect(written[1]).not.toContain("sk-real-secret");
     expect(written[1]).toContain("CD_BRIDGE_TOKEN=tok");
+  });
+
+  // pi speaks whatever shape the UPSTREAM speaks: the gateway proxies bytes, so an OpenAI-completions request
+  // can never reach Anthropic's /v1/messages. The Anthropic SDK also builds its own /v1, so its gateway base
+  // must be the origin — otherwise the path arrives doubled and the rewrite lands on /v1/v1/messages.
+  it("tells the agent the upstream's wire shape and the base that shape expects", async () => {
+    const written: string[] = [];
+    await startPiAgentSession(fakeHost(), { ...spec, providerKind: "anthropic" }, async (contents) => {
+      written.push(contents);
+      return "/tmp/env";
+    });
+    expect(written[1]).toContain("CD_MODEL_API=anthropic-messages");
+    expect(written[1]).toContain("CD_GATEWAY_URL=http://cd-gateway-1:8788\n");
+  });
+
+  it("keeps the version segment on the gateway base for an OpenAI-shaped upstream", async () => {
+    const written: string[] = [];
+    await startPiAgentSession(fakeHost(), spec, async (contents) => {
+      written.push(contents);
+      return "/tmp/env";
+    });
+    expect(written[1]).toContain("CD_MODEL_API=openai-completions");
+    expect(written[1]).toContain("CD_GATEWAY_URL=http://cd-gateway-1:8788/v1");
+  });
+
+  it("tells the gateway how the upstream authenticates, not just its key", async () => {
+    const written: string[] = [];
+    await startPiAgentSession(fakeHost(), { ...spec, providerKind: "anthropic" }, async (contents) => {
+      written.push(contents);
+      return "/tmp/env";
+    });
+    expect(written[0]).toContain("CD_UPSTREAM_KIND=anthropic");
+    expect(written[0]).toContain("CD_UPSTREAM_AUTH_SCHEME=bearer");
   });
 
   it("writes the container-reachable upstream URL, not the loopback one the app sees", async () => {

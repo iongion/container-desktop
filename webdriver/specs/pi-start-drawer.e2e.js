@@ -212,6 +212,10 @@ describe("pi coding agent session start", () => {
     assert.ok(options.upstreamBaseUrl.startsWith("http"), "the gateway needs an endpoint to dial");
     assert.ok(options.providerId, "the inference source must be recorded");
     assert.equal(options.upstreamApiKey, "", "the provider key must never come from the renderer");
+    // The gateway signs the upstream from these, and pi speaks the shape they imply. An endpoint without them
+    // is silently assumed to be OpenAI-shaped and bearer-authenticated, which Anthropic is not.
+    assert.ok(options.providerKind, "the provider's wire shape must travel with the endpoint");
+    assert.ok(options.upstreamAuth?.scheme, "the provider's credential shape must travel with the endpoint");
   });
 
   it("collapses into the session summary once the session is ready", () => {

@@ -1,14 +1,13 @@
-// Pure provider resolution (no AI-SDK import, so it stays unit-testable). Decides which provider,
-// base URL, model, and whether a key is required. The actual AI-SDK LanguageModel is built from
-// this by createLanguageModel() in the runtime layer. See.
+// Pure provider resolution. Decides which provider, base URL, model, and whether a key is required. Its
+// result drives model discovery, the app's own provider transport, and the coding agent's gateway env file.
 
 import { z } from "zod";
 import providerCatalog from "@/resources/ai/provider-catalog.json";
 import type { AIAuthScheme, AIAuthSettings, AISettings } from "./types";
 
-// "local" and "openai-compatible" both build via @ai-sdk/openai-compatible; the catalog kind describes their
-// default connection shape. A user may explicitly point either kind at another HTTP(S) endpoint.
-// "anthropic"/"openai" use their dedicated AI-SDK providers.
+// The catalog kind describes a provider's default connection shape: "local" and "openai-compatible" both speak
+// OpenAI completions, and a user may point either at another HTTP(S) endpoint. "anthropic" is the one kind with
+// a different wire shape and credential header — see core/piAgentEnv and providerTransport.
 export type ProviderKind = "local" | "anthropic" | "openai" | "openai-compatible";
 
 // Provider-specific discovery is runtime behavior, not merely a list/single UI hint. Unknown endpoints use the

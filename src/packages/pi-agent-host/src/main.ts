@@ -2,9 +2,9 @@ import { WebSocketServer } from "ws";
 
 import { createLogger } from "@/logger";
 import { containerToolDescriptions } from "@/pi-agent-host/containerToolDescriptions";
-import { startGateway } from "@/pi-agent-host/gateway";
+import { parseUpstreamAuthScheme, startGateway } from "@/pi-agent-host/gateway";
 import { attachBridgeConnection } from "@/pi-agent-host/server";
-import { createPiSession } from "@/pi-agent-host/session";
+import { createPiSession, parseModelApi } from "@/pi-agent-host/session";
 
 const logger = createLogger("pi-agent-host.main");
 
@@ -43,6 +43,7 @@ async function runAgent(): Promise<void> {
       gatewayUrl: required("CD_GATEWAY_URL"),
       gatewayToken: token,
       modelId: required("CD_MODEL_ID"),
+      modelApi: parseModelApi(process.env.CD_MODEL_API),
       emit: (event) => attached?.emit(event),
       containerToolDescriptions: containerToolDescriptions(),
     })
@@ -64,8 +65,14 @@ async function runGateway(): Promise<void> {
   await startGateway(
     {
       upstreamBaseUrl: required("CD_UPSTREAM_BASE_URL"),
-      apiKey: required("CD_UPSTREAM_API_KEY"),
+      // NOT required: a keyless local server (LM Studio, llama.cpp) writes an empty key, and demanding one
+      // here killed the gateway container before it ever listened.
+      apiKey: process.env.CD_UPSTREAM_API_KEY ?? "",
       bridgeToken: required("CD_BRIDGE_TOKEN"),
+      upstreamKind: process.env.CD_UPSTREAM_KIND,
+      authScheme: parseUpstreamAuthScheme(process.env.CD_UPSTREAM_AUTH_SCHEME),
+      authHeaderName: process.env.CD_UPSTREAM_AUTH_HEADER_NAME,
+      authUsername: process.env.CD_UPSTREAM_AUTH_USERNAME,
     },
     Number(process.env.CD_GATEWAY_PORT ?? "8788"),
   );

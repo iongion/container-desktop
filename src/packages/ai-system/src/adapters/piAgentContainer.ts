@@ -1,4 +1,6 @@
-import { isLoopbackProviderHost } from "@/ai-system/core/providers";
+import { composeGatewayEnv, gatewayBaseUrl, upstreamModelApi } from "@/ai-system/core/piAgentEnv";
+import { isLoopbackProviderHost, type ProviderKind } from "@/ai-system/core/providers";
+import type { AIAuthSettings } from "@/ai-system/core/types";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
 
@@ -25,6 +27,11 @@ export interface PiAgentSessionSpec {
   // Passed in rather than read from the environment: this module runs in the renderer, where there is no
   // process.env.
   upstreamApiKey: string;
+  // The provider's catalog kind and connection auth. They decide the wire shape pi speaks and the credential
+  // header the gateway signs — an Anthropic upstream wants /v1/messages and x-api-key, not a bearer token on
+  // /v1/chat/completions.
+  providerKind: ProviderKind;
+  upstreamAuth: AIAuthSettings;
   modelId: string;
   egress: boolean;
   // The DNS name that resolves to THIS machine from inside a container on this engine — podman's
@@ -161,21 +168,25 @@ export async function startPiAgentSession(
   const gatewayEnvFile = options?.gatewayEnvFile
     ? await options.gatewayEnvFile()
     : await writeEnvFile(
-        [
-          `CD_UPSTREAM_BASE_URL=${gatewayUpstreamUrl(spec)}`,
-          `CD_UPSTREAM_API_KEY=${spec.upstreamApiKey}`,
-          `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
-          `CD_GATEWAY_PORT=${GATEWAY_PORT_IN_IMAGE}`,
-        ].join("\n"),
+        composeGatewayEnv({
+          baseUrl: gatewayUpstreamUrl(spec),
+          apiKey: spec.upstreamApiKey,
+          bridgeToken: spec.bridgeToken,
+          gatewayPort: GATEWAY_PORT_IN_IMAGE,
+          providerKind: spec.providerKind,
+          auth: spec.upstreamAuth,
+        }),
       );
   const gatewayContainerId = await run(host, gatewayRunArgv(spec, gatewayEnvFile), spec.scope);
 
   // The agent's env file deliberately omits the provider key: plugin code runs in this container.
+  const modelApi = upstreamModelApi(spec.providerKind);
   const agentEnvFile = await writeEnvFile(
     [
       `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
       `CD_BRIDGE_PORT=${BRIDGE_PORT_IN_IMAGE}`,
-      `CD_GATEWAY_URL=http://${spec.gatewayContainerName}:${GATEWAY_PORT_IN_IMAGE}/v1`,
+      `CD_GATEWAY_URL=${gatewayBaseUrl(`http://${spec.gatewayContainerName}:${GATEWAY_PORT_IN_IMAGE}`, modelApi)}`,
+      `CD_MODEL_API=${modelApi}`,
       `CD_MODEL_ID=${spec.modelId}`,
       "CD_WORKSPACE=/workspace",
       `CD_AGENT_DIR=${AGENT_DIR_IN_IMAGE}`,

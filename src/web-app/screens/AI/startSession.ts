@@ -75,6 +75,10 @@ export function resolveCodingAgentStart(
       workspacePath,
       modelId,
       providerId: resolved.id,
+      // The wire shape and the credential shape both follow from the provider, so they travel with it: the
+      // gateway signs Anthropic with x-api-key and pi speaks /v1/messages to it.
+      providerKind: resolved.kind,
+      upstreamAuth: resolved.auth,
       upstreamBaseUrl: resolved.baseURL,
       // The key lives in the OS keychain and is never readable here — the host puts it in the gateway's
       // private env file. Callers that already hold a key (the live WebDriver specs) pass their own.

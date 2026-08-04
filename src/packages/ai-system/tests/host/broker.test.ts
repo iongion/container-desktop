@@ -288,6 +288,10 @@ describe("AIBroker agent gateway environment", () => {
     expect(written.contents).toContain("CD_UPSTREAM_BASE_URL=https://api.openai.com/v1");
     expect(written.contents).toContain("CD_BRIDGE_TOKEN=tok");
     expect(written.contents).toContain("CD_GATEWAY_PORT=8788");
+    // The credential SHAPE is derived host-side too, from the settings this host reads itself — the renderer
+    // never describes how a provider authenticates, only which one was picked.
+    expect(written.contents).toContain("CD_UPSTREAM_KIND=openai");
+    expect(written.contents).toContain("CD_UPSTREAM_AUTH_SCHEME=bearer");
     // The answer must not carry the secret back across the boundary.
     expect(JSON.stringify(result)).not.toContain("sk-secret");
   });

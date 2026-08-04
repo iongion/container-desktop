@@ -12,6 +12,7 @@ import type { AIRecordedError } from "@/ai-system/core/diagnostics";
 import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
 import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
+import { composeGatewayEnv } from "@/ai-system/core/piAgentEnv";
 import type { AIKeyStore, ExecutionSelectorFactory, KnowledgeBankLike, SandboxRunner } from "@/ai-system/core/ports";
 import type { ProjectContextPack } from "@/ai-system/core/projectContext";
 import { type ResolvedProvider, resolveProvider } from "@/ai-system/core/providers";
@@ -254,14 +255,20 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
           throw new Error("AI: this runtime cannot write the agent gateway environment");
         }
         const key = (await deps.keyStore.getKey(request.provider)) ?? "";
+        // The credential SHAPE is derived here too, from the settings this host reads itself — the renderer
+        // never describes how a provider authenticates, only which one it picked. `baseUrl` stays the caller's:
+        // it carries the engine's host-alias rewrite, which only the renderer knows.
+        const resolved = resolveProvider(await deps.getAISettings(), request.provider);
         const path = await deps.writePrivateAgentFile(
           request.fileName,
-          [
-            `CD_UPSTREAM_BASE_URL=${request.baseUrl}`,
-            `CD_UPSTREAM_API_KEY=${key}`,
-            `CD_BRIDGE_TOKEN=${request.bridgeToken}`,
-            `CD_GATEWAY_PORT=${request.gatewayPort}`,
-          ].join("\n"),
+          composeGatewayEnv({
+            baseUrl: request.baseUrl,
+            apiKey: key,
+            bridgeToken: request.bridgeToken,
+            gatewayPort: request.gatewayPort,
+            providerKind: resolved.kind,
+            auth: resolved.auth,
+          }),
         );
         return { path };
       }),

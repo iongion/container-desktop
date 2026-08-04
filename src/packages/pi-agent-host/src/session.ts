@@ -41,6 +41,21 @@ export const GATEWAY_PROVIDER_ID = "container-desktop-gateway";
 // without reconstructing pi-ai's Context and Model types.
 export type PiStreamFn = (...args: never[]) => AsyncGenerator<unknown>;
 
+// The wire shape pi speaks to the gateway. The gateway proxies bytes, so this has to be the UPSTREAM's shape:
+// an OpenAI-completions request can never satisfy Anthropic's /v1/messages endpoint.
+export type PiModelApi = "openai-completions" | "anthropic-messages";
+
+const MODEL_APIS: readonly PiModelApi[] = ["openai-completions", "anthropic-messages"];
+
+// Absent ⇒ OpenAI completions, which is what every other provider family speaks.
+export function parseModelApi(value: string | undefined): PiModelApi {
+  if (!value) return "openai-completions";
+  if (!MODEL_APIS.includes(value as PiModelApi)) {
+    throw new Error(`CD_MODEL_API must be one of ${MODEL_APIS.join(", ")}`);
+  }
+  return value as PiModelApi;
+}
+
 export interface CreatePiSessionOptions {
   cwd: string;
   agentDir: string;
@@ -49,6 +64,9 @@ export interface CreatePiSessionOptions {
   // token, which is exactly what the gateway authorizes on — the real provider key never comes here.
   gatewayToken: string;
   modelId: string;
+  // Which wire shape the upstream behind the gateway speaks. The app derives it from the provider's kind and
+  // sends it in the agent's env file; `gatewayUrl` is already the base that shape's client expects.
+  modelApi?: PiModelApi;
   emit: (event: BridgeEvent) => void;
   streamOverride?: PiStreamFn;
   // The app's `--app-*` colours, so plugin components are painted in the theme the rest of the app is.
@@ -76,7 +94,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
         // baseUrl is required: the provider composer validates it when defining custom models.
         baseUrl: gatewayUrl,
         apiKey: gatewayToken,
-        api: "openai-completions",
+        api: options.modelApi ?? "openai-completions",
         ...(streamOverride ? { streamSimple: streamOverride as never } : {}),
         models: [
           {

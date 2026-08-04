@@ -25,11 +25,25 @@ describe("resolveCodingAgentStart", () => {
       workspacePath: "/home/you/code/my-app",
       modelId: "qwen3-coder-30b",
       providerId: "lmstudio",
+      providerKind: "local",
+      upstreamAuth: { scheme: "none" },
       upstreamBaseUrl: "http://127.0.0.1:1234/v1",
       upstreamApiKey: "",
       appVersion: "6.0.0",
       egress: true,
     });
+  });
+
+  // The gateway signs Anthropic with x-api-key and pi speaks /v1/messages to it, so both shapes have to travel
+  // with the provider rather than being assumed OpenAI-shaped downstream.
+  it("carries the provider's wire shape and credential shape", () => {
+    const result = resolveCodingAgentStart(form({ providerId: "anthropic", model: "claude-sonnet-4-5" }), {
+      settings: settings(),
+      appVersion: "6.0.0",
+      keyPresent: true,
+    });
+    expect(result.options?.providerKind).toBe("anthropic");
+    expect(result.options?.upstreamAuth).toEqual({ scheme: "bearer" });
   });
 
   it("carries the egress choice through", () => {

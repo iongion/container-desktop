@@ -143,7 +143,8 @@ queueing frames that arrive while it is still starting. `createPiSession` (`sess
 `createAgentSessionServices` with **three inline extensions**:
 
 - **the gateway provider** — `registerProvider("container-desktop-gateway", { baseUrl: <gateway>, apiKey:
-  <bridge token>, api: "openai-completions", models: [<the one model>] })`. pi therefore never reads
+  <bridge token>, api: <the upstream's wire shape>, models: [<the one model>] })`, where the shape comes from
+  `CD_MODEL_API` (`openai-completions`, or `anthropic-messages` for an Anthropic upstream). pi therefore never reads
   `~/.pi/auth.json` and never learns a real key. Registration is queued by the extension runtime and flushed
   by `createAgentSessionServices`, which is why services are built here rather than calling the low-level
   `createAgentSession`;
@@ -330,9 +331,14 @@ consumes them since the worker library was deleted; they survive as a capability
 - **Cloud, needs a key** — Anthropic, OpenAI, DeepSeek, GLM (Zhipu), MiniMax, and OpenRouter (an aggregator;
   aggregated model ids split by `parseAggregatedModelId`).
 
-**Inference** does not go through the AI SDK on this path: the renderer hands `start()` an upstream base URL,
-a key and a model id, and everything after that is the gateway. `adapters/languageModel.ts` still exists but
-has no caller. **Discovery** is live and provider-specific: `adapters/localModels.ts` `listModels` paginates
+**Inference** runs entirely on pi's own provider layer: the renderer hands `start()` an endpoint, a model id and
+the provider it came from, and everything after that is the gateway — there is no AI-SDK dependency left in the
+app. Two things travel with the provider, both derived from its catalog kind in `core/piAgentEnv.ts`: the **wire
+shape** pi speaks (`CD_MODEL_API`, plus the gateway base URL that shape's client expects — the Anthropic SDK
+builds its own `/v1`) and the **credential shape** the gateway signs (`CD_UPSTREAM_KIND` /
+`CD_UPSTREAM_AUTH_SCHEME` / `…_HEADER_NAME` / `…_USERNAME`, mirroring `providerTransport`'s
+`authenticatedHeaders`: Anthropic is `x-api-key`, a keyless local server is nothing at all).
+**Discovery** is live and provider-specific: `adapters/localModels.ts` `listModels` paginates
 OpenAI-compatible endpoints with `after`, uses Anthropic's `anthropic-version` + `after_id`, falls back to an
 explicitly saved model for a single-model server, and performs no request at all for a manual provider. The
 renderer cache is TanStack Query, keyed by provider id + normalized endpoint + auth metadata + a non-secret

@@ -5,7 +5,7 @@ import type { ExtensionContext, InlineExtension } from "@earendil-works/pi-codin
 import { describe, expect, it } from "vitest";
 
 import { CONTAINER_TOOL_NAMES } from "@/ai-system/core/toolNames";
-import { createPiSession } from "@/pi-agent-host/session";
+import { createPiSession, parseModelApi } from "@/pi-agent-host/session";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 
 // The real loader reads these out of a prompt resource that only esbuild inlines, so the session takes them as an
@@ -133,5 +133,21 @@ describe("createPiSession", () => {
     const frames = events.filter((event) => event.type === "surface_frame");
     const accent = (frames.at(-1) as { lines: string[] }).lines[0];
     expect(accent).toBe("\x1b[38;2;255;0;0mx\x1b[39m");
+  });
+});
+
+describe("parseModelApi", () => {
+  it("defaults to OpenAI completions, which every provider family but Anthropic speaks", () => {
+    expect(parseModelApi(undefined)).toBe("openai-completions");
+    expect(parseModelApi("")).toBe("openai-completions");
+  });
+
+  it("selects Anthropic's own wire shape when the app asked for it", () => {
+    expect(parseModelApi("anthropic-messages")).toBe("anthropic-messages");
+  });
+
+  // A typo would otherwise reach pi as an unknown api and fail deep inside its provider composer.
+  it("refuses a shape this host cannot register", () => {
+    expect(() => parseModelApi("openai-responses")).toThrow(/CD_MODEL_API/);
   });
 });

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The coding agent can now use an Anthropic model: its gateway speaks Anthropic's own wire shape and signs the request the way Anthropic expects
+- A keyless local model server no longer stops the coding agent's gateway from starting
+- The gateway now signs the upstream the way that provider's settings say — bearer token, API-key header, basic auth or a custom header
+
 ### Added
 
 - Start a coding agent session from the app: pick the connection, the workspace folder, the model and whether it may reach the network

@@ -5,6 +5,8 @@ import {
   buildUpstreamRequest,
   type GatewayConfig,
   isAuthorized,
+  parseUpstreamAuthScheme,
+  upstreamCredentialHeaders,
 } from "@/pi-agent-host/gateway";
 
 const config: GatewayConfig = {
@@ -82,6 +84,13 @@ describe("isAuthorized", () => {
     expect(isAuthorized({ headers: { authorization: "Bearer tok" } }, config)).toBe(true);
   });
 
+  // pi's anthropic-messages client signs x-api-key rather than authorization, so a check on the latter alone
+  // would 401 every Anthropic turn before it ever reached the upstream.
+  it("accepts the bridge token from x-api-key, which is where the Anthropic shape puts it", () => {
+    expect(isAuthorized({ headers: { "x-api-key": "tok" } }, config)).toBe(true);
+    expect(isAuthorized({ headers: { "x-api-key": "nope" } }, config)).toBe(false);
+  });
+
   it("rejects a wrong or missing token", () => {
     expect(isAuthorized({ headers: { authorization: "Bearer nope" } }, config)).toBe(false);
     expect(isAuthorized({ headers: {} }, config)).toBe(false);
@@ -89,5 +98,80 @@ describe("isAuthorized", () => {
 
   it("never accepts the upstream key as a client token", () => {
     expect(isAuthorized({ headers: { authorization: "Bearer sk-real-secret" } }, config)).toBe(false);
+    expect(isAuthorized({ headers: { "x-api-key": "sk-real-secret" } }, config)).toBe(false);
+  });
+});
+
+describe("upstreamCredentialHeaders", () => {
+  it("signs a bearer token for an OpenAI-shaped upstream", () => {
+    expect(upstreamCredentialHeaders(config)).toEqual({ authorization: "Bearer sk-real-secret" });
+  });
+
+  // Anthropic rejects a bearer token: it authenticates with x-api-key. This is the same split the app's own
+  // provider transport makes, so one provider does not mean two different things.
+  it("signs x-api-key for Anthropic", () => {
+    expect(upstreamCredentialHeaders({ ...config, upstreamKind: "anthropic" })).toEqual({
+      "x-api-key": "sk-real-secret",
+    });
+  });
+
+  it("sends nothing at all for a keyless local server", () => {
+    expect(upstreamCredentialHeaders({ ...config, authScheme: "none" })).toEqual({});
+  });
+
+  it("signs basic auth with the non-secret username and the stored secret", () => {
+    expect(upstreamCredentialHeaders({ ...config, authScheme: "basic", authUsername: "me" })).toEqual({
+      authorization: `Basic ${Buffer.from("me:sk-real-secret").toString("base64")}`,
+    });
+  });
+
+  it("signs a custom header for an exotic gateway", () => {
+    expect(upstreamCredentialHeaders({ ...config, authScheme: "header", authHeaderName: "X-Key" })).toEqual({
+      "x-key": "sk-real-secret",
+    });
+  });
+
+  it("refuses a custom header that belongs to the connection or the proxy", () => {
+    expect(() => upstreamCredentialHeaders({ ...config, authScheme: "header", authHeaderName: "Host" })).toThrow(
+      /invalid custom upstream auth header/,
+    );
+    expect(() => upstreamCredentialHeaders({ ...config, authScheme: "header" })).toThrow();
+  });
+
+  it("puts the anthropic credential on the request it builds", () => {
+    const built = buildUpstreamRequest({ path: "/v1/messages", headers: {} }, { ...config, upstreamKind: "anthropic" });
+    expect(built.headers["x-api-key"]).toBe("sk-real-secret");
+    expect(built.headers.authorization).toBeUndefined();
+  });
+
+  // The Anthropic SDK posts /v1/messages onto the gateway ORIGIN, so the one /v1 the rewrite strips is the
+  // client's — and the upstream base contributes its own.
+  it("joins the Anthropic path onto the upstream base exactly once", () => {
+    const built = buildUpstreamRequest(
+      { path: "/v1/messages", headers: {} },
+      { ...config, upstreamBaseUrl: "https://api.anthropic.com/v1", upstreamKind: "anthropic" },
+    );
+    expect(built.url).toBe("https://api.anthropic.com/v1/messages");
+  });
+});
+
+describe("parseUpstreamAuthScheme", () => {
+  it("defaults to bearer, which is what every OpenAI-shaped upstream wants", () => {
+    expect(parseUpstreamAuthScheme(undefined)).toBe("bearer");
+    expect(parseUpstreamAuthScheme("")).toBe("bearer");
+  });
+
+  it("accepts every scheme the app can configure", () => {
+    expect(["none", "bearer", "basic", "header"].map(parseUpstreamAuthScheme)).toEqual([
+      "none",
+      "bearer",
+      "basic",
+      "header",
+    ]);
+  });
+
+  // A typo would otherwise surface as an unexplained 401 on the first turn.
+  it("refuses a scheme it does not know", () => {
+    expect(() => parseUpstreamAuthScheme("oauth")).toThrow(/CD_UPSTREAM_AUTH_SCHEME/);
   });
 });
