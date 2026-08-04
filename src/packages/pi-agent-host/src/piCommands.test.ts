@@ -15,7 +15,22 @@ function deps(overrides: Partial<PiCommandDeps> = {}): PiCommandDeps {
       reload: vi.fn(async () => {}),
       getSessionStats: vi.fn(),
     } as never,
-    sessionManager: { getTree: vi.fn(() => [{ id: "e1" }]), getSessionName: vi.fn(() => undefined) } as never,
+    sessionManager: {
+      getTree: vi.fn(() => [
+        {
+          entry: {
+            type: "message",
+            id: "e1",
+            parentId: null,
+            timestamp: "t0",
+            message: { role: "user", content: "first ask" },
+          },
+          children: [],
+        },
+      ]),
+      getSessionName: vi.fn(() => undefined),
+      getLeafId: vi.fn(() => "e1"),
+    } as never,
     keybindings: () => [{ action: "tui.input.submit", keys: ["enter"] }],
     changelog: async () => "# pi\n\n## 1.2.3",
     ...overrides,
@@ -127,7 +142,24 @@ describe("runPiCommand", () => {
 
   it("answers with the session tree, and moves within it", async () => {
     const harness = deps();
-    await expect(runPiCommand(harness, "tree", "")).resolves.toEqual({ ok: true, data: { tree: [{ id: "e1" }] } });
+    // Projected, not pi's raw tree: the app receives ids, pi's own entry kind and a short preview, and the leaf's
+    // ancestry marked so a picker can show which branch is live.
+    await expect(runPiCommand(harness, "tree", "")).resolves.toEqual({
+      ok: true,
+      data: {
+        tree: [
+          {
+            id: "e1",
+            kind: "message",
+            role: "user",
+            preview: "first ask",
+            timestamp: "t0",
+            current: true,
+            children: [],
+          },
+        ],
+      },
+    });
     await expect(runPiCommand(harness, "tree", "e1")).resolves.toMatchObject({ ok: true });
     expect(harness.session.navigateTree).toHaveBeenCalledWith("e1");
   });

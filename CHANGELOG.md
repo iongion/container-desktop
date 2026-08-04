@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - pi's own slash commands, all of them, under pi's own names — the ones this architecture cannot honour are listed with the reason rather than hidden
 - `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog` and `/reload` run against the session itself
+- `/fork` and `/tree` open a picker: your earlier messages to start again from, or the session's branches with the one you are on marked
 - The assistant reports what it has spent and what it is sending the model, after every turn
 - One Assistant: the full screen and the quake console are the same conversation, with the same transcript, cards and composer — the separate Coding Agent screen is gone
 - Start a session from wherever you are — the console offers it too, instead of a composer that leads nowhere

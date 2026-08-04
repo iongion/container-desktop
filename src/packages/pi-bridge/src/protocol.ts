@@ -163,6 +163,32 @@ export interface PiBuiltinCommand {
   reason?: string;
 }
 
+// One user message the session can be forked from — pi's own shape, which is already exactly what a picker needs.
+export interface PiForkPoint {
+  entryId: string;
+  text: string;
+}
+
+// One node of pi's session tree, projected into what a picker can render. pi's own `SessionEntry` union is
+// deliberately NOT carried across the bridge: the app would have to know pi's internals to render it, the message
+// bodies run to the whole conversation, and only these few fields mean anything in a list.
+export interface PiSessionTreeNode {
+  id: string;
+  // pi's own entry type — `message`, `compaction`, `model_change`, … Pi's vocabulary, not a translated label.
+  kind: string;
+  // Who spoke. Present only for a message entry.
+  role?: string;
+  // Enough of the entry to recognise the point in the conversation, and no more.
+  preview: string;
+  // pi's own label for this entry, when one was set.
+  label?: string;
+  timestamp: string;
+  // This node is on the branch the session is currently on, so a picker can show where "here" is. Every ancestor of
+  // the leaf is current; a sibling branch is not.
+  current: boolean;
+  children: PiSessionTreeNode[];
+}
+
 // What one of pi's own commands answered. `data` is structured on purpose: a GUI renders a fork point list or a
 // compaction summary, and prose composed in the container could be neither translated nor laid out.
 export type PiCommandResult = { ok: true; data?: unknown } | { ok: false; error: string };

@@ -12,6 +12,7 @@
 
 import type { AgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
 
+import { projectSessionTree } from "@/pi-agent-host/sessionTree";
 import type { PiBuiltinCommand, PiCommandResult } from "@/pi-bridge/protocol";
 
 export type PiCommandName =
@@ -135,7 +136,9 @@ export interface PiCommandDeps {
     AgentSession,
     "compact" | "setSessionName" | "getUserMessagesForForking" | "navigateTree" | "reload" | "getSessionStats"
   >;
-  sessionManager: Pick<SessionManager, "getTree" | "getSessionName">;
+  // `getLeafId` is what tells the tree which branch is live: pi answers with a leaf id alone, and a picker that
+  // cannot say "you are here" is a list of ids.
+  sessionManager: Pick<SessionManager, "getTree" | "getSessionName" | "getLeafId">;
   // The keys pi's own components respond to inside a focused surface. The GUI has its own bindings everywhere else,
   // which is why this answers with the set that is actually in effect for pi, not a fabricated GUI cheat sheet.
   keybindings: () => Array<{ action: string; keys: string[] }>;
@@ -184,7 +187,13 @@ export async function runPiCommand(deps: PiCommandDeps, name: string, args: stri
     }
     case "tree": {
       const target = args.trim();
-      if (!target) return { ok: true, data: { tree: deps.sessionManager.getTree() } };
+      // Projected, never raw: pi's own tree carries whole message bodies and an entry union the app cannot render.
+      if (!target) {
+        return {
+          ok: true,
+          data: { tree: projectSessionTree(deps.sessionManager.getTree(), deps.sessionManager.getLeafId()) },
+        };
+      }
       const result = await deps.session.navigateTree(target);
       return result.cancelled
         ? { ok: false, error: "the branch switch was cancelled" }

@@ -18,10 +18,15 @@ import type {
   AssistantCommandSurface,
   BuiltinAssistantCommandId,
 } from "@/ai-system/ui/core/commands/commandTypes";
+import { readSessionTreeAnswer } from "@/ai-system/ui/core/commands/piCommandAnswers";
 import { resolveScreenPrompt } from "@/template/screenPrompts";
 import { AIComposer, type ParsedAssistantCommand } from "@/web-app/components/AIComposer";
 import { AssistantContextDrawer, type AssistantContextSection } from "@/web-app/components/ai/AssistantContextDrawer";
 import { AssistantDiagnosticsDrawer } from "@/web-app/components/ai/AssistantDiagnosticsDrawer";
+import {
+  AssistantSessionTreeDrawer,
+  type AssistantSessionTreeView,
+} from "@/web-app/components/ai/AssistantSessionTreeDrawer";
 import { AssistantSkillsDrawer } from "@/web-app/components/ai/AssistantSkillsDrawer";
 import { type AssistantTimelineContext, AssistantTimelineItem } from "@/web-app/components/ai/AssistantTimelineItem";
 import { ExtensionDialog } from "@/web-app/components/ai/ExtensionDialog";
@@ -126,6 +131,8 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   }>();
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [workspaceChangesView, setWorkspaceChangesView] = useState<WorkspaceChangesView>();
+  // The points a bare `/fork` or `/tree` answered with, held until the user picks one.
+  const [sessionPoints, setSessionPoints] = useState<AssistantSessionTreeView>();
 
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -191,6 +198,10 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         }
         const result = await useCodingAgentStore.getState().runPiCommand(command.commandName, parsed.rawArguments);
         if (!result.ok) throw new Error(result.error);
+        // `/fork` and `/tree` with no argument are QUESTIONS: the session answers with the points it could move to
+        // and waits to be told which. Without this the answer was discarded and the command looked inert.
+        const points = readSessionTreeAnswer(result.data);
+        if (points) setSessionPoints(points);
         return undefined;
       }
       if (parsed.command.kind === "skill") {
@@ -474,6 +485,20 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
       ) : null}
       {workspaceChangesView ? (
         <WorkspaceChangesDrawer initialView={workspaceChangesView} onClose={() => setWorkspaceChangesView(undefined)} />
+      ) : null}
+      {sessionPoints ? (
+        <AssistantSessionTreeDrawer
+          view={sessionPoints}
+          onPick={async (id) => {
+            // The SAME command the user typed, now with the id it was asking for. A refusal comes back as a reason
+            // for the drawer to show rather than as a throw, because a cancelled branch switch is an answer.
+            const answer = await useCodingAgentStore
+              .getState()
+              .runPiCommand(sessionPoints.kind === "fork" ? "fork" : "tree", id);
+            return answer.ok ? undefined : answer.error;
+          }}
+          onClose={() => setSessionPoints(undefined)}
+        />
       ) : null}
     </div>
   );

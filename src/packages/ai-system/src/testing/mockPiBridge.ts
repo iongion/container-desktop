@@ -100,6 +100,8 @@ const MOCK_RESOURCES: ContributedResources = {
     { name: "compact", description: "Manually compact the session context", runsIn: "session" },
     { name: "name", description: "Set session display name", runsIn: "session" },
     { name: "hotkeys", description: "Show all keyboard shortcuts", runsIn: "session" },
+    { name: "fork", description: "Create a new fork from a previous user message", runsIn: "session" },
+    { name: "tree", description: "Navigate session tree (switch branches)", runsIn: "session" },
     { name: "new", description: "Start a new session", runsIn: "app" },
     {
       name: "login",
@@ -110,6 +112,45 @@ const MOCK_RESOURCES: ContributedResources = {
     },
   ],
 };
+
+// What a bare `/fork` answers with: the user's own messages, which are the only points pi can restart from.
+const MOCK_FORK_POINTS = [
+  { entryId: "mock-entry-1", text: "how many containers are running?" },
+  { entryId: "mock-entry-2", text: "restart the web container" },
+];
+
+// What a bare `/tree` answers with, already projected into the app's shape: one shared start, two branches, and the
+// live one marked so the picker can say "you are here".
+const MOCK_SESSION_TREE = [
+  {
+    id: "mock-entry-1",
+    kind: "message",
+    role: "user",
+    preview: "how many containers are running?",
+    timestamp: "2026-08-04T10:00:00.000Z",
+    current: true,
+    children: [
+      {
+        id: "mock-entry-2",
+        kind: "message",
+        role: "user",
+        preview: "restart the web container",
+        timestamp: "2026-08-04T10:01:00.000Z",
+        current: true,
+        children: [],
+      },
+      {
+        id: "mock-entry-3",
+        kind: "message",
+        role: "user",
+        preview: "never mind, show me the images",
+        timestamp: "2026-08-04T10:02:00.000Z",
+        current: false,
+        children: [],
+      },
+    ],
+  },
+];
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -315,6 +356,10 @@ export function createMockPiBridgeClient(): PiBridgeClient {
       }
       if (name === "name" && !args.trim())
         return { ok: false as const, error: "give the session a name: /name <text>" };
+      // The two commands that answer with DATA when given no argument, and act when given an id — the shape the
+      // picker reads. Scripted here so the drawer can be driven without a container.
+      if (name === "fork" && !args.trim()) return { ok: true as const, data: { forkPoints: MOCK_FORK_POINTS } };
+      if (name === "tree" && !args.trim()) return { ok: true as const, data: { tree: MOCK_SESSION_TREE } };
       return { ok: true as const, data: { command: name, ...(args.trim() ? { args: args.trim() } : {}) } };
     },
     async reloadSession() {

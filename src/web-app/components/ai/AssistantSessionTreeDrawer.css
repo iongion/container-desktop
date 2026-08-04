@@ -1,0 +1,89 @@
+.AssistantSessionTreeDrawer .bp6-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.AssistantSessionTreeToolbar,
+.AssistantSessionTreeRow,
+.AssistantSessionTreeTitle {
+  display: flex;
+  align-items: center;
+}
+
+.AssistantSessionTreeToolbar {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.AssistantSessionTreeToolbar > span,
+.AssistantSessionTreeBody small,
+.AssistantSessionTreeEmpty {
+  color: var(--app-text-muted);
+}
+
+.AssistantSessionTreeToolbar > span {
+  font-size: 12px;
+}
+
+.AssistantSessionTreeToolbar > .bp6-tag {
+  flex: 0 0 auto;
+}
+
+.AssistantSessionTreeList {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.AssistantSessionTreeRow {
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 10px;
+}
+
+.AssistantSessionTreeRow + .AssistantSessionTreeRow {
+  border-top: 1px solid var(--app-border);
+}
+
+.AssistantSessionTreeRow > .bp6-button,
+.AssistantSessionTreeRow > .bp6-tag {
+  flex: 0 0 auto;
+}
+
+.AssistantSessionTreeBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.AssistantSessionTreeTitle {
+  gap: 8px;
+}
+
+.AssistantSessionTreeTitle strong,
+.AssistantSessionTreeTitle code,
+.AssistantSessionTreeBody small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssistantSessionTreeTitle code {
+  color: var(--app-accent-text);
+  font-size: 11px;
+}
+
+.AssistantSessionTreeBody small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.AssistantSessionTreeEmpty {
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-chrome);
+  font-size: 12px;
+}
