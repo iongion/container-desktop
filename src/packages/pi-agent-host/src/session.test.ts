@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { CONTAINER_TOOL_NAMES, WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import { createPiSession, parseModelApi, sanitizeSessionFileName } from "@/pi-agent-host/session";
-import type { BridgeEvent, PiSessionSummary } from "@/pi-bridge/protocol";
+import type { BridgeEvent, PiScopedModels, PiSessionSummary } from "@/pi-bridge/protocol";
 
 // The real loader reads these out of a prompt resource that only esbuild inlines, so the session takes them as an
 // argument and the suite supplies its own.
@@ -333,6 +333,83 @@ describe("resuming, cloning and importing a conversation", () => {
     // donor's header records, which is what the cwd override is for.
     expect(events.filter((event) => event.type === "user_message")).toMatchObject([{ text: "the first conversation" }]);
     expect(session.cwd).not.toBe(donor.cwd);
+  });
+});
+
+// One container's gateway reaches one upstream, so every model that upstream serves is already reachable — the
+// session used to be registered with exactly one of them and could therefore never be pointed at another.
+describe("the models the session can be pointed at", () => {
+  async function sessionWith(events: BridgeEvent[], contextWindow?: number) {
+    return await createPiSession({
+      cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+      agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
+      gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
+      gatewayToken: "tok",
+      modelId: "canned",
+      ...(contextWindow ? { contextWindow } : {}),
+      emit: (event) => events.push(event),
+      streamOverride: cannedStream as never,
+    });
+  }
+
+  const available = async (session: Awaited<ReturnType<typeof sessionWith>>) => {
+    const answer = (await session.runCommand("scoped-models", "")) as {
+      ok: true;
+      data: { models: PiScopedModels };
+    };
+    return answer.data.models.available.map((model) => model.id);
+  };
+
+  it("offers every model the app discovered, so pi has more than one to cycle", async () => {
+    const session = await sessionWith([]);
+    expect(await available(session)).toEqual(["canned"]);
+
+    session.registerModels([{ id: "canned" }, { id: "other" }, { id: "third" }]);
+
+    expect(await available(session)).toEqual(["canned", "other", "third"]);
+  });
+
+  // The keystone of the phase: pi replaces the model in place, so the conversation, the containers and the plugins
+  // all survive. Starting a session per model change is what this replaces.
+  it("switches the running session's model without touching the conversation", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await sessionWith(events);
+    await session.prompt("the first conversation");
+    session.registerModels([{ id: "canned" }, { id: "other" }]);
+    events.length = 0;
+
+    await expect(session.selectModel({ id: "other", contextWindow: 8192 })).resolves.toEqual({
+      provider: "container-desktop-gateway",
+      id: "other",
+    });
+
+    expect(session.model).toBe("container-desktop-gateway/other");
+    // Nothing was replaced: a session replacement would have cleared the app's transcript.
+    expect(events.some((event) => event.type === "session_replaced")).toBe(false);
+    const context = events.findLast((event) => event.type === "request_context");
+    // The report names the model now in force and the window the app just learned for it — not the one the session
+    // was started with, which is what a report built from the start options would still be claiming.
+    expect(context).toMatchObject({ context: { model: "other", contextWindow: 8192, messages: { user: 1 } } });
+  });
+
+  // A model the app never listed is registered rather than refused: the app has just asked the provider and probed
+  // this model, so it knows more about what is reachable than the set this container was last told about.
+  it("adopts a model it had not been told about", async () => {
+    const session = await sessionWith([]);
+    await session.selectModel({ id: "typed-by-hand" });
+    expect(session.model).toBe("container-desktop-gateway/typed-by-hand");
+    expect(await available(session)).toContain("typed-by-hand");
+  });
+
+  it("keeps the model it is running when a later list no longer mentions it", async () => {
+    const session = await sessionWith([], 40960);
+    session.registerModels([{ id: "other" }]);
+
+    expect(await available(session)).toEqual(["canned", "other"]);
+    // And still reports what the provider published for it, which the app only sent once at start.
+    await session.prompt("say hello");
+    expect(session.model).toBe("container-desktop-gateway/canned");
   });
 });
 

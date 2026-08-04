@@ -20,6 +20,8 @@ function harness(token = "tok") {
     runCommand: vi.fn(async () => ({ ok: true as const, data: { ran: true } })),
     importSession: vi.fn(async () => {}),
     checkProvider: vi.fn(async () => ({ reachable: true, status: 200 })),
+    registerModels: vi.fn(),
+    selectModel: vi.fn(async (model: { id: string }) => ({ provider: "test", id: model.id })),
     plugins: {
       list: vi.fn(() => ({ configured: [{ source: "npm:@foo/bar", scope: "user" as const, filtered: false }] })),
       install: vi.fn(async () => {}),
@@ -132,6 +134,26 @@ describe("attachBridgeConnection", () => {
     await h.attached.handleFrame(encodeCommand({ id: "c2", type: "set_system_context", text: "## rules\n\nbe terse" }));
     expect(h.session.setSystemContext).toHaveBeenCalledWith("## rules\n\nbe terse");
     expect(parsed(h.sent)).toEqual([{ type: "response", id: "c2", success: true }]);
+  });
+
+  // Both halves of the model wiring, end to end through the codec: a command name missing from the protocol's own
+  // set is refused before it reaches the dispatcher, so "the case exists" proves nothing on its own.
+  it("registers the app's model list and answers a switch with what the session chose", async () => {
+    const h = harness();
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    h.sent.length = 0;
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c2", type: "models_register", models: [{ id: "a" }, { id: "b" }] }),
+    );
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c3", type: "model_select", model: { id: "b", contextWindow: 8192 } }),
+    );
+    expect(h.session.registerModels).toHaveBeenCalledWith([{ id: "a" }, { id: "b" }]);
+    expect(h.session.selectModel).toHaveBeenCalledWith({ id: "b", contextWindow: 8192 });
+    expect(parsed(h.sent)).toEqual([
+      { type: "response", id: "c2", success: true },
+      { type: "response", id: "c3", success: true, result: { provider: "test", id: "b" } },
+    ]);
   });
 
   it("answers plugins_list with the payload as the response result", async () => {

@@ -240,6 +240,27 @@ export interface PiScopedModels {
   scoped: string[];
 }
 
+// One model the session may be pointed at, as the APP knows it. The app composes these because it is the only side
+// that can ask a provider what a model's budget and rates are — the gateway forwards the completions API and
+// nothing else, so LM Studio's `/api/v0/models` and llama.cpp's `/props` are unreachable from the container. An
+// absent number still means unknown: pi needs one for its compaction maths, but the report says what the provider
+// published, never the fallback.
+export interface PiModelRegistration {
+  id: string;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  // Dollars per million tokens, the unit pi's model catalogue prices in. Absent for a free or unpriced model,
+  // where pi's own zeroes are already the truth.
+  pricing?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number };
+}
+
+// What the session ended up running against, in pi's own terms. Answered by a switch so the app adopts what pi did
+// rather than assuming its request landed.
+export interface PiSessionModel {
+  provider: string;
+  id: string;
+}
+
 // What one of pi's own commands answered. `data` is structured on purpose: a GUI renders a fork point list or a
 // compaction summary, and prose composed in the container could be neither translated nor laid out.
 export type PiCommandResult = { ok: true; data?: unknown } | { ok: false; error: string };
@@ -294,7 +315,14 @@ export type BridgeCommand =
   // pi's `/import`, which needs both halves: the app owns the file dialog and the host filesystem, the session
   // owns the import. The JSONL travels as text rather than as a path — the app's path names a file on the HOST,
   // which the container cannot open, and copying it in would need a capability no shell has.
-  | { id: string; type: "session_import"; fileName: string; contents: string };
+  | { id: string; type: "session_import"; fileName: string; contents: string }
+  // Every model of the session's provider, so pi can cycle them and `/scoped-models` has something to narrow. The
+  // whole set, replacing what was registered: a model the provider no longer serves stops being offered. What the
+  // app has already learned about a surviving model is kept, and the model the session is RUNNING is never dropped.
+  | { id: string; type: "models_register"; models: PiModelRegistration[] }
+  // Point the running session at one of them. pi replaces the model in place, so the conversation, the containers
+  // and the plugins all survive — nothing here restarts anything.
+  | { id: string; type: "model_select"; model: PiModelRegistration };
 
 // pi's ProgressEvent, split the way it reads: `action` is what is being done, `phase` how far along it is.
 export type PluginProgressAction = "install" | "remove" | "update" | "clone" | "pull";
@@ -381,6 +409,8 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "session_reload",
   "read_tool_output",
   "session_import",
+  "models_register",
+  "model_select",
 ]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([

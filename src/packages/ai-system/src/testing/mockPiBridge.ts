@@ -19,6 +19,7 @@ import type {
   BridgeEvent,
   ContributedResources,
   EngineOpResult,
+  PiModelRegistration,
   PiProjectTrust,
   PiScopedModels,
   PiSessionSettings,
@@ -154,8 +155,17 @@ const MOCK_SETTINGS: PiSessionSettings = {
   availableThinkingLevels: ["minimal", "low", "medium", "high"],
 };
 
+// The gateway's own provider id, as the mock's session reports it. Every model the app registers lands under it: one
+// container reaches one upstream, so that is the only provider a session can answer with.
+const MOCK_PROVIDER = "container-desktop-mock";
+
+// The model a mock session answers with when the caller named none.
+const DEFAULT_MOCK_MODEL = "mock-assistant";
+
+// Reset per session, like the real container's registration: it starts on the one model it was given and widens once
+// the app has asked the provider what else it serves.
 const MOCK_MODELS: PiScopedModels = {
-  available: [{ id: "mock-assistant", name: "Mock Assistant", provider: "container-desktop-mock" }],
+  available: [{ id: DEFAULT_MOCK_MODEL, name: DEFAULT_MOCK_MODEL, provider: MOCK_PROVIDER }],
   scoped: [],
 };
 
@@ -234,7 +244,9 @@ const MOCK_SESSION_TREE = [
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-export function createMockPiBridgeClient(): PiBridgeClient {
+// `modelId` is the model this session starts on — what the real container is given as CD_MODEL_ID. Without it the
+// chip would show a fixture id that is not in the provider's list at all.
+export function createMockPiBridgeClient(options?: { modelId?: string }): PiBridgeClient {
   const listeners = new Set<(event: BridgeEvent) => void>();
   // A host request the store has not answered yet. The real session parks the tool on it, so the mock must
   // too — otherwise an approval card would never be able to hold anything back.
@@ -246,6 +258,15 @@ export function createMockPiBridgeClient(): PiBridgeClient {
   // Which session this stand-in is on. The real container replaces the session in process and reports a new id, so
   // the mock has to move too — the renderer would otherwise never see the id change that proves a replacement.
   let sessions = 1;
+  // The model this session is answering with, and what the app has told it about the ones it could switch to. Held
+  // rather than fixed because a switch that reported the model it had before would make the chip look inert — the
+  // very defect the real session had.
+  let liveModel = options?.modelId?.trim() || DEFAULT_MOCK_MODEL;
+  // 128000 stands in for what the app would have probed off a real provider; nothing here can ask one.
+  const registered = new Map<string, PiModelRegistration>([[liveModel, { id: liveModel, contextWindow: 128000 }]]);
+  const modelLabel = () => `${MOCK_PROVIDER}/${liveModel}`;
+  MOCK_MODELS.available = [{ id: liveModel, name: liveModel, provider: MOCK_PROVIDER }];
+  MOCK_MODELS.scoped = [];
 
   // What this session has shown, kept so a replacement can replay it the way the real host replays pi's entries.
   // Only what a transcript is made of: the reports, surfaces and requests belong to the turn that produced them.
@@ -297,9 +318,11 @@ export function createMockPiBridgeClient(): PiBridgeClient {
     emit({
       type: "request_context",
       context: {
-        model: "mock-assistant",
+        model: liveModel,
         contextTokens: 1200 * turns,
-        contextWindow: 128000,
+        // What the app said this model's window is, which is unknown for one it never probed — exactly what the real
+        // session reports, and what makes the panel say so instead of repeating a number.
+        contextWindow: registered.get(liveModel)?.contextWindow ?? 0,
         maxOutputTokens: 4096,
         // Nothing publishes a cap for a mock model, so the one in force is our default — which is what the panel says.
         providerMaxOutputTokens: 0,
@@ -332,7 +355,7 @@ export function createMockPiBridgeClient(): PiBridgeClient {
       reason,
       sessionId: `mock-pi-session-${sessions}`,
       cwd: "/workspace",
-      model: "container-desktop-mock/mock-assistant",
+      model: modelLabel(),
     });
     for (const event of history) emit(event);
     emit({ type: "idle" });
@@ -404,7 +427,7 @@ export function createMockPiBridgeClient(): PiBridgeClient {
         protocolVersion: 1,
         sessionId: `mock-pi-session-${sessions}`,
         cwd: "/workspace",
-        model: "container-desktop-mock/mock-assistant",
+        model: modelLabel(),
       });
     },
     async prompt(text: string) {
@@ -463,7 +486,32 @@ export function createMockPiBridgeClient(): PiBridgeClient {
       return MOCK_RESOURCES;
     },
     async checkProvider() {
-      return { reachable: true, status: 200, models: 1 };
+      return { reachable: true, status: 200, models: MOCK_MODELS.available.length };
+    },
+    // The app's discovered list, applied rather than acknowledged: a mock that kept its one fixture would leave the
+    // model chip and `/scoped-models` looking exactly as inert as the session used to be.
+    async registerModels(models: PiModelRegistration[]) {
+      // The same merge the real host performs (mergeModelRegistrations): the incoming set, with what was already
+      // learned about a survivor kept, and the live model first because the conversation is running against it.
+      const merged = new Map<string, PiModelRegistration>([
+        [liveModel, registered.get(liveModel) ?? { id: liveModel }],
+      ]);
+      for (const model of models) merged.set(model.id, { ...registered.get(model.id), ...model });
+      registered.clear();
+      for (const [id, model] of merged) registered.set(id, model);
+      MOCK_MODELS.available = [...registered.keys()].map((id) => ({ id, name: id, provider: MOCK_PROVIDER }));
+      MOCK_MODELS.scoped = MOCK_MODELS.scoped.filter((id) => registered.has(id));
+    },
+    async selectModel(model: PiModelRegistration) {
+      registered.set(model.id, { ...registered.get(model.id), ...model });
+      if (!MOCK_MODELS.available.some((candidate) => candidate.id === model.id)) {
+        MOCK_MODELS.available = [...MOCK_MODELS.available, { id: model.id, name: model.id, provider: MOCK_PROVIDER }];
+      }
+      liveModel = model.id;
+      // The conversation is untouched — only the model answering it changed — so the reports are republished on the
+      // spot, exactly as the container does.
+      publishReports();
+      return { provider: MOCK_PROVIDER, id: liveModel };
     },
     async runCommand(name: string, args: string) {
       const builtin = MOCK_RESOURCES.builtins.find((candidate) => candidate.name === name);

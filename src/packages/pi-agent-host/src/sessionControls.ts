@@ -120,13 +120,16 @@ export interface ScopedModels {
   write(modelIds: string[]): PiScopedModels;
 }
 
-// The set pi cycles with Ctrl+P. Scoping nothing means it cycles everything available, which is pi's own default
-// and the honest answer while this gateway registers a single model.
+// The set pi cycles with Ctrl+P. Scoping nothing means it cycles everything available, which is pi's own default.
+//
+// Only the GATEWAY provider's models are listed: this session reaches exactly one upstream, so a model registered
+// under any other provider is one it could never answer with.
 export function createScopedModels(deps: {
   session: () => AgentSession;
   services: () => AgentSessionServices;
+  providerId: string;
 }): ScopedModels {
-  const available = () => deps.services().modelRuntime.getModels();
+  const available = () => deps.services().modelRuntime.getModels(deps.providerId);
   const read = (): PiScopedModels => ({
     available: available().map((model) => ({ id: model.id, name: model.name, provider: model.provider })),
     scoped: deps.session().scopedModels.map((scoped) => scoped.model.id),

@@ -30,7 +30,7 @@ describe("Assistant command queue", () => {
         queueId: 7,
         canonicalInput: "/new",
         commandId: "session.new",
-        registryRevision: "builtin-v11",
+        registryRevision: "builtin-v12",
         sourceIdentity: "builtin",
         targetThreadId: "thread-1",
         enqueuedAt: 10,

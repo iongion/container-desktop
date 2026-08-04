@@ -9,6 +9,8 @@ import {
   type ContributedResources,
   PI_BRIDGE_PROTOCOL_VERSION,
   type PiCommandResult,
+  type PiModelRegistration,
+  type PiSessionModel,
   type SessionProviderCheck,
 } from "@/pi-bridge/protocol";
 
@@ -36,6 +38,11 @@ export interface BridgeSessionHandle {
   importSession(fileName: string, contents: string): Promise<void>;
   // Whether this session can reach the model, probed through the gateway from in here.
   checkProvider(): Promise<SessionProviderCheck>;
+  // Every model of the session's provider, as the app discovered them. The whole set: one the provider no longer
+  // serves stops being offered, and what was already learned about the others is kept.
+  registerModels(models: PiModelRegistration[]): void;
+  // Point the running session at one of them, in place. Answers with what pi ended up on rather than an echo.
+  selectModel(model: PiModelRegistration): Promise<PiSessionModel>;
   plugins: PluginService;
   listResources(): ContributedResources;
   // pi's own reload: settings, resources and the tool runtime, keeping the UI bindings. What makes a
@@ -160,6 +167,11 @@ export function attachBridgeConnection(
       case "session_import":
         await session.importSession(command.fileName, command.contents);
         return;
+      case "models_register":
+        session.registerModels(command.models);
+        return;
+      case "model_select":
+        return session.selectModel(command.model);
       case "hello":
         return;
     }

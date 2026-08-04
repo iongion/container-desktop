@@ -314,9 +314,12 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     path: "/model",
     categoryKey: "Model",
     descriptionKey: "Select model (opens selector UI)",
+    // pi's own argument, and pi's own meaning: named, it switches straight away; bare, it opens the selector. The
+    // session is re-pointed in place either way, so this is no longer a choice that costs the conversation.
+    argumentHintKey: "<provider/model>",
     bypassTier: "immediate-ui",
     availabilityId: "thread-idle-only",
-    arguments: { kind: "none" },
+    arguments: { kind: "text", required: false },
   }),
   control({
     id: "permissions.open",
@@ -330,6 +333,6 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
   }),
 ];
 
-export const BUILTIN_ASSISTANT_COMMAND_REGISTRY = createAssistantCommandRegistry("builtin-v11", [
+export const BUILTIN_ASSISTANT_COMMAND_REGISTRY = createAssistantCommandRegistry("builtin-v12", [
   BUILTIN_ASSISTANT_COMMANDS,
 ]);

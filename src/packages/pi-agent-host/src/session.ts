@@ -22,6 +22,7 @@ import { createContainerToolsExtension } from "@/pi-agent-host/containerTools";
 import { mapAgentEvent, type PiAgentEvent } from "@/pi-agent-host/events";
 import { GuiTui } from "@/pi-agent-host/guiTui";
 import { createHostRpc } from "@/pi-agent-host/hostRpc";
+import { type ModelRegistrations, mergeModelRegistrations, piModelConfig } from "@/pi-agent-host/modelRegistrations";
 import { createPermissionGateExtension } from "@/pi-agent-host/permissionGate";
 import { runPiCommand } from "@/pi-agent-host/piCommands";
 import { buildPiTheme, normalizeAppThemePalette } from "@/pi-agent-host/piTheme";
@@ -43,7 +44,13 @@ import { createToolSurfaceRenderer, routeToolSurfaces } from "@/pi-agent-host/to
 import { createGuiUiContext, type PiKeybindings } from "@/pi-agent-host/uiContext";
 import { createVirtualTerminal } from "@/pi-agent-host/virtualTerminal";
 import { createWebSearchExtension } from "@/pi-agent-host/webSearchTool";
-import type { AppThemePalette, BridgeEvent, PiSessionReplacement } from "@/pi-bridge/protocol";
+import type {
+  AppThemePalette,
+  BridgeEvent,
+  PiModelRegistration,
+  PiSessionModel,
+  PiSessionReplacement,
+} from "@/pi-bridge/protocol";
 
 const logger = createLogger("pi-agent-host.session");
 
@@ -55,12 +62,6 @@ const DEFAULT_SURFACE_ROWS = 30;
 // One provider id for the gateway. Models are declared against it so pi never reads ~/.pi/auth.json and
 // never learns a real key: the gateway container owns the credential.
 export const GATEWAY_PROVIDER_ID = "container-desktop-gateway";
-
-// pi's own defaults, mirrored because its ProviderModelConfig requires both numbers even when nobody knows them
-// (provider-composer.js: `definition.contextWindow ?? 128000`). Used ONLY so pi has something to compact against —
-// never reported to the user as this model's budget.
-const PI_FALLBACK_CONTEXT_WINDOW = 128000;
-const PI_FALLBACK_MAX_OUTPUT_TOKENS = 4096;
 
 // pi's ProviderConfigInput.streamSimple, kept loose here so the test can inject a canned generator
 // without reconstructing pi-ai's Context and Model types.
@@ -127,42 +128,43 @@ export interface CreatePiSessionOptions {
 export async function createPiSession(options: CreatePiSessionOptions): Promise<BridgeSessionHandle> {
   const { cwd, agentDir, gatewayUrl, gatewayToken, modelId, emit, streamOverride } = options;
 
+  // Every model this session may be pointed at. It starts as the one the container was given and grows to the
+  // provider's whole list once the app has asked the provider for it — one gateway reaches one upstream, so all of
+  // that upstream's models were always reachable; only the registration said otherwise.
+  let registered: ModelRegistrations = new Map([
+    [
+      modelId,
+      {
+        id: modelId,
+        ...(options.contextWindow ? { contextWindow: options.contextWindow } : {}),
+        ...(options.maxOutputTokens ? { maxOutputTokens: options.maxOutputTokens } : {}),
+        ...(options.pricing ? { pricing: options.pricing } : {}),
+      },
+    ],
+  ]);
+
+  // The gateway provider, exactly as pi is to register it. Built rather than written twice because a
+  // re-registration is validated ON ITS OWN before pi merges it (provider-composer's validateExtensionProvider), so
+  // sending only the models fails with `no "api" specified` — the merge never gets to supply the rest.
+  //
+  // It reads the CURRENT set each time: a session replacement builds fresh services and runs the extension again, so
+  // a session born after the app widened the list must be born with all of it.
+  const gatewayProviderConfig = () => ({
+    // baseUrl is required: the provider composer validates it when defining custom models.
+    baseUrl: gatewayUrl,
+    apiKey: gatewayToken,
+    api: options.modelApi ?? "openai-completions",
+    ...(streamOverride ? { streamSimple: streamOverride as never } : {}),
+    models: [...registered.values()].map(piModelConfig),
+  });
+
   // The inline extension registers the gateway provider. Its registration is queued by the extension
   // runtime and flushed by createAgentSessionServices — the low-level createAgentSession does NOT flush
   // it, which is why services are built here rather than calling createAgentSession directly.
   const gatewayExtension: InlineExtension = {
     name: "container-desktop-gateway",
     factory: (pi: ExtensionAPI) => {
-      pi.registerProvider(GATEWAY_PROVIDER_ID, {
-        // baseUrl is required: the provider composer validates it when defining custom models.
-        baseUrl: gatewayUrl,
-        apiKey: gatewayToken,
-        api: options.modelApi ?? "openai-completions",
-        ...(streamOverride ? { streamSimple: streamOverride as never } : {}),
-        models: [
-          {
-            id: modelId,
-            name: modelId,
-            reasoning: false,
-            input: ["text"],
-            // pi multiplies these by the token counts to bill a turn, so all-zero is what made every session report
-            // $0.00 whatever it really cost. Zero stays the honest answer for a free model.
-            cost: {
-              input: options.pricing?.input ?? 0,
-              output: options.pricing?.output ?? 0,
-              cacheRead: options.pricing?.cacheRead ?? 0,
-              cacheWrite: options.pricing?.cacheWrite ?? 0,
-            },
-            // What the PROVIDER said, falling back to pi's own defaults because its ProviderModelConfig requires both
-            // numbers and pi needs them for its compaction maths. The fallback is NOT passed on to the user: the
-            // report carries only what the provider actually published, so the panel says "unknown" rather than
-            // repeating a guess. This pair used to be hardcoded for every model on every server, which is where the
-            // Context panel's "123,904 input tokens" came from while LM Studio had 8192 loaded.
-            contextWindow: options.contextWindow ?? PI_FALLBACK_CONTEXT_WINDOW,
-            maxTokens: options.maxOutputTokens ?? PI_FALLBACK_MAX_OUTPUT_TOKENS,
-          },
-        ],
-      });
+      pi.registerProvider(GATEWAY_PROVIDER_ID, gatewayProviderConfig());
     },
   };
 
@@ -283,13 +285,20 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   // because pi retries the dying request and reports each attempt.
   let aborting = false;
 
+  // The model the conversation is running against right now. `/model` switches it and a resumed session can carry
+  // one pi resolved for itself, so nothing here may restate the id the container was started with.
+  const liveModelId = () => runtime.session.model?.id ?? modelId;
+
   // What this session has spent and what it is sending the model, read off pi rather than counted from the events
   // the app happened to see: pi's stats span entries it has since compacted away, which no bridge tally could.
   const readFacts = (): PiSessionFacts => {
     const session = runtime.session;
     const stats = session.getSessionStats();
+    // What the PROVIDER published for the model NOW in force — the start options would still be describing the one
+    // the container was born with, which is a different model the moment the user switches.
+    const published = registered.get(liveModelId());
     return {
-      model: modelId,
+      model: liveModelId(),
       systemPrompt: session.systemPrompt,
       activeToolNames: session.getActiveToolNames(),
       tools: session.getAllTools().map(({ name, description }) => ({ name, description })),
@@ -306,8 +315,8 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
       maxOutputTokens: session.model?.maxTokens ?? 0,
       // Only what the provider published — never pi's fallback, which `model.contextWindow` and `model.maxTokens`
       // would both carry.
-      ...(options.contextWindow ? { providerContextWindow: options.contextWindow } : {}),
-      ...(options.maxOutputTokens ? { providerMaxOutputTokens: options.maxOutputTokens } : {}),
+      ...(published?.contextWindow ? { providerContextWindow: published.contextWindow } : {}),
+      ...(published?.maxOutputTokens ? { providerMaxOutputTokens: published.maxOutputTokens } : {}),
       compacted,
     };
   };
@@ -414,7 +423,37 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   });
   const sessionTrust = createSessionTrust({ agentDir, cwd });
   const sessionSettings = createSessionSettings(() => runtime.session);
-  const scopedModels = createScopedModels({ session: () => runtime.session, services: () => runtime.services });
+  const scopedModels = createScopedModels({
+    session: () => runtime.session,
+    services: () => runtime.services,
+    providerId: GATEWAY_PROVIDER_ID,
+  });
+
+  // Bring the gateway provider's registration in line with the given set. The running session keeps the model OBJECT
+  // it already holds and pi still streams with it: `prepareRequest` resolves the provider by id, so nothing about
+  // that object goes stale except its own numbers — which are the model's, and that model has not changed here.
+  const applyModels = (models: readonly PiModelRegistration[]) => {
+    registered = mergeModelRegistrations(registered, models, liveModelId());
+    runtime.services.modelRuntime.registerProvider(GATEWAY_PROVIDER_ID, gatewayProviderConfig());
+  };
+
+  // Point the conversation at another of them. pi swaps the model on the session, so the turns, the containers and
+  // the plugins are all untouched — this is why a model change no longer costs the user their conversation.
+  const selectModel = async (model: PiModelRegistration): Promise<PiSessionModel> => {
+    // The whole set with this one merged in, keeping its position: a switch is not a re-discovery, so nothing may be
+    // dropped. An id the app never listed is adopted rather than refused — the app has just asked the provider what
+    // it serves and probed this model, so it knows more than this container was last told.
+    const next = new Map(registered);
+    next.set(model.id, { ...next.get(model.id), ...model });
+    applyModels([...next.values()]);
+    const chosen = runtime.services.modelRuntime.getModel(GATEWAY_PROVIDER_ID, model.id);
+    if (!chosen) throw new Error(`gateway model ${model.id} was not registered — the provider flush did not happen`);
+    await runtime.session.setModel(chosen);
+    // Both reports describe the model that is answering, so a switch that did not republish them would leave the
+    // panels describing the model of the last turn.
+    publishReports();
+    return { provider: chosen.provider, id: chosen.id };
+  };
 
   // The JSONL the app read off the HOST filesystem, written where pi's importer can open it. It lands beside the
   // sessions rather than in the workspace: an import is not a change to the user's project.
@@ -465,6 +504,10 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     checkProvider() {
       return checkSessionProvider({ gatewayUrl, gatewayToken });
     },
+    registerModels(models) {
+      applyModels(models);
+    },
+    selectModel,
     // One of pi's own commands, by pi's own name. The dispatcher answers with a value, never a throw: the palette
     // shows the reason a command is unavailable here, which is more use than a stack trace.
     runCommand(name, args) {

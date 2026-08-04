@@ -69,6 +69,14 @@ export interface AIComposerProps {
   // A draft an extension pushed in (pi's setEditorText). The seq is what makes it applicable twice: setting
   // the same text again is a new instruction, not a no-op.
   draft?: { text: string; seq: number };
+  // The model a RUNNING session is answering with, and how to re-point it. Present where the composer sits in front
+  // of one: the chip then shows what is actually answering and a pick switches that session in place, instead of
+  // saving a default the next session would pick up. Absent ⇒ the chip is the saved selection, as everywhere else.
+  session?: {
+    providerId: string;
+    model: string;
+    onSelectModel: (modelId: string, providerId: string) => Promise<void>;
+  };
 }
 
 export const AIComposer: React.FC<AIComposerProps> = ({
@@ -81,6 +89,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   showPermissionMode,
   commands,
   draft: injectedDraft,
+  session,
 }) => {
   const { t } = useTranslation();
   const ai: AISettings = useAppStore((state) => state.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
@@ -106,6 +115,9 @@ export const AIComposer: React.FC<AIComposerProps> = ({
     providerId: ai.defaultProvider,
     model: ai.providers?.[ai.defaultProvider]?.model ?? "",
   }));
+  // In front of a live session the session IS the selection: its model is what answers, and the saved default
+  // describes the next session rather than this one.
+  const target: ModelPickerValue = session ? { providerId: session.providerId, model: session.model } : selection;
   const active = phase !== "idle" && phase !== "error";
 
   const applyCommandEffect = useCallback(
@@ -131,12 +143,27 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   const paletteQuery = completion.state.query || "/";
   const commandMatches = completion.matches;
   // Provider authentication is enforced by the broker; saving/selecting the provider already chose its endpoint.
-  const canSubmit = !submitting && draft.trim().length > 0 && (slashInput ? !!commands : !!selection.model && !blocked);
+  const canSubmit = !submitting && draft.trim().length > 0 && (slashInput ? !!commands : !!target.model && !blocked);
+
+  // Picking a model. In front of a live session that re-points the session itself, in place — a refusal (another
+  // inference source, a model the provider does not serve) is the session's own words, shown like any other hint.
+  const pickModel = useCallback(
+    (next: ModelPickerValue) => {
+      if (!session) {
+        setSelection(next);
+        return;
+      }
+      setSubmitError(undefined);
+      void session.onSelectModel(next.model, next.providerId).catch((error) => setSubmitError(describeError(error)));
+    },
+    [session],
+  );
 
   // A settings change made in another mounted composer/settings surface becomes the idle composer's next
   // submission target. Never switch underneath an active task; that operation retains its explicit selection.
+  // Nothing to track while a session owns the selection: it answers for what is running.
   useEffect(() => {
-    if (active) return;
+    if (active || session) return;
     const next = {
       providerId: ai.defaultProvider,
       model: ai.providers?.[ai.defaultProvider]?.model ?? "",
@@ -144,7 +171,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
     setSelection((current) =>
       current.providerId === next.providerId && current.model === next.model ? current : next,
     );
-  }, [active, ai.defaultProvider, ai.providers]);
+  }, [active, session, ai.defaultProvider, ai.providers]);
 
   // An extension replacing the composer text. The store hands over a fresh object per push — its `seq` is what
   // keeps two identical texts distinct — so applying on identity lands both without reverting live typing.
@@ -253,7 +280,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         clearSubmittedDraft(text);
         applyCommandEffect(effect);
       } else {
-        await onSubmit(parsed.text, { providerId: selection.providerId, model: selection.model });
+        await onSubmit(parsed.text, { providerId: target.providerId, model: target.model });
         clearSubmittedDraft(text);
       }
     } catch (error) {
@@ -265,7 +292,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
 
   const hint = submitError
     ? submitError
-    : !selection.model
+    : !target.model
       ? t("Pick a model to start.")
       : phase === "awaiting-approval"
         ? t("Allow or reject the request above to continue.")
@@ -461,10 +488,11 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         {showPermissionMode ? <PermissionModeMenu disabled={active} /> : null}
         {showPermissionMode ? <ExecutionTargetMenu disabled={active} /> : null}
         <ModelPicker
-          value={selection}
-          onChange={setSelection}
+          value={target}
+          onChange={pickModel}
           disabled={active}
           control={{ open: modelPickerOpen, onOpenChange: setModelPickerOpen }}
+          autoSelect={!session}
         />
         <span className="AIComposerSpacer" />
         {queuedCommands.length > 0 ? (

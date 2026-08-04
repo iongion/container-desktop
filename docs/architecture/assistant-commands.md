@@ -2,7 +2,7 @@
 
 <!-- Generated from commandCatalog.ts. Update the registry, then regenerate this document. -->
 
-Registry revision: `builtin-v11`
+Registry revision: `builtin-v12`
 
 | Command | Aliases | Description | Arguments | Bypass tier | Availability | Confirmation |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -30,5 +30,5 @@ Registry revision: `builtin-v11`
 | `/share` | — | Share the session as one standalone HTML file | — | `immediate-ui` | `thread` | `none` |
 | `/login` | — | Configure provider authentication | — | `immediate-ui` | `always` | `none` |
 | `/logout` | — | Remove provider authentication | — | `immediate-ui` | `always` | `required` |
-| `/model` | — | Select model (opens selector UI) | — | `immediate-ui` | `thread-idle-only` | `none` |
+| `/model` | — | Select model (opens selector UI) | <provider/model> | `immediate-ui` | `thread-idle-only` | `none` |
 | `/permissions` | — | Open AI permissions settings | — | `immediate-ui` | `always` | `none` |

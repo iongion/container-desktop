@@ -10,12 +10,12 @@ import { useTranslation } from "react-i18next";
 import type { AIPermissionMode } from "@/ai-system/core/permissions";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import { latestAssistantResponse } from "@/ai-system/core/threadExport";
-import type { AISettings } from "@/ai-system/core/types";
 import type {
   AssistantCommandExecutionResult,
   AssistantCommandSurface,
   BuiltinAssistantCommandId,
 } from "@/ai-system/ui/core/commands/commandTypes";
+import { modelFromCommandArgument } from "@/ai-system/ui/core/commands/modelArgument";
 import {
   readProjectTrustAnswer,
   readScopedModelsAnswer,
@@ -97,6 +97,11 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   // no bridge client), so the surface offers a way to start one instead of a dead input.
   const sessionStatus = useCodingAgentStore((s) => s.status);
   const noSession = sessionStatus !== "ready";
+  // What the running session is answering with, so the composer's chip reflects it rather than a saved default — and
+  // switching it re-points THIS conversation instead of describing the next one.
+  const sessionModel = useCodingAgentStore((s) => s.sessionModel);
+  const sessionProviderId = useCodingAgentStore((s) => s.lastStart?.providerId);
+  const switchModel = useCodingAgentStore((s) => s.switchModel);
   const [startOpen, setStartOpen] = useState(false);
   usePiThemeSync();
   const setAssistantConsoleOpen = useUIStore((s) => s.setAssistantConsoleOpen);
@@ -110,7 +115,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
     setProjectSkillTrust,
   } = useAssistantSkills();
   const mode: AIPermissionMode = useAppStore((s) => s.userSettings.ai?.permissionMode) ?? "ask";
-  const _ai: AISettings = useAppStore((s) => s.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
+  const defaultProvider = useAppStore((s) => s.userSettings.ai?.defaultProvider) ?? DEFAULT_AI_SETTINGS.defaultProvider;
   // Per-screen starter questions for the empty state (chips), from the current screen the user is on.
   const screenId = useUIStore((s) => s.currentScreen.id);
   const suggestions = resolveScreenPrompt(screenId).suggestions;
@@ -367,7 +372,16 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
           await window.AI.clearKey(provider);
           Notification.show({ message: t("Provider authentication removed"), intent: Intent.SUCCESS });
         },
-        "model.open": () => ({ kind: "open-model-picker" }),
+        // pi's `/model`: bare it opens the selector, and with pi's own `<provider/model>` argument it switches
+        // straight away. Either way the session is re-pointed in place — no container restart, no lost conversation.
+        "model.open": async (command) => {
+          const store = useCodingAgentStore.getState();
+          const target = modelFromCommandArgument(command.rawArguments, store.lastStart?.providerId ?? "");
+          if (!target) return { kind: "open-model-picker" };
+          await store.switchModel(target, store.lastStart?.providerId);
+          Notification.show({ message: t("Now answering with {{model}}", { model: target }), intent: Intent.SUCCESS });
+          return undefined;
+        },
         "permissions.open": () => {
           navigate(getSettingsUrl("ai"));
           return undefined;
@@ -399,6 +413,21 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const onStarter = (text: string) => {
     void submitMessage(text);
   };
+
+  // A running session ALWAYS owns the chip: showing a saved default while something else is answering is the very
+  // thing this replaces. The start form always records which source it resolved, so the fallback is only reached by a
+  // session composed by hand — and the model that is answering is still the truth worth showing.
+  const composerSession = useMemo(
+    () =>
+      sessionModel
+        ? {
+            providerId: sessionProviderId ?? defaultProvider,
+            model: sessionModel,
+            onSelectModel: switchModel,
+          }
+        : undefined,
+    [sessionModel, sessionProviderId, defaultProvider, switchModel],
+  );
 
   const timelineContext: AssistantTimelineContext = {
     view,
@@ -500,6 +529,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
             showPermissionMode
             commands={composerCommands}
             draft={extensionChrome.editorDraft}
+            session={composerSession}
           />
           <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="belowEditor" />
           <PluginWidgetSurfaces placement="belowEditor" />

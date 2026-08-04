@@ -28,9 +28,13 @@ export interface ModelPickerProps {
   onChange: (value: ModelPickerValue) => void;
   disabled?: boolean;
   control?: { open: boolean; onOpenChange: (open: boolean) => void };
+  // Whether a reachable source with nothing saved may have its first (or served) model applied for the user. False
+  // where the VALUE belongs to something that already made the choice — a running session — because an auto-select
+  // would re-point a live conversation at a model nobody picked.
+  autoSelect?: boolean;
 }
 
-export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disabled, control }) => {
+export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disabled, control, autoSelect = true }) => {
   const { t } = useTranslation();
   const ai: AISettings = useAppStore((state) => state.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
   const discovery = useModelDiscovery();
@@ -70,14 +74,14 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disab
     const sourceId = value.providerId;
     const entry = getProviderEntry(sourceId);
     const models = modelsBySource[sourceId];
-    if (!entry || !models) {
+    if (!autoSelect || !entry || !models) {
       return;
     }
     const tree = buildModelTree({ entry, models, savedModel: ai.providers?.[sourceId]?.model ?? "" });
     if (tree.autoSelect && tree.autoSelect !== value.model) {
       persist({ providerId: sourceId, model: tree.autoSelect });
     }
-  }, [modelsBySource, value.providerId, value.model, ai.providers, persist]);
+  }, [autoSelect, modelsBySource, value.providerId, value.model, ai.providers, persist]);
 
   const triggerLabel = useMemo(() => {
     const path = selectedPath(value.providerId, value.model);
