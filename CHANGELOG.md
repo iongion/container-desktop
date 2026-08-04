@@ -47,9 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Every model your inference source serves is available to a running session: switch from the composer's model chip and the conversation, the containers and the plugins all survive it
+- Change the model a running session answers with, from the composer's chip: the conversation, the containers and the plugins all survive it
+- A model is looked up when you choose it — one level of your source's catalogue at a time, nothing fetched or registered up front
 - `/model` switches straight away when you name one, pi's own way (`/model <provider/model>`), and opens the picker when you do not
-- The models Ctrl+P cycles are now a real choice — `/scoped-models` narrows a session that knows its provider's whole catalogue
 - pi's own slash commands, all of them, under pi's own names — the ones this architecture cannot honour are listed with the reason rather than hidden
 - **Every one of pi's own commands works.** The nine that used to be refused — `/clone`, `/resume`, `/import`, `/trust`, `/settings`, `/scoped-models`, `/login`, `/logout`, `/share` — described this app's wiring, not pi's limits
 - `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog`, `/reload`, `/new`, `/clone`, `/resume`, `/trust`, `/settings` and `/scoped-models` run against the session itself

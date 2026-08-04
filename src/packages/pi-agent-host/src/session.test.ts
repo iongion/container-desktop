@@ -361,11 +361,14 @@ describe("the models the session can be pointed at", () => {
     return answer.data.models.available.map((model) => model.id);
   };
 
-  it("offers every model the app discovered, so pi has more than one to cycle", async () => {
+  // The set grows by USE, never by pre-registering what a provider serves: the app's picker reads a catalogue one
+  // level at a time, and a session that registered hundreds of models nobody asked for would undo that.
+  it("registers a model when it is picked, and offers only the ones this session has used", async () => {
     const session = await sessionWith([]);
     expect(await available(session)).toEqual(["canned"]);
 
-    session.registerModels([{ id: "canned" }, { id: "other" }, { id: "third" }]);
+    await session.selectModel({ id: "other" });
+    await session.selectModel({ id: "third" });
 
     expect(await available(session)).toEqual(["canned", "other", "third"]);
   });
@@ -376,7 +379,6 @@ describe("the models the session can be pointed at", () => {
     const events: BridgeEvent[] = [];
     const session = await sessionWith(events);
     await session.prompt("the first conversation");
-    session.registerModels([{ id: "canned" }, { id: "other" }]);
     events.length = 0;
 
     await expect(session.selectModel({ id: "other", contextWindow: 8192 })).resolves.toEqual({
@@ -393,8 +395,8 @@ describe("the models the session can be pointed at", () => {
     expect(context).toMatchObject({ context: { model: "other", contextWindow: 8192, messages: { user: 1 } } });
   });
 
-  // A model the app never listed is registered rather than refused: the app has just asked the provider and probed
-  // this model, so it knows more about what is reachable than the set this container was last told about.
+  // An id this container has never heard of is adopted rather than refused: the user picked it out of the provider's
+  // own listing, which the app read and this container cannot.
   it("adopts a model it had not been told about", async () => {
     const session = await sessionWith([]);
     await session.selectModel({ id: "typed-by-hand" });
@@ -402,14 +404,19 @@ describe("the models the session can be pointed at", () => {
     expect(await available(session)).toContain("typed-by-hand");
   });
 
-  it("keeps the model it is running when a later list no longer mentions it", async () => {
-    const session = await sessionWith([], 40960);
-    session.registerModels([{ id: "other" }]);
+  // Switching back carries only the id: the app probes a window once, and re-reporting it as unknown would undo the
+  // one thing this session learned about that model.
+  it("still knows what the provider published about a model it comes back to", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await sessionWith(events, 40960);
+    await session.selectModel({ id: "other", contextWindow: 8192 });
+    events.length = 0;
 
-    expect(await available(session)).toEqual(["canned", "other"]);
-    // And still reports what the provider published for it, which the app only sent once at start.
-    await session.prompt("say hello");
-    expect(session.model).toBe("container-desktop-gateway/canned");
+    await session.selectModel({ id: "canned" });
+
+    expect(events.findLast((event) => event.type === "request_context")).toMatchObject({
+      context: { model: "canned", contextWindow: 40960 },
+    });
   });
 });
 

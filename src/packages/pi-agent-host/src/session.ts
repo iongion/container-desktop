@@ -22,7 +22,7 @@ import { createContainerToolsExtension } from "@/pi-agent-host/containerTools";
 import { mapAgentEvent, type PiAgentEvent } from "@/pi-agent-host/events";
 import { GuiTui } from "@/pi-agent-host/guiTui";
 import { createHostRpc } from "@/pi-agent-host/hostRpc";
-import { type ModelRegistrations, mergeModelRegistrations, piModelConfig } from "@/pi-agent-host/modelRegistrations";
+import { type ModelRegistrations, piModelConfig, withModelRegistration } from "@/pi-agent-host/modelRegistrations";
 import { createPermissionGateExtension } from "@/pi-agent-host/permissionGate";
 import { runPiCommand } from "@/pi-agent-host/piCommands";
 import { buildPiTheme, normalizeAppThemePalette } from "@/pi-agent-host/piTheme";
@@ -128,9 +128,10 @@ export interface CreatePiSessionOptions {
 export async function createPiSession(options: CreatePiSessionOptions): Promise<BridgeSessionHandle> {
   const { cwd, agentDir, gatewayUrl, gatewayToken, modelId, emit, streamOverride } = options;
 
-  // Every model this session may be pointed at. It starts as the one the container was given and grows to the
-  // provider's whole list once the app has asked the provider for it — one gateway reaches one upstream, so all of
-  // that upstream's models were always reachable; only the registration said otherwise.
+  // The models this session has been pointed at: the one the container was given, plus each one the user has since
+  // picked. One gateway reaches one upstream, so every model that upstream serves is reachable — but it is registered
+  // when it is chosen, never in advance, because the app's picker reads a catalogue one level at a time and this set
+  // exists to follow that, not to mirror a provider's whole listing.
   let registered: ModelRegistrations = new Map([
     [
       modelId,
@@ -148,7 +149,8 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   // sending only the models fails with `no "api" specified` — the merge never gets to supply the rest.
   //
   // It reads the CURRENT set each time: a session replacement builds fresh services and runs the extension again, so
-  // a session born after the app widened the list must be born with all of it.
+  // the conversation that takes over is born knowing every model this container has been pointed at — including the
+  // one it is running, which would otherwise not be registered for the session that inherited it.
   const gatewayProviderConfig = () => ({
     // baseUrl is required: the provider composer validates it when defining custom models.
     baseUrl: gatewayUrl,
@@ -429,23 +431,18 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     providerId: GATEWAY_PROVIDER_ID,
   });
 
-  // Bring the gateway provider's registration in line with the given set. The running session keeps the model OBJECT
-  // it already holds and pi still streams with it: `prepareRequest` resolves the provider by id, so nothing about
-  // that object goes stale except its own numbers — which are the model's, and that model has not changed here.
-  const applyModels = (models: readonly PiModelRegistration[]) => {
-    registered = mergeModelRegistrations(registered, models, liveModelId());
-    runtime.services.modelRuntime.registerProvider(GATEWAY_PROVIDER_ID, gatewayProviderConfig());
-  };
-
-  // Point the conversation at another of them. pi swaps the model on the session, so the turns, the containers and
-  // the plugins are all untouched — this is why a model change no longer costs the user their conversation.
+  // Point the conversation at a model, registering it the first time this session is asked for it. pi swaps the model
+  // on the session, so the turns, the containers and the plugins are all untouched — this is why a model change no
+  // longer costs the user their conversation.
+  //
+  // Whatever the app knows about the model travels with the request, because only the app can ask the provider. An id
+  // this container has not heard of is adopted rather than refused: the user picked it out of the provider's own
+  // listing, which the app read and this container cannot.
   const selectModel = async (model: PiModelRegistration): Promise<PiSessionModel> => {
-    // The whole set with this one merged in, keeping its position: a switch is not a re-discovery, so nothing may be
-    // dropped. An id the app never listed is adopted rather than refused — the app has just asked the provider what
-    // it serves and probed this model, so it knows more than this container was last told.
-    const next = new Map(registered);
-    next.set(model.id, { ...next.get(model.id), ...model });
-    applyModels([...next.values()]);
+    registered = withModelRegistration(registered, model);
+    // The re-registration carries the WHOLE provider config: pi validates an incoming registration on its own before
+    // merging it (validateExtensionProvider), so sending only the models fails with `no "api" specified`.
+    runtime.services.modelRuntime.registerProvider(GATEWAY_PROVIDER_ID, gatewayProviderConfig());
     const chosen = runtime.services.modelRuntime.getModel(GATEWAY_PROVIDER_ID, model.id);
     if (!chosen) throw new Error(`gateway model ${model.id} was not registered — the provider flush did not happen`);
     await runtime.session.setModel(chosen);
@@ -503,9 +500,6 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     },
     checkProvider() {
       return checkSessionProvider({ gatewayUrl, gatewayToken });
-    },
-    registerModels(models) {
-      applyModels(models);
     },
     selectModel,
     // One of pi's own commands, by pi's own name. The dispatcher answers with a value, never a throw: the palette

@@ -1,40 +1,43 @@
 import { describe, expect, it } from "vitest";
 
-import { mergeModelRegistrations, piModelConfig } from "@/pi-agent-host/modelRegistrations";
+import { piModelConfig, withModelRegistration } from "@/pi-agent-host/modelRegistrations";
 
-describe("mergeModelRegistrations", () => {
-  it("takes the incoming set, so a model the provider stopped serving stops being offered", () => {
-    const held = new Map([{ id: "a" }, { id: "b" }].map((model) => [model.id, model]));
-    const merged = mergeModelRegistrations(held, [{ id: "a" }, { id: "c" }], "a");
-    expect([...merged.keys()]).toEqual(["a", "c"]);
+describe("withModelRegistration", () => {
+  it("adds a model the session has not been pointed at before", () => {
+    const held = new Map([["a", { id: "a" }]]);
+    expect([...withModelRegistration(held, { id: "b" }).keys()]).toEqual(["a", "b"]);
   });
 
-  // The app probes a model's window only when it switches to it, so a later re-discovery arrives with nothing to
-  // say about the models it already learned. Taking that literally would report every window as unknown again.
-  it("keeps what was already learned about a model that survives", () => {
+  // The app probes a model's window when it switches to it. Switching back later carries only the id when the
+  // provider published nothing new, and taking that literally would report a known window as unknown again.
+  it("keeps what was already learned about a model it is given again", () => {
     const held = new Map([["a", { id: "a", contextWindow: 8192, maxOutputTokens: 2048 }]]);
-    const merged = mergeModelRegistrations(held, [{ id: "a" }], "a");
-    expect(merged.get("a")).toEqual({ id: "a", contextWindow: 8192, maxOutputTokens: 2048 });
+    expect(withModelRegistration(held, { id: "a" }).get("a")).toEqual({
+      id: "a",
+      contextWindow: 8192,
+      maxOutputTokens: 2048,
+    });
   });
 
   it("adopts a number the app has just learned over the one it held", () => {
     const held = new Map([["a", { id: "a", contextWindow: 8192 }]]);
-    const merged = mergeModelRegistrations(held, [{ id: "a", contextWindow: 40960, pricing: { input: 3 } }], "a");
-    expect(merged.get("a")).toEqual({ id: "a", contextWindow: 40960, pricing: { input: 3 } });
+    expect(withModelRegistration(held, { id: "a", contextWindow: 40960, pricing: { input: 3 } }).get("a")).toEqual({
+      id: "a",
+      contextWindow: 40960,
+      pricing: { input: 3 },
+    });
   });
 
-  // The live model is what the conversation is running against. A list that no longer mentions it would leave the
-  // session pointing at a model its own provider does not register.
-  it("never drops the model the session is running", () => {
-    const held = new Map([["a", { id: "a", contextWindow: 8192 }]]);
-    const merged = mergeModelRegistrations(held, [{ id: "b" }], "a");
-    expect([...merged.keys()]).toEqual(["a", "b"]);
-    expect(merged.get("a")?.contextWindow).toBe(8192);
+  // A list that reshuffles every time the user switches is a list nobody can point at twice.
+  it("leaves the order of the set alone", () => {
+    const held = new Map([{ id: "a" }, { id: "b" }, { id: "c" }].map((model) => [model.id, model]));
+    expect([...withModelRegistration(held, { id: "b", contextWindow: 4096 }).keys()]).toEqual(["a", "b", "c"]);
   });
 
-  it("refuses an empty registration rather than leaving the session with no model at all", () => {
+  it("does not mutate the set it was given", () => {
     const held = new Map([["a", { id: "a" }]]);
-    expect(() => mergeModelRegistrations(held, [], "a")).toThrow(/no models/);
+    withModelRegistration(held, { id: "b" });
+    expect([...held.keys()]).toEqual(["a"]);
   });
 });
 

@@ -314,11 +314,9 @@ export interface CodingAgentState {
   // conversation, so "start a fresh conversation" can only mean starting a fresh session.
   lastStart?: StartCodingAgentOptions;
   // The model the RUNNING session answers with, read off the container: `/model` switches it in place and a resumed
-  // conversation can carry one pi resolved for itself, so the id this session STARTED with is not the answer.
+  // conversation can carry one pi resolved for itself, so the id this session STARTED with is not the answer. The one
+  // model fact this store keeps — what a provider serves is the picker's question, asked one level at a time.
   sessionModel?: string;
-  // Every model of this session's provider, as registered with the container. Held so a switch can be refused
-  // against what the provider actually serves rather than sent for the upstream to 404 on.
-  sessionModels: string[];
   start(options: StartCodingAgentOptions): Promise<void>;
   submit(text: string): Promise<void>;
   submitSkill(input: SkillSubmission): Promise<void>;
@@ -360,9 +358,6 @@ export interface CodingAgentState {
   // Run one of pi's own commands, by pi's name, against the running session. Answers with a value: the palette
   // shows "not available here, and why" rather than raising.
   runPiCommand(name: string, args: string): Promise<PiCommandResult>;
-  // Tell the session every model its provider serves, so `/model` and the composer's chip have something to choose
-  // from. Called once the session is up; a provider that will not list leaves it on the model it started with.
-  registerSessionModels(): Promise<void>;
   // Point the running session at another of its provider's models. pi swaps the model in place, so this costs
   // neither the conversation nor the container pair — which is why the composer's chip can now do it. A model from a
   // DIFFERENT provider is refused: one gateway holds one upstream and one credential, so that would be a new session.
@@ -431,22 +426,6 @@ async function readModelWindow(
   }
 }
 
-// Every model this provider serves, asked ONCE — not probed per model. The window and the rates are resolved only
-// when the user actually switches to one, because that is one request per switch instead of one per model on a list
-// that runs to hundreds on an aggregator.
-async function readProviderModels(providerId?: string): Promise<string[]> {
-  const bridge = typeof window !== "undefined" ? window.AI : undefined;
-  if (!bridge) return [];
-  try {
-    const { models } = await bridge.listModels(providerId);
-    return models.map((model) => model.id).filter((id) => id.trim().length > 0);
-  } catch (error) {
-    // The session keeps the model it was started with, which always works. Widening the list is what fails here.
-    logger.warn("unable to list the provider's models for this session", error);
-    return [];
-  }
-}
-
 // The model half of what a session reports it is running: pi answers `<provider>/<model>`, and a provider id never
 // contains a slash while an aggregator's model ids routinely do (`anthropic/claude-3.5-sonnet`).
 function modelIdOf(label: string | undefined): string | undefined {
@@ -474,7 +453,6 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   resources: noContributedResources(),
   pendingEngineOps: {},
   turnReadPublicWeb: false,
-  sessionModels: [],
 
   async start(options) {
     set({
@@ -494,7 +472,6 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       // The model asked for, until the container says what it is actually running. A chip left empty until the first
       // report would read as "no model" during the wait.
       sessionModel: options.modelId,
-      sessionModels: [],
     });
     const suffix = randomUUID().slice(0, 8);
     // Mock mode has no engine to run a container on, so the far end of the socket is scripted instead. Only
@@ -510,7 +487,6 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         spec: { workspacePath: options.workspacePath, modelId: options.modelId } as PiAgentSessionSpec,
       });
       await client.connect();
-      await get().registerSessionModels();
       return;
     }
     const host = await resolveConnectionHost(options.connectionId);
@@ -576,9 +552,6 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       // Before the first turn, and early enough that a failure is visible while the user is still looking at the
       // start drawer rather than at an answer that quietly ignored their rules.
       await get().publishSystemContext();
-      // Every model this provider serves, so the chip can switch to one without restarting anything. After the
-      // session is up: the conversation must not wait on a provider listing, and a failed one costs only the choice.
-      await get().registerSessionModels();
     } catch (error) {
       logger.error("coding agent start failed", error);
       set((state) => ({
@@ -694,7 +667,6 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       turnReadPublicWeb: false,
       systemContext: undefined,
       sessionModel: undefined,
-      sessionModels: [],
     });
   },
 
@@ -974,24 +946,8 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     }
   },
 
-  async registerSessionModels() {
-    const { client, lastStart } = get();
-    if (!client) return;
-    const models = await readProviderModels(lastStart?.providerId);
-    // Nothing to register is not the same as an empty provider: a listing that failed must leave the session with the
-    // model it started on rather than replace the set with nothing.
-    if (!models.length) return;
-    try {
-      await client.registerModels(models.map((id) => ({ id })));
-      set({ sessionModels: models });
-    } catch (error) {
-      // The session still answers on the model it started with; only switching to another is unavailable.
-      logger.warn("unable to register this provider's models with the session", error);
-    }
-  },
-
   async switchModel(modelId, providerId) {
-    const { client, lastStart, sessionModels } = get();
+    const { client, lastStart } = get();
     if (!client) throw new Error(t("There is no session to change the model of"));
     const target = modelId.trim();
     if (!target) throw new Error(t("Name the model to switch to"));
@@ -1004,13 +960,8 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         }),
       );
     }
-    // Checked against what the provider said it serves, here rather than in the container: the app is the side that
-    // asked it. An unlisted id is a typo far more often than a model discovery missed.
-    if (sessionModels.length && !sessionModels.includes(target)) {
-      throw new Error(t("This session's inference source does not serve {{model}}", { model: target }));
-    }
-    // Resolved now, for this model alone — the honest cost of a switch, and the reason the whole list can be
-    // registered without probing every model on it.
+    // Asked of the provider now, for this model alone. Nothing is pre-fetched and nothing is held: the picker read one
+    // level of the catalogue to offer this id, and this is the one request that turns it into a session's model.
     const window = await readModelWindow(target, lastStart?.providerId);
     const chosen = await client.selectModel({ id: target, ...window });
     // What pi answered, not what was asked for: the session is the authority on which model is now answering.

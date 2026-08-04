@@ -316,12 +316,12 @@ export type BridgeCommand =
   // owns the import. The JSONL travels as text rather than as a path — the app's path names a file on the HOST,
   // which the container cannot open, and copying it in would need a capability no shell has.
   | { id: string; type: "session_import"; fileName: string; contents: string }
-  // Every model of the session's provider, so pi can cycle them and `/scoped-models` has something to narrow. The
-  // whole set, replacing what was registered: a model the provider no longer serves stops being offered. What the
-  // app has already learned about a surviving model is kept, and the model the session is RUNNING is never dropped.
-  | { id: string; type: "models_register"; models: PiModelRegistration[] }
-  // Point the running session at one of them. pi replaces the model in place, so the conversation, the containers
-  // and the plugins all survive — nothing here restarts anything.
+  // Point the running session at a model, registering it if this session has not used it before. pi replaces the
+  // model in place, so the conversation, the containers and the plugins all survive — nothing here restarts anything.
+  //
+  // ONE model, as the user picked it. There is deliberately no command for "here is the provider's whole catalogue":
+  // the picker is a drill-down so that a catalogue is read one level at a time, on demand, and pre-registering
+  // hundreds of models the user never asked for would undo exactly that.
   | { id: string; type: "model_select"; model: PiModelRegistration };
 
 // pi's ProgressEvent, split the way it reads: `action` is what is being done, `phase` how far along it is.
@@ -409,7 +409,6 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "session_reload",
   "read_tool_output",
   "session_import",
-  "models_register",
   "model_select",
 ]);
 

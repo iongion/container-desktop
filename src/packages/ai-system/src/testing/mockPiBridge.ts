@@ -488,20 +488,9 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
     async checkProvider() {
       return { reachable: true, status: 200, models: MOCK_MODELS.available.length };
     },
-    // The app's discovered list, applied rather than acknowledged: a mock that kept its one fixture would leave the
-    // model chip and `/scoped-models` looking exactly as inert as the session used to be.
-    async registerModels(models: PiModelRegistration[]) {
-      // The same merge the real host performs (mergeModelRegistrations): the incoming set, with what was already
-      // learned about a survivor kept, and the live model first because the conversation is running against it.
-      const merged = new Map<string, PiModelRegistration>([
-        [liveModel, registered.get(liveModel) ?? { id: liveModel }],
-      ]);
-      for (const model of models) merged.set(model.id, { ...registered.get(model.id), ...model });
-      registered.clear();
-      for (const [id, model] of merged) registered.set(id, model);
-      MOCK_MODELS.available = [...registered.keys()].map((id) => ({ id, name: id, provider: MOCK_PROVIDER }));
-      MOCK_MODELS.scoped = MOCK_MODELS.scoped.filter((id) => registered.has(id));
-    },
+    // Applied rather than acknowledged: a mock that kept its one fixture would leave the model chip and
+    // `/scoped-models` looking exactly as inert as the session used to be. Like the real host, the set grows by use —
+    // a model is registered when it is picked, never a provider's catalogue in advance.
     async selectModel(model: PiModelRegistration) {
       registered.set(model.id, { ...registered.get(model.id), ...model });
       if (!MOCK_MODELS.available.some((candidate) => candidate.id === model.id)) {

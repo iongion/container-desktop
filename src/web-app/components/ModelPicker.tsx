@@ -63,10 +63,12 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disab
   );
 
   // Pre-fetch the active source on mount (and when it changes) so the composer has a model to submit even
-  // if the user never opens the popover.
+  // if the user never opens the popover. Skipped where the value comes from something that already chose — a running
+  // session — because then nothing here can use the answer: the trigger label needs no catalogue, the auto-select
+  // below is off, and asking a provider for a listing the user never opened is exactly what the drill-down avoids.
   useEffect(() => {
-    void discover(value.providerId);
-  }, [discover, value.providerId]);
+    if (autoSelect) void discover(value.providerId);
+  }, [autoSelect, discover, value.providerId]);
 
   // Smart default: when the active source is reachable and nothing is saved (or llama.cpp's served model
   // drifted), apply its first/served model. Converges — once saved, autoSelect clears.

@@ -1,9 +1,11 @@
-// The models this container's gateway provider is registered with, and how the app's view of them becomes pi's.
+// The models this container's gateway provider is registered with, and how the app's view of one becomes pi's.
 //
-// The app is the authority on what its provider serves: it has just asked the provider's own listing, and it is the
-// only side that can ask what a model's budget and rates are — the gateway forwards the completions API and nothing
-// else. So what is held here is a cache of what the app said, kept out of `session.ts` because merging a set and
-// mapping a shape are decisions worth testing without a live session.
+// The set grows by USE: the model the container was started on, plus each one the user has since picked. Nothing
+// pre-registers a provider's catalogue — the app's picker is a drill-down precisely so a catalogue is read one level
+// at a time, on demand, and a session that registered hundreds of models the user never asked for would undo that.
+//
+// Kept out of `session.ts` because merging an entry and mapping a shape are decisions worth testing without a live
+// session.
 
 import type { PiModelRegistration } from "@/pi-bridge/protocol";
 
@@ -15,26 +17,19 @@ const PI_FALLBACK_MAX_OUTPUT_TOKENS = 4096;
 
 export type ModelRegistrations = ReadonlyMap<string, PiModelRegistration>;
 
-// Take the app's set as the registered one, keeping what is already known about a model that survives: the app
-// probes a window only when it switches to a model, so a later re-discovery says nothing about the ones it learned
-// earlier, and taking that literally would report every window as unknown again.
+// Add a model to the registered set, or update the one already there. What the app has learned survives what it did
+// not say this time: a later switch back to a model carries only its id when the provider published nothing new, and
+// taking that literally would report a window it had already answered as unknown again.
 //
-// `liveId` is the model the session is running against. It survives any list, because a set that no longer mentions
-// it would leave the conversation pointing at a model its own provider does not register.
-export function mergeModelRegistrations(
+// Position is kept for a model already in the set, so the list a picker or `/scoped-models` renders does not reshuffle
+// under the user every time they switch.
+export function withModelRegistration(
   held: ModelRegistrations,
-  incoming: readonly PiModelRegistration[],
-  liveId: string,
+  model: PiModelRegistration,
 ): Map<string, PiModelRegistration> {
-  if (incoming.length === 0) throw new Error("a registration with no models would leave the session nothing to run");
-  const merged = new Map<string, PiModelRegistration>();
-  const live = held.get(liveId);
-  if (live) merged.set(liveId, live);
-  for (const model of incoming) {
-    const previous = held.get(model.id);
-    merged.set(model.id, previous ? { ...previous, ...model } : model);
-  }
-  return merged;
+  const next = new Map(held);
+  next.set(model.id, { ...next.get(model.id), ...model });
+  return next;
 }
 
 // One registration as pi's provider composer wants it. `name` is the id: the provider listings carry an id and

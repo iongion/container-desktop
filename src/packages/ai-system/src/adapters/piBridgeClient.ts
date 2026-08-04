@@ -63,12 +63,9 @@ export interface PiBridgeClient {
   // Ask the SESSION whether it can reach the model. The app's own provider check answers for the app's realm, which
   // is not the one a turn runs in.
   checkProvider(): Promise<SessionProviderCheck>;
-  // Every model of this session's provider, so pi can cycle them and `/scoped-models` has something to narrow. The
-  // app sends them because only it can ask the provider what it serves — the gateway forwards completions, not a
-  // catalogue. The whole set each time; what the session already learned about a surviving model is kept.
-  registerModels(models: PiModelRegistration[]): Promise<void>;
-  // Point the running session at one of them. Answers with what pi ended up on, so the caller adopts the switch
-  // rather than assuming it. The conversation, the containers and the plugins all survive it.
+  // Point the running session at a model the user picked, with whatever the provider published about it — the app
+  // asks, because the gateway forwards completions and not a catalogue. Answers with what pi ended up on, so the
+  // caller adopts the switch rather than assuming it. The conversation, the containers and the plugins all survive it.
   selectModel(model: PiModelRegistration): Promise<PiSessionModel>;
   reloadSession(): Promise<void>;
   // pi's `/import`. The JSONL travels as text: the app read it off the HOST, and the container cannot open a host
@@ -260,9 +257,6 @@ export function createPiBridgeClient(options: {
     },
     checkProvider(): Promise<SessionProviderCheck> {
       return request({ id: randomUUID(), type: "check_provider" }, READ_TIMEOUT_MS);
-    },
-    registerModels(models: PiModelRegistration[]): Promise<void> {
-      return request({ id: randomUUID(), type: "models_register", models }, READ_TIMEOUT_MS);
     },
     selectModel(model: PiModelRegistration): Promise<PiSessionModel> {
       // pi swaps the model on the session and writes its own settings — a memory operation, not a turn.
