@@ -35,6 +35,9 @@ export interface IAI {
     bridgeToken: string;
     gatewayPort: number;
   }) => Promise<{ path: string }>;
+  // The AGENT container's env file, into the same protected directory. It carries the bridge token, so it belongs
+  // behind the same guard rather than in a second directory the web view could read it out of.
+  writeAgentEnvFile: (fileName: string, contents: string) => Promise<{ path: string }>;
   getWorkspaceChangeStatus: () => Promise<WorkspaceChangeSnapshot>;
   getWorkspaceDiff: () => Promise<WorkspaceDiff>;
   getProjectContext: () => Promise<ProjectContextSnapshot>;
@@ -98,6 +101,7 @@ export function createAIClient(transport: AIClientTransport) {
     setKey: (provider, key, opts) => invoke(AI_CHANNELS.keySet, { provider, key, allowDegraded: opts?.allowDegraded }),
     clearKey: (provider) => invoke(AI_CHANNELS.keyClear, { provider }),
     writeAgentGatewayEnv: (request) => invoke(AI_CHANNELS.agentGatewayEnv, request),
+    writeAgentEnvFile: (fileName, contents) => invoke(AI_CHANNELS.agentEnvFile, { fileName, contents }),
     getWorkspaceChangeStatus: () => invoke(AI_CHANNELS.changesStatus),
     getWorkspaceDiff: () => invoke(AI_CHANNELS.changesDiff),
     getProjectContext: () => invoke(AI_CHANNELS.projectContextSnapshot),

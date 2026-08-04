@@ -246,6 +246,42 @@ func (s *KeychainService) WriteSecretFile(req KeychainWriteSecretFileRequest) (s
 	return path, nil
 }
 
+// KeychainWriteAgentFileRequest names only the file to write; there is no account because there is no secret.
+type KeychainWriteAgentFileRequest struct {
+	FileName string `json:"fileName"`
+	Contents string `json:"contents"`
+}
+
+// WriteAgentFile writes a private (0600) file into the same protected agent directory, with NO secret to
+// substitute. This is the agent container's own env file: it carries the bridge token but never a provider
+// credential.
+//
+// It lives beside the gateway's rather than in a directory of its own so ONE guard covers both — the bridge token
+// is a secret too, and a second directory would have been outside fs_service.go's refusal. Deliberately separate
+// from WriteSecretFile, whose placeholder requirement is a fail-closed check worth keeping.
+func (s *KeychainService) WriteAgentFile(req KeychainWriteAgentFileRequest) (string, error) {
+	if !isSafeAgentFileName(req.FileName) {
+		return "", fmt.Errorf("invalid agent file name")
+	}
+	// The opposite fail-closed check to WriteSecretFile's: a placeholder HERE means a caller expected a credential
+	// to be substituted and it silently was not.
+	if strings.Contains(req.Contents, keychainSecretPlaceholder) {
+		return "", fmt.Errorf("this file carries a secret placeholder and must be written as a secret file")
+	}
+	dir, err := agentSecretsDir()
+	if err != nil {
+		return "", err
+	}
+	if mkErr := os.MkdirAll(dir, 0o700); mkErr != nil {
+		return "", mkErr
+	}
+	path := filepath.Join(dir, req.FileName)
+	if writeErr := os.WriteFile(path, []byte(req.Contents), 0o600); writeErr != nil {
+		return "", writeErr
+	}
+	return path, nil
+}
+
 // isSafeAgentFileName keeps the caller to naming a FILE — never a directory, never a traversal.
 func isSafeAgentFileName(name string) bool {
 	if name == "" || len(name) > 128 || strings.HasPrefix(name, ".") {

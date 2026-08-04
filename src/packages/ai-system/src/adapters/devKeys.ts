@@ -41,6 +41,7 @@ export function withDevApiKeys(keyStore: AIKeyStore, devApiKeys: Record<string, 
     },
     writeSecretFile: (provider: string, fileName: string, contents: string) =>
       keyStore.writeSecretFile(provider, fileName, contents),
+    writeAgentEnvFile: (fileName: string, contents: string) => keyStore.writeAgentEnvFile(fileName, contents),
     setKey: (provider: string, key: string, opts?: { allowDegraded?: boolean }) => keyStore.setKey(provider, key, opts),
     clearKey: (provider: string) => keyStore.clearKey(provider),
   };

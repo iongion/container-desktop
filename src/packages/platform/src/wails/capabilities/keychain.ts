@@ -49,5 +49,9 @@ export async function createWailsKeychain(invoke: WailsInvoke): Promise<IKeychai
     // credential the caller never handled.
     writeSecretFile: (provider, fileName, contents) =>
       invoke<string>("keychain_write_secret_file", { account: provider, fileName, contents }),
+
+    // The same protected directory, no secret to substitute: the agent container's own env file. One guard then
+    // covers both, instead of a second directory the web view could read the bridge token out of.
+    writeAgentEnvFile: (fileName, contents) => invoke<string>("keychain_write_agent_file", { fileName, contents }),
   };
 }

@@ -14,7 +14,10 @@ export const AI_CHANNELS = {
   keyClear: "ai:key:clear", // invoke({ provider }) → { ok: true }
   // Write the coding agent gateway's private env file, with the provider key read from the OS keychain and
   // put in host-side. The renderer cannot read that key — only ask for the file that carries it.
-  agentGatewayEnv: "ai:agent:gateway-env", // invoke(AgentGatewayEnvRequest) → { path }
+  agentGatewayEnv: "ai:agent:gateway-env",
+  // invoke({ fileName, contents }) → { path }. The AGENT container's env file, written into the same protected
+  // directory as the gateway's so one guard covers both. Carries the bridge token, never a provider key.
+  agentEnvFile: "ai:agent:env-file", // invoke(AgentGatewayEnvRequest) → { path }
   changesStatus: "ai:changes:status",
   changesDiff: "ai:changes:diff",
   projectContextSnapshot: "ai:project-context:snapshot",

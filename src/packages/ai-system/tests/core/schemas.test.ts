@@ -81,6 +81,7 @@ describe("AI protocol boundary validation", () => {
         bridgeToken: "tok",
         gatewayPort: 8788,
       },
+      [AI_CHANNELS.agentEnvFile]: { fileName: "8f21ac.env", contents: "CD_BRIDGE_TOKEN=tok\nCD_BRIDGE_PORT=8787" },
       [AI_CHANNELS.changesStatus]: undefined,
       [AI_CHANNELS.changesDiff]: undefined,
       [AI_CHANNELS.projectContextSnapshot]: undefined,
@@ -165,6 +166,7 @@ describe("AI protocol boundary validation", () => {
         webSearchAvailable: true,
       },
       [AI_CHANNELS.agentGatewayEnv]: { path: "/home/me/.local/share/container-desktop/agent/8f21ac-gateway.env" },
+      [AI_CHANNELS.agentEnvFile]: { path: "/home/me/.config/container-desktop/agent/8f21ac.env" },
       [AI_CHANNELS.diagnostics]: {
         capturedAt: 1,
         provider: {

@@ -94,6 +94,8 @@ export function createMockKeyStore(): AIKeyStore {
     setKey: async () => {},
     clearKey: async () => {},
     writeSecretFile: async (_provider, fileName) => `/mock/agent/${fileName}`,
+    // The same directory as the secret file's, which is the point of the merge.
+    writeAgentEnvFile: async (fileName) => `/mock/agent/${fileName}`,
   };
 }
 

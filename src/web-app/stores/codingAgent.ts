@@ -378,13 +378,14 @@ async function readModelWindow(
   }
 }
 
-async function writePrivateEnvFile(name: string, contents: string): Promise<string> {
-  const home = await Platform.getHomeDir();
-  const dir = await Path.join(home, ".local/share/container-desktop/agent");
-  await FS.mkdir(dir, { recursive: true });
-  const location = await Path.join(dir, name);
-  await FS.writePrivateTextFile(location, contents);
-  return location;
+// The agent container's env file, written by the HOST into the same protected directory as the gateway's. It used to
+// go to `~/.local/share/container-desktop/agent`, a second directory outside the fs guard — so the bridge token that
+// authorises the whole socket was readable from the web view while the provider key beside it was not.
+async function writeAgentEnvFile(name: string, contents: string): Promise<string> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge) throw new Error("the AI host bridge is unavailable, so the agent cannot be given its environment");
+  const { path } = await bridge.writeAgentEnvFile(name, contents);
+  return path;
 }
 
 export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
@@ -472,7 +473,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       const gatewayEnvFile = options.providerId
         ? () => writeGatewayEnvFile(options.providerId as string, `${suffix}-gateway.env`, spec)
         : undefined;
-      await startPiAgentSession(host, spec, (contents) => writePrivateEnvFile(`${suffix}.env`, contents), {
+      await startPiAgentSession(host, spec, (contents) => writeAgentEnvFile(`${suffix}.env`, contents), {
         gatewayEnvFile,
       });
 

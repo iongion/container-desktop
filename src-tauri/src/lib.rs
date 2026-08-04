@@ -179,6 +179,7 @@ pub fn run() {
             keychain::keychain_set,
             keychain::keychain_clear,
             keychain::keychain_write_secret_file,
+            keychain::keychain_write_agent_file,
             tray::tray_update,
         ])
         .run(tauri::generate_context!())

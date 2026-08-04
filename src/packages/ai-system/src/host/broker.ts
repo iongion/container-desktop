@@ -207,6 +207,11 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
         return { path };
       }),
     );
+    // The AGENT container's env file, into the SAME protected directory. It carries the bridge token — a secret in its
+    // own right — so it belongs behind the same guard rather than in a second directory the web view can read back.
+    onInvoke(AI_CHANNELS.agentEnvFile, (event, request) =>
+      guarded(event, async () => ({ path: await deps.keyStore.writeAgentEnvFile(request.fileName, request.contents) })),
+    );
     onInvoke(AI_CHANNELS.changesStatus, (event) =>
       guarded(event, () => {
         if (!deps.workspaceChanges) throw new Error("AI: workspace change review is unavailable");

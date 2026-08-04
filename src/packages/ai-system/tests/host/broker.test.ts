@@ -41,6 +41,11 @@ function fakeKeyStore(): AIKeyStore & {
       written.push({ fileName, contents: contents.replace("__CD_KEYCHAIN_SECRET__", keys.get(provider) ?? "") });
       return `/data/agent/${fileName}`;
     }),
+    // The agent's own env file, into the same directory — no secret to substitute, which is the whole difference.
+    writeAgentEnvFile: vi.fn(async (fileName: string, contents: string) => {
+      written.push({ fileName, contents });
+      return `/data/agent/${fileName}`;
+    }),
     setDegraded: (value) => {
       degraded = value;
     },
@@ -159,6 +164,23 @@ describe("AIBroker agent gateway environment", () => {
     expect(written.contents).toContain("CD_UPSTREAM_AUTH_SCHEME=bearer");
     // The answer must not carry the secret back across the boundary.
     expect(JSON.stringify(result)).not.toContain("sk-secret");
+  });
+
+  // The AGENT's env file goes into the SAME protected directory as the gateway's. It used to be written to a second
+  // directory outside the fs guard, so the bridge token that authorises the whole socket was readable from the web
+  // view while the provider key beside it was not.
+  it("writes the agent's own env file into the same protected directory, with no secret to substitute", async () => {
+    const broker = makeBroker();
+    const result = await broker.invoke(AI_CHANNELS.agentEnvFile, {
+      fileName: "8f21ac.env",
+      contents: "CD_BRIDGE_TOKEN=tok\nCD_BRIDGE_PORT=8787",
+    });
+    expect(result).toEqual({ path: "/data/agent/8f21ac.env" });
+    const [written] = broker.keyStore.files();
+    expect(written.contents).toContain("CD_BRIDGE_TOKEN=tok");
+    // No provider credential belongs in the agent's container: plugin code runs there.
+    expect(written.contents).not.toContain("CD_UPSTREAM_API_KEY");
+    expect(broker.keyStore.getKey).not.toHaveBeenCalled();
   });
 
   // A keyless local server (LM Studio, llama.cpp) is a first-class case, not a failure.

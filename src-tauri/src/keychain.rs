@@ -197,6 +197,17 @@ pub(crate) async fn keychain_get(account: String) -> Result<Option<String>, Stri
 /// transport follows. Deliberately not derived from anything the caller sends.
 pub const SECRET_PLACEHOLDER: &str = "__CD_KEYCHAIN_SECRET__";
 
+/// Keeps a caller to naming a FILE — never a directory, never a traversal. Shared by both writers into the
+/// protected agent directory, and mirrored in the Wails shell (isSafeAgentFileName).
+fn is_safe_agent_file_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 128
+        && !name.starts_with('.')
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
+}
+
 /// Write a private (0600) file into the protected agent directory, substituting SECRET_PLACEHOLDER with the
 /// secret stored for `account`. This is how a credential reaches a container's env file without ever crossing
 /// into the web view: the caller supplies the SHAPE, this process supplies the secret.
@@ -210,13 +221,7 @@ pub async fn keychain_write_secret_file(
     file_name: String,
     contents: String,
 ) -> Result<String, String> {
-    if file_name.is_empty()
-        || file_name.len() > 128
-        || !file_name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
-        || file_name.starts_with('.')
-    {
+    if !is_safe_agent_file_name(&file_name) {
         return Err("invalid agent file name".into());
     }
     // Fail closed: a body with nowhere to put the secret would silently produce an unauthenticated env file,
@@ -230,6 +235,28 @@ pub async fn keychain_write_secret_file(
     }
     let path = crate::host::fs::agent_secrets_dir().join(&file_name);
     crate::host::fs::write_private_file(&path, &contents.replace(SECRET_PLACEHOLDER, &secret))?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// Write a private (0600) file into the same protected agent directory, with NO secret to substitute. This is the
+/// agent container's own env file: it carries the bridge token but never a provider credential.
+///
+/// It lives beside the gateway's rather than in a directory of its own so that ONE guard covers both — the bridge
+/// token is a secret too, and a second directory would have been outside `host::fs`'s refusal. Deliberately
+/// separate from keychain_write_secret_file, whose placeholder requirement is a fail-closed check worth keeping:
+/// loosening it to accept a body with no placeholder would let an unauthenticated gateway env file through.
+#[tauri::command]
+pub async fn keychain_write_agent_file(file_name: String, contents: String) -> Result<String, String> {
+    if !is_safe_agent_file_name(&file_name) {
+        return Err("invalid agent file name".into());
+    }
+    // The opposite fail-closed check to the secret writer's: a placeholder HERE would mean a caller expected a
+    // credential to be substituted and it silently was not.
+    if contents.contains(SECRET_PLACEHOLDER) {
+        return Err("this file carries a secret placeholder and must be written as a secret file".into());
+    }
+    let path = crate::host::fs::agent_secrets_dir().join(&file_name);
+    crate::host::fs::write_private_file(&path, &contents)?;
     Ok(path.to_string_lossy().to_string())
 }
 

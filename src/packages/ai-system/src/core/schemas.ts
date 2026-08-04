@@ -444,6 +444,21 @@ export const invokeSchemas = {
       gatewayPort: z.number().int().positive().max(65535),
     })
     .strict(),
+  [AI_CHANNELS.agentEnvFile]: z
+    .object({
+      // The same naming rule as the gateway's: a simple <name>.env, never a path. Both writers refuse anything else
+      // in the native realm too — this is the first of the two checks, not the only one.
+      fileName: z
+        .string()
+        .trim()
+        .min(1)
+        .max(128)
+        .regex(/^[a-zA-Z0-9._-]+\.env$/, "AI: the agent env file name must be a simple <name>.env"),
+      // The whole env body. Bounded well above what the agent needs, and far below anything that would be a file
+      // rather than an environment.
+      contents: z.string().min(1).max(65536),
+    })
+    .strict(),
   [AI_CHANNELS.changesStatus]: empty,
   [AI_CHANNELS.changesDiff]: empty,
   [AI_CHANNELS.projectContextSnapshot]: empty,
@@ -796,6 +811,7 @@ export const responseSchemas = {
   [AI_CHANNELS.keySet]: ok,
   [AI_CHANNELS.keyClear]: ok,
   [AI_CHANNELS.agentGatewayEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
+  [AI_CHANNELS.agentEnvFile]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.changesStatus]: workspaceChangeStatusSchema,
   [AI_CHANNELS.changesDiff]: workspaceDiffSchema,
   [AI_CHANNELS.projectContextSnapshot]: projectContextSnapshotSchema,

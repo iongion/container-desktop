@@ -98,6 +98,7 @@ const COMMAND_TO_METHOD: Record<string, string> = {
   keychain_set: "main.KeychainService.Set",
   keychain_clear: "main.KeychainService.Clear",
   keychain_write_secret_file: "main.KeychainService.WriteSecretFile",
+  keychain_write_agent_file: "main.KeychainService.WriteAgentFile",
   open_external: "main.ShellService.OpenExternal",
   open_storage_folder: "main.ShellService.OpenStorageFolder",
   open_path: "main.ShellService.OpenPath",

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rejecting a tool call no longer leaves "Connection error." in the transcript — stopping the agent was reported as the model failing, several times over
 - The Context panel reports the model's real budget, asked of the provider: a local server's loaded context length, not the 128k every model used to claim regardless of what the server would accept. A provider that publishes nothing now says so
 - The provider key has only one route to the gateway container: the app reads it from the OS keychain and writes the file itself, and there is no longer any field it could travel in from the web view
+- The agent's bridge token is protected like the provider key beside it: both env files now live in the one directory the web view cannot read back, instead of the token sitting in a second unguarded one
 
 - Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
 - A local model server session starts again — asking for a key a keyless provider never had used to stop it
