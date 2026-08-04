@@ -67,6 +67,9 @@ export interface AIBrokerDeps<TEvent = unknown> {
   permissionsStore?: PermissionsStoreLike;
   knowledgeBank?: KnowledgeBankLike;
   webSearcher?: (query: string) => Promise<{ text: string }>;
+  // Writes a PRIVATE file into the host's own agent directory, named by the caller but placed by the host.
+  // Absent ⇒ the coding agent's gateway env channel is not offered.
+  writePrivateAgentFile?: (fileName: string, contents: string) => Promise<string>;
   threadRepository: ThreadRepository;
   toolArtifactRepository?: ToolArtifactRepository;
   skillHost?: SkillHost;
@@ -239,6 +242,28 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
       guarded(event, async () => {
         await deps.keyStore.clearKey(request.provider);
         return { ok: true };
+      }),
+    );
+    // The coding agent's gateway container needs the provider key, and the renderer cannot read it — the key
+    // lives in the OS keychain. So the env file that carries it is composed and written HERE, and the renderer
+    // only learns its path. A provider with no key stored yields an empty value, which is correct for a
+    // keyless local server.
+    onInvoke(AI_CHANNELS.agentGatewayEnv, (event, request) =>
+      guarded(event, async () => {
+        if (!deps.writePrivateAgentFile) {
+          throw new Error("AI: this runtime cannot write the agent gateway environment");
+        }
+        const key = (await deps.keyStore.getKey(request.provider)) ?? "";
+        const path = await deps.writePrivateAgentFile(
+          request.fileName,
+          [
+            `CD_UPSTREAM_BASE_URL=${request.baseUrl}`,
+            `CD_UPSTREAM_API_KEY=${key}`,
+            `CD_BRIDGE_TOKEN=${request.bridgeToken}`,
+            `CD_GATEWAY_PORT=${request.gatewayPort}`,
+          ].join("\n"),
+        );
+        return { path };
       }),
     );
     onInvoke(AI_CHANNELS.threadList, (event) => guarded(event, () => threadHost.list()));

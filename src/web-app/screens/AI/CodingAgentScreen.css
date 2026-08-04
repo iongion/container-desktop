@@ -1,43 +1,54 @@
 .CodingAgentScreen {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.CodingAgentScreen .AppScreenContent {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
 .CodingAgentScreen .CodingAgentBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 5px 8px;
   background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: 3px;
+  color: var(--app-text-muted);
+  flex: 0 0 auto;
 }
 
-.CodingAgentScreen .CodingAgentStatus {
-  color: var(--app-text-muted);
+.CodingAgentScreen .CodingAgentStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--app-intent-success-rest);
+}
+
+.CodingAgentScreen .CodingAgentWorkspace {
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.CodingAgentScreen .CodingAgentModel,
+.CodingAgentScreen .CodingAgentContainer {
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-.CodingAgentScreen .CodingAgentStatus[data-status="ready"] {
-  color: var(--app-accent);
+.CodingAgentScreen .CodingAgentBarSpacer {
+  flex: 1;
 }
 
-.CodingAgentScreen .CodingAgentStartLog {
-  margin: 0;
-  padding: 8px;
-  max-height: 160px;
-  overflow: auto;
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  border-radius: 3px;
-  color: var(--app-text-muted);
-  white-space: pre-wrap;
+.CodingAgentScreen .CodingAgentEmptyState {
+  margin: auto;
 }
 
 .CodingAgentScreen .CodingAgentTranscript {
@@ -96,4 +107,30 @@
 .CodingAgentScreen .CodingAgentComposer {
   min-height: 72px;
   resize: vertical;
+  flex: 0 0 auto;
+}
+
+/* The start drawer renders in a portal, outside .CodingAgentScreen — its rules scope to the drawer itself. */
+.AppStartAgentSessionDrawer .CodingAgentStartLog {
+  margin: 10px 0 0;
+  padding: 8px;
+  max-height: 132px;
+  overflow: auto;
+  background: var(--app-group-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+
+.AppStartAgentSessionDrawer .AgentStartProblems,
+.AppStartAgentSessionDrawer .AgentStartFailure {
+  margin-top: 10px;
+}
+
+.AppStartAgentSessionDrawer .AgentStartImageNote {
+  margin-top: 8px;
+  color: var(--app-text-muted);
+  font-size: 11px;
 }

@@ -50,6 +50,23 @@ describe("workerExecutionTarget", () => {
 });
 
 describe("AI protocol boundary validation", () => {
+  // The host places the file; the caller only names it. A name that could escape that directory is refused
+  // at the boundary, not sanitized later.
+  it("refuses a gateway env file name that is a path", () => {
+    const valid = {
+      provider: "openrouter",
+      fileName: "8f21ac-gateway.env",
+      baseUrl: "https://openrouter.ai/api/v1",
+      bridgeToken: "tok",
+      gatewayPort: 8788,
+    };
+    expect(() => validateAIInvokeRequest(AI_CHANNELS.agentGatewayEnv, valid)).not.toThrow();
+    for (const fileName of ["../../evil.env", "/etc/passwd", "nested/dir.env", "no-extension"]) {
+      expect(() => validateAIInvokeRequest(AI_CHANNELS.agentGatewayEnv, { ...valid, fileName })).toThrow();
+    }
+    expect(() => validateAIInvokeRequest(AI_CHANNELS.agentGatewayEnv, { ...valid, baseUrl: "not a url" })).toThrow();
+  });
+
   it("has a validator for every invoke channel", () => {
     const samples: Record<AIInvokeChannel, unknown> = {
       [AI_CHANNELS.status]: undefined,
@@ -57,6 +74,13 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.keyHas]: { provider: "openai" },
       [AI_CHANNELS.keySet]: { provider: "openai", key: "secret" },
       [AI_CHANNELS.keyClear]: { provider: "openai" },
+      [AI_CHANNELS.agentGatewayEnv]: {
+        provider: "openrouter",
+        fileName: "8f21ac-gateway.env",
+        baseUrl: "https://openrouter.ai/api/v1",
+        bridgeToken: "tok",
+        gatewayPort: 8788,
+      },
       [AI_CHANNELS.threadList]: undefined,
       [AI_CHANNELS.threadCreate]: { id: "thread-1", title: "Thread" },
       [AI_CHANNELS.threadRename]: { threadId: "thread-1", title: "Renamed Thread" },
@@ -177,6 +201,7 @@ describe("AI protocol boundary validation", () => {
         encryption: { available: true, degraded: false },
         webSearchAvailable: true,
       },
+      [AI_CHANNELS.agentGatewayEnv]: { path: "/home/me/.local/share/container-desktop/agent/8f21ac-gateway.env" },
       [AI_CHANNELS.diagnostics]: {
         capturedAt: 1,
         provider: {

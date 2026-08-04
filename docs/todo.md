@@ -101,7 +101,7 @@ waves, and the Runs/Workers lists — but that's a *result* of the tests, propos
 
 **How (CLAUDE.md):** never component-test React. Seed deterministically → `CONTAINER_DESKTOP_MOCK=1 yarn dev` →
 drive with `support/cdp.mjs` (`EVAL=` DOM assertions + screenshots). Fold the durable flows into
-`support/e2e/ai/flows.mjs` (`yarn test:e2e:ai`, Playwright/CDP + Tauri WebdriverIO) so they're repeatable; use
+`support/e2e/ai/flows.mjs` (`yarn test:e2e:tauri --spec webdriver/specs/ai-flows.e2e.js`) so they're repeatable; use
 CDP for iterative verification. **Never invent routes** — all cited below are from `Screen.Route.Path`/`Navigation.ts`.
 
 ### 3.1 Team Run — `screens/AI/Run/RunScreen.tsx` · route `/screens/ai/run/$runId`
@@ -182,7 +182,7 @@ src/__tests__/live/ai-agent.live.test.ts`. Document rate-limit posture + fallbac
 - **Task 5.2** — CI decision (owner): the mock UI flows are the only AI UI automation and are **non-CI** today;
   decide whether to add an AI arm to the CI checks — see Open Decisions. Do **not** silently
   add CI steps (per `dont-add-ci-guard-steps-to-pipeline`).
-- **Task 5.3** — verification: `yarn check-types` · `yarn lint` · `yarn test:run` green; `test:e2e:ai` drives the
+- **Task 5.3** — verification: `yarn check-types` · `yarn lint` · `yarn test:run` green; the AI flows spec drives the
   new flows against the mock app; `test:ai:live` green against real free models (or skips loud without a key);
   scale scenarios captured with screenshots + timing.
 

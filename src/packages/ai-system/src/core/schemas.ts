@@ -425,6 +425,22 @@ export const invokeSchemas = {
     })
     .strict(),
   [AI_CHANNELS.keyClear]: z.object({ provider }).strict(),
+  // The file name is session-scoped, not a path: the host decides where its private agent directory is, so a
+  // caller cannot aim this write anywhere else.
+  [AI_CHANNELS.agentGatewayEnv]: z
+    .object({
+      provider,
+      fileName: z
+        .string()
+        .trim()
+        .min(1)
+        .max(128)
+        .regex(/^[a-zA-Z0-9._-]+\.env$/, "AI: the gateway env file name must be a simple <name>.env"),
+      baseUrl: z.url().max(2048),
+      bridgeToken: z.string().trim().min(1).max(256),
+      gatewayPort: z.number().int().positive().max(65535),
+    })
+    .strict(),
   [AI_CHANNELS.threadList]: empty,
   [AI_CHANNELS.threadCreate]: z
     .object({
@@ -1038,6 +1054,7 @@ export const responseSchemas = {
   [AI_CHANNELS.keyHas]: z.boolean(),
   [AI_CHANNELS.keySet]: ok,
   [AI_CHANNELS.keyClear]: ok,
+  [AI_CHANNELS.agentGatewayEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.threadList]: z.array(threadSummarySchema).max(MAX_RETAINED_THREADS),
   [AI_CHANNELS.threadCreate]: threadSummarySchema,
   [AI_CHANNELS.threadRename]: threadSummarySchema,

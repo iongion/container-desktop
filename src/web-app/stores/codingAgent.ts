@@ -5,7 +5,12 @@ import { Intent } from "@blueprintjs/core";
 import { create } from "zustand";
 
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
-import { startPiAgentSession, stopPiAgentSession } from "@/ai-system/adapters/piAgentContainer";
+import {
+  GATEWAY_PORT_IN_IMAGE,
+  gatewayUpstreamUrl,
+  startPiAgentSession,
+  stopPiAgentSession,
+} from "@/ai-system/adapters/piAgentContainer";
 import {
   createPiBridgeClient,
   type HostResponsePayload,
@@ -188,6 +193,9 @@ export interface StartCodingAgentOptions {
   upstreamBaseUrl: string;
   upstreamApiKey: string;
   appVersion: string;
+  // Which configured AI provider the endpoint came from. Recorded so the session can name its inference
+  // source; the key itself stays in the OS keychain.
+  providerId?: string;
   scope?: string;
   egress?: boolean;
 }
@@ -246,6 +254,21 @@ export function noContributedResources(): ContributedResources {
 // start log shows verbatim — cheaper and clearer than probing for a free port from the renderer.
 function pickHostPort(): number {
   return 41000 + Math.floor(Math.random() * 4000);
+}
+
+// The gateway's env file carries the provider key, so the HOST composes and writes it: it reads the key from
+// the OS keychain, which is deliberately unreadable from here. Only the path comes back.
+async function writeGatewayEnvFile(providerId: string, fileName: string, spec: PiAgentSessionSpec): Promise<string> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge) throw new Error("the AI host bridge is unavailable, so the gateway cannot be given its key");
+  const { path } = await bridge.writeAgentGatewayEnv({
+    provider: providerId,
+    fileName,
+    baseUrl: gatewayUpstreamUrl(spec),
+    bridgeToken: spec.bridgeToken,
+    gatewayPort: GATEWAY_PORT_IN_IMAGE,
+  });
+  return path;
 }
 
 async function writePrivateEnvFile(name: string, contents: string): Promise<string> {
@@ -314,13 +337,24 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       modelId: options.modelId,
       egress: options.egress ?? true,
       scope: options.scope,
+      // Podman publishes host.containers.internal, docker host.docker.internal. The gateway reaches a provider
+      // running on this machine only through that alias — inside the container 127.0.0.1 is the container.
+      hostAlias: host.PROGRAM === "podman" ? "host.containers.internal" : "host.docker.internal",
       // Podman maps the invoking user to container root under rootless mode, so the agent user needs an
       // explicit mapping or the bind-mounted workspace is effectively read-only. Docker has no keep-id.
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
     };
     try {
       set((state) => ({ startLog: [...state.startLog, `starting ${spec.agentContainerName}`] }));
-      await startPiAgentSession(host, spec, (contents) => writePrivateEnvFile(`${suffix}.env`, contents));
+      // The provider key lives in the OS keychain, which the renderer cannot read, so the host composes and
+      // writes the gateway's env file. A caller that already holds a key (the live specs) keeps the old path.
+      const gatewayEnvFile =
+        options.providerId && !options.upstreamApiKey
+          ? () => writeGatewayEnvFile(options.providerId as string, `${suffix}-gateway.env`, spec)
+          : undefined;
+      await startPiAgentSession(host, spec, (contents) => writePrivateEnvFile(`${suffix}.env`, contents), {
+        gatewayEnvFile,
+      });
 
       const client = createPiBridgeClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));

@@ -46,6 +46,15 @@ export interface IAI {
   hasKey: (provider: string) => Promise<boolean>;
   setKey: (provider: string, key: string, opts?: { allowDegraded?: boolean }) => Promise<{ ok: true }>;
   clearKey: (provider: string) => Promise<{ ok: true }>;
+  // Ask the host to write the coding agent gateway's private env file, with the provider key read from the
+  // keychain host-side. Answers the file's path; the key never crosses this boundary.
+  writeAgentGatewayEnv: (request: {
+    provider: string;
+    fileName: string;
+    baseUrl: string;
+    bridgeToken: string;
+    gatewayPort: number;
+  }) => Promise<{ path: string }>;
   submitToThread: (request: SubmitThreadRequest) => Promise<SubmitThreadResult>;
   listThreads: () => Promise<ThreadSummary[]>;
   createThread: (request: CreateThreadRequest) => Promise<ThreadSummary>;
@@ -123,6 +132,7 @@ export function createAIClient(transport: AIClientTransport) {
     hasKey: (provider) => invoke(AI_CHANNELS.keyHas, { provider }),
     setKey: (provider, key, opts) => invoke(AI_CHANNELS.keySet, { provider, key, allowDegraded: opts?.allowDegraded }),
     clearKey: (provider) => invoke(AI_CHANNELS.keyClear, { provider }),
+    writeAgentGatewayEnv: (request) => invoke(AI_CHANNELS.agentGatewayEnv, request),
     listThreads: () => invoke(AI_CHANNELS.threadList),
     createThread: (request) => invoke(AI_CHANNELS.threadCreate, request),
     renameThread: (threadId, title) => invoke(AI_CHANNELS.threadRename, { threadId, title }),

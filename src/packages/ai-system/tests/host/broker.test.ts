@@ -164,6 +164,11 @@ function makeBroker(options?: {
     removeCommand,
   };
   const knowledgeBank: KnowledgeBankLike = { search: vi.fn(async () => []) };
+  const agentFiles: Array<{ fileName: string; contents: string }> = [];
+  const writePrivateAgentFile = vi.fn(async (fileName: string, contents: string) => {
+    agentFiles.push({ fileName, contents });
+    return `/data/agent/${fileName}`;
+  });
   const logger = { error: vi.fn() };
   let persistedThreads = structuredClone(options?.threads ?? []);
   const threadStore = {
@@ -189,6 +194,7 @@ function makeBroker(options?: {
   });
   const broker = createAIBroker<{ allowed?: boolean; senderId?: number | string }>({
     keyStore,
+    writePrivateAgentFile,
     getAISettings: async () => settings,
     onInvoke: (channel, handler) => handlers.set(channel, handler),
     send: (event, channel, payload) => sent.push({ event, channel, payload }),
@@ -239,6 +245,7 @@ function makeBroker(options?: {
     threadRepository,
     toolArtifactRepository,
     threadStore,
+    agentFiles: () => agentFiles.slice(),
     persistedThreads: () => structuredClone(persistedThreads),
     persistedArtifacts: () => structuredClone(persistedArtifacts),
     logger,
@@ -255,6 +262,50 @@ const submitRequest = (content = "hello", threadId = "thread-1", id = "user-1") 
   threadId,
   message: { id, content, createdAt: 1 },
   history: [],
+});
+
+// The coding agent's gateway container needs the provider key; the renderer cannot read it. So the broker
+// composes that env file host-side, which is the only place the keychain is readable.
+describe("AIBroker agent gateway environment", () => {
+  const request = {
+    provider: "openai",
+    fileName: "8f21ac-gateway.env",
+    baseUrl: "https://api.openai.com/v1",
+    bridgeToken: "tok",
+    gatewayPort: 8788,
+  };
+
+  it("puts the keychain key in the file and answers only its path", async () => {
+    const broker = makeBroker();
+    await broker.invoke(AI_CHANNELS.keySet, { provider: "openai", key: "sk-secret", allowDegraded: true });
+
+    const result = await broker.invoke(AI_CHANNELS.agentGatewayEnv, request);
+
+    expect(result).toEqual({ path: "/data/agent/8f21ac-gateway.env" });
+    const [written] = broker.agentFiles();
+    expect(written.fileName).toBe("8f21ac-gateway.env");
+    expect(written.contents).toContain("CD_UPSTREAM_API_KEY=sk-secret");
+    expect(written.contents).toContain("CD_UPSTREAM_BASE_URL=https://api.openai.com/v1");
+    expect(written.contents).toContain("CD_BRIDGE_TOKEN=tok");
+    expect(written.contents).toContain("CD_GATEWAY_PORT=8788");
+    // The answer must not carry the secret back across the boundary.
+    expect(JSON.stringify(result)).not.toContain("sk-secret");
+  });
+
+  // A keyless local server (LM Studio, llama.cpp) is a first-class case, not a failure.
+  it("writes an empty key when the provider has none stored", async () => {
+    const broker = makeBroker();
+    await broker.invoke(AI_CHANNELS.agentGatewayEnv, request);
+    expect(broker.agentFiles()[0].contents).toContain("CD_UPSTREAM_API_KEY=\n");
+  });
+
+  it("refuses an unauthorized sender", async () => {
+    const broker = makeBroker();
+    await expect(broker.invoke(AI_CHANNELS.agentGatewayEnv, request, { allowed: false })).rejects.toThrow(
+      /unauthorized/i,
+    );
+    expect(broker.agentFiles()).toEqual([]);
+  });
 });
 
 describe("AIBroker security and settings", () => {

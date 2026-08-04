@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Start a coding agent session from the app: pick the connection, the workspace folder, the model and whether it may reach the network
+- A local model server (LM Studio, llama.cpp) is now reachable from the agent's gateway container
 - A truncated command's full output can be opened from its card — the agent writes it inside the container, the app reads it back
 - The assistant now answers, runs tools and asks for approval in demo mode, with no container engine present
 - Coding Agent screen: pi runs inside a container, streamed into the app over a token-authenticated bridge

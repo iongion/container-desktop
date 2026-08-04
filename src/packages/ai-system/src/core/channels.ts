@@ -12,6 +12,9 @@ export const AI_CHANNELS = {
   keyHas: "ai:key:has", // invoke({ provider }) → boolean
   keySet: "ai:key:set", // invoke({ provider, key, allowDegraded? }) → { ok: true }
   keyClear: "ai:key:clear", // invoke({ provider }) → { ok: true }
+  // Write the coding agent gateway's private env file, with the provider key read from the OS keychain and
+  // put in host-side. The renderer cannot read that key — only ask for the file that carries it.
+  agentGatewayEnv: "ai:agent:gateway-env", // invoke(AgentGatewayEnvRequest) → { path }
   threadSubmit: "ai:thread:submit",
   threadList: "ai:thread:list",
   threadCreate: "ai:thread:create",

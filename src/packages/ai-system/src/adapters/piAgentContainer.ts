@@ -1,3 +1,4 @@
+import { isLoopbackProviderHost } from "@/ai-system/core/providers";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
 
@@ -5,7 +6,7 @@ const logger = createLogger("ai.piAgentContainer");
 
 const AGENT_DIR_IN_IMAGE = "/home/agent/.pi/agent";
 const BRIDGE_PORT_IN_IMAGE = 8787;
-const GATEWAY_PORT_IN_IMAGE = 8788;
+export const GATEWAY_PORT_IN_IMAGE = 8788;
 // The uid/gid of the `agent` user baked into the image. Rootless podman maps the invoking host user to
 // container root, so without a mapping the agent user cannot write to the bind-mounted workspace.
 const AGENT_UID_IN_IMAGE = 1001;
@@ -26,6 +27,10 @@ export interface PiAgentSessionSpec {
   upstreamApiKey: string;
   modelId: string;
   egress: boolean;
+  // The DNS name that resolves to THIS machine from inside a container on this engine — podman's
+  // host.containers.internal, docker's host.docker.internal. A provider running on the host (LM Studio,
+  // llama.cpp) is only reachable through it.
+  hostAlias: string;
   scope?: string;
   // How to map the container's agent user onto the host user so workspace writes land with the right
   // ownership. Podman rootless uses keep-id; Docker needs an explicit --user, which requires knowing the
@@ -81,6 +86,32 @@ export function agentRunArgv(spec: PiAgentSessionSpec, guestWorkspacePath: strin
   ];
 }
 
+function upstreamIsOnThisMachine(spec: PiAgentSessionSpec): boolean {
+  try {
+    return isLoopbackProviderHost(new URL(spec.upstreamBaseUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+// The gateway dials the provider from INSIDE a container, where 127.0.0.1 is the container itself. A provider
+// on this machine therefore has to be addressed by the engine's host alias — otherwise a local LM Studio or
+// llama.cpp server is simply unreachable and every turn fails on connect.
+export function gatewayUpstreamUrl(spec: PiAgentSessionSpec): string {
+  if (!upstreamIsOnThisMachine(spec)) {
+    return spec.upstreamBaseUrl;
+  }
+  const url = new URL(spec.upstreamBaseUrl);
+  url.hostname = spec.hostAlias;
+  return url.toString().replace(/\/$/, spec.upstreamBaseUrl.endsWith("/") ? "/" : "");
+}
+
+// Neither engine guarantees the alias resolves on a user-defined network, so it is mapped explicitly.
+// `host-gateway` is understood by both podman and docker.
+export function hostAliasArgv(spec: PiAgentSessionSpec): string[] {
+  return upstreamIsOnThisMachine(spec) ? ["--add-host", `${spec.hostAlias}:host-gateway`] : [];
+}
+
 export function gatewayRunArgv(spec: PiAgentSessionSpec, envFilePath: string): string[] {
   return [
     "run",
@@ -89,6 +120,7 @@ export function gatewayRunArgv(spec: PiAgentSessionSpec, envFilePath: string): s
     spec.gatewayContainerName,
     "--network",
     spec.networkName,
+    ...hostAliasArgv(spec),
     "--env-file",
     envFilePath,
     spec.imageTag,
@@ -111,6 +143,9 @@ export async function startPiAgentSession(
   host: HostClientFacade,
   spec: PiAgentSessionSpec,
   writeEnvFile: (contents: string) => Promise<string>,
+  // The provider key lives in the OS keychain, which only the host can read, so the host writes the gateway's
+  // env file. When it has, that file is used as-is — composing a second one here would carry an empty key.
+  options?: { gatewayEnvFile?: () => Promise<string> },
 ): Promise<PiAgentSessionContainers> {
   const guestWorkspacePath = spec.scope
     ? await host.resolveGuestPath(spec.workspacePath, spec.scope)
@@ -123,14 +158,16 @@ export async function startPiAgentSession(
     return "";
   });
 
-  const gatewayEnvFile = await writeEnvFile(
-    [
-      `CD_UPSTREAM_BASE_URL=${spec.upstreamBaseUrl}`,
-      `CD_UPSTREAM_API_KEY=${spec.upstreamApiKey}`,
-      `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
-      `CD_GATEWAY_PORT=${GATEWAY_PORT_IN_IMAGE}`,
-    ].join("\n"),
-  );
+  const gatewayEnvFile = options?.gatewayEnvFile
+    ? await options.gatewayEnvFile()
+    : await writeEnvFile(
+        [
+          `CD_UPSTREAM_BASE_URL=${gatewayUpstreamUrl(spec)}`,
+          `CD_UPSTREAM_API_KEY=${spec.upstreamApiKey}`,
+          `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
+          `CD_GATEWAY_PORT=${GATEWAY_PORT_IN_IMAGE}`,
+        ].join("\n"),
+      );
   const gatewayContainerId = await run(host, gatewayRunArgv(spec, gatewayEnvFile), spec.scope);
 
   // The agent's env file deliberately omits the provider key: plugin code runs in this container.

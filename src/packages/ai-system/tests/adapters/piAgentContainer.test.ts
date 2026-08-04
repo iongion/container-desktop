@@ -3,6 +3,8 @@ import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   agentRunArgv,
   gatewayRunArgv,
+  gatewayUpstreamUrl,
+  hostAliasArgv,
   pluginVolumeMount,
   startPiAgentSession,
   userMappingArgv,
@@ -21,8 +23,11 @@ const spec: PiAgentSessionSpec = {
   upstreamApiKey: "sk-real-secret",
   modelId: "some/model",
   egress: true,
+  hostAlias: "host.containers.internal",
   userMapping: { kind: "keep-id" },
 };
+
+const localSpec: PiAgentSessionSpec = { ...spec, upstreamBaseUrl: "http://127.0.0.1:1234/v1" };
 
 function fakeHost(overrides: Record<string, unknown> = {}) {
   return {
@@ -113,6 +118,43 @@ describe("gatewayRunArgv", () => {
     const argv = gatewayRunArgv(spec, "/tmp/env");
     expect(argv.slice(-3)).toEqual([spec.imageTag, "--mode", "gateway"]);
   });
+
+  // Without the mapping the alias does not resolve inside the container, so a local model server is
+  // unreachable and every turn fails on connect.
+  it("maps the host alias when the provider runs on this machine", () => {
+    expect(gatewayRunArgv(localSpec, "/tmp/env").join(" ")).toContain(
+      "--add-host host.containers.internal:host-gateway",
+    );
+  });
+
+  it("maps nothing for a provider that is already routable", () => {
+    expect(gatewayRunArgv(spec, "/tmp/env")).not.toContain("--add-host");
+  });
+});
+
+// The gateway dials the provider from INSIDE a container, where 127.0.0.1 is the container itself.
+describe("gatewayUpstreamUrl", () => {
+  it("rewrites a loopback provider to the engine's host alias", () => {
+    expect(gatewayUpstreamUrl(localSpec)).toBe("http://host.containers.internal:1234/v1");
+  });
+
+  it("rewrites localhost and IPv6 loopback too", () => {
+    expect(gatewayUpstreamUrl({ ...spec, upstreamBaseUrl: "http://localhost:8080/v1" })).toBe(
+      "http://host.containers.internal:8080/v1",
+    );
+    expect(gatewayUpstreamUrl({ ...spec, upstreamBaseUrl: "http://[::1]:8080/v1" })).toBe(
+      "http://host.containers.internal:8080/v1",
+    );
+  });
+
+  it("leaves a routable provider alone", () => {
+    expect(gatewayUpstreamUrl(spec)).toBe("https://openrouter.ai/api/v1");
+    expect(hostAliasArgv(spec)).toEqual([]);
+  });
+
+  it("leaves an unparseable URL alone rather than inventing one", () => {
+    expect(gatewayUpstreamUrl({ ...spec, upstreamBaseUrl: "not a url" })).toBe("not a url");
+  });
 });
 
 describe("startPiAgentSession", () => {
@@ -136,6 +178,38 @@ describe("startPiAgentSession", () => {
     expect(written[0]).toContain("sk-real-secret");
     expect(written[1]).not.toContain("sk-real-secret");
     expect(written[1]).toContain("CD_BRIDGE_TOKEN=tok");
+  });
+
+  it("writes the container-reachable upstream URL, not the loopback one the app sees", async () => {
+    const written: string[] = [];
+    await startPiAgentSession(fakeHost(), localSpec, async (contents) => {
+      written.push(contents);
+      return "/tmp/env";
+    });
+    expect(written[0]).toContain("CD_UPSTREAM_BASE_URL=http://host.containers.internal:1234/v1");
+    expect(written[0]).not.toContain("127.0.0.1:1234");
+  });
+
+  // The provider key lives in the OS keychain, so the host writes the gateway's env file. When it has, the
+  // renderer must not compose a second one — that copy would carry an empty key.
+  it("uses the gateway env file the host wrote instead of composing one", async () => {
+    const written: string[] = [];
+    const host = fakeHost();
+    await startPiAgentSession(
+      host,
+      spec,
+      async (contents) => {
+        written.push(contents);
+        return "/tmp/agent.env";
+      },
+      { gatewayEnvFile: async () => "/run/secrets/gateway.env" },
+    );
+    expect(written.length).toBe(1);
+    expect(written[0]).toContain("CD_BRIDGE_TOKEN=tok");
+    expect(written[0]).not.toContain("sk-real-secret");
+    const commands = (host as unknown as { runHostCommand: { mock: { calls: unknown[][] } } }).runHostCommand.mock
+      .calls;
+    expect((commands[1][1] as string[]).join(" ")).toContain("/run/secrets/gateway.env");
   });
 
   it("throws with the engine's stderr when the agent fails to start", async () => {

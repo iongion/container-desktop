@@ -132,12 +132,14 @@ How you build here, **per change** — not an end-of-task afterthought:
   `CONTAINER_DESKTOP_E2E_APP`. **Paint caveat:** WebKitGTK parks its compositor when idle, so a
   WebDriver screenshot can force a paint the live view hadn't done — read the DOM to confirm data,
   use eyes/screenshots for paint.
-- **Per-scenario UI specs:** `test:e2e:tauri:mock:podman` / `:mock:docker` (inventory counts),
-  `test:e2e:tauri:swarm` / `:swarm:none` (swarm tabs vs the Initialize empty state).
+- **ONE e2e entry point.** `yarn test:e2e:tauri` runs every spec; select with `--spec <file>` and let the
+  scenario travel in the environment (`CONTAINER_DESKTOP_MOCK=podman|docker`,
+  `CONTAINER_DESKTOP_MOCK_SWARM=manager|none`, empty `CONTAINER_DESKTOP_MOCK=` for a real engine). Do NOT add
+  a package.json script per spec/scenario.
 - **Real-engine specs** need a NON-mock app (`CONTAINER_DESKTOP_MOCK=`) and a configured target from
-  `src/__tests__/live/targets.env`: `test:e2e:tauri:connections` (the connectivity matrix),
-  `test:e2e:tauri:execution-targets` (off-host worker execution), `test:e2e:tauri:swarm:live`
-  (real Docker Swarm, against `support/swarm-sandbox.sh up` — NEVER your primary daemon). They
+  `src/__tests__/live/targets.env`: `connection-matrix.e2e.js` (the connectivity matrix),
+  `off-host-exec.e2e.js` (off-host worker execution), `swarm.e2e.js` (real Docker Swarm, against
+  `support/swarm-sandbox.sh up` — NEVER your primary daemon). They
   drive `window.__cdLiveProbe` / `window.__cdExecutionMatrixProbe`, DEV-gated seams that run the
   SHIPPED ports inside the webview, so one probe covers both backends.
 - **The Wails shell has its own driver**, `support/wails-mcp.mjs` (MCP + X11 grab).

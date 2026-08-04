@@ -64,7 +64,7 @@ What survives, and what the WebDriver live specs read, is the machine registry: 
 
 ```bash
 support/swarm-sandbox.sh up          # single-node (docker:dind); or `up-multi` for node ops
-yarn test:e2e:tauri:swarm:live
+CONTAINER_DESKTOP_MOCK= yarn test:e2e:tauri --spec webdriver/specs/swarm.e2e.js
 support/swarm-sandbox.sh down
 ```
 
@@ -76,26 +76,31 @@ there is no CDP in a native webview. UI specs run against deterministic **mock**
 `CONTAINER_DESKTOP_MOCK_SWARM=manager|none` to render the populated vs "Initialize Swarm" states — no
 Docker required.
 
+One entry point — `yarn test:e2e:tauri` runs every spec; `--spec` selects one and the scenario travels in the
+environment, so there is no script per combination:
+
 ```bash
-yarn test:e2e:tauri:mock:podman   # inventory counts, podman fixtures
-yarn test:e2e:tauri:mock:docker   # inventory counts, docker fixtures
-yarn test:e2e:tauri:swarm         # swarm tabs (manager)
-yarn test:e2e:tauri:swarm:none    # the Initialize Swarm empty state
+CONTAINER_DESKTOP_MOCK=podman yarn test:e2e:tauri --spec webdriver/specs/mock-inventory.e2e.js
+CONTAINER_DESKTOP_MOCK=docker yarn test:e2e:tauri --spec webdriver/specs/mock-inventory.e2e.js
+CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=manager yarn test:e2e:tauri --spec webdriver/specs/swarm-ui.e2e.js
+CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=none yarn test:e2e:tauri --spec webdriver/specs/swarm-ui.e2e.js
 ```
+
+On Windows, prefix with `yarn cross-env` instead of a shell assignment.
 
 Real-engine specs need a NON-mock app (`CONTAINER_DESKTOP_MOCK=`) and a configured target in
 `src/__tests__/live/targets.env`. They drive `window.__cdLiveProbe` — a DEV-gated seam that runs the SHIPPED
 ports inside the webview, so one probe covers both backends:
 
 ```bash
-yarn test:e2e:tauri:connections         # the connectivity matrix
-yarn test:e2e:tauri:swarm:live          # real Docker Swarm (use support/swarm-sandbox.sh up)
+CONTAINER_DESKTOP_MOCK= yarn test:e2e:tauri --spec webdriver/specs/connection-matrix.e2e.js   # the connectivity matrix
+CONTAINER_DESKTOP_MOCK= yarn test:e2e:tauri --spec webdriver/specs/swarm.e2e.js               # real Docker Swarm
 ```
 
 Off-host execution (`webdriver/specs/off-host-exec.e2e.js`) runs on the **mock** app instead: the
 `__aiOffHostProbe` seam resolves a sandbox target and round-trips a file through the container-routed
-workspace, proving the real execution selector works inside the WebKitGTK realm. It has no dedicated script —
-run it with `yarn test:e2e:tauri --spec webdriver/specs/off-host-exec.e2e.js`.
+workspace, proving the real execution selector works inside the WebKitGTK realm:
+`yarn test:e2e:tauri --spec webdriver/specs/off-host-exec.e2e.js`.
 
 ## AI subsystem
 
@@ -124,12 +129,13 @@ frame still push it through the DEV-only `window.__cdCodingAgentStore` seam. Sta
 shell, then:
 
 ```bash
-yarn test:e2e:tauri:pi:extension-ui     # T1 — native dialogs, chrome, widgets       (5)
-yarn test:e2e:tauri:pi:cards            # T2 — tool results as typed cards           (12)
-yarn test:e2e:tauri:pi:surfaces         # T3 — pi components as ANSI surfaces        (10)
-yarn test:e2e:tauri:pi:plugins          # plugin install / enable / update / remove  (8)
-yarn test:e2e:tauri:pi:container-tools  # the container toolset over a driven bridge (9)
-yarn test:e2e:ai                        # the assistant flows, against the scripted session
+yarn test:e2e:tauri --spec webdriver/specs/extension-ui.e2e.js        # T1 — native dialogs, chrome, widgets       (5)
+yarn test:e2e:tauri --spec webdriver/specs/pi-tool-cards.e2e.js       # T2 — tool results as typed cards           (12)
+yarn test:e2e:tauri --spec webdriver/specs/pi-surfaces.e2e.js         # T3 — pi components as ANSI surfaces        (10)
+yarn test:e2e:tauri --spec webdriver/specs/pi-plugins.e2e.js          # plugin install / enable / update / remove  (8)
+yarn test:e2e:tauri --spec webdriver/specs/pi-container-tools.e2e.js  # the container toolset over a driven bridge (9)
+yarn test:e2e:tauri --spec webdriver/specs/pi-start-drawer.e2e.js     # the session-start drawer                   (6)
+yarn test:e2e:tauri --spec webdriver/specs/ai-flows.e2e.js            # the assistant flows, scripted session
 ```
 
 The **AI flows** ([`support/e2e/ai/flows.mjs`](../support/e2e/ai/flows.mjs)) drive the running app through a
@@ -162,7 +168,7 @@ under test.
 ```bash
 CD_LIVE_ENGINE=docker \
 CONTAINER_DESKTOP_E2E_APP=<repo>/src-tauri/target/debug/container-desktop \
-  yarn test:e2e:tauri:pi:container:live   # a real model drives the container toolset end to end
+CONTAINER_DESKTOP_MOCK= yarn test:e2e:tauri --spec webdriver/specs/pi-container-live.e2e.js
 ```
 
 It creates its own throwaway container so the destructive half is proven without touching anything of yours,

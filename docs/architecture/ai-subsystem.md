@@ -420,7 +420,7 @@ probe with the short name. **An image built for one engine does not exist for th
   `pi-surfaces` (T3) · `pi-plugins` (management) · `pi-container-tools` (the toolset over a driven bridge).
 - **Real containers, no app** — `support/pi-plugins-probe.mjs` and `support/pi-bridge-probe.mjs` run the built
   image directly.
-- **Real model, real engine** — `yarn test:e2e:tauri:pi:container:live` drives a non-mock app and a real
+- **Real model, real engine** — `yarn test:e2e:tauri --spec webdriver/specs/pi-container-live.e2e.js` drives a non-mock app and a real
   OpenRouter model through the container toolset, creating and removing its own throwaway container.
 
 See [`../testing.md`](../testing.md) for how to run each of these.
