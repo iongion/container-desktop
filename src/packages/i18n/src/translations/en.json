@@ -1679,5 +1679,6 @@
   "Allow egress": "Allow egress",
   "Start the session": "Start the session",
   "Complete the form to start a session": "Complete the form to start a session",
-  "Image {{tag}} — builds on first use.": "Image {{tag}} — builds on first use."
+  "Image {{tag}} — builds on first use.": "Image {{tag}} — builds on first use.",
+  "The assistant did not receive this project's rules and memories": "The assistant did not receive this project's rules and memories"
 }

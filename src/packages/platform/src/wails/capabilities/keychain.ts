@@ -21,9 +21,12 @@ export async function createWailsKeychain(invoke: WailsInvoke): Promise<IKeychai
 
     hasKey: (provider) => invoke<boolean>("keychain_has", { account: provider }),
 
-    async getKey(provider) {
-      const key = await invoke<string | null>("keychain_get", { account: provider });
-      return key ?? undefined;
+    async getKey() {
+      // The provider key never enters this realm: Go resolves it where it is needed — the native provider
+      // transport, and the gateway env file it writes 0600 — and the backing command is no longer registered.
+      // Tauri has always refused this; a web view that could read a cloud key on one shell and not the other was
+      // one shell's security model, not the app's.
+      throw new Error("AI: reading the provider key is not available in the web view");
     },
 
     async setKey(provider, plaintext, opts) {

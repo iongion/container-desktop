@@ -28,6 +28,12 @@ function sourceIdentity(source: AssistantCommandSource): string {
       return `${source.kind}:${source.workspaceId}:${source.fingerprint}`;
     case "plugin-skill":
       return `${source.kind}:${source.pluginId}:${source.fingerprint}`;
+    // pi's own commands have no content to fingerprint: what a queued `/compact` means cannot change under it the
+    // way a rewritten skill file can.
+    case "pi-builtin":
+      return source.kind;
+    case "pi-plugin":
+      return `${source.kind}:${source.pluginId}`;
     default:
       return `${source.kind}:${source.fingerprint}`;
   }

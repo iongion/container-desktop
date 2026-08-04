@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The assistant now actually receives your Project Rules and Memory — it used to confirm them in the UI and send the model nothing
+- Everything the app does on the agent's behalf acts on the folder the session mounted, not the one named in Settings: workspace changes, project rules and memory, and project skills
+- Public web search works for the assistant, or says why not — the setting used to promise something the session could not do
+- The Context and Usage panels show real numbers: tokens, cost, the model's budget and the exact tools the model was offered
+- pi's own slash commands are offered under pi's own names; the app no longer answers `/compact`, `/new`, `/session` or `/resume` with something adjacent of its own
+- A plugin's own commands appear in the palette — every one of them was silently dropped before it got there
+- Diagnostics answer the question that matters: whether the SESSION can reach the model, through its gateway, and not only whether this app can
+- A turn that has read your project's rules, an untrusted skill or a public web page no longer honours a remembered approval
+- The Wails backend no longer lets the web view read a provider key, which Tauri has always refused
+- A command a container image is too old to know now fails immediately with the reason, instead of hanging for thirty seconds
+
 - Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
 - A local model server session starts again — asking for a key a keyless provider never had used to stop it
 - The assistant shows that it is working from the moment you send, not only once the answer starts arriving
@@ -20,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- pi's own slash commands, all of them, under pi's own names — the ones this architecture cannot honour are listed with the reason rather than hidden
+- `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog` and `/reload` run against the session itself
+- The assistant reports what it has spent and what it is sending the model, after every turn
 - One Assistant: the full screen and the quake console are the same conversation, with the same transcript, cards and composer — the separate Coding Agent screen is gone
 - Start a session from wherever you are — the console offers it too, instead of a composer that leads nowhere
 - The AI screens are reachable again, from a menu on the header's AI button
@@ -99,6 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A session is one conversation: the thread list, rename, delete, branch and compaction drawers are gone, replaced by pi's own `/resume`, `/name`, `/fork`, `/tree` and `/compact`
 - The left sidebar now starts collapsed, giving screens their full width until you expand it
 - Eleven unused libraries are gone from the app, including the retired multi-agent engine — a smaller install and a faster build
 - Container and pod lists no longer refetch on every health-check probe — only real lifecycle events and health-status changes trigger a refresh

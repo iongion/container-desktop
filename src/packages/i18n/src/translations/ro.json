@@ -1679,5 +1679,6 @@
   "Allow egress": "Permite ieșirea în rețea",
   "Start the session": "Pornește sesiunea",
   "Complete the form to start a session": "Completează formularul pentru a porni o sesiune",
-  "Image {{tag}} — builds on first use.": "Imaginea {{tag}} — se construiește la prima utilizare."
+  "Image {{tag}} — builds on first use.": "Imaginea {{tag}} — se construiește la prima utilizare.",
+  "The assistant did not receive this project's rules and memories": "Asistentul nu a primit regulile și memoriile acestui proiect"
 }

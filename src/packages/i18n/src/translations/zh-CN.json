@@ -1679,5 +1679,6 @@
   "Allow egress": "允许出站网络访问",
   "Start the session": "启动该会话",
   "Complete the form to start a session": "填写完表单即可启动会话",
-  "Image {{tag}} — builds on first use.": "镜像 {{tag}} — 首次使用时构建。"
+  "Image {{tag}} — builds on first use.": "镜像 {{tag}} — 首次使用时构建。",
+  "The assistant did not receive this project's rules and memories": "助手未收到此项目的规则和记忆"
 }

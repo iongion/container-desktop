@@ -2,7 +2,10 @@
 // assistant UI — markdown, tool cards, approvals, thinking — render pi output with no component changes:
 // the vocabulary stays the app's, only the producer changes from the OMA engine to the pi bridge.
 
+import type { EffectiveContextSource } from "@/ai-system/core/context";
+import type { AIPermissionMode } from "@/ai-system/core/permissions";
 import { piApprovalSummary } from "@/ai-system/core/piApprovals";
+import { toEffectiveContext, toThreadUsage } from "@/ai-system/core/piContextReport";
 import type { ThreadView } from "@/ai-system/core/threadEvents";
 import { classifyHostRequest } from "@/ai-system/core/uiRequests";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
@@ -38,11 +41,21 @@ function withTool(view: ThreadView, toolCallId: string, patch: (item: ToolItem) 
 }
 
 // `session` carries what the transcript cannot read off the event: the connection the asking session runs on, so an
-// approval card can name where a container mutation lands even when the agent left it to the app to decide.
+// approval card can name where a container mutation lands even when the agent left it to the app to decide, plus the
+// app-side facts a usage or context report needs — which configured provider this is, the permission mode in force,
+// and the project sources the app itself put into the prompt.
+export interface PiThreadViewSession {
+  connectionId?: string;
+  providerId?: string;
+  permissionMode?: AIPermissionMode;
+  contextSources?: readonly EffectiveContextSource[];
+  now?: () => number;
+}
+
 export function projectPiThreadView(
   view: ThreadView,
   event: PiThreadViewEvent,
-  session?: { connectionId?: string },
+  session?: PiThreadViewSession,
 ): ThreadView {
   const next = { ...view, lastSeq: view.lastSeq + 1 };
 
@@ -206,6 +219,27 @@ export function projectPiThreadView(
 
     case "idle":
       return { ...next, phase: "idle", streamingAssistant: undefined };
+
+    // Neither report is transcript content: they replace what the usage and context panels show. `lastSeq` still
+    // moves, because a subscriber watching it has something new to render.
+    case "usage":
+      return { ...next, usage: toThreadUsage(event.usage) };
+
+    case "request_context":
+      return {
+        ...next,
+        context: toEffectiveContext(
+          event.context,
+          {
+            // Absent means the caller did not say — which is true of the live specs, and of a session started
+            // before a provider was recorded. The panel shows the model either way.
+            providerId: session?.providerId ?? "unknown",
+            permissionMode: session?.permissionMode ?? "ask",
+            ...(session?.contextSources ? { sources: session.contextSources } : {}),
+          },
+          session?.now?.() ?? Date.now(),
+        ),
+      };
 
     case "host_request": {
       // Only the approval gate belongs in the transcript. Dialogs and chrome are session UI the store holds

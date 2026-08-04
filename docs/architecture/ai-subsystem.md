@@ -448,6 +448,22 @@ probe with the short name. **An image built for one engine does not exist for th
 
 See [`../testing.md`](../testing.md) for how to run each of these.
 
+## Who produces each surface
+
+Every surface either has a producer on the pi path or is refused with a reason. Nothing is offered, accepted and
+then failed from inside a store.
+
+| Surface | Producer |
+| ------- | -------- |
+| Transcript, tool cards, approvals | the session's bridge events, projected by `piThreadView` |
+| Project Rules + Memory (what the model receives) | the app composes the pack and sends `set_system_context`; the container appends it per turn via `before_agent_start` |
+| Workspace changes, project rules discovery, project skills | host-side workspace access, bound to the RUNNING session's mounted folder (`sessionWorkspace`) |
+| Public web search | the app performs it (address-pinned fetch, user's setting enforced in the broker); the container registers the tool |
+| Context panel · Usage panel | the session's `request_context` and `usage` reports, plus the app's own policy (provider id, permission mode, tool gating, project sources) |
+| Slash commands | the app's own catalogue for what the GUI performs; the session's `resources_list` for pi's own commands and its plugins' — under pi's names, with a reason on the ones this architecture cannot honour |
+| Diagnostics | two independent answers: the app's own provider probe, and the session's own through the gateway |
+| Plugins screen | the session's plugin service over the bridge |
+
 ## Source map
 
 | Path | Role |
@@ -456,7 +472,9 @@ See [`../testing.md`](../testing.md) for how to run each of these.
 | `pi-bridge/src/{codec,image}.ts` | frame encode/decode; the agent image tag |
 | `pi-agent-host/src/{main,server}.ts` | the container entry (agent or gateway) and the bridge connection |
 | `pi-agent-host/src/session.ts` | the pi session — provider, extensions, TUI, surfaces, resources |
-| `pi-agent-host/src/{permissionGate,containerTools,containerToolCatalogue}.ts` | the three inline extensions' substance |
+| `pi-agent-host/src/{permissionGate,containerTools,containerToolCatalogue}.ts` | the inline extensions' substance |
+| `pi-agent-host/src/{systemContext,webSearchTool}.ts` | the app's project prose as system prompt; the app-performed web search |
+| `pi-agent-host/src/{piCommands,reports,providerCheck}.ts` | pi's own commands; the usage/context reports; the through-the-gateway probe |
 | `pi-agent-host/src/{hostRpc,events}.ts` | reverse-call correlation with fallbacks; pi event → bridge event |
 | `pi-agent-host/src/{guiTui,virtualTerminal,surfaces,toolSurfaces,uiContext,piTheme}.ts` | T1 + T3: the extension UI context and ANSI rendering |
 | `pi-agent-host/src/{plugins,resources,gateway}.ts` | package management, contributed resources, the credential proxy |
@@ -464,6 +482,9 @@ See [`../testing.md`](../testing.md) for how to run each of these.
 | `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
 | `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |
 | `ai-system/core/{piThreadView,piToolCards,piApprovals,piAIState,uiRequests,engineOpDispatch}.ts` | pure projection, card resolution, policy, routing, dispatch |
+| `ai-system/core/piContextReport.ts` | the session's reports → the context and usage panels' shapes |
+| `ai-system/adapters/sessionWorkspace.ts` | which folder host-side workspace access acts on: the session's, not Settings' |
+| `ai-system/ui/core/commands/piSessionCommands.ts` | pi's own commands and its plugins' as palette entries, under pi's names |
 | `ai-system/core/{permissions,commandFloor}.ts` | modes, scoped rule/key construction, `resolveToolAction`; the floor (host-side only) |
 | `ai-system/core/{channels,schemas}.ts` | the typed invoke/push map and its authoritative Zod schemas |
 | `ai-system/core/{providers,redact,limits,settings,toolNames}.ts` | provider resolution, redaction, ceilings, settings, tool-name unions |
@@ -471,9 +492,9 @@ See [`../testing.md`](../testing.md) for how to run each of these.
 | `ai-system/adapters/*FileStore.ts`, `permissionsStoreCore.ts` | private temp-file / atomic-rename stores |
 | `ai-system/host/{createAISystem,broker,aiClientBridge}.ts` | composition root, router, the one `window.AI` client |
 | `ai-system/host/{skillHost,projectContextHost,modelDiscoveryHost,diagnosticsHost,knowledgeBank}.ts` | the live sub-hosts |
-| `ai-system/host/{threadHost,threadRepository,toolArtifactRepository}.ts` | the orphaned thread path (no engine injected) |
+| `ai-system/host/{threadHost,threadRepository,toolArtifactRepository}.ts` | the orphaned thread path — no engine injected, and since the client that called it was deleted, no caller either |
 | `web-app/stores/{codingAgent,codingAgentSurfaces,pluginStore}.ts` | the session, its ANSI surfaces, the plugin table |
-| `web-app/stores/useAIStore.ts` | pi session → the Assistant UI's `AIState` shape |
+| `web-app/stores/{useAIStore,codingAgentSystemContext}.ts` | pi session → the Assistant UI's state; the project prose the session is given |
 | `web-app/screens/AI/{AssistantScreen,AssistantActionsMenu,ScreenHeader,Navigation}.tsx` | the surface, its actions and the tab bar |
 | `web-app/screens/AI/Plugins/` | the Plugins sub-screen |
 | `web-app/components/ai/` | transcript, composer chrome, dialogs, ANSI surfaces, drawers, the card registry |

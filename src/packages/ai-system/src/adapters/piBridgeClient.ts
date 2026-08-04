@@ -6,8 +6,10 @@ import {
   type BridgeEvent,
   type ContributedResources,
   PI_BRIDGE_PROTOCOL_VERSION,
+  type PiCommandResult,
   type PluginListPayload,
   type PluginScope,
+  type SessionProviderCheck,
 } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 
@@ -41,6 +43,9 @@ export interface PiBridgeClient {
   surfaceResize(surfaceId: string, columns: number): Promise<void>;
   // The app's `--app-*` colours, so the container can derive a pi theme that matches the running app.
   setTheme(palette: Partial<AppThemePalette>): Promise<void>;
+  // The project's rules and memories, as system prose for the turns that follow. A request rather than
+  // fire-and-forget: an agent that silently never received them is the defect this exists to close.
+  setSystemContext(text: string): Promise<void>;
   // Plugin management. Unlike the fire-and-forget commands above these are real requests: the caller needs
   // the answer, or needs to know an install failed and why.
   listPlugins(): Promise<PluginListPayload>;
@@ -50,6 +55,12 @@ export interface PiBridgeClient {
   checkPluginUpdates(): Promise<string[]>;
   setPluginEnabled(source: string, enabled: boolean, scope: PluginScope): Promise<void>;
   listResources(): Promise<ContributedResources>;
+  // Run one of pi's own commands, under pi's own name. Answers with a value: "not available in this session, and
+  // why" is what the palette shows, not an exception.
+  runCommand(name: string, args: string): Promise<PiCommandResult>;
+  // Ask the SESSION whether it can reach the model. The app's own provider check answers for the app's realm, which
+  // is not the one a turn runs in.
+  checkProvider(): Promise<SessionProviderCheck>;
   reloadSession(): Promise<void>;
   // Read back a truncated tool's full output. The path comes from the tool result's `details.fullOutputPath`
   // and names a file inside the agent container, which only the host can open.
@@ -207,6 +218,9 @@ export function createPiBridgeClient(options: {
     async setTheme(palette: Partial<AppThemePalette>): Promise<void> {
       socket?.send(encodeCommand({ id: randomUUID(), type: "set_theme", palette }));
     },
+    setSystemContext(text: string): Promise<void> {
+      return request({ id: randomUUID(), type: "set_system_context", text }, READ_TIMEOUT_MS);
+    },
     listPlugins(): Promise<PluginListPayload> {
       return request({ id: randomUUID(), type: "plugins_list" }, READ_TIMEOUT_MS);
     },
@@ -231,6 +245,13 @@ export function createPiBridgeClient(options: {
     },
     listResources(): Promise<ContributedResources> {
       return request({ id: randomUUID(), type: "resources_list" }, READ_TIMEOUT_MS);
+    },
+    checkProvider(): Promise<SessionProviderCheck> {
+      return request({ id: randomUUID(), type: "check_provider" }, READ_TIMEOUT_MS);
+    },
+    runCommand(name: string, args: string): Promise<PiCommandResult> {
+      // A compaction summarises the whole conversation with the model, so this waits like a mutation, not a read.
+      return request({ id: randomUUID(), type: "run_command", name, args }, MUTATION_TIMEOUT_MS);
     },
     reloadSession(): Promise<void> {
       return request({ id: randomUUID(), type: "session_reload" }, MUTATION_TIMEOUT_MS);

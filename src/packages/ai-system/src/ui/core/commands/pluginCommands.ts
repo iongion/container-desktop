@@ -1,10 +1,9 @@
-// The slash commands a pi plugin contributes: extension commands, skills and prompt templates, as palette
-// entries alongside the built-ins and the app's own skills.
+// The SKILLS a pi plugin contributes, as palette entries alongside the app's own.
 //
-// They are `kind: "skill"` with a `plugin-skill` source, which is what tells the executor to send the text to
-// pi instead of resolving it against the app's skill host. pi expands its own skills and templates when the
-// prompt arrives, so nothing is expanded here.
-import type { ContributedResource, ContributedResources } from "@/pi-bridge/protocol";
+// Only skills. A plugin's commands and prompt templates own their names and are pi's, not skill files — they are
+// built in `piSessionCommands.ts` as `kind: "pi"`. Building them as skills here is what made the registry drop
+// every one of them: a skill may only answer to `/skill:<name>`.
+import type { ContributedResources } from "@/pi-bridge/protocol";
 
 import type { AssistantCommandText, AssistantSkillCommandDefinition } from "./commandTypes";
 
@@ -18,46 +17,30 @@ function literal(value: string): AssistantCommandText {
   return { kind: "literal", value };
 }
 
-interface PluginCommandGroup {
-  resources: ContributedResource[];
-  category: string;
-  prefix: string;
-  kind: string;
-}
-
-function definition(resource: ContributedResource, group: PluginCommandGroup): AssistantSkillCommandDefinition {
-  const pluginId = resource.source ?? "local";
-  const name = `${group.prefix}${resource.name}`;
-  return {
-    id: `plugin:${group.kind}:${pluginId}:${resource.name}`,
-    kind: "skill",
-    skillId: name,
-    path: `/${name}`,
-    aliases: [],
-    category: { kind: "i18n", key: group.category },
-    // A plugin that documents nothing still shows where the command came from, which is the more useful half.
-    description: literal(resource.description ?? pluginId),
-    hiddenSearchTerms: [resource.name, pluginId, group.kind],
-    source: { kind: "plugin-skill", pluginId, fingerprint: `${pluginId}:${resource.name}` },
-    // The text goes to pi as a prompt, so it waits for an idle thread like any other queued invocation.
-    bypassTier: "queued",
-    availabilityId: "thread-idle",
-    confirmation: "none",
-    arguments: { kind: "text", required: false },
-    surfaces: SURFACES,
-  };
-}
-
-export function pluginCommandsFromResources(resources: ContributedResources): AssistantSkillCommandDefinition[] {
-  const groups: PluginCommandGroup[] = [
-    { resources: resources.commands, category: "Plugin commands", prefix: "", kind: "command" },
-    // pi only invokes a skill explicitly through `/skill:<name>`.
-    { resources: resources.skills, category: "Plugin skills", prefix: "skill:", kind: "skill" },
-    { resources: resources.prompts, category: "Plugin prompts", prefix: "", kind: "prompt" },
-  ];
-  return groups.flatMap((group) =>
-    group.resources
-      .filter((resource) => COMMAND_NAME.test(resource.name))
-      .map((resource) => definition(resource, group)),
-  );
+export function pluginSkillCommands(resources: ContributedResources): AssistantSkillCommandDefinition[] {
+  return resources.skills
+    .filter((resource) => COMMAND_NAME.test(resource.name))
+    .map((resource) => {
+      const pluginId = resource.source ?? "local";
+      // pi only invokes a skill explicitly, through `/skill:<name>`.
+      const name = `skill:${resource.name}`;
+      return {
+        id: `plugin:skill:${pluginId}:${resource.name}`,
+        kind: "skill" as const,
+        skillId: name,
+        path: `/${name}` as const,
+        aliases: [],
+        category: { kind: "i18n" as const, key: "Plugin skills" },
+        // A plugin that documents nothing still shows where the skill came from, which is the more useful half.
+        description: literal(resource.description ?? pluginId),
+        hiddenSearchTerms: [resource.name, pluginId, "skill"],
+        source: { kind: "plugin-skill" as const, pluginId, fingerprint: `${pluginId}:${resource.name}` },
+        // The text goes to pi as a prompt, so it waits for an idle thread like any other queued invocation.
+        bypassTier: "queued" as const,
+        availabilityId: "thread-idle" as const,
+        confirmation: "none" as const,
+        arguments: { kind: "text" as const, required: false },
+        surfaces: SURFACES,
+      };
+    });
 }

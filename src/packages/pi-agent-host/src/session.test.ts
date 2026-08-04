@@ -4,13 +4,17 @@ import { join } from "node:path";
 import type { ExtensionContext, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
-import { CONTAINER_TOOL_NAMES } from "@/ai-system/core/toolNames";
+import { CONTAINER_TOOL_NAMES, WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import { createPiSession, parseModelApi } from "@/pi-agent-host/session";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 
 // The real loader reads these out of a prompt resource that only esbuild inlines, so the session takes them as an
 // argument and the suite supplies its own.
-const CONTAINER_TOOL_DESCRIPTIONS = Object.fromEntries(CONTAINER_TOOL_NAMES.map((name) => [name, `does ${name}`]));
+const CONTAINER_TOOL_DESCRIPTIONS = {
+  ...Object.fromEntries(CONTAINER_TOOL_NAMES.map((name) => [name, `does ${name}`])),
+  // The app performs this one, so it travels in the same descriptions record as the container toolset.
+  [WEB_SEARCH_TOOL_NAME]: "searches the public web",
+};
 
 // The smallest real extension: one session_start handler, which is where a plugin first gets a ui context.
 const onSessionStart = (name: string, run: (ctx: ExtensionContext) => void): InlineExtension => ({
@@ -43,7 +47,12 @@ const assistantMessage = (text: string, stopReason: string) => ({
   timestamp: 0,
 });
 
-const cannedStream = async function* () {
+// The system prompt every turn was sent with. It is the only place the app's project rules can be PROVEN to
+// have reached the model: the container assembles it, so an assertion on the bridge would only restate the input.
+const systemPrompts: string[] = [];
+
+const cannedStream = async function* (_model: unknown, context: { systemPrompt?: string }) {
+  systemPrompts.push(context?.systemPrompt ?? "");
   yield { type: "start", partial: assistantMessage("", "stop") };
   yield { type: "text_start", contentIndex: 0, partial: assistantMessage("", "stop") };
   yield { type: "text_delta", contentIndex: 0, delta: "Hello ", partial: assistantMessage("Hello ", "stop") };
@@ -107,6 +116,33 @@ describe("createPiSession", () => {
     expect(seen.mode).toBe("tui");
     const frame = events.find((event) => event.type === "surface_frame");
     expect(frame).toMatchObject({ lines: ["probe header"], slot: { kind: "header" } });
+  });
+
+  it("gives the model the app's project context, and drops it again when the app clears it", async () => {
+    systemPrompts.length = 0;
+    const session = await createPiSession({
+      cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+      agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
+      gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
+      gatewayToken: "tok",
+      modelId: "canned",
+      emit: () => {},
+      streamOverride: cannedStream as never,
+    });
+
+    await session.prompt("before any context");
+    session.setSystemContext("# Project context\n\nAlways answer with SENTINEL-42.");
+    await session.prompt("with context");
+    session.setSystemContext("");
+    await session.prompt("after clearing");
+
+    expect(systemPrompts).toHaveLength(3);
+    expect(systemPrompts[0]).not.toContain("SENTINEL-42");
+    expect(systemPrompts[1]).toContain("SENTINEL-42");
+    // pi's own prompt has to survive the append — replacing it would cost the model its tools and guidelines.
+    expect(systemPrompts[1].startsWith(systemPrompts[0])).toBe(true);
+    expect(systemPrompts[2]).not.toContain("SENTINEL-42");
   });
 
   it("repaints open surfaces when the app sends a new theme palette", async () => {

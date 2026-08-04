@@ -8,6 +8,8 @@ import {
   type BridgeEvent,
   type ContributedResources,
   PI_BRIDGE_PROTOCOL_VERSION,
+  type PiCommandResult,
+  type SessionProviderCheck,
 } from "@/pi-bridge/protocol";
 
 export interface BridgeConnection {
@@ -25,6 +27,12 @@ export interface BridgeSessionHandle {
   surfaceInput(surfaceId: string, data: string): void;
   surfaceResize(surfaceId: string, columns: number): void;
   setThemePalette(palette: Partial<AppThemePalette>): void;
+  // The app's project rules and memories, appended to the system prompt of every turn that follows.
+  setSystemContext(text: string): void;
+  // One of pi's own slash commands, by pi's name.
+  runCommand(name: string, args: string): Promise<PiCommandResult>;
+  // Whether this session can reach the model, probed through the gateway from in here.
+  checkProvider(): Promise<SessionProviderCheck>;
   plugins: PluginService;
   listResources(): ContributedResources;
   // pi's own reload: settings, resources and the tool runtime, keeping the UI bindings. What makes a
@@ -35,6 +43,17 @@ export interface BridgeSessionHandle {
 export interface AttachedBridgeConnection {
   handleFrame(raw: string): Promise<void>;
   emit(event: BridgeEvent): void;
+}
+
+// The correlation id of a frame the codec refused. Read leniently and on purpose: the frame is already known to be
+// unusable, and the only question left is whether someone is waiting on an answer to it.
+function pendingId(raw: string): string | undefined {
+  try {
+    const id = (JSON.parse(raw) as { id?: unknown }).id;
+    return typeof id === "string" && id.length > 0 ? id : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function attachBridgeConnection(
@@ -105,6 +124,13 @@ export function attachBridgeConnection(
       case "set_theme":
         session.setThemePalette(command.palette);
         return;
+      case "set_system_context":
+        session.setSystemContext(command.text);
+        return;
+      case "run_command":
+        return session.runCommand(command.name, command.args);
+      case "check_provider":
+        return session.checkProvider();
       case "plugins_list":
         return session.plugins.list();
       case "plugins_install":
@@ -140,7 +166,12 @@ export function attachBridgeConnection(
       try {
         command = decodeCommand(raw);
       } catch (error) {
-        connection.send(encodeEvent({ type: "error", message: (error as Error).message }));
+        const message = (error as Error).message;
+        connection.send(encodeEvent({ type: "error", message }));
+        // A command this host does not know — an app newer than its container image — must not leave the caller's
+        // request pending until its timeout, which reads as a hung session rather than a version mismatch.
+        const id = pendingId(raw);
+        if (id) respond(id, false, message);
         return;
       }
       if (command.type === "hello") {

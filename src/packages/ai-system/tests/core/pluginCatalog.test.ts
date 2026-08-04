@@ -70,8 +70,9 @@ describe("buildPluginRows", () => {
     commands: [{ name: "probe", source: "npm:@foo/bar" }],
     skills: [{ name: "search", source: "npm:@foo/bar" }],
     prompts: [{ name: "deploy", source: "npm:@foo/bar" }],
+    builtins: [],
   };
-  const noResources = { extensions: [], commands: [], skills: [], prompts: [] };
+  const noResources = { extensions: [], commands: [], skills: [], prompts: [], builtins: [] };
 
   it("builds a row per configured package with its contributions", () => {
     const rows = buildPluginRows({

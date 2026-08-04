@@ -204,6 +204,40 @@ describe("projectPiThreadView", () => {
     expect(view.phase).toBe("model");
   });
 
+  // The usage and context panels read these two fields and nothing else fills them: before this the drawer said
+  // "no tools offered to the model" for a session that had just used one.
+  it("puts the session's usage and request context where the panels read them, without touching the transcript", () => {
+    const view = project([
+      { type: "usage", usage: { requests: 2, inputTokens: 900, outputTokens: 120, costUsd: 0 } },
+      {
+        type: "request_context",
+        context: {
+          model: "qwen3-4b",
+          contextTokens: 1200,
+          contextWindow: 128000,
+          maxOutputTokens: 4096,
+          systemPromptChars: 800,
+          tools: [{ name: "listContainers", description: "list containers" }],
+          messages: { user: 1, assistant: 2, toolCalls: 1 },
+          compacted: false,
+        },
+      },
+    ]);
+    expect(view.usage).toMatchObject({ requests: 2, inputTokens: 900, outputTokens: 120 });
+    expect(view.context?.tools).toEqual([
+      {
+        name: "listContainers",
+        title: "listContainers",
+        description: "list containers",
+        group: "container",
+        gated: false,
+      },
+    ]);
+    expect(view.context?.totals.estimatedTokens).toBe(1200);
+    expect(view.timeline).toEqual([]);
+    expect(() => threadViewSchema.parse(view)).not.toThrow();
+  });
+
   it("ignores a settle for an approval it never saw", () => {
     const view = projectPiThreadView(emptyPiThreadView("t1"), {
       type: "approval_settled",

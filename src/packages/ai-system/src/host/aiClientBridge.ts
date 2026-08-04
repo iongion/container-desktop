@@ -91,6 +91,9 @@ export interface IAI {
     args?: Record<string, unknown>;
     defaultConnectionId?: string;
   }) => Promise<EngineOpResult>;
+  // One public-web query on the agent's behalf. Throws when the runtime cannot search or the user has web search
+  // turned off — the caller turns that into the reason the agent reads.
+  runWebSearch: (query: string) => Promise<{ text: string }>;
   listPermissions: () => Promise<PermissionsSnapshot>;
   addPermission: (list: PermissionsList, rule: PermissionRule) => Promise<PermissionsSnapshot>;
   removePermission: (list: PermissionsList, key: string) => Promise<PermissionsSnapshot>;
@@ -162,6 +165,7 @@ export function createAIClient(transport: AIClientTransport) {
       invoke(AI_CHANNELS.modelsList, { providerId, requestId }),
     cancelModelList: (requestId) => invoke(AI_CHANNELS.modelsCancel, { requestId }),
     runEngineOp: (request) => invoke(AI_CHANNELS.engineOp, request),
+    runWebSearch: (query) => invoke(AI_CHANNELS.webSearch, { query }),
     // The user-managed allow/reject record — managed from Settings → AI permissions.
     listPermissions: () => invoke(AI_CHANNELS.permissionsList),
     addPermission: (list, rule) => invoke(AI_CHANNELS.permissionsAdd, { list, rule }),

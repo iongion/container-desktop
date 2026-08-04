@@ -95,7 +95,6 @@ const COMMAND_TO_METHOD: Record<string, string> = {
   // KeychainService (Phase 3) / ShellService + TrayService (Phase 4).
   keychain_status: "main.KeychainService.Status",
   keychain_has: "main.KeychainService.Has",
-  keychain_get: "main.KeychainService.Get",
   keychain_set: "main.KeychainService.Set",
   keychain_clear: "main.KeychainService.Clear",
   keychain_write_secret_file: "main.KeychainService.WriteSecretFile",

@@ -93,12 +93,12 @@ describe("collectResources", () => {
     expect(resources.skills).toEqual([{ name: "bare" }]);
   });
 
-  it("returns empty arrays when the loader has nothing", () => {
-    expect(collectResources(emptyLoader as never)).toEqual({
-      extensions: [],
-      commands: [],
-      skills: [],
-      prompts: [],
-    });
+  it("returns empty arrays when the loader has nothing — except pi's own commands, which always exist", () => {
+    const resources = collectResources(emptyLoader as never);
+    expect(resources).toMatchObject({ extensions: [], commands: [], skills: [], prompts: [] });
+    // The palette showed only what plugins contributed, so everything a pi user already knows how to type looked
+    // like it did not exist. pi's own list travels with the contributed one.
+    expect(resources.builtins.map((builtin) => builtin.name)).toContain("compact");
+    expect(resources.builtins.every((builtin) => builtin.description.length > 0)).toBe(true);
   });
 });

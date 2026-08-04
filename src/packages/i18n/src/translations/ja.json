@@ -1679,5 +1679,6 @@
   "Allow egress": "外部ネットワークへの通信を許可",
   "Start the session": "セッションを開始する",
   "Complete the form to start a session": "セッションを開始するにはフォームを入力してください",
-  "Image {{tag}} — builds on first use.": "イメージ {{tag}} — 初回使用時にビルドされます。"
+  "Image {{tag}} — builds on first use.": "イメージ {{tag}} — 初回使用時にビルドされます。",
+  "The assistant did not receive this project's rules and memories": "アシスタントはこのプロジェクトのルールとメモリを受け取りませんでした"
 }

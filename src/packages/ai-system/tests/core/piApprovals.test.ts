@@ -15,6 +15,12 @@ describe("isPiToolGated", () => {
     expect(isPiToolGated("deploy_to_prod")).toBe(true);
   });
 
+  // Its gate is the user's own switch in Settings → AI, which is off until they turn it on, and the broker refuses
+  // the call while it is off. A card in front of every query would only ask again what that switch already answered.
+  it("leaves web search to the setting that governs it, not a card per query", () => {
+    expect(isPiToolGated("webSearch")).toBe(false);
+  });
+
   // The container toolset arrives over the bridge as ordinary tool calls, so without this the gate would put an
   // approval card in front of every `listContainers` — and none in front of `removeContainer`, since the pi
   // built-in list knows neither name.

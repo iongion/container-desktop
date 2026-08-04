@@ -1679,5 +1679,6 @@
   "Allow egress": "Permitir salida a la red",
   "Start the session": "Iniciar la sesión",
   "Complete the form to start a session": "Completa el formulario para iniciar una sesión",
-  "Image {{tag}} — builds on first use.": "Imagen {{tag}}: se construye en el primer uso."
+  "Image {{tag}} — builds on first use.": "Imagen {{tag}}: se construye en el primer uso.",
+  "The assistant did not receive this project's rules and memories": "El asistente no recibió las reglas ni las memorias de este proyecto"
 }

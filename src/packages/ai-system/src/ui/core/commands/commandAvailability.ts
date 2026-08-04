@@ -34,6 +34,11 @@ function semanticUnavailableReason(
   context: AssistantCommandExecutionContext,
 ): string | undefined {
   if (!command.surfaces.includes(context.surface)) return "Command is not available here";
+  // pi's own command, offered so a user who knows pi can find it, with the reason this architecture cannot honour
+  // it. Refused HERE rather than accepted and then failed from inside a store.
+  if (command.kind === "pi" && command.venue === "unavailable") {
+    return command.unavailableReason ?? "This session cannot run that pi command";
+  }
   if (command.capabilityId && context.capabilities && !context.capabilities.has(command.capabilityId)) {
     return CAPABILITY_REASON[command.capabilityId];
   }

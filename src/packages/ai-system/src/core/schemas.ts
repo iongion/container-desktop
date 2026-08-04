@@ -409,6 +409,16 @@ const engineOpResult = z.union([
   z.object({ ok: z.literal(false), error: z.string().max(MAX_ENGINE_OP_ERROR_CHARS) }).strict(),
 ]);
 
+// One public-web query. Bounded because it is model-authored text on its way to a URL; the adapter redacts it
+// before it leaves the device and rejects an empty one.
+const webSearchRequest = z.object({ query: z.string().trim().min(1).max(MAX_TITLE_CHARS) }).strict();
+
+// The page text the agent reads. Bounded ABOVE the adapter's own 96 KB download cap rather than at the
+// model-facing text limit: a legitimate result must not be rejected here, and pi already truncates long tool
+// output inside the container — writing the full text to a file the card can read back — so the model-facing
+// decision belongs there and not in this channel.
+const webSearchResult = z.object({ text: z.string().max(128 * 1024) }).strict();
+
 export const invokeSchemas = {
   [AI_CHANNELS.status]: empty,
   [AI_CHANNELS.diagnostics]: z.object({ providerId: optionalProvider }).strict(),
@@ -503,6 +513,7 @@ export const invokeSchemas = {
   [AI_CHANNELS.modelsList]: z.object({ providerId: optionalProvider, requestId: id }).strict(),
   [AI_CHANNELS.modelsCancel]: z.object({ requestId: id }).strict(),
   [AI_CHANNELS.engineOp]: engineOpRequest,
+  [AI_CHANNELS.webSearch]: webSearchRequest,
   [AI_CHANNELS.permissionsList]: empty,
   [AI_CHANNELS.permissionsAdd]: z.object({ list: permissionsList, rule: permissionRule }).strict(),
   [AI_CHANNELS.permissionsRemove]: z
@@ -1085,6 +1096,7 @@ export const responseSchemas = {
     .strict(),
   [AI_CHANNELS.modelsCancel]: ok,
   [AI_CHANNELS.engineOp]: engineOpResult,
+  [AI_CHANNELS.webSearch]: webSearchResult,
   [AI_CHANNELS.permissionsList]: permissionsSnapshot,
   [AI_CHANNELS.permissionsAdd]: permissionsSnapshot,
   [AI_CHANNELS.permissionsRemove]: permissionsSnapshot,

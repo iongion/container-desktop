@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { PI_SESSION_CAPABILITIES } from "@/ai-system/core/piAIState";
 import { planCommandExecution } from "@/ai-system/ui/core/commands/commandAvailability";
 import { BUILTIN_ASSISTANT_COMMANDS } from "@/ai-system/ui/core/commands/commandCatalog";
 
@@ -12,7 +11,7 @@ const command = (id: string) => {
 describe("planCommandExecution", () => {
   it("executes immediate UI while an Agent Session is active or the host is connecting", () => {
     expect(
-      planCommandExecution(command("thread.list"), {
+      planCommandExecution(command("context.usage"), {
         surface: "assistant",
         hostStatus: "ready",
         hasThread: true,
@@ -31,7 +30,7 @@ describe("planCommandExecution", () => {
 
   it("queues state-changing commands while an Agent Session is active", () => {
     expect(
-      planCommandExecution(command("thread.new"), {
+      planCommandExecution(command("session.new"), {
         surface: "assistant",
         hostStatus: "ready",
         hasThread: true,
@@ -42,7 +41,7 @@ describe("planCommandExecution", () => {
 
   it("executes an idle command even when no Thread exists", () => {
     expect(
-      planCommandExecution(command("thread.new"), {
+      planCommandExecution(command("session.new"), {
         surface: "assistant",
         hostStatus: "ready",
         hasThread: false,
@@ -53,7 +52,7 @@ describe("planCommandExecution", () => {
 
   it("reports semantic unavailability separately from scheduling", () => {
     expect(
-      planCommandExecution(command("thread.rename"), {
+      planCommandExecution(command("session.info"), {
         surface: "assistant",
         hostStatus: "ready",
         hasThread: false,
@@ -61,7 +60,7 @@ describe("planCommandExecution", () => {
       }),
     ).toEqual({ kind: "unavailable", reasonKey: "Start or select a Thread first" });
     expect(
-      planCommandExecution(command("thread.stop"), {
+      planCommandExecution(command("turn.stop"), {
         surface: "assistant",
         hostStatus: "ready",
         hasThread: true,
@@ -81,31 +80,25 @@ describe("planCommandExecution", () => {
       kind: "unavailable",
       reasonKey: "Wait for the active turn to finish",
     });
-    expect(planCommandExecution(command("thread.copy"), activeContext)).toEqual({ kind: "execute" });
+    expect(planCommandExecution(command("session.copy"), activeContext)).toEqual({ kind: "execute" });
   });
 
-  it("opens Thread compaction only for an idle Thread", () => {
+  // pi's own `/compact` is reported by the session, so the app declares nothing for it. What the app still owns is
+  // the model picker, which cannot change under a running turn.
+  it("keeps a configuration command to an idle turn", () => {
     expect(
-      planCommandExecution(command("thread.compact"), {
+      planCommandExecution(command("model.open"), {
         surface: "assistant",
         hostStatus: "ready",
         hasThread: true,
         threadPhase: "idle",
       }),
     ).toEqual({ kind: "execute" });
-    expect(
-      planCommandExecution(command("thread.compact"), {
-        surface: "assistant",
-        hostStatus: "ready",
-        hasThread: true,
-        threadPhase: "model",
-      }),
-    ).toEqual({ kind: "unavailable", reasonKey: "Wait for the active turn to finish" });
   });
 
   it("queues queued commands while the host connects and blocks normal commands after host failure", () => {
     expect(
-      planCommandExecution(command("thread.new"), {
+      planCommandExecution(command("session.new"), {
         surface: "assistant",
         hostStatus: "connecting",
         hasThread: false,
@@ -113,7 +106,7 @@ describe("planCommandExecution", () => {
       }),
     ).toEqual({ kind: "queue", reasonKey: "Wait for the Assistant to connect" });
     expect(
-      planCommandExecution(command("thread.new"), {
+      planCommandExecution(command("session.new"), {
         surface: "assistant",
         hostStatus: "error",
         hasThread: false,
@@ -123,58 +116,29 @@ describe("planCommandExecution", () => {
   });
 });
 
-// A session that cannot do a thing must SAY so before the command runs. The pi session is one conversation:
-// it has no thread list, cannot rewrite its own history, and takes its model and access at start — so those
-// commands used to be offered, accepted, and only then rejected from deep inside the store.
+// pi's own commands carry their own reason for being unavailable (see piSessionCommands.test.ts): the app's
+// catalogue no longer declares a capability, because the commands that needed one were its own thread vocabulary and
+// pi owns those concepts. The mechanism stays covered here, over a definition that declares one.
 describe("session capabilities", () => {
   const base = { surface: "assistant", hostStatus: "ready", hasThread: true, threadPhase: "idle" } as const;
 
-  it("refuses a command the session has no capability for, naming why", () => {
-    for (const [id, reason] of [
-      ["thread.new", "This session cannot start a new conversation"],
-      ["thread.rename", "This session is a single conversation"],
-      ["thread.branch", "This session cannot revisit its history"],
-      ["thread.compact", "This session cannot revisit its history"],
-      ["access.set", "The model and access are chosen when the session starts"],
-      ["reasoning.set", "The model and access are chosen when the session starts"],
-    ] as const) {
-      expect(planCommandExecution(command(id), { ...base, capabilities: new Set() })).toEqual({
-        kind: "unavailable",
-        reasonKey: reason,
-      });
-    }
-  });
-
-  it("executes those same commands where the session does carry the capability", () => {
-    const capabilities = new Set(["conversation-reset", "threads", "history", "configuration"] as const);
-    for (const id of ["thread.new", "thread.branch", "access.set"]) {
-      expect(planCommandExecution(command(id), { ...base, capabilities })).toEqual({ kind: "execute" });
-    }
-  });
-
-  // The set a pi session really publishes: it can start a FRESH conversation (a fresh session), but it still
-  // has no second conversation to list, switch to, rename or delete.
-  it("matches what a pi session can actually do", () => {
-    const capabilities = PI_SESSION_CAPABILITIES;
-    expect(planCommandExecution(command("thread.new"), { ...base, capabilities })).toEqual({ kind: "execute" });
-    expect(planCommandExecution(command("thread.rename"), { ...base, capabilities })).toEqual({
+  it("refuses a command whose capability the session lacks, naming why", () => {
+    const gated = { ...command("model.open"), capabilityId: "configuration" as const };
+    expect(planCommandExecution(gated, { ...base, capabilities: new Set([]) })).toEqual({
       kind: "unavailable",
-      reasonKey: "This session is a single conversation",
+      reasonKey: "The model and access are chosen when the session starts",
     });
   });
 
-  // Stopping a turn is not a capability the session can lack — there is always an abort.
-  it("leaves capability-free commands alone", () => {
-    expect(
-      planCommandExecution(command("thread.stop"), { ...base, threadPhase: "model", capabilities: new Set() }),
-    ).toEqual({
+  it("executes it where the session does carry the capability", () => {
+    const gated = { ...command("model.open"), capabilityId: "configuration" as const };
+    expect(planCommandExecution(gated, { ...base, capabilities: new Set(["configuration"]) })).toEqual({
       kind: "execute",
     });
-    expect(planCommandExecution(command("help"), { ...base, capabilities: new Set() })).toEqual({ kind: "execute" });
   });
 
-  // Omitting the set entirely must not silently hide half the palette for callers that never opted in.
-  it("treats an absent capability set as 'everything is available'", () => {
-    expect(planCommandExecution(command("thread.new"), base)).toEqual({ kind: "execute" });
+  // An unconstrained caller keeps the whole palette: absent means "not declared", not "nothing allowed".
+  it("leaves a caller that declared no capabilities unconstrained", () => {
+    expect(planCommandExecution(command("model.open"), base)).toEqual({ kind: "execute" });
   });
 });

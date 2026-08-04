@@ -9,11 +9,18 @@
 
 import type { AIPermissionMode, CachedVerdict, PermissionDecisionContext, ToolAction } from "./permissions";
 import { resolveToolAction } from "./permissions";
+import { WEB_SEARCH_TOOL_NAME } from "./toolNames";
 import { WORKER_TOOL_CATALOGUE } from "./workerTools";
 
-// pi's read-only built-ins. Everything else — the mutating built-ins, plugin tools, MCP tools — is gated, so a
-// tool nobody has classified yet is asked about rather than run silently.
-const PI_UNGATED_TOOLS = new Set<string>(["read", "grep", "find", "ls"]);
+// pi's read-only built-ins, plus the app's own web search. Everything else — the mutating built-ins, plugin tools,
+// MCP tools — is gated, so a tool nobody has classified yet is asked about rather than run silently.
+//
+// `webSearch` belongs here because it mutates nothing and because its gate already exists and is explicit: the
+// "enable public web search" switch in Settings → AI, off until the user turns it on, enforced by the broker on
+// every call. A card per query would ask a second time what that switch answered once — while the real protection,
+// that a turn which has read the public web can no longer ride a remembered allow, is the taint the app sets after
+// performing one.
+const PI_UNGATED_TOOLS = new Set<string>(["read", "grep", "find", "ls", WEB_SEARCH_TOOL_NAME]);
 
 // The container toolset reaches pi over the bridge, so its calls arrive here as ordinary tool names. Its
 // read/mutation split is taken from the catalogue the worker editor renders rather than restated, so a tool that

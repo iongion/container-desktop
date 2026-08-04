@@ -171,3 +171,9 @@
   gap: 8px;
   min-height: 160px;
 }
+
+.AssistantDiagnosticsDrawer .AssistantDiagnosticSessionDetail {
+  color: var(--app-text-muted);
+  font-size: 12px;
+  padding: 4px 0 0;
+}

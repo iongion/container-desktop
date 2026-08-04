@@ -250,6 +250,19 @@ describe("createPiBridgeClient", () => {
     expect(JSON.parse(sent.at(-1) as string)).toEqual({ id: expect.any(String), type: "plugins_update" });
   });
 
+  // A lost project context is the defect this carries: the agent would answer without the user's rules and
+  // nothing would say so. It is a request, not fire-and-forget, so a failure can be reported.
+  it("sends the project context as a request the caller can see fail", async () => {
+    const { socket, sent, client } = await connectedClient();
+    const published = client.setSystemContext("## rules\n\nbe terse");
+    expect(JSON.parse(sent.at(-1) as string)).toMatchObject({
+      type: "set_system_context",
+      text: "## rules\n\nbe terse",
+    });
+    socket.onmessage?.({ data: encodeEvent({ type: "response", id: lastId(sent), success: false, error: "gone" }) });
+    await expect(published).rejects.toThrow("gone");
+  });
+
   it("refuses a request before the bridge is connected", async () => {
     const client = createPiBridgeClient({
       url: "ws://127.0.0.1:1/",

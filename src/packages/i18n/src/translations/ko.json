@@ -1679,5 +1679,6 @@
   "Allow egress": "외부 네트워크 허용",
   "Start the session": "세션 시작하기",
   "Complete the form to start a session": "세션을 시작하려면 양식을 작성하세요",
-  "Image {{tag}} — builds on first use.": "이미지 {{tag}} — 처음 사용할 때 빌드됩니다."
+  "Image {{tag}} — builds on first use.": "이미지 {{tag}} — 처음 사용할 때 빌드됩니다.",
+  "The assistant did not receive this project's rules and memories": "어시스턴트가 이 프로젝트의 규칙과 메모리를 받지 못했습니다"
 }

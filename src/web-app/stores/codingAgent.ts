@@ -16,6 +16,7 @@ import {
   type HostResponsePayload,
   type PiBridgeClient,
 } from "@/ai-system/adapters/piBridgeClient";
+import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
 import {
   type AIPermissionMode,
   cachedVerdict,
@@ -24,20 +25,31 @@ import {
   toolRule,
 } from "@/ai-system/core/permissions";
 import { decidePiToolCall, piPermissionContext } from "@/ai-system/core/piApprovals";
-import { emptyPiThreadView, projectPiThreadView } from "@/ai-system/core/piThreadView";
+import { emptyPiThreadView, type PiThreadViewSession, projectPiThreadView } from "@/ai-system/core/piThreadView";
+import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import type { ProviderKind } from "@/ai-system/core/providers";
 import type { ThreadView } from "@/ai-system/core/threadEvents";
+import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
 import { isMockMode } from "@/container-client/mock/mode";
+import { t } from "@/i18n";
 import { createLogger } from "@/logger";
 import { agentImageTag } from "@/pi-bridge/image";
-import type { BridgeEvent, ContributedResources, EngineOpResult } from "@/pi-bridge/protocol";
+import type {
+  BridgeEvent,
+  ContributedResources,
+  EngineOpResult,
+  PiCommandResult,
+  SessionProviderCheck,
+  WebSearchAnswer,
+} from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { applySurfaceEvent, type CodingAgentSurfaces, noSurfaces } from "@/web-app/stores/codingAgentSurfaces";
+import { composeSessionSystemContext, type SessionSystemContext } from "@/web-app/stores/codingAgentSystemContext";
 import { readAppPiThemePalette } from "@/web-app/themes/appPiTheme";
 
 const logger = createLogger("web-app.codingAgent");
@@ -137,6 +149,35 @@ async function performEngineOp(
   }
 }
 
+// Run one public-web query for the agent, through the AI bridge — which is where the address-pinned fetch and the
+// user's own web-search switch live. Never throws: the container is blocked on this answer, and "you have it turned
+// off" is a reason the model should read rather than a broken response.
+async function performWebSearch(query: string): Promise<WebSearchAnswer> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge) return { ok: false, error: "the app's AI bridge is unavailable" };
+  try {
+    const { text } = await bridge.runWebSearch(query);
+    return { ok: true, text };
+  } catch (error) {
+    logger.warn("a web search failed or was refused", error);
+    return { ok: false, error: (error as Error).message };
+  }
+}
+
+// The project's rules and memories, read through the AI bridge — the same snapshot the Project context panel
+// shows. Absent means "could not be read": the caller keeps whatever the session already has rather than
+// replacing a good context with an empty one over a transient failure.
+async function readProjectContext(): Promise<ProjectContextSnapshot | undefined> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge) return undefined;
+  try {
+    return await bridge.getProjectContext();
+  } catch (error) {
+    logger.warn("unable to read the project context", error);
+    return undefined;
+  }
+}
+
 // A rule needs the session's workspace and connection to be scoped, so there is nothing to remember before a
 // session exists.
 function approvalRule(
@@ -188,6 +229,24 @@ export interface ActiveSkillScope {
   tainted: boolean;
 }
 
+// What the projector cannot read off a bridge event: which connection this session runs on, which configured
+// provider answers it, the permission mode in force, and the project sources the app itself put in the prompt.
+function viewSession(state: CodingAgentState): PiThreadViewSession {
+  return {
+    connectionId: state.connectionId,
+    ...(state.lastStart?.providerId ? { providerId: state.lastStart.providerId } : {}),
+    permissionMode: permissionMode(),
+    ...(state.systemContext ? { contextSources: state.systemContext.sources } : {}),
+  };
+}
+
+// Whether this turn is running on instructions the app did not author: a skill from an untrusted source, the
+// project's own rules and memories, or a page the agent just read off the public web. Each means a remembered allow
+// is not honoured, so the user sees the call that untrusted text asked for.
+function turnTainted(state: Pick<CodingAgentState, "activeSkill" | "systemContext" | "turnReadPublicWeb">): boolean {
+  return !!(state.activeSkill?.tainted || state.systemContext?.tainted || state.turnReadPublicWeb);
+}
+
 export interface StartCodingAgentOptions {
   connectionId: string;
   workspacePath: string;
@@ -230,6 +289,13 @@ export interface CodingAgentState {
   resources: ContributedResources;
   // The narrowing the running skill asked for, cleared when its turn ends.
   activeSkill?: ActiveSkillScope;
+  // This turn has read a page off the public web, so it is carrying content anyone could have published. Cleared
+  // with the skill scope when the turn ends.
+  turnReadPublicWeb: boolean;
+  // What this session was last told about the project's rules and memories. Held because the container cannot be
+  // asked what it has, because the taint has to outlive the turn that delivered it, and because an unchanged
+  // context is not worth re-sending.
+  systemContext?: SessionSystemContext;
   // What this session was started with, so it can be started again identically. A pi session IS the
   // conversation, so "start a fresh conversation" can only mean starting a fresh session.
   lastStart?: StartCodingAgentOptions;
@@ -255,6 +321,15 @@ export interface CodingAgentState {
   // Re-read the app's tokens and tell the container. Called on connect and whenever the engine or the
   // light/dark mode repaints them, so plugin output never sits in a theme the app has moved off.
   publishTheme(): Promise<void>;
+  // Re-read the project's rules and memories and give them to the container as system prose. Called on connect
+  // and before every turn, so a memory added mid-session reaches the model on the next answer.
+  publishSystemContext(): Promise<void>;
+  // Ask the SESSION whether it can reach the model, through the gateway. Absent when no session runs: the app's own
+  // provider check answers for the app's realm, and there is no second answer to give.
+  checkSessionProvider(): Promise<SessionProviderCheck | undefined>;
+  // Run one of pi's own commands, by pi's name, against the running session. Answers with a value: the palette
+  // shows "not available here, and why" rather than raising.
+  runPiCommand(name: string, args: string): Promise<PiCommandResult>;
   refreshResources(): Promise<void>;
   // Read back the file pi wrote when it truncated a tool's output. It lives inside the agent container, so the
   // card cannot open it — only the host on the other end of the bridge can.
@@ -262,7 +337,7 @@ export interface CodingAgentState {
 }
 
 export function noContributedResources(): ContributedResources {
-  return { extensions: [], commands: [], skills: [], prompts: [] };
+  return { extensions: [], commands: [], skills: [], prompts: [], builtins: [] };
 }
 
 // The published port is picked per session. A collision surfaces as an engine error on run, which the
@@ -303,6 +378,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   surfaces: noSurfaces(),
   resources: noContributedResources(),
   pendingEngineOps: {},
+  turnReadPublicWeb: false,
 
   async start(options) {
     set({
@@ -315,6 +391,8 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       pendingDialog: undefined,
       pendingEngineOps: {},
       activeSkill: undefined,
+      turnReadPublicWeb: false,
+      systemContext: undefined,
       error: undefined,
       lastStart: options,
     });
@@ -383,6 +461,9 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       // Before the first plugin component can render: a component that draws once with pi's built-in
       // palette and only then hears about the app's would flash the wrong colours.
       await get().publishTheme();
+      // Before the first turn, and early enough that a failure is visible while the user is still looking at the
+      // start drawer rather than at an answer that quietly ignored their rules.
+      await get().publishSystemContext();
     } catch (error) {
       logger.error("coding agent start failed", error);
       set((state) => ({
@@ -398,6 +479,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   async submit(text) {
     const { client } = get();
     if (!client) return;
+    await get().publishSystemContext();
     set((state) => ({ view: projectPiThreadView(state.view, { type: "user_message", text }) }));
     await client.prompt(text);
   },
@@ -405,6 +487,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   async submitSkill(input) {
     const { client } = get();
     if (!client) return;
+    await get().publishSystemContext();
     set((state) => ({
       view: projectPiThreadView(state.view, { type: "user_message", text: input.displayContent }),
       activeSkill: {
@@ -445,6 +528,8 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       pendingDialog: undefined,
       pendingEngineOps: {},
       activeSkill: undefined,
+      turnReadPublicWeb: false,
+      systemContext: undefined,
     });
   },
 
@@ -470,10 +555,12 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       return;
     }
     if (event.type === "plugin_progress") return;
-    set((state) => ({ view: projectPiThreadView(state.view, event) }));
+    set((state) => ({ view: projectPiThreadView(state.view, event, viewSession(state)) }));
     // A skill narrows only the turn it started. Lifting it here rather than on the next submit keeps a
     // follow-up prompt from inheriting a restriction the user never asked for.
-    if (event.type === "turn_end" || event.type === "idle") set({ activeSkill: undefined });
+    if (event.type === "turn_end" || event.type === "idle") {
+      set({ activeSkill: undefined, turnReadPublicWeb: false });
+    }
     if (event.type === "ready") {
       set({ status: "ready" });
       void get().refreshResources();
@@ -519,7 +606,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         // Only "remember" consults the cache, so the other modes never pay for a broker round-trip.
         const rule = approvalRule(get(), toolName, args);
         const cached = mode === "remember" && rule ? await rememberedVerdict(rule) : undefined;
-        const action = decidePiToolCall({ toolName, mode, cached, boundary: "tool-call", tainted: skill?.tainted });
+        const action = decidePiToolCall({ toolName, mode, cached, boundary: "tool-call", tainted: turnTainted(get()) });
         if (action === "run") {
           await get().respondToRequest(requestId, { ok: true, value: { allow: true } });
           return;
@@ -553,12 +640,18 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         const cached = mode === "remember" && rule ? await rememberedVerdict(rule) : undefined;
         // The same decision path as a pi tool call: reads run unattended, mutations ask. This is the boundary that
         // decides for a container operation — the app performs it, so the pre-call gate deferred to here.
-        const action = decidePiToolCall({ toolName: op, mode, cached, boundary: "engine-op", tainted: skill?.tainted });
+        const action = decidePiToolCall({
+          toolName: op,
+          mode,
+          cached,
+          boundary: "engine-op",
+          tainted: turnTainted(get()),
+        });
         if (action === "run") {
           await get().runEngineOp(requestId, { op, args });
           return;
         }
-        set((state) => ({ view: projectPiThreadView(state.view, event, { connectionId: get().connectionId }) }));
+        set((state) => ({ view: projectPiThreadView(state.view, event, viewSession(state)) }));
         if (action === "reject") {
           await get().respondToRequest(requestId, {
             ok: true,
@@ -572,6 +665,27 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         }
         // Held until the user answers: unlike a pi tool, nothing runs this but the app itself.
         set((state) => ({ pendingEngineOps: { ...state.pendingEngineOps, [requestId]: { op, args } } }));
+        return;
+      }
+      case "web-search": {
+        const { requestId, query } = outcome.request;
+        const skill = get().activeSkill;
+        if (skill?.allowedTools && !skill.allowedTools.has(WEB_SEARCH_TOOL_NAME)) {
+          await get().respondToRequest(requestId, {
+            ok: true,
+            value: {
+              ok: false,
+              error: `${WEB_SEARCH_TOOL_NAME} is not among this skill's allowed tools`,
+            } satisfies WebSearchAnswer,
+          });
+          return;
+        }
+        // No card: this tool's gate is the user's own switch in Settings → AI, which the broker enforces on every
+        // call. What a search DOES change is trust — the turn has now read a page anyone could have published, so
+        // the taint is set before the answer goes back, in time for whatever the model does with it.
+        const answer = await performWebSearch(query);
+        if (answer.ok) set({ turnReadPublicWeb: true });
+        await get().respondToRequest(requestId, { ok: true, value: answer });
         return;
       }
       default:
@@ -652,7 +766,57 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       logger.warn("unable to publish the app theme to the agent", error);
     }
   },
+
+  async checkSessionProvider() {
+    const { client } = get();
+    if (!client) return undefined;
+    try {
+      return await client.checkProvider();
+    } catch (error) {
+      // The probe itself failing IS the answer: the session could not even be asked.
+      return { reachable: false, error: (error as Error).message };
+    }
+  },
+
+  async runPiCommand(name, args) {
+    const { client } = get();
+    if (!client) return { ok: false, error: "there is no session to run a pi command in" };
+    try {
+      return await client.runCommand(name, args);
+    } catch (error) {
+      // A lost socket or a container that predates the command: both are reasons, not crashes.
+      logger.error("a pi command failed", name, error);
+      return { ok: false, error: (error as Error).message };
+    }
+  },
+
+  async publishSystemContext() {
+    const { client } = get();
+    if (!client) return;
+    const snapshot = await readProjectContext();
+    if (!snapshot) return;
+    const composed = composeSessionSystemContext(snapshot);
+    if ((get().systemContext?.text ?? "") === composed.text) return;
+    try {
+      await client.setSystemContext(composed.text);
+      set({ systemContext: composed });
+    } catch (error) {
+      // Recording it as delivered here would stop every later turn from retrying, leaving the session silently
+      // rule-less — the exact defect this publishing exists to close. Say so and leave it undelivered.
+      logger.error("unable to give the agent this project's context", error);
+      Notification.show({
+        message: t("The assistant did not receive this project's rules and memories"),
+        detail: (error as Error).message,
+        intent: Intent.WARNING,
+      });
+    }
+  },
 }));
+
+// Host-side workspace access follows the folder THIS session mounted, not the one named in Settings → AI. Bound
+// here, at module scope, because the store is the only thing that knows it and a reader cannot go stale: stopping
+// the session clears the spec, which hands the folder straight back to Settings.
+bindSessionWorkspace(() => useCodingAgentStore.getState().spec?.workspacePath);
 
 // DEV-only handle for the WebDriver spec, mirroring window.__cdLiveProbe: the spec drives the store
 // directly so the screen's rendering can be asserted without a live container session.

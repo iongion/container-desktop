@@ -165,17 +165,18 @@ func (s *KeychainService) Has(req KeychainAccountRequest) bool {
 	return ok && fallback != ""
 }
 
-// Get returns the stored secret, or nil (→ JSON null → undefined in the renderer) when absent. Present in the
-// vault → use it; otherwise (absent OR the vault is unreachable) consult the degraded fallback. Never errors on
-// a missing/unreachable vault, matching keychain.rs.
-func (s *KeychainService) Get(req KeychainAccountRequest) (*string, error) {
-	if secret, err := keyring.Get(keychainService, req.Account); err == nil {
-		return &secret, nil
+// lookupSecret reads the stored secret for an account, or "" when there is none. Deliberately NOT a service method:
+// the web view must not be able to read a provider key, on either shell, and the only caller that needs one is
+// WriteSecretFile — which substitutes it into a file the web view is refused read access to. Present in the vault →
+// use it; otherwise (absent OR the vault unreachable) consult the degraded fallback, matching keychain.rs.
+func lookupSecret(account string) string {
+	if secret, err := keyring.Get(keychainService, account); err == nil {
+		return secret
 	}
-	if fallback, ok := keychainFallbackGet(req.Account); ok {
-		return &fallback, nil
+	if fallback, ok := keychainFallbackGet(account); ok {
+		return fallback
 	}
-	return nil, nil
+	return ""
 }
 
 // KeychainSetRequest carries the secret to store. AllowDegraded is the renderer's opt-in for storing while the
@@ -227,10 +228,7 @@ func (s *KeychainService) WriteSecretFile(req KeychainWriteSecretFileRequest) (s
 	if !strings.Contains(req.Contents, keychainSecretPlaceholder) {
 		return "", fmt.Errorf("the agent environment carries no secret placeholder")
 	}
-	secret := ""
-	if stored, err := (&KeychainService{}).Get(KeychainAccountRequest{Account: req.Account}); err == nil && stored != nil {
-		secret = *stored
-	}
+	secret := lookupSecret(req.Account)
 	if strings.ContainsAny(secret, "\r\n") {
 		return "", fmt.Errorf("a stored secret cannot contain a newline")
 	}

@@ -1679,5 +1679,6 @@
   "Allow egress": "Разрешить исходящий трафик",
   "Start the session": "Запустить сеанс",
   "Complete the form to start a session": "Заполните форму, чтобы запустить сеанс",
-  "Image {{tag}} — builds on first use.": "Образ {{tag}} — собирается при первом использовании."
+  "Image {{tag}} — builds on first use.": "Образ {{tag}} — собирается при первом использовании.",
+  "The assistant did not receive this project's rules and memories": "Ассистент не получил правила и заметки этого проекта"
 }

@@ -363,6 +363,18 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
         ),
       ),
     );
+    // The agent's public-web search. The user's switch is enforced HERE, on every call, rather than by withholding
+    // the tool: it can be turned off while a session runs, and "the user turned it off" is a reason the model can
+    // act on. A runtime with no pinned public fetch never offers it at all (webSearchAvailable is false).
+    onInvoke(AI_CHANNELS.webSearch, (event, request) =>
+      guarded(event, async () => {
+        if (!deps.webSearcher) throw new Error("AI: web search is unavailable on this runtime");
+        if (!(await deps.getAISettings()).webSearch) {
+          throw new Error("AI: web search is turned off in Settings → AI");
+        }
+        return deps.webSearcher(request.query);
+      }),
+    );
     onInvoke(AI_CHANNELS.permissionsList, (event) =>
       guarded(event, () => requirePermissions(deps.permissionsStore).load()),
     );

@@ -1,8 +1,11 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import {
   createAgentSessionFromServices,
   createAgentSessionServices,
   DefaultPackageManager,
   type ExtensionAPI,
+  getPackageDir,
   type InlineExtension,
   initTheme,
   SessionManager,
@@ -10,20 +13,26 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { getKeybindings } from "@earendil-works/pi-tui";
 
+import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import { createLogger } from "@/logger";
 import { createContainerToolsExtension } from "@/pi-agent-host/containerTools";
 import { mapAgentEvent, type PiAgentEvent } from "@/pi-agent-host/events";
 import { GuiTui } from "@/pi-agent-host/guiTui";
 import { createHostRpc } from "@/pi-agent-host/hostRpc";
 import { createPermissionGateExtension } from "@/pi-agent-host/permissionGate";
+import { runPiCommand } from "@/pi-agent-host/piCommands";
 import { buildPiTheme, normalizeAppThemePalette } from "@/pi-agent-host/piTheme";
 import { createPluginService } from "@/pi-agent-host/plugins";
+import { checkSessionProvider } from "@/pi-agent-host/providerCheck";
+import { type PiSessionFacts, sessionContextReport, sessionUsageReport } from "@/pi-agent-host/reports";
 import { collectResources } from "@/pi-agent-host/resources";
 import type { BridgeSessionHandle } from "@/pi-agent-host/server";
 import { createSurfaceRegistry } from "@/pi-agent-host/surfaces";
+import { createSystemContextExtension } from "@/pi-agent-host/systemContext";
 import { createToolSurfaceRenderer, routeToolSurfaces } from "@/pi-agent-host/toolSurfaces";
 import { createGuiUiContext, type PiKeybindings } from "@/pi-agent-host/uiContext";
 import { createVirtualTerminal } from "@/pi-agent-host/virtualTerminal";
+import { createWebSearchExtension } from "@/pi-agent-host/webSearchTool";
 import type { AppThemePalette, BridgeEvent } from "@/pi-bridge/protocol";
 
 const logger = createLogger("pi-agent-host.session");
@@ -112,6 +121,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   };
 
   const rpc = createHostRpc(emit);
+  const systemContext = createSystemContextExtension();
 
   // Settings are file-backed at `agentDir`, which is the named plugin volume: installing a plugin writes its
   // source into `packages` there, so the set survives the session that installed it. `projectTrusted` stays
@@ -128,6 +138,12 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
         // The container toolset. It registers tools only — each call still passes the permission gate above,
         // because the gate handles every tool_call regardless of who registered the tool.
         createContainerToolsExtension({ rpc, descriptions: options.containerToolDescriptions }),
+        // Public web search, performed by the app. Registered unconditionally: the setting it depends on can be
+        // turned off mid-session, so the app answers with that as the reason rather than the tool vanishing.
+        createWebSearchExtension({ rpc, description: options.containerToolDescriptions[WEB_SEARCH_TOOL_NAME] ?? "" }),
+        // The app's project rules and memories. Registered last of the app's own three so its append lands on top
+        // of whatever the others contributed to the turn's system prompt.
+        systemContext.extension,
         ...(options.extraExtensions ?? []),
       ],
     },
@@ -139,11 +155,8 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     throw new Error(`gateway model ${modelId} was not registered — the provider flush did not happen`);
   }
 
-  const { session } = await createAgentSessionFromServices({
-    services,
-    sessionManager: SessionManager.create(cwd),
-    model,
-  });
+  const sessionManager = SessionManager.create(cwd);
+  const { session } = await createAgentSessionFromServices({ services, sessionManager, model });
 
   // pi's own components (Markdown, SelectList, Editor) read a module-global theme that throws until it is
   // initialised, so a plugin building one would crash on its first render. There is no public way to make
@@ -183,10 +196,52 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     getToolDefinition: (name) => session.getToolDefinition(name),
   });
 
+  // pi only says that a compaction happened, never how much it dropped, so the fact is remembered here and
+  // travels with every later report — the app would otherwise keep claiming an untouched history.
+  let compacted = false;
+
+  // What this session has spent and what it is sending the model, read off pi rather than counted from the events
+  // the app happened to see: pi's stats span entries it has since compacted away, which no bridge tally could.
+  const readFacts = (): PiSessionFacts => {
+    const stats = session.getSessionStats();
+    return {
+      model: modelId,
+      systemPrompt: session.systemPrompt,
+      activeToolNames: session.getActiveToolNames(),
+      tools: session.getAllTools().map(({ name, description }) => ({ name, description })),
+      stats: {
+        userMessages: stats.userMessages,
+        assistantMessages: stats.assistantMessages,
+        toolCalls: stats.toolCalls,
+        tokens: { input: stats.tokens.input, output: stats.tokens.output },
+        cost: stats.cost,
+        ...(stats.contextUsage
+          ? { contextUsage: { tokens: stats.contextUsage.tokens, contextWindow: stats.contextUsage.contextWindow } }
+          : {}),
+      },
+      maxOutputTokens: model.maxTokens ?? 0,
+      compacted,
+    };
+  };
+
+  const publishReports = () => {
+    try {
+      const facts = readFacts();
+      emit({ type: "usage", usage: sessionUsageReport(facts) });
+      emit({ type: "request_context", context: sessionContextReport(facts) });
+    } catch (error) {
+      // Reporting is observability: a session that cannot describe itself must still answer prompts.
+      logger.warn("unable to report the session's usage and context", error);
+    }
+  };
+
   session.subscribe((event) => {
     const piEvent = event as unknown as PiAgentEvent;
     routeToolSurfaces(toolSurfaces, piEvent);
     for (const mapped of mapAgentEvent(piEvent)) emit(mapped);
+    if (piEvent.type === "session_compact") compacted = true;
+    // After the turn, when the numbers have moved and the tool set for the next one is settled.
+    if (piEvent.type === "turn_end" || piEvent.type === "agent_settled") publishReports();
   });
 
   // A second package manager over the same settings and agent dir. pi's resource loader keeps its own for
@@ -220,6 +275,31 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     },
     surfaceResize(surfaceId, columns) {
       surfaces.resize(surfaceId, columns);
+    },
+    setSystemContext(text) {
+      systemContext.set(text);
+    },
+    checkProvider() {
+      return checkSessionProvider({ gatewayUrl, gatewayToken });
+    },
+    // One of pi's own commands, by pi's own name. The dispatcher answers with a value, never a throw: the palette
+    // shows the reason a command is unavailable here, which is more use than a stack trace.
+    runCommand(name, args) {
+      return runPiCommand(
+        {
+          session,
+          sessionManager,
+          keybindings: () =>
+            Object.entries(getKeybindings().getResolvedBindings()).map(([action, keys]) => ({
+              action,
+              keys: Array.isArray(keys) ? keys : keys ? [keys] : [],
+            })),
+          // pi's shipped changelog, read from the installed package rather than restated here.
+          changelog: () => readFile(join(getPackageDir(), "CHANGELOG.md"), "utf8"),
+        },
+        name,
+        args,
+      );
     },
     setThemePalette(palette) {
       guiUi.applyTheme(buildPiTheme(normalizeAppThemePalette(palette)));

@@ -4,6 +4,7 @@
 // Attribution is pi's own, not a guess: every loaded resource carries a `SourceInfo`, and `origin: "package"`
 // means `source` is the package source string that brought it in. Anything the user dropped straight into the
 // agent directory comes back `origin: "top-level"` and stays unattributed, which is what a plugin table wants.
+import { PI_BUILTIN_COMMANDS } from "@/pi-agent-host/piCommands";
 import type { ContributedResource, ContributedResources } from "@/pi-bridge/protocol";
 
 interface PiSourceInfo {
@@ -59,5 +60,8 @@ export function collectResources(loader: ResourceLoaderLike): ContributedResourc
     commands,
     skills: loader.getSkills().skills.map((skill) => named(skill)),
     prompts: loader.getPrompts().prompts.map((prompt) => named(prompt)),
+    // pi's own commands, reported alongside what the plugins contributed: the palette showed only the latter, so
+    // everything a user of pi already knows how to type looked like it did not exist here.
+    builtins: [...PI_BUILTIN_COMMANDS],
   };
 }

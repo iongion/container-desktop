@@ -27,6 +27,11 @@ export const CONTAINER_TOOL_NAMES = [
 
 export type ContainerToolName = (typeof CONTAINER_TOOL_NAMES)[number];
 
+// The public-web search the app performs for the agent. Named here beside the container tools because the same
+// name is used in three places that must agree: the tool the container registers, the app's gating table, and the
+// `allowed-tools` list a skill can narrow a turn to.
+export const WEB_SEARCH_TOOL_NAME = "webSearch";
+
 const toolPresentation = z.object({
   name: z.enum(CONTAINER_TOOL_NAMES),
   titleKey: z.string().min(1),

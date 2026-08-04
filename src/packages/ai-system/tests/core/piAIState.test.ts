@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { piSessionSummary, piSessionUnavailable } from "@/ai-system/core/piAIState";
+import { piSessionSummary } from "@/ai-system/core/piAIState";
 import { emptyPiThreadView, projectPiThreadView } from "@/ai-system/core/piThreadView";
 import { threadSummarySchema } from "@/ai-system/core/schemas";
 
@@ -36,13 +36,5 @@ describe("piSessionSummary", () => {
 
   it("reports the model it was started with", () => {
     expect(piSessionSummary(base).model).toBe("some/model");
-  });
-});
-
-describe("piSessionUnavailable", () => {
-  it("rejects with a message naming the capability and the phase that will bring it", () => {
-    const error = piSessionUnavailable("branchThread");
-    expect(error).toBeInstanceOf(Error);
-    expect(error.message).toContain("branchThread");
   });
 });

@@ -9,16 +9,13 @@ import { toolTitle } from "@/ai-system/ui/core/toolTitle";
 import { AssistantMarkdown } from "@/web-app/components/ai/AssistantMarkdown";
 import { DataCard } from "@/web-app/components/ai/cards/DataCard";
 import { ToolCard } from "@/web-app/components/ai/cards/registry";
-import type { ThreadBranchSource } from "@/web-app/components/ai/ThreadBranchDrawer";
 import { WorkspaceChangesCard } from "@/web-app/components/ai/WorkspaceChangesDrawer";
 
 export interface AssistantTimelineContext {
   view?: ThreadView;
   activeThread?: ThreadSummary;
   activeThreadId?: string;
-  checkpointMessageIds: ReadonlySet<string>;
   rememberApprovals: boolean;
-  onBranch: (source: ThreadBranchSource) => void;
   onResolveApproval: (approvalId: string, decision: "allow" | "reject") => Promise<unknown>;
   onOpenWorkspaceChanges: () => void;
 }
@@ -78,28 +75,10 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
   switch (item.kind) {
     case "message": {
       const content = context.view ? threadTimelineMessageContent(context.view, item, timelineIndex) : item.content;
-      const canBranch = context.checkpointMessageIds.has(item.id);
       return (
         <div className={`AssistantMessage AssistantMessage--${item.role}`}>
           <div className="AssistantMessageContent">
             <AssistantMarkdown content={content || (item.status === "streaming" ? "…" : "")} />
-            {canBranch && context.activeThread && context.view ? (
-              <Button
-                className="AssistantMessageBranch"
-                icon={IconNames.GIT_BRANCH}
-                size="small"
-                variant="minimal"
-                title={t("Branch from here")}
-                aria-label={t("Branch from here")}
-                onClick={() =>
-                  context.onBranch({
-                    thread: context.activeThread as ThreadSummary,
-                    view: context.view as ThreadView,
-                    checkpointReference: item.id,
-                  })
-                }
-              />
-            ) : null}
           </div>
           {item.role === "user" && item.delivery === "queued" ? (
             <span className="AssistantMessageStatus">{t("Queued")}</span>

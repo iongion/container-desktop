@@ -54,6 +54,9 @@ export const AI_CHANNELS = {
   // One container-engine operation, performed on the agent's behalf. The coding agent runs inside a container
   // and cannot reach the engine ports, so its container toolset executes here, where engineOps is bound.
   engineOp: "ai:engine:op", // invoke({ op, args?, defaultConnectionId? }) → EngineOpResult
+  // One public-web query, run for the agent. It executes here because the app owns the address-pinned fetch and
+  // the user's own web-search switch — which this refuses on while it is off.
+  webSearch: "ai:web:search", // invoke({ query }) → { text }
   // The knowledge bank has no renderer surface — the agent searches it main-side (see tools.ts).
 } as const;
 

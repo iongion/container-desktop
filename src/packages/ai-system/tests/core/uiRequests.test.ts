@@ -104,6 +104,18 @@ describe("classifyHostRequest", () => {
     });
   });
 
+  it("routes a web search to the app, which is what has a network and the user's consent", () => {
+    expect(classifyHostRequest(request("web_search", { query: "podman rootless" }))).toEqual({
+      kind: "web-search",
+      request: { requestId: "r1", query: "podman rootless" },
+    });
+  });
+
+  it("ignores a web search with no query, which there is nothing to run", () => {
+    expect(classifyHostRequest(request("web_search", { query: "   " }))).toEqual({ kind: "ignored" });
+    expect(classifyHostRequest(request("web_search", {}))).toEqual({ kind: "ignored" });
+  });
+
   it("ignores an unknown method rather than throwing", () => {
     expect(classifyHostRequest(request("teleport", {}))).toEqual({ kind: "ignored" });
   });

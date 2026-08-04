@@ -3,12 +3,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AI_CHANNELS } from "@/ai-system/core/channels";
 import { describeError } from "@/ai-system/core/errors";
 import type { SkillHostSnapshot } from "@/ai-system/core/skills";
-import { pluginCommandsFromResources } from "@/ai-system/ui/core/commands/pluginCommands";
+import {
+  piBuiltinCommandDefinitions,
+  piPluginCommandDefinitions,
+} from "@/ai-system/ui/core/commands/piSessionCommands";
+import { pluginSkillCommands } from "@/ai-system/ui/core/commands/pluginCommands";
 import { createSkillCommandRegistry } from "@/ai-system/ui/core/commands/skillCommands";
 import { createLogger } from "@/logger";
 import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
 const logger = createLogger("web.ai.skills");
+
+// pi's commands that the GUI performs itself, and therefore declares in its own catalogue under the same names:
+// only the app can stop one container pair and start another, open a model picker, or write a file to the host.
+const APP_PERFORMED_PI_COMMANDS = ["new", "quit", "session", "copy", "export", "model", "reload"] as const;
 const EMPTY_SNAPSHOT: SkillHostSnapshot = {
   revision: "0",
   user: { root: "…", status: "error" },
@@ -24,9 +32,19 @@ export function useAssistantSkills() {
   const [snapshot, setSnapshot] = useState<SkillHostSnapshot>(EMPTY_SNAPSHOT);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
-  // The session's plugins contribute commands too, and they change when one is installed or disabled.
+  // Everything the running session contributes: pi's OWN commands under pi's own names, what its plugins
+  // registered with pi, and their skills. All of it changes when a plugin is installed, disabled or the session
+  // stops, which is why it is read from the store rather than assembled once.
   const resources = useCodingAgentStore((state) => state.resources);
-  const pluginCommands = useMemo(() => pluginCommandsFromResources(resources), [resources]);
+  const sessionCommands = useMemo(
+    () => [
+      // The app's own catalogue already offers the ones the GUI performs, under exactly these names.
+      ...piBuiltinCommandDefinitions(resources.builtins, APP_PERFORMED_PI_COMMANDS),
+      ...piPluginCommandDefinitions(resources),
+      ...pluginSkillCommands(resources),
+    ],
+    [resources],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -69,7 +87,7 @@ export function useAssistantSkills() {
 
   return {
     snapshot,
-    registry: useMemo(() => createSkillCommandRegistry(snapshot, pluginCommands), [snapshot, pluginCommands]),
+    registry: useMemo(() => createSkillCommandRegistry(snapshot, sessionCommands), [snapshot, sessionCommands]),
     loading,
     error,
     reload: useCallback(() => mutate(() => window.AI.reloadSkills()), [mutate]),

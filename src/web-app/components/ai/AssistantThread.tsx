@@ -7,12 +7,11 @@ import { Button, Callout, Icon, Intent, NonIdealState } from "@blueprintjs/core"
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type AccessProfileId, isAccessProfileId } from "@/ai-system/core/accessProfiles";
+import { isAccessProfileId } from "@/ai-system/core/accessProfiles";
 import type { AIPermissionMode } from "@/ai-system/core/permissions";
-import { isReasoningLevel, type ReasoningLevel } from "@/ai-system/core/reasoning";
+import { isReasoningLevel } from "@/ai-system/core/reasoning";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import { latestAssistantResponse } from "@/ai-system/core/threadExport";
-import type { ThreadConfigurationPatch } from "@/ai-system/core/threads";
 import type { AISettings } from "@/ai-system/core/types";
 import type {
   AssistantCommandExecutionResult,
@@ -36,11 +35,7 @@ import {
 } from "@/web-app/components/ai/PluginSurfaces";
 import type { ProjectContextRequest } from "@/web-app/components/ai/ProjectContextPanel";
 import { ThinkingStatus } from "@/web-app/components/ai/ThinkingStatus";
-import { ThreadBranchDrawer, type ThreadBranchSource } from "@/web-app/components/ai/ThreadBranchDrawer";
-import { ThreadCompactionDrawer } from "@/web-app/components/ai/ThreadCompactionDrawer";
 import { ThreadExportDrawer } from "@/web-app/components/ai/ThreadExportDrawer";
-import { ThreadSelector } from "@/web-app/components/ai/ThreadSelector";
-import { resolveThreadReference } from "@/web-app/components/ai/threadHistory";
 import { WorkspaceChangesDrawer, type WorkspaceChangesView } from "@/web-app/components/ai/WorkspaceChangesDrawer";
 import { useAssistantSkills } from "@/web-app/hooks/useAssistantSkills";
 import { Notification } from "@/web-app/Notification";
@@ -74,13 +69,8 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const recoveryErrors = useAIStore((s) => s.recoveryErrors);
   const submitMessage = useAIStore((s) => s.submitMessage);
   const newThread = useAIStore((s) => s.newThread);
-  const renameThread = useAIStore((s) => s.renameThread);
-  const configureThread = useAIStore((s) => s.configureThread);
-  const previewThreadBranch = useAIStore((s) => s.previewThreadBranch);
-  const setActiveThread = useAIStore((s) => s.setActiveThread);
   const resolveApproval = useAIStore((s) => s.resolveApproval);
   const cancel = useAIStore((s) => s.cancel);
-  const capabilities = useAIStore((s) => s.capabilities);
   // Extension chrome and dialogs are pi-session state with no place in the neutral ThreadView, and since the
   // Assistant surface IS the pi session they are read from its store directly rather than widening AIState.
   const extensionChrome = useCodingAgentStore((s) => s.chrome);
@@ -128,15 +118,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [autoFollow, setAutoFollow] = useState(true);
   const [atBottom, setAtBottom] = useState(true);
-  const [threadHistoryOpen, setThreadHistoryOpen] = useState(false);
-  const [threadQuery, setThreadQuery] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
-  const [branchSource, setBranchSource] = useState<ThreadBranchSource>();
-  const [compactionRequest, setCompactionRequest] = useState<{
-    thread: NonNullable<typeof activeThread>;
-    instructions?: string;
-  }>();
-  const [checkpointMessageIds, setCheckpointMessageIds] = useState<Set<string>>(() => new Set());
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [contextDrawer, setContextDrawer] = useState<{
     section: AssistantContextSection;
@@ -158,22 +140,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
     }
   }, [items, streamingContent, autoFollow, scrollToBottom]);
 
-  useEffect(() => {
-    setCheckpointMessageIds(new Set());
-    if (!activeThreadId || phase !== "idle" || items.length === 0) return;
-    let current = true;
-    void previewThreadBranch(activeThreadId)
-      .then((preview) => {
-        if (current) setCheckpointMessageIds(new Set(preview.checkpoints.map(({ messageId }) => messageId)));
-      })
-      .catch(() => {
-        if (current) setCheckpointMessageIds(new Set());
-      });
-    return () => {
-      current = false;
-    };
-  }, [activeThreadId, items.length, phase, previewThreadBranch]);
-
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) {
@@ -189,30 +155,9 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
     scrollToBottom();
   }, [scrollToBottom]);
 
-  const onSubmit = (
-    text: string,
-    bindings: {
-      providerId: string;
-      model: string;
-      accessProfile: AccessProfileId;
-      reasoningLevel: ReasoningLevel;
-    },
-  ) => {
-    return submitMessage(text, bindings);
-  };
-
-  const onThreadConfigurationChange = useCallback(
-    async (patch: ThreadConfigurationPatch) => {
-      if (!activeThreadId) throw new Error(t("Start or select a Thread first"));
-      await configureThread(activeThreadId, patch);
-    },
-    [activeThreadId, configureThread, t],
-  );
-
-  const openThreadHistory = useCallback((query = "") => {
-    setThreadQuery(query);
-    setThreadHistoryOpen(true);
-  }, []);
+  // The session was started with its provider, model, access and reasoning; a per-message binding would be a promise
+  // nothing here can keep, so the composer's are read for display only and the text is what is sent.
+  const onSubmit = (text: string) => submitMessage(text);
 
   const navigate = useCallback(
     (href: string) => {
@@ -224,15 +169,28 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
 
   const executeCommand = useCallback(
     async (parsed: ParsedAssistantCommand): Promise<AssistantCommandExecutionResult> => {
-      // A plugin's command, skill or prompt template belongs to the pi session, not the app's skill host:
-      // there is nothing here to resolve it against. pi expands it itself when the prompt arrives, so the
-      // canonical text is simply sent.
+      // A plugin's SKILL belongs to the pi session, not the app's skill host: there is nothing here to resolve it
+      // against. pi expands it itself when the prompt arrives, so the canonical text is simply sent.
       if (parsed.command.kind === "skill" && parsed.command.source.kind === "plugin-skill") {
         const text = `${parsed.command.path}${parsed.rawArguments ? ` ${parsed.rawArguments}` : ""}`;
-        await submitMessage(text, {
-          providerId: ai.defaultProvider,
-          model: ai.providers?.[ai.defaultProvider]?.model ?? "",
-        });
+        await submitMessage(text);
+        return undefined;
+      }
+      // pi's own command, or one a plugin registered with pi. A `prompt`-venue command is text pi expands itself,
+      // so it is simply sent; a `session`-venue one crosses the bridge and runs against pi's session. An
+      // `unavailable` one never reaches here — the availability layer refuses it with pi's reason.
+      if (parsed.command.kind === "pi") {
+        const command = parsed.command;
+        if (command.venue === "prompt") {
+          const text = `${command.path}${parsed.rawArguments ? ` ${parsed.rawArguments}` : ""}`;
+          await submitMessage(text);
+          return undefined;
+        }
+        if (command.venue !== "session") {
+          throw new Error(command.unavailableReason ?? t("This session cannot run that pi command"));
+        }
+        const result = await useCodingAgentStore.getState().runPiCommand(command.commandName, parsed.rawArguments);
+        if (!result.ok) throw new Error(result.error);
         return undefined;
       }
       if (parsed.command.kind === "skill") {
@@ -254,8 +212,14 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         "skills.open": () => {
           setSkillsOpen(true);
         },
-        "skills.reload": async () => {
+        // pi's own `/reload` reloads its extensions, skills, prompts, themes and context files; the app's skill
+        // library is reloaded in the same breath, because one command called `/reload` that reloaded half of what
+        // is loaded would be the sort of half-truth this app has been chasing out.
+        reload: async () => {
+          const store = useCodingAgentStore.getState();
+          const session = store.client ? await store.runPiCommand("reload", "") : undefined;
           const next = await reloadSkills();
+          if (session && !session.ok) throw new Error(session.error);
           Notification.show({
             message: t("{{count}} skills loaded", { count: next.skills.length }),
             intent: Intent.SUCCESS,
@@ -306,45 +270,29 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
             projectRequest: { view: "rules" },
           });
         },
-        "thread.list": () => {
-          openThreadHistory();
-        },
-        "thread.new": async () => {
+        // pi's `/new`: a pi session IS the conversation, so a fresh one means a fresh session on the same settings.
+        "session.new": async () => {
           await newThread();
         },
-        "thread.switch": (command) => {
-          const reference = command.args[0] ?? "";
-          const resolved = resolveThreadReference(threads, reference);
-          if (resolved.kind === "resolved") setActiveThread(resolved.thread.id);
-          else openThreadHistory(reference);
+        // pi's `/quit`: it quits pi, which here means tearing down the container pair.
+        "session.quit": async () => {
+          await useCodingAgentStore.getState().stop();
         },
-        "thread.rename": async (command) => {
-          if (activeThreadId) await renameThread(activeThreadId, command.args[0] ?? "");
+        // pi's `/session`: its info and stats, which is exactly what the usage panel shows.
+        "session.info": () => {
+          setContextDrawer({ section: "usage" });
         },
-        "thread.branch": (command) => {
-          if (!activeThread || !view) throw new Error(t("Start or select a Thread first"));
-          setBranchSource({ thread: activeThread, view, checkpointReference: command.args[0] });
-        },
-        "thread.compact": (command) => {
-          if (!activeThread) throw new Error(t("Start or select a Thread first"));
-          setCompactionRequest({ thread: activeThread, instructions: command.rawArguments || undefined });
-        },
-        "thread.delete": (command) => {
-          const reference = command.args[0];
-          const active = threads.find((thread) => thread.id === activeThreadId);
-          openThreadHistory(reference ?? active?.title ?? "");
-        },
-        "thread.stop": async () => {
+        "turn.stop": async () => {
           await cancel();
         },
-        "thread.copy": async () => {
+        "session.copy": async () => {
           const response = view ? latestAssistantResponse(view) : undefined;
           if (!response) throw new Error(t("There is no Assistant response to copy"));
           if (!navigator.clipboard?.writeText) throw new Error(t("Clipboard access is unavailable"));
           await navigator.clipboard.writeText(response);
           Notification.show({ message: t("Assistant response copied"), intent: Intent.SUCCESS });
         },
-        "thread.export": () => {
+        "session.export": () => {
           setExportOpen(true);
           return undefined;
         },
@@ -366,24 +314,11 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
           return undefined;
         },
       };
+      // Everything else was dispatched above; only a control command reaches the handler map.
+      if (parsed.command.kind !== "control") throw new Error(t("Command is not available here"));
       return handlers[parsed.command.handlerId](parsed);
     },
-    [
-      activeThreadId,
-      activeThread,
-      ai,
-      cancel,
-      navigate,
-      submitMessage,
-      newThread,
-      openThreadHistory,
-      reloadSkills,
-      renameThread,
-      setActiveThread,
-      t,
-      threads,
-      view,
-    ],
+    [cancel, navigate, submitMessage, newThread, reloadSkills, t, view],
   );
 
   const composerCommands = useMemo(
@@ -395,28 +330,22 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         hostStatus: lifecycle === "hydrating" ? ("connecting" as const) : ("ready" as const),
         hasThread: !!activeThreadId,
         threadPhase: composerPhase,
-        capabilities,
       },
       onExecute: executeCommand,
     }),
-    [activeThreadId, capabilities, composerPhase, executeCommand, lifecycle, skillRegistry, surface],
+    [activeThreadId, composerPhase, executeCommand, lifecycle, skillRegistry, surface],
   );
 
-  // Starter chips send immediately with the saved default provider/model (the same seed the composer uses).
+  // Starter chips send straight to the running session, like any other submission.
   const onStarter = (text: string) => {
-    void submitMessage(text, {
-      providerId: ai.defaultProvider,
-      model: ai.providers?.[ai.defaultProvider]?.model ?? "",
-    });
+    void submitMessage(text);
   };
 
   const timelineContext: AssistantTimelineContext = {
     view,
     activeThread,
     activeThreadId: activeThreadId ?? undefined,
-    checkpointMessageIds,
     rememberApprovals: mode === "remember",
-    onBranch: setBranchSource,
     onResolveApproval: resolveApproval,
     onOpenWorkspaceChanges: () => setWorkspaceChangesView("diff"),
   };
@@ -425,16 +354,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
 
   return (
     <div className={`AssistantThread${className ? ` ${className}` : ""}`}>
-      <ThreadSelector
-        control={{
-          open: threadHistoryOpen,
-          query: threadQuery,
-          onOpenChange: (open) => {
-            setThreadHistoryOpen(open);
-            if (!open) setThreadQuery("");
-          },
-        }}
-      />
       <PluginChromeSurface slot="header" />
       <div className="AssistantScroll">
         <PluginFocusSurface variant="overlay" />
@@ -520,13 +439,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
             onSubmit={onSubmit}
             statusLeading={streaming ? <ThinkingStatus /> : null}
             showPermissionMode
-            threadBindings={{
-              providerId: activeThread?.providerId,
-              model: activeThread?.model,
-              accessProfile: activeThread?.accessProfile,
-              reasoningLevel: activeThread?.reasoningLevel,
-              onChange: onThreadConfigurationChange,
-            }}
             commands={composerCommands}
             draft={extensionChrome.editorDraft}
           />
@@ -537,14 +449,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
       {startOpen ? <StartSessionDrawer onClose={() => setStartOpen(false)} /> : null}
       {exportOpen && activeThread && view ? (
         <ThreadExportDrawer thread={activeThread} view={view} onClose={() => setExportOpen(false)} />
-      ) : null}
-      {branchSource ? <ThreadBranchDrawer source={branchSource} onClose={() => setBranchSource(undefined)} /> : null}
-      {compactionRequest ? (
-        <ThreadCompactionDrawer
-          thread={compactionRequest.thread}
-          initialInstructions={compactionRequest.instructions}
-          onClose={() => setCompactionRequest(undefined)}
-        />
       ) : null}
       {skillsOpen ? (
         <AssistantSkillsDrawer

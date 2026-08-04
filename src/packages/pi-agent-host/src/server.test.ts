@@ -16,6 +16,9 @@ function harness(token = "tok") {
     surfaceInput: vi.fn(),
     surfaceResize: vi.fn(),
     setThemePalette: vi.fn(),
+    setSystemContext: vi.fn(),
+    runCommand: vi.fn(async () => ({ ok: true as const, data: { ran: true } })),
+    checkProvider: vi.fn(async () => ({ reachable: true, status: 200 })),
     plugins: {
       list: vi.fn(() => ({ configured: [{ source: "npm:@foo/bar", scope: "user" as const, filtered: false }] })),
       install: vi.fn(async () => {}),
@@ -24,7 +27,13 @@ function harness(token = "tok") {
       checkUpdates: vi.fn(async () => ["npm:@foo/bar"]),
       setEnabled: vi.fn(async () => {}),
     },
-    listResources: vi.fn(() => ({ extensions: [], commands: [{ name: "probe" }], skills: [], prompts: [] })),
+    listResources: vi.fn(() => ({
+      extensions: [],
+      commands: [{ name: "probe" }],
+      skills: [],
+      prompts: [],
+      builtins: [],
+    })),
     reload: vi.fn(async () => {}),
   };
   const attached = attachBridgeConnection(
@@ -92,6 +101,20 @@ describe("attachBridgeConnection", () => {
     expect(parsed(h.sent)[0].type).toBe("error");
   });
 
+  // A command this host does not know is how an app newer than its container image arrives. Answering only with a
+  // bare error event leaves the caller's request pending until its timeout, which reads as a hung session — so the
+  // id gets a failed response too, and the app can say what is wrong straight away.
+  it("fails the request when the command type is unknown, instead of leaving it pending", async () => {
+    const h = harness();
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    h.sent.length = 0;
+    await h.attached.handleFrame(JSON.stringify({ id: "c2", type: "from_a_newer_app", text: "x" }));
+    expect(parsed(h.sent)).toEqual([
+      { type: "error", message: "unknown command type: from_a_newer_app" },
+      { type: "response", id: "c2", success: false, error: "unknown command type: from_a_newer_app" },
+    ]);
+  });
+
   it("routes a host_response to the session handle", async () => {
     const h = harness();
     await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
@@ -99,6 +122,15 @@ describe("attachBridgeConnection", () => {
       encodeCommand({ id: "c2", type: "host_response", requestId: "r1", ok: true, value: "yes" }),
     );
     expect(h.session.settleHostResponse).toHaveBeenCalledWith("r1", { ok: true, value: "yes", error: undefined });
+  });
+
+  it("routes the app's project context to the session", async () => {
+    const h = harness();
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    h.sent.length = 0;
+    await h.attached.handleFrame(encodeCommand({ id: "c2", type: "set_system_context", text: "## rules\n\nbe terse" }));
+    expect(h.session.setSystemContext).toHaveBeenCalledWith("## rules\n\nbe terse");
+    expect(parsed(h.sent)).toEqual([{ type: "response", id: "c2", success: true }]);
   });
 
   it("answers plugins_list with the payload as the response result", async () => {

@@ -3,6 +3,7 @@ import { listModels } from "@/ai-system/adapters/localModels";
 import { createPermissionsStore } from "@/ai-system/adapters/permissionsStoreCore";
 import { createProjectContextFileStore } from "@/ai-system/adapters/projectContextFileStore";
 import { executeSandboxed } from "@/ai-system/adapters/sandbox";
+import { sessionWorkspaceRoot } from "@/ai-system/adapters/sessionWorkspace";
 import { sha256Text } from "@/ai-system/adapters/sha256";
 import { createSkillTrustFileStore } from "@/ai-system/adapters/skillTrustFileStore";
 import { createThreadFileStore } from "@/ai-system/adapters/threadFileStore";
@@ -113,7 +114,9 @@ export async function createAISystem<TEvent = unknown>(
 
   const skillHost = createSkillHost({
     userRoot: userSkillsRoot,
-    getWorkspaceRoot: async () => (await deps.getAISettings()).workspaceRoot,
+    // Project skills come from the folder the RUNNING session mounted, like every other workspace read — a skill
+    // discovered in a folder the agent cannot see is one it can never act on.
+    getWorkspaceRoot: sessionWorkspaceRoot(async () => (await deps.getAISettings()).workspaceRoot),
     trustStore: createSkillTrustFileStore(skillTrustPath, deps.fs, deps.path),
     fs: deps.fs,
     path: deps.path,

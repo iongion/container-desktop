@@ -49,10 +49,19 @@ export interface PendingEngineOpRequest {
   args: Record<string, unknown>;
 }
 
+// One public-web query the agent wants the app to run. Like a container operation it executes in the app — which
+// owns the address-pinned fetch and the user's setting — and unlike one it takes no connection and no arguments
+// beyond the query.
+export interface PendingWebSearchRequest {
+  requestId: string;
+  query: string;
+}
+
 export type HostRequestOutcome =
   | { kind: "dialog"; request: PendingUiRequest }
   | { kind: "approval"; request: PendingApprovalRequest }
   | { kind: "engine-op"; request: PendingEngineOpRequest }
+  | { kind: "web-search"; request: PendingWebSearchRequest }
   | { kind: "chrome"; patch: ChromePatch }
   | { kind: "ignored" };
 
@@ -105,6 +114,12 @@ export function classifyHostRequest(event: HostRequestEvent): HostRequestOutcome
       const parsed = parseEngineOpRequest(event.payload);
       if (!parsed) return { kind: "ignored" };
       return { kind: "engine-op", request: { requestId: event.requestId, op: parsed.op, args: parsed.args ?? {} } };
+    }
+    case "web_search": {
+      const query = text(event.payload, "query")?.trim();
+      // Nothing to search for is not a refusal to report — there is no request here at all.
+      if (!query) return { kind: "ignored" };
+      return { kind: "web-search", request: { requestId: event.requestId, query } };
     }
     case "setStatus": {
       const key = text(event.payload, "statusKey");
