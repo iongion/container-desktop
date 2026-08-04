@@ -1659,8 +1659,6 @@
   "There is no Assistant response to copy": "Não há resposta do assistente para copiar",
   "Clipboard access is unavailable": "O acesso à área de transferência não está disponível",
   "Assistant response copied": "Resposta do assistente copiada",
-  "Unknown access profile: {{value}}": "Perfil de acesso desconhecido: {{value}}",
-  "Unknown reasoning level: {{value}}": "Nível de raciocínio desconhecido: {{value}}",
   "No assistant session": "Nenhuma sessão do assistente",
   "Start a session to work on a folder with the assistant.": "Inicie uma sessão para trabalhar em uma pasta com o assistente.",
   "It runs in a container on the connection you pick, and only that folder is mounted into it.": "Ele roda em um contêiner na conexão escolhida, e somente essa pasta é montada nele.",

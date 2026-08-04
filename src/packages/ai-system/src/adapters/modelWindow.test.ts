@@ -100,46 +100,6 @@ describe("fetchModelWindow", () => {
     });
   });
 
-  // Ollama publishes the same two numbers in two different places, and only one of them bounds a request: `/api/ps`
-  // reports what the resident copy was LOADED with (its default is far below the model's own maximum), while
-  // `/api/show` reports what the GGUF says the model could do. Payloads taken from a real ollama 0.32.5.
-  it("prefers the context length Ollama loaded over the model's own", async () => {
-    const fetchImpl = vi.fn(
-      async (url: unknown, init?: unknown) =>
-        (String(url).endsWith("/api/ps")
-          ? {
-              ok: true,
-              json: async () => ({ models: [{ name: "smollm2:135m", model: "smollm2:135m", context_length: 6144 }] }),
-            }
-          : {
-              ok: true,
-              json: async () => ({ model_info: { "general.architecture": "llama", "llama.context_length": 8192 } }),
-            }) as unknown as Response,
-    );
-    const resolved = provider({ id: "ollama", baseURL: "http://127.0.0.1:11434/v1", model: "smollm2:135m" });
-    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({ contextWindow: 6144 });
-    expect(String(fetchImpl.mock.calls[0][0])).toBe("http://127.0.0.1:11434/api/ps");
-  });
-
-  // Nothing is resident until a request loads it, and a model nobody has asked for yet still has a real maximum. The
-  // architecture prefix is read off the payload rather than assumed — `llama.context_length` on a llama, `qwen3.` on a
-  // qwen3, and no way to know which without asking.
-  it("falls back to what the model itself declares when Ollama holds nothing", async () => {
-    const fetchImpl = vi.fn(
-      async (url: unknown, init?: unknown) =>
-        (String(url).endsWith("/api/ps")
-          ? { ok: true, json: async () => ({ models: [] }) }
-          : {
-              ok: true,
-              json: async () => ({ model_info: { "general.architecture": "qwen3", "qwen3.context_length": 40960 } }),
-            }) as unknown as Response,
-    );
-    const resolved = provider({ id: "ollama", baseURL: "http://127.0.0.1:11434/v1", model: "qwen3:0.6b" });
-    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({ contextWindow: 40960 });
-    // The model is NAMED in the body, so this one has to be a POST.
-    expect(fetchImpl.mock.calls[1]?.[1]).toMatchObject({ method: "POST" });
-  });
-
   // llama.cpp serves ONE model at whatever `-c` it was started with, and publishes it under the default generation
   // settings — NOT as a top-level `n_ctx`, which is where a guess would have looked. Payload from a real llama-server.
   it("reads the context llama.cpp was started with", async () => {

@@ -1659,8 +1659,6 @@
   "There is no Assistant response to copy": "Aucune réponse de l'assistant à copier",
   "Clipboard access is unavailable": "L'accès au presse-papiers n'est pas disponible",
   "Assistant response copied": "Réponse de l'assistant copiée",
-  "Unknown access profile: {{value}}": "Profil d'accès inconnu : {{value}}",
-  "Unknown reasoning level: {{value}}": "Niveau de raisonnement inconnu : {{value}}",
   "No assistant session": "Aucune session de l'assistant",
   "Start a session to work on a folder with the assistant.": "Démarrez une session pour travailler sur un dossier avec l'assistant.",
   "It runs in a container on the connection you pick, and only that folder is mounted into it.": "Il s'exécute dans un conteneur sur la connexion choisie, et seul ce dossier y est monté.",

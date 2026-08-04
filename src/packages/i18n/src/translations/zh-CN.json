@@ -1659,8 +1659,6 @@
   "There is no Assistant response to copy": "没有可复制的助手回复",
   "Clipboard access is unavailable": "无法访问剪贴板",
   "Assistant response copied": "已复制助手回复",
-  "Unknown access profile: {{value}}": "未知的访问配置: {{value}}",
-  "Unknown reasoning level: {{value}}": "未知的推理级别: {{value}}",
   "No assistant session": "没有助手会话",
   "Start a session to work on a folder with the assistant.": "启动会话，与助手一起处理某个文件夹。",
   "It runs in a container on the connection you pick, and only that folder is mounted into it.": "它在你选择的连接上的容器中运行，且只挂载该文件夹。",

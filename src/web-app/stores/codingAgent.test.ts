@@ -746,3 +746,102 @@ describe("useCodingAgentStore skill invocation", () => {
     expect(useCodingAgentStore.getState().view.timeline[1]).toMatchObject({ kind: "approval", status: "pending" });
   });
 });
+
+describe("useCodingAgentStore session replacement", () => {
+  afterEach(() => {
+    delete (globalThis as { window?: unknown }).window;
+  });
+
+  // pi replaces the session inside the container it is already running in, so the socket, the spec and the
+  // connection all survive — but everything on screen belongs to the conversation that is gone.
+  it("drops the conversation the container no longer has, and keeps the session it is running in", () => {
+    const { client } = attachFakeClient();
+    useCodingAgentStore.getState().applyBridgeEvent({ type: "user_message", text: "first conversation" });
+    useCodingAgentStore.getState().applyBridgeEvent({ type: "assistant_end", text: "hello", stopReason: "stop" });
+    expect(useCodingAgentStore.getState().view.timeline).toHaveLength(2);
+
+    useCodingAgentStore.getState().applyBridgeEvent({
+      type: "session_replaced",
+      reason: "new",
+      sessionId: "session-2",
+      cwd: "/work",
+      model: "gw/canned",
+    });
+
+    const state = useCodingAgentStore.getState();
+    expect(state.view.timeline).toEqual([]);
+    expect(state.view.phase).toBe("idle");
+    expect(state.client).toBe(client);
+    expect(state.spec).toBe(spec);
+    expect(state.status).toBe("ready");
+  });
+
+  // A dialog and a held container operation are questions the OLD session asked. Nothing will ever answer them, so
+  // leaving them up parks the UI on a request no container is listening for.
+  it("abandons what the replaced session was waiting on", async () => {
+    setPermissionMode("ask");
+    withEngineOps({ ok: true });
+    attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("select", { title: "Pick one", options: ["a", "b"] }, "d1"));
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("engine_op", { op: "removeContainer", args: { id: "web" } }, "e1"));
+    expect(useCodingAgentStore.getState().pendingDialog).toBeDefined();
+    expect(useCodingAgentStore.getState().pendingEngineOps).toHaveProperty("e1");
+
+    useCodingAgentStore
+      .getState()
+      .applyBridgeEvent({ type: "session_replaced", reason: "resume", sessionId: "s2", cwd: "/work" });
+
+    expect(useCodingAgentStore.getState().pendingDialog).toBeUndefined();
+    expect(useCodingAgentStore.getState().pendingEngineOps).toEqual({});
+  });
+
+  // The replay that follows the reset comes over the bridge, so the user's own turns have to project as they did
+  // when they were typed — the same case, not a second path.
+  it("rebuilds a replayed conversation from the container's own events", () => {
+    attachFakeClient();
+    useCodingAgentStore
+      .getState()
+      .applyBridgeEvent({ type: "session_replaced", reason: "resume", sessionId: "s2", cwd: "/work" });
+    for (const event of [
+      { type: "user_message" as const, text: "how many containers?" },
+      { type: "assistant_end" as const, text: "Two.", stopReason: "stop" },
+      { type: "idle" as const },
+    ]) {
+      useCodingAgentStore.getState().applyBridgeEvent(event);
+    }
+
+    const { view } = useCodingAgentStore.getState();
+    expect(view.timeline).toMatchObject([
+      { kind: "message", role: "user", content: "how many containers?", status: "complete" },
+      { kind: "message", role: "assistant", content: "Two.", status: "complete" },
+    ]);
+    expect(view.phase).toBe("idle");
+  });
+
+  // The palette's /new used to tear the container pair down and build it again. It must now be one bridge command,
+  // and the reset must come from the container rather than be assumed here.
+  it("asks the container for a new session instead of restarting the pair", async () => {
+    const { client } = attachFakeClient();
+    const runCommand = vi.fn(async () => ({ ok: true as const }));
+    useCodingAgentStore.setState({ client: { ...client, runCommand } as unknown as PiBridgeClient });
+
+    await useCodingAgentStore.getState().newConversation();
+
+    expect(runCommand).toHaveBeenCalledWith("new", "");
+    expect(useCodingAgentStore.getState().spec).toBe(spec);
+  });
+
+  it("reports a refusal rather than clearing a conversation the container still has", async () => {
+    const { client } = attachFakeClient();
+    const runCommand = vi.fn(async () => ({ ok: false as const, error: "an extension cancelled the new session" }));
+    useCodingAgentStore.setState({ client: { ...client, runCommand } as unknown as PiBridgeClient });
+    useCodingAgentStore.getState().applyBridgeEvent({ type: "user_message", text: "still mine" });
+
+    await expect(useCodingAgentStore.getState().newConversation()).rejects.toThrow(/cancelled/);
+    expect(useCodingAgentStore.getState().view.timeline).toHaveLength(1);
+  });
+});

@@ -1659,8 +1659,6 @@
   "There is no Assistant response to copy": "Es gibt keine Assistentenantwort zum Kopieren",
   "Clipboard access is unavailable": "Kein Zugriff auf die Zwischenablage",
   "Assistant response copied": "Assistentenantwort kopiert",
-  "Unknown access profile: {{value}}": "Unbekanntes Zugriffsprofil: {{value}}",
-  "Unknown reasoning level: {{value}}": "Unbekannte Reasoning-Stufe: {{value}}",
   "No assistant session": "Keine Assistenzsitzung",
   "Start a session to work on a folder with the assistant.": "Starte eine Sitzung, um mit dem Assistenten an einem Ordner zu arbeiten.",
   "It runs in a container on the connection you pick, and only that folder is mounted into it.": "Er läuft in einem Container auf der von dir gewählten Verbindung; nur dieser Ordner wird eingebunden.",

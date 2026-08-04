@@ -30,7 +30,7 @@ Open it from the **AI menu** in the header (the chat button). It is **local-firs
 
 Pick your inference **source → provider → model** from the selector in the message box. Two kinds of source are supported:
 
-- **Local (no API key, runs on your machine):** **LM Studio**, **Ollama** and **llama.cpp**. Start the server, and the assistant lists its models — your prompts and container data never leave the device.
+- **Local (no API key, runs on your machine):** **LM Studio** and **llama.cpp**. Start the server, and the assistant lists its models — your prompts and container data never leave the device.
 - **Cloud (needs an API key):** **OpenRouter**, **Anthropic**, **OpenAI**, **DeepSeek**, **GLM** and **MiniMax**. Add a key in **Settings → AI**; OpenRouter exposes many vendors' models behind one key.
 
 <div class="note info">

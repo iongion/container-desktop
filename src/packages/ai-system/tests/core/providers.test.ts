@@ -133,7 +133,6 @@ describe("PROVIDER_CATALOG — single source of provider metadata", () => {
   it("contains every provider in the canonical order, local before cloud", () => {
     expect(PROVIDER_CATALOG.map((e) => e.id)).toEqual([
       "lmstudio",
-      "ollama",
       "llamacpp",
       "anthropic",
       "openai",

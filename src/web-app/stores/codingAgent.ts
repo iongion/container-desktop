@@ -309,9 +309,13 @@ export interface CodingAgentState {
   submit(text: string): Promise<void>;
   submitSkill(input: SkillSubmission): Promise<void>;
   stop(): Promise<void>;
-  // Tear the session down and start an identical one — the honest meaning of "new conversation" here, since
-  // pi holds the conversation inside the session and the bridge carries no reset.
+  // Tear the container pair down and start an identical one. What `/quit` followed by starting again does, and the
+  // only route back when nothing is running.
   restart(): Promise<void>;
+  // A fresh conversation on the SAME containers, plugins and workspace: pi's own runtime replaces the session in
+  // process, so this costs neither the image build nor the plugin load. Falls back to bringing the pair up when
+  // there is no session to replace.
+  newConversation(): Promise<void>;
   // Stop the RUNNING TURN and leave the session up. Distinct from stop(), which removes the container pair:
   // a user who asks to stop generating does not mean "throw the workspace away".
   abortTurn(): Promise<void>;
@@ -556,6 +560,18 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     await get().start(options);
   },
 
+  async newConversation() {
+    const { client } = get();
+    if (!client) {
+      await get().restart();
+      return;
+    }
+    // The transcript is not cleared here: the container answers with `session_replaced`, and clearing on that one
+    // event means a session pi refused to replace still shows the conversation the user actually has.
+    const result = await client.runCommand("new", "");
+    if (!result.ok) throw new Error(result.error);
+  },
+
   async abortTurn() {
     await stopAfterRejection(get().client);
   },
@@ -587,6 +603,22 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   // Every bridge event lands here, whether the socket delivered it or a WebDriver spec pushed it, so the
   // transcript a test sees is projected by exactly the code the session uses.
   applyBridgeEvent(event) {
+    // The container is running a different conversation than the one on screen — /new, /resume, /clone or /import.
+    // Everything held here belongs to the session that is gone, including the dialogs and container operations it
+    // was waiting on, so it goes; the entries of the session that replaced it arrive next as ordinary events.
+    // The client, the spec and the connection stay: same socket, same containers.
+    if (event.type === "session_replaced") {
+      set({
+        view: emptyPiThreadView("pi-session"),
+        chrome: emptyCodingAgentChrome(),
+        surfaces: noSurfaces(),
+        pendingDialog: undefined,
+        pendingEngineOps: {},
+        activeSkill: undefined,
+        turnReadPublicWeb: false,
+      });
+      return;
+    }
     // A host request is a question, not transcript content: the handler decides what it becomes, and
     // whether the container gets an answer without ever bothering the user.
     if (event.type === "host_request") {

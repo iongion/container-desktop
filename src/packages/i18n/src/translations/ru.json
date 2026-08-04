@@ -1659,8 +1659,6 @@
   "There is no Assistant response to copy": "Нет ответа ассистента для копирования",
   "Clipboard access is unavailable": "Доступ к буферу обмена недоступен",
   "Assistant response copied": "Ответ ассистента скопирован",
-  "Unknown access profile: {{value}}": "Неизвестный профиль доступа: {{value}}",
-  "Unknown reasoning level: {{value}}": "Неизвестный уровень рассуждения: {{value}}",
   "No assistant session": "Нет сеанса ассистента",
   "Start a session to work on a folder with the assistant.": "Запустите сеанс, чтобы работать над папкой вместе с ассистентом.",
   "It runs in a container on the connection you pick, and only that folder is mounted into it.": "Он выполняется в контейнере на выбранном подключении, и в него монтируется только эта папка.",

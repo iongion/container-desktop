@@ -3,7 +3,6 @@ import type {
   AssistantCommandArgumentSpec,
   AssistantCommandAvailabilityId,
   AssistantCommandBypassTier,
-  AssistantCommandCapabilityId,
   AssistantCommandText,
   AssistantControlCommandDefinition,
   BuiltinAssistantCommandId,
@@ -23,7 +22,6 @@ interface ControlInput {
   argumentHintKey?: string;
   bypassTier: AssistantCommandBypassTier;
   availabilityId: AssistantCommandAvailabilityId;
-  capabilityId?: AssistantCommandCapabilityId;
   confirmation?: "none" | "required";
   arguments: AssistantCommandArgumentSpec;
 }
@@ -42,7 +40,6 @@ function control(input: ControlInput): AssistantControlCommandDefinition {
     argumentHint: input.argumentHintKey ? i18n(input.argumentHintKey) : undefined,
     bypassTier: input.bypassTier,
     availabilityId: input.availabilityId,
-    ...(input.capabilityId ? { capabilityId: input.capabilityId } : {}),
     confirmation: input.confirmation ?? "none",
     arguments: input.arguments,
     surfaces: SURFACES,

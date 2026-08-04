@@ -21,7 +21,8 @@ export interface AssistantSessionState {
   recoveryErrors: Record<string, string>;
   submitMessage: (text: string) => Promise<undefined>;
   cancel: () => Promise<void>;
-  // pi's `/new`: one session is one conversation, so a fresh conversation is a fresh session on the same settings.
+  // pi's `/new`: one session is one conversation, so a fresh conversation is a fresh session — replaced in the
+  // container it is already running in, keeping the containers, the plugins and the mounted workspace.
   newThread: () => Promise<string>;
   resolveApproval: (approvalId: string, decision: "allow" | "reject") => Promise<undefined>;
 }
@@ -42,7 +43,7 @@ function deriveState(view: ThreadView, status: string, modelId: string, startedA
       await useCodingAgentStore.getState().abortTurn();
     },
     newThread: async () => {
-      await useCodingAgentStore.getState().restart();
+      await useCodingAgentStore.getState().newConversation();
       return useCodingAgentStore.getState().view.threadId;
     },
     // The approvalId is the container's requestId, so the card answers the exact tool call that is parked.

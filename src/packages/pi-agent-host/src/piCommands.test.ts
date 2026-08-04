@@ -31,6 +31,7 @@ function deps(overrides: Partial<PiCommandDeps> = {}): PiCommandDeps {
       getSessionName: vi.fn(() => undefined),
       getLeafId: vi.fn(() => "e1"),
     } as never,
+    runtime: { newSession: vi.fn(async () => ({ cancelled: false })) },
     keybindings: () => [{ action: "tui.input.submit", keys: ["enter"] }],
     changelog: async () => "# pi\n\n## 1.2.3",
     ...overrides,
@@ -209,8 +210,23 @@ describe("runPiCommand", () => {
   // A command the GUI performs reaching the container means the app forgot to handle it. Saying so beats doing
   // nothing and looking like a dead command.
   it("says so when handed a command the app performs", async () => {
-    await expect(runPiCommand(deps(), "new", "")).resolves.toMatchObject({ ok: false });
     await expect(runPiCommand(deps(), "quit", "")).resolves.toMatchObject({ ok: false });
+    await expect(runPiCommand(deps(), "export", "")).resolves.toMatchObject({ ok: false });
+  });
+
+  // A fresh conversation used to mean tearing the container pair down and building it again. pi's own runtime
+  // replaces the session in place, so this is the session's own work now.
+  it("starts a new session in process", async () => {
+    const runtime = { newSession: vi.fn(async () => ({ cancelled: false })) };
+    await expect(runPiCommand(deps({ runtime }), "new", "")).resolves.toEqual({ ok: true });
+    expect(runtime.newSession).toHaveBeenCalledTimes(1);
+  });
+
+  // An extension holding a `session_before_switch` handler can refuse. Reporting that as success would leave the
+  // user looking at the old conversation believing it was cleared.
+  it("reports a new session an extension refused", async () => {
+    const runtime = { newSession: vi.fn(async () => ({ cancelled: true })) };
+    await expect(runPiCommand(deps({ runtime }), "new", "")).resolves.toMatchObject({ ok: false });
   });
 
   it("refuses a name pi does not have", async () => {

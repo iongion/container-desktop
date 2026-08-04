@@ -1,7 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  type AgentSession,
+  type CreateAgentSessionRuntimeFactory,
   createAgentSessionFromServices,
+  createAgentSessionRuntime,
   createAgentSessionServices,
   DefaultPackageManager,
   type ExtensionAPI,
@@ -27,13 +30,14 @@ import { checkSessionProvider } from "@/pi-agent-host/providerCheck";
 import { type PiSessionFacts, sessionContextReport, sessionUsageReport } from "@/pi-agent-host/reports";
 import { collectResources } from "@/pi-agent-host/resources";
 import type { BridgeSessionHandle } from "@/pi-agent-host/server";
+import { replaySessionEntries, sessionWasCompacted } from "@/pi-agent-host/sessionReplay";
 import { createSurfaceRegistry } from "@/pi-agent-host/surfaces";
 import { createSystemContextExtension } from "@/pi-agent-host/systemContext";
 import { createToolSurfaceRenderer, routeToolSurfaces } from "@/pi-agent-host/toolSurfaces";
 import { createGuiUiContext, type PiKeybindings } from "@/pi-agent-host/uiContext";
 import { createVirtualTerminal } from "@/pi-agent-host/virtualTerminal";
 import { createWebSearchExtension } from "@/pi-agent-host/webSearchTool";
-import type { AppThemePalette, BridgeEvent } from "@/pi-bridge/protocol";
+import type { AppThemePalette, BridgeEvent, PiSessionReplacement } from "@/pi-bridge/protocol";
 
 const logger = createLogger("pi-agent-host.session");
 
@@ -151,37 +155,69 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   // Settings are file-backed at `agentDir`, which is the named plugin volume: installing a plugin writes its
   // source into `packages` there, so the set survives the session that installed it. `projectTrusted` stays
   // false, so pi refuses project-scoped package storage — nothing is written into the user's workspace.
+  //
+  // ONE instance for the life of the container, shared by every session it runs and by the plugin package manager.
+  // pi would let the factory build a fresh one per cwd; here that would hand the Plugins screen a different
+  // settings instance from the session's, and the two would disagree about what is installed.
   const settingsManager = SettingsManager.create(cwd, agentDir);
-  const services = await createAgentSessionServices({
+
+  // What pi calls to build a session — once at start, and again for every replacement (`/new`, `/resume`, `/clone`,
+  // `/import`). Everything above it is fixed for the life of the container; everything in it is per session.
+  const createRuntime: CreateAgentSessionRuntimeFactory = async (target) => {
+    // pi hands the factory `sessionManager.getCwd()`, which for an imported session is whatever machine wrote the
+    // JSONL. This container has exactly one workspace — the folder the app bind-mounted — so a session claiming a
+    // different one must fail loudly here rather than run its tools against a path that is not the user's project.
+    if (target.cwd !== cwd) {
+      throw new Error(`this container serves ${cwd}; the session asked for ${target.cwd}`);
+    }
+    const services = await createAgentSessionServices({
+      cwd,
+      agentDir: target.agentDir,
+      settingsManager,
+      resourceLoaderOptions: {
+        extensionFactories: [
+          gatewayExtension,
+          createPermissionGateExtension(rpc),
+          // The container toolset. It registers tools only — each call still passes the permission gate above,
+          // because the gate handles every tool_call regardless of who registered the tool.
+          createContainerToolsExtension({ rpc, descriptions: options.containerToolDescriptions }),
+          // Public web search, performed by the app. Registered unconditionally: the setting it depends on can be
+          // turned off mid-session, so the app answers with that as the reason rather than the tool vanishing.
+          createWebSearchExtension({ rpc, description: options.containerToolDescriptions[WEB_SEARCH_TOOL_NAME] ?? "" }),
+          // The app's project rules and memories. Registered last of the app's own three so its append lands on top
+          // of whatever the others contributed to the turn's system prompt. The prose itself outlives every
+          // replacement, because the extension holds it and the extension is built once, above.
+          systemContext.extension,
+          ...(options.extraExtensions ?? []),
+        ],
+      },
+    });
+    await services.modelRuntime.setRuntimeApiKey(GATEWAY_PROVIDER_ID, gatewayToken, { allowNetwork: false });
+
+    const model = services.modelRuntime.getModel(GATEWAY_PROVIDER_ID, modelId);
+    if (!model) {
+      throw new Error(`gateway model ${modelId} was not registered — the provider flush did not happen`);
+    }
+    const created = await createAgentSessionFromServices({
+      services,
+      sessionManager: target.sessionManager,
+      model,
+      ...(target.sessionStartEvent ? { sessionStartEvent: target.sessionStartEvent } : {}),
+    });
+    return { ...created, services, diagnostics: services.diagnostics };
+  };
+
+  // The runtime owns the current session and replaces it IN PROCESS. Adopting it is what makes `/new`, `/resume`,
+  // `/clone` and `/import` real here: without it a container could only ever run the session it was started with,
+  // and a fresh conversation cost the user their containers, their plugins and the wait to build them again.
+  const runtime = await createAgentSessionRuntime(createRuntime, {
     cwd,
     agentDir,
-    settingsManager,
-    resourceLoaderOptions: {
-      extensionFactories: [
-        gatewayExtension,
-        createPermissionGateExtension(rpc),
-        // The container toolset. It registers tools only — each call still passes the permission gate above,
-        // because the gate handles every tool_call regardless of who registered the tool.
-        createContainerToolsExtension({ rpc, descriptions: options.containerToolDescriptions }),
-        // Public web search, performed by the app. Registered unconditionally: the setting it depends on can be
-        // turned off mid-session, so the app answers with that as the reason rather than the tool vanishing.
-        createWebSearchExtension({ rpc, description: options.containerToolDescriptions[WEB_SEARCH_TOOL_NAME] ?? "" }),
-        // The app's project rules and memories. Registered last of the app's own three so its append lands on top
-        // of whatever the others contributed to the turn's system prompt.
-        systemContext.extension,
-        ...(options.extraExtensions ?? []),
-      ],
-    },
+    sessionManager: SessionManager.create(cwd),
   });
-  await services.modelRuntime.setRuntimeApiKey(GATEWAY_PROVIDER_ID, gatewayToken, { allowNetwork: false });
-
-  const model = services.modelRuntime.getModel(GATEWAY_PROVIDER_ID, modelId);
-  if (!model) {
-    throw new Error(`gateway model ${modelId} was not registered — the provider flush did not happen`);
-  }
-
-  const sessionManager = SessionManager.create(cwd);
-  const { session } = await createAgentSessionFromServices({ services, sessionManager, model });
+  // Which of pi's replacements is in flight, so the app is told why its transcript was reset. pi does not carry the
+  // reason into the rebind, and only this host calls a replacement, so it is recorded where the call is made.
+  let replacement: PiSessionReplacement = "new";
 
   // pi's own components (Markdown, SelectList, Editor) read a module-global theme that throws until it is
   // initialised, so a plugin building one would crash on its first render. There is no public way to make
@@ -218,7 +254,9 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     cwd,
     getTheme: () => guiUi.ui.theme,
     getToolsExpanded: guiUi.getToolsExpanded,
-    getToolDefinition: (name) => session.getToolDefinition(name),
+    // Read off the RUNNING session, never a captured one: a replacement brings a new tool runtime, and a renderer
+    // resolved against the disposed session would silently stop drawing a plugin's rows.
+    getToolDefinition: (name) => runtime.session.getToolDefinition(name),
   });
 
   // pi only says that a compaction happened, never how much it dropped, so the fact is remembered here and
@@ -231,6 +269,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   // What this session has spent and what it is sending the model, read off pi rather than counted from the events
   // the app happened to see: pi's stats span entries it has since compacted away, which no bridge tally could.
   const readFacts = (): PiSessionFacts => {
+    const session = runtime.session;
     const stats = session.getSessionStats();
     return {
       model: modelId,
@@ -247,7 +286,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
           ? { contextUsage: { tokens: stats.contextUsage.tokens, contextWindow: stats.contextUsage.contextWindow } }
           : {}),
       },
-      maxOutputTokens: model.maxTokens ?? 0,
+      maxOutputTokens: session.model?.maxTokens ?? 0,
       // Only what the provider published — never pi's fallback, which `model.contextWindow` and `model.maxTokens`
       // would both carry.
       ...(options.contextWindow ? { providerContextWindow: options.contextWindow } : {}),
@@ -267,21 +306,83 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     }
   };
 
-  session.subscribe((event) => {
-    const piEvent = event as unknown as PiAgentEvent;
-    routeToolSurfaces(toolSurfaces, piEvent);
-    for (const mapped of mapAgentEvent(piEvent)) {
-      // A turn the APP aborted — the user pressed Stop, or rejected a tool call — dies with its in-flight upstream
-      // request, and pi reports that as a finished assistant message with stopReason "error" and the transport's own
-      // wording ("Connection error."), not as stopReason "aborted". Relaying it would tell the user their assistant
-      // broke when in fact it obeyed them, and pi retries first, so they would be told several times.
-      if (mapped.type === "error" && aborting) continue;
-      emit(mapped);
-    }
-    if (piEvent.type === "session_compact") compacted = true;
-    // After the turn, when the numbers have moved and the tool set for the next one is settled.
-    if (piEvent.type === "turn_end" || piEvent.type === "agent_settled") publishReports();
+  // Everything a session needs from this host: the event plumbing and the UI bindings. Applied to the session the
+  // runtime built, and applied again to whichever session replaces it — the surfaces, tool renderers and GuiTui are
+  // the same objects throughout, so they must be RE-POINTED at the new session, never rebuilt.
+  const attach = async (session: AgentSession) => {
+    session.subscribe((event) => {
+      const piEvent = event as unknown as PiAgentEvent;
+      routeToolSurfaces(toolSurfaces, piEvent);
+      for (const mapped of mapAgentEvent(piEvent)) {
+        // A turn the APP aborted — the user pressed Stop, or rejected a tool call — dies with its in-flight upstream
+        // request, and pi reports that as a finished assistant message with stopReason "error" and the transport's
+        // own wording ("Connection error."), not as stopReason "aborted". Relaying it would tell the user their
+        // assistant broke when in fact it obeyed them, and pi retries first, so they would be told several times.
+        if (mapped.type === "error" && aborting) continue;
+        emit(mapped);
+      }
+      if (piEvent.type === "session_compact") compacted = true;
+      // After the turn, when the numbers have moved and the tool set for the next one is settled.
+      if (piEvent.type === "turn_end" || piEvent.type === "agent_settled") publishReports();
+    });
+
+    // `tui` is what the extensions see now: dialogs are answered by the app AND components render, because
+    // every one of them is drawn to lines here and painted by an xterm surface in the renderer. A plugin
+    // guarding on `mode === "tui"` takes its rich path and gets a surface that works. This is also what emits
+    // pi's `session_start`, so it is the point every extension is (re)born at.
+    await session.bindExtensions({ uiContext: guiUi.ui, mode: "tui" });
+  };
+
+  // What the app is told a session is running against. Read off the live session rather than restated from the
+  // options: a resumed conversation can carry a model change pi resolved for itself.
+  const modelLabel = (session: AgentSession) => {
+    const model = session.model;
+    return model ? `${model.provider}/${model.id}` : `${GATEWAY_PROVIDER_ID}/${modelId}`;
+  };
+
+  await attach(runtime.session);
+
+  // The surfaces on screen were opened by extensions that are about to become stale, and the tool rows belong to a
+  // conversation that is ending. pi runs this synchronously, before the outgoing session is invalidated, which is
+  // exactly when a frame can still be retired cleanly.
+  runtime.setBeforeSessionInvalidate(() => {
+    surfaces.closeAll();
+    toolSurfaces.clear();
   });
+
+  // A replacement landed. The app holds a transcript of events, not a view of pi's store, so it is told to drop what
+  // it has and is then handed the new session's own entries as the very events it would have seen live.
+  runtime.setRebindSession(async (session) => {
+    const entries = session.sessionManager.getBranch();
+    // Re-derived, never carried over: claiming the predecessor's compaction would tell the user part of THIS
+    // conversation is a summary when none of it is.
+    compacted = sessionWasCompacted(entries);
+    emit({
+      type: "session_replaced",
+      reason: replacement,
+      sessionId: session.sessionId,
+      cwd,
+      model: modelLabel(session),
+    });
+    for (const event of replaySessionEntries(entries)) emit(event);
+    await attach(session);
+    // A replaced session is holding nothing: the replay is history, not a turn in flight.
+    emit({ type: "idle" });
+    publishReports();
+  });
+
+  // Perform one of pi's session replacements, and tell the app why. `aborting` covers the whole call because the
+  // teardown aborts whatever turn was running — that abort is this host's, so the transport failure it provokes must
+  // not reach the user as a model error.
+  const replace = async (reason: PiSessionReplacement, run: () => Promise<{ cancelled: boolean }>) => {
+    replacement = reason;
+    aborting = true;
+    try {
+      return await run();
+    } finally {
+      aborting = false;
+    }
+  };
 
   // A second package manager over the same settings and agent dir. pi's resource loader keeps its own for
   // resolution; this one exists so the GUI's install, remove and update run through the manager's public
@@ -289,24 +390,26 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   const packageManager = new DefaultPackageManager({ cwd, agentDir, settingsManager });
   const plugins = createPluginService({ packageManager, settings: settingsManager, emit });
 
-  // `tui` is what the extensions see now: dialogs are answered by the app AND components render, because
-  // every one of them is drawn to lines here and painted by an xterm surface in the renderer. A plugin
-  // guarding on `mode === "tui"` takes its rich path and gets a surface that works.
-  await session.bindExtensions({ uiContext: guiUi.ui, mode: "tui" });
-
   return {
-    sessionId: session.sessionId,
+    // Getters, not values: a replacement changes both, and a handshake answered with the predecessor's id would
+    // name a session that no longer exists.
+    get sessionId() {
+      return runtime.session.sessionId;
+    },
+    get model() {
+      return modelLabel(runtime.session);
+    },
     cwd,
-    model: `${GATEWAY_PROVIDER_ID}/${modelId}`,
     plugins,
     listResources() {
-      return collectResources(services.resourceLoader);
+      return collectResources(runtime.services.resourceLoader);
     },
     async reload() {
-      await session.reload();
+      await runtime.session.reload();
       // The extensions that owned the open surfaces are gone; their frames would otherwise sit on screen
       // with nothing behind them, taking keys no component reads.
       surfaces.closeAll();
+      toolSurfaces.clear();
       emit({ type: "plugins_changed" });
     },
     surfaceInput(surfaceId, data) {
@@ -326,8 +429,13 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     runCommand(name, args) {
       return runPiCommand(
         {
-          session,
-          sessionManager,
+          session: runtime.session,
+          sessionManager: runtime.session.sessionManager,
+          // The session replacements pi performs in process. `AgentSession.sessionManager` above is the live one, so
+          // a command reading the tree after a replacement reads the tree it landed in.
+          runtime: {
+            newSession: () => replace("new", () => runtime.newSession()),
+          },
           keybindings: () =>
             Object.entries(getKeybindings().getResolvedBindings()).map(([action, keys]) => ({
               action,
@@ -351,7 +459,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
       // A fresh turn is nobody's abort yet: the flag belongs to the turn that was stopped, not to the session.
       aborting = false;
       try {
-        await session.prompt(text, streamingBehavior ? { streamingBehavior } : undefined);
+        await runtime.session.prompt(text, streamingBehavior ? { streamingBehavior } : undefined);
       } catch (error) {
         // A swallowed turn error reads as a hung UI: the transcript just stops. Surface it, then rethrow
         // so the bridge command response fails too.
@@ -363,7 +471,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     async abort() {
       // Set BEFORE the abort lands, so the failure it causes is already recognised as ours when pi reports it.
       aborting = true;
-      await session.abort();
+      await runtime.session.abort();
     },
     settleHostResponse: rpc.settle,
   };

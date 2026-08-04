@@ -1659,8 +1659,6 @@
   "There is no Assistant response to copy": "There is no Assistant response to copy",
   "Clipboard access is unavailable": "Clipboard access is unavailable",
   "Assistant response copied": "Assistant response copied",
-  "Unknown access profile: {{value}}": "Unknown access profile: {{value}}",
-  "Unknown reasoning level: {{value}}": "Unknown reasoning level: {{value}}",
   "No assistant session": "No assistant session",
   "Start a session to work on a folder with the assistant.": "Start a session to work on a folder with the assistant.",
   "It runs in a container on the connection you pick, and only that folder is mounted into it.": "It runs in a container on the connection you pick, and only that folder is mounted into it.",

@@ -9,8 +9,7 @@
 // `undefined`, which the panel renders as "unknown" rather than as a confident fiction.
 //
 // Every probe here was driven against a real server, because the shapes are not guessable: llama.cpp keeps its number
-// under `default_generation_settings`, not at the top level of `/props`, and Ollama has two numbers in two endpoints
-// where only `/api/ps` reports the one a request is actually bounded by.
+// under `default_generation_settings`, not at the top level of `/props`, where a guess would have looked.
 
 import type { ResolvedProvider } from "@/ai-system/core/providers";
 
@@ -122,36 +121,6 @@ async function openRouterWindow(
   return { contextWindow: window, ...(cap ? { maxOutputTokens: cap } : {}), ...(pricing ? { pricing } : {}) };
 }
 
-// Ollama says it twice, and only one of them bounds a request. `/api/ps` describes the RESIDENT copy — the context
-// length it was loaded with, which defaults well below what the model could do — and `/api/show` describes the model
-// itself, under a key named after its architecture. Same relationship as LM Studio's loaded vs maximum, so the
-// preference is the same.
-//
-// Ollama is also the one provider that can refuse this app by ORIGIN: it runs a CORS allow-list, and every request
-// from a webview whose scheme is not on it fails as an opaque network error rather than an HTTP status. Its defaults
-// include `tauri://*`, so the Tauri shell is fine; `wails://` is not, and cannot be added either — Ollama PANICS at
-// startup on an origin whose scheme is not http/https/*-extension, so the only opening is `OLLAMA_ORIGINS=*`.
-async function ollamaWindow(
-  resolved: ResolvedProvider,
-  opts: { fetchImpl: typeof fetch; signal?: AbortSignal },
-): Promise<ModelWindow | undefined> {
-  const base = origin(resolved.baseURL);
-  const resident = (await readJSON(`${base}/api/ps`, opts)) as { models?: Array<Record<string, unknown>> } | undefined;
-  const running = resident?.models?.find((entry) => entry.model === resolved.model || entry.name === resolved.model);
-  const loaded = usable(running?.context_length);
-  if (loaded) return { contextWindow: loaded };
-
-  // Nothing resident: the model still has a maximum, and the key it lives under is named after the architecture the
-  // payload itself reports — there is no way to know it in advance.
-  const shown = (await readJSON(`${base}/api/show`, { ...opts, body: { model: resolved.model } })) as
-    | { model_info?: Record<string, unknown> }
-    | undefined;
-  const info = shown?.model_info;
-  const architecture = info?.["general.architecture"];
-  const declared = typeof architecture === "string" ? usable(info?.[`${architecture}.context_length`]) : undefined;
-  return declared ? { contextWindow: declared } : undefined;
-}
-
 // llama.cpp serves ONE model at whatever `-c` it was started with, so the model id plays no part. The number lives
 // under the default generation settings and NOT at the top level of `/props`, where a guess would have looked.
 async function llamaCppWindow(
@@ -168,7 +137,6 @@ async function llamaCppWindow(
 const PROBES: Record<string, typeof lmStudioWindow> = {
   lmstudio: lmStudioWindow,
   openrouter: openRouterWindow,
-  ollama: ollamaWindow,
   llamacpp: llamaCppWindow,
 };
 

@@ -12,6 +12,7 @@ import type { ILogger } from "@/logger";
 
 import type { AxiosInstance } from "axios";
 import type EventEmitter from "eventemitter3";
+import { isMockMode } from "@/container-client/mock/mode";
 import { systemNotifier } from "@/container-client/notifier";
 import { Runner } from "@/container-client/runner";
 import type { ApiConnection, Connection, EngineConnectorSettings } from "@/container-client/types/connection";
@@ -352,7 +353,8 @@ export class HostClient implements HostContext {
           : `Program "${programName}" could not be checked in the remote host`;
         return result;
       }
-    } else if (!(await FS.isFilePresent(programPath))) {
+      // The fixtures ARE the engine in mock mode, so there is no binary to find — see isApiAvailable.
+    } else if (!isMockMode() && !(await FS.isFilePresent(programPath))) {
       result.details =
         programPath === programName
           ? `Program "${programName}" was not detected on this machine`
@@ -390,7 +392,11 @@ export class HostClient implements HostContext {
     // fs.existsSync, which is false for EVERY named pipe (it opens the path, and opening a pipe means
     // becoming a client of it), so checking one here would have refused every Windows connection. The
     // port now answers a pipe address by enumerating \\.\pipe\.
-    if (!this.isScoped()) {
+    // Mock mode serves every request from fixtures, so a connection's address names nothing on this machine —
+    // podman's real socket path with no podman running, or Apple Container's macOS path on Linux. Probing the
+    // filesystem for it fails every time, which failed each liveness ping, which dropped the connection: the
+    // engines flapped and the theme — keyed to the active engine — flickered between them at random.
+    if (!this.isScoped() && !isMockMode()) {
       const address = settings.api.connection.uri || "";
       const socketPath = isWindowsNamedPipe(address) ? address : address.replace(/^unix:\/\//, "");
       if (socketPath && !(await FS.isFilePresent(socketPath))) {

@@ -102,7 +102,7 @@ const MOCK_RESOURCES: ContributedResources = {
     { name: "hotkeys", description: "Show all keyboard shortcuts", runsIn: "session" },
     { name: "fork", description: "Create a new fork from a previous user message", runsIn: "session" },
     { name: "tree", description: "Navigate session tree (switch branches)", runsIn: "session" },
-    { name: "new", description: "Start a new session", runsIn: "app" },
+    { name: "new", description: "Start a new session", runsIn: "session" },
     {
       name: "login",
       description: "Configure provider authentication",
@@ -163,6 +163,9 @@ export function createMockPiBridgeClient(): PiBridgeClient {
   // What the app published as the project's rules and memories. The real session appends this to the system
   // prompt pi assembles; here it is what the session can quote back.
   let systemContext = "";
+  // Which session this stand-in is on. The real container replaces the session in process and reports a new id, so
+  // the mock has to move too — the renderer would otherwise never see the id change that proves a replacement.
+  let sessions = 1;
 
   const emit = (event: BridgeEvent) => {
     for (const listener of listeners) listener(event);
@@ -287,7 +290,7 @@ export function createMockPiBridgeClient(): PiBridgeClient {
       emit({
         type: "ready",
         protocolVersion: 1,
-        sessionId: "mock-pi-session",
+        sessionId: `mock-pi-session-${sessions}`,
         cwd: "/workspace",
         model: "container-desktop-mock/mock-assistant",
       });
@@ -358,6 +361,22 @@ export function createMockPiBridgeClient(): PiBridgeClient {
       }
       if (name === "name" && !args.trim())
         return { ok: false as const, error: "give the session a name: /name <text>" };
+      // A fresh conversation on the same containers. The real runtime replaces the session and replays whatever the
+      // new one holds; a new session holds nothing, so the reset frame is the whole of it. The turn counters go with
+      // the conversation — the usage panel reports THIS session, not the container's lifetime.
+      if (name === "new") {
+        sessions += 1;
+        turns = 0;
+        emit({
+          type: "session_replaced",
+          reason: "new",
+          sessionId: `mock-pi-session-${sessions}`,
+          cwd: "/workspace",
+          model: "container-desktop-mock/mock-assistant",
+        });
+        emit({ type: "idle" });
+        return { ok: true as const };
+      }
       // The two commands that answer with DATA when given no argument, and act when given an id — the shape the
       // picker reads. Scripted here so the drawer can be driven without a container.
       if (name === "fork" && !args.trim()) return { ok: true as const, data: { forkPoints: MOCK_FORK_POINTS } };

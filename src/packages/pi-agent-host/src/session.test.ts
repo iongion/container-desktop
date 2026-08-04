@@ -172,6 +172,84 @@ describe("createPiSession", () => {
   });
 });
 
+// The keystone: pi's own runtime replaces a session in process, so a fresh conversation costs neither the container
+// pair nor the plugins. Everything this host holds — the surfaces, the tool renderers, the GuiTui, the event
+// plumbing — has to be re-pointed at the session that took over, not rebuilt.
+describe("replacing the session with /new", () => {
+  async function sessionOnA(events: BridgeEvent[], extraExtensions?: InlineExtension[]) {
+    return await createPiSession({
+      cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+      agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
+      gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
+      gatewayToken: "tok",
+      modelId: "canned",
+      emit: (event) => events.push(event),
+      streamOverride: cannedStream as never,
+      ...(extraExtensions ? { extraExtensions } : {}),
+    });
+  }
+
+  it("tells the app its transcript belongs to a session that is gone", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await sessionOnA(events);
+    await session.prompt("say hello");
+    const first = session.sessionId;
+    events.length = 0;
+
+    await expect(session.runCommand("new", "")).resolves.toEqual({ ok: true });
+
+    const replaced = events.find((event) => event.type === "session_replaced");
+    expect(replaced).toMatchObject({ reason: "new", model: "container-desktop-gateway/canned" });
+    // A NEW conversation, and the handle now answers for it: a handshake replying with the predecessor's id would
+    // name a session nobody can reach.
+    expect((replaced as { sessionId: string }).sessionId).not.toBe(first);
+    expect(session.sessionId).toBe((replaced as { sessionId: string }).sessionId);
+    // Nothing to replay — a new session has no history — and the app is told the agent is holding nothing.
+    expect(events.filter((event) => event.type === "user_message")).toEqual([]);
+    expect(events.at(-1)).toMatchObject({ type: "request_context" });
+    expect(events.some((event) => event.type === "idle")).toBe(true);
+  });
+
+  it("still answers a prompt, and starts the new conversation empty", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await sessionOnA(events);
+    await session.prompt("say hello");
+    await session.runCommand("new", "");
+    events.length = 0;
+
+    await session.prompt("say hello again");
+
+    const context = events.findLast((event) => event.type === "request_context");
+    // One user turn and one reply in the new session — not the three the old one had reached.
+    expect(context).toMatchObject({ context: { messages: { user: 1, assistant: 1 } } });
+    expect(events.some((event) => event.type === "assistant_end")).toBe(true);
+  });
+
+  // pi emits `session_start` from `bindExtensions`, so a replacement that forgot to re-bind would leave every
+  // extension holding a stale context: no dialogs answered, no components rendered, silently.
+  it("gives the extensions the app's UI context again", async () => {
+    const events: BridgeEvent[] = [];
+    const starts: string[] = [];
+    const session = await sessionOnA(events, [
+      onSessionStart("rebind-probe", (ctx) => {
+        starts.push(ctx.mode ?? "none");
+        ctx.ui.setHeader(() => ({ render: () => ["probe header"], invalidate: () => {} }));
+      }),
+    ]);
+    await session.prompt("say hello");
+    events.length = 0;
+
+    await session.runCommand("new", "");
+
+    expect(starts).toEqual(["tui", "tui"]);
+    // The old header was retired before the outgoing session went stale, and the new extension painted its own.
+    expect(events.filter((event) => event.type === "surface_closed").length).toBeGreaterThan(0);
+    const frames = events.filter((event) => event.type === "surface_frame");
+    expect(frames.at(-1)).toMatchObject({ lines: ["probe header"], slot: { kind: "header" } });
+  });
+});
+
 // A turn whose upstream request is cancelled rejects with whatever the transport threw — "Connection error." on a
 // real provider. When the APP asked for that cancellation, showing it is a lie about what happened.
 const failingStream = async function* () {

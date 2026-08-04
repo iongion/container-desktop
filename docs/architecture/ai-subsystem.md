@@ -328,9 +328,9 @@ consumes them since the worker library was deleted; they survive as a capability
 ## Providers
 
 `resolveProvider` (pure, `core/providers.ts`) decides id/kind/baseURL/model/requiresKey/discovery. The catalog
-(`resources/ai/provider-catalog.json`) ships **nine**:
+(`resources/ai/provider-catalog.json`) ships **eight**:
 
-- **Local, no key** — LM Studio, Ollama, llama.cpp (loopback base URLs).
+- **Local, no key** — LM Studio, llama.cpp (loopback base URLs).
 - **Cloud, needs a key** — Anthropic, OpenAI, DeepSeek, GLM (Zhipu), MiniMax, and OpenRouter (an aggregator;
   aggregated model ids split by `parseAggregatedModelId`).
 

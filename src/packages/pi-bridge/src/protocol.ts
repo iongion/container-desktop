@@ -197,6 +197,10 @@ export interface PiSessionTreeNode {
 // compaction summary, and prose composed in the container could be neither translated nor laid out.
 export type PiCommandResult = { ok: true; data?: unknown } | { ok: false; error: string };
 
+// Why the container is running a different session than it was a moment ago, in pi's own vocabulary: `/new`,
+// `/resume`, `/clone` (which pi performs as a fork) and `/import`.
+export type PiSessionReplacement = "new" | "resume" | "fork" | "import";
+
 export interface ContributedResources {
   extensions: Array<{ path: string; source?: string }>;
   commands: ContributedResource[];
@@ -247,6 +251,13 @@ export type PluginProgressPhase = "start" | "progress" | "complete" | "error";
 
 export type BridgeEvent =
   | { type: "ready"; protocolVersion: number; sessionId: string; cwd: string; model?: string }
+  // The container replaced the session behind this connection, in process — same socket, same containers, a
+  // different conversation. Everything the renderer holds belongs to the session that is gone, so this clears it,
+  // and the entries of the one that took its place follow as ordinary events.
+  | { type: "session_replaced"; reason: PiSessionReplacement; sessionId: string; cwd: string; model?: string }
+  // One user turn, read back out of pi's own session entries after a replacement. The live path emits none — the
+  // app appends what it submitted itself — so a resumed conversation would otherwise render as an empty screen.
+  | { type: "user_message"; text: string }
   // `result` carries a command's answer: the plugin and resource lists are requests, not fire-and-forget
   // notifications, so the client settles its pending call on this frame.
   | { type: "response"; id: string; success: boolean; error?: string; result?: unknown }
@@ -322,7 +333,9 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "ready",
+  "session_replaced",
   "response",
+  "user_message",
   "assistant_delta",
   "assistant_end",
   "tool_start",

@@ -115,30 +115,3 @@ describe("planCommandExecution", () => {
     ).toEqual({ kind: "unavailable", reasonKey: "The Assistant is unavailable" });
   });
 });
-
-// pi's own commands carry their own reason for being unavailable (see piSessionCommands.test.ts): the app's
-// catalogue no longer declares a capability, because the commands that needed one were its own thread vocabulary and
-// pi owns those concepts. The mechanism stays covered here, over a definition that declares one.
-describe("session capabilities", () => {
-  const base = { surface: "assistant", hostStatus: "ready", hasThread: true, threadPhase: "idle" } as const;
-
-  it("refuses a command whose capability the session lacks, naming why", () => {
-    const gated = { ...command("model.open"), capabilityId: "configuration" as const };
-    expect(planCommandExecution(gated, { ...base, capabilities: new Set([]) })).toEqual({
-      kind: "unavailable",
-      reasonKey: "The model and access are chosen when the session starts",
-    });
-  });
-
-  it("executes it where the session does carry the capability", () => {
-    const gated = { ...command("model.open"), capabilityId: "configuration" as const };
-    expect(planCommandExecution(gated, { ...base, capabilities: new Set(["configuration"]) })).toEqual({
-      kind: "execute",
-    });
-  });
-
-  // An unconstrained caller keeps the whole palette: absent means "not declared", not "nothing allowed".
-  it("leaves a caller that declared no capabilities unconstrained", () => {
-    expect(planCommandExecution(command("model.open"), base)).toEqual({ kind: "execute" });
-  });
-});

@@ -13,14 +13,12 @@ import { randomUUID } from "@/utils/randomUUID";
 
 type TimelineItem = ThreadView["timeline"][number];
 
-// A user turn has no bridge event of its own — the app knows what it submitted — so the store injects one
-// through this projector to keep every timeline mutation in a single tested place. `approval_settled` is the
-// same idea for the answer the user gave a gated tool call: the container is told over the bridge, the
-// transcript is told through here.
-export type PiThreadViewEvent =
-  | BridgeEvent
-  | { type: "user_message"; text: string }
-  | { type: "approval_settled"; requestId: string; allowed: boolean };
+// A live user turn has no bridge event — the app knows what it submitted — so the store injects `user_message`
+// through this projector to keep every timeline mutation in a single tested place. It is a bridge event as well,
+// because a REPLACED session replays its history through the same case, which is why there is one projection here
+// and not two that drift. `approval_settled` is the same idea for the answer the user gave a gated tool call: the
+// container is told over the bridge, the transcript is told through here.
+export type PiThreadViewEvent = BridgeEvent | { type: "approval_settled"; requestId: string; allowed: boolean };
 
 export function emptyPiThreadView(threadId: string): ThreadView {
   return { threadId, phase: "idle", lastSeq: 0, timeline: [] };

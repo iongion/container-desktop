@@ -1659,8 +1659,6 @@
   "There is no Assistant response to copy": "Nu există niciun răspuns al asistentului de copiat",
   "Clipboard access is unavailable": "Accesul la clipboard nu este disponibil",
   "Assistant response copied": "Răspunsul asistentului a fost copiat",
-  "Unknown access profile: {{value}}": "Profil de acces necunoscut: {{value}}",
-  "Unknown reasoning level: {{value}}": "Nivel de raționament necunoscut: {{value}}",
   "No assistant session": "Nicio sesiune de asistent",
   "Start a session to work on a folder with the assistant.": "Pornește o sesiune pentru a lucra la un folder cu asistentul.",
   "It runs in a container on the connection you pick, and only that folder is mounted into it.": "Rulează într-un container pe conexiunea aleasă, iar doar acel folder este montat în el.",

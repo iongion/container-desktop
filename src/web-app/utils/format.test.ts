@@ -37,6 +37,16 @@ describe("formatCost", () => {
     expect(formatCost({ amount: 0, currency: "USD" })).toBe("USD 0.0000");
   });
 
+  // A cheap model on a short turn costs real money in the sixth decimal place, and four decimals rounded it to the
+  // same string a free local model gets. Only a genuinely free turn may read as zero.
+  it.each([
+    [0.00004, "USD 0.000040"],
+    [0.0000006, "USD 0.00000060"],
+    [0.00002965, "USD 0.000030"],
+  ])("keeps a non-zero cost visible below four decimals (%f)", (amount, expected) => {
+    expect(formatCost({ amount, currency: "USD" })).toBe(expected);
+  });
+
   it("uses a dash when cost is unknown", () => {
     expect(formatCost(undefined)).toBe("—");
   });

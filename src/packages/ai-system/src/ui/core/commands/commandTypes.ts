@@ -48,12 +48,6 @@ export type AssistantCommandAvailabilityId =
   | "assistant-only"
   | "quake-console-only";
 
-// What a SESSION can do, as opposed to what the surface or the current phase allows. Nothing declares one today —
-// the commands that needed capability gating were the app's own thread vocabulary, and pi's own commands carry
-// their reason on the definition instead. Kept because the mechanism is the honest way to refuse a command a
-// future session type cannot run.
-export type AssistantCommandCapabilityId = "conversation-reset" | "threads" | "history" | "configuration";
-
 export type AssistantCommandSurface = "assistant" | "quake-console";
 
 export type AssistantCommandArgumentSpec =
@@ -72,8 +66,6 @@ interface AssistantCommandBase {
   source: AssistantCommandSource;
   bypassTier: AssistantCommandBypassTier;
   availabilityId: AssistantCommandAvailabilityId;
-  // Absent ⇒ every session can run it.
-  capabilityId?: AssistantCommandCapabilityId;
   confirmation: "none" | "required";
   arguments: AssistantCommandArgumentSpec;
   surfaces: readonly AssistantCommandSurface[];

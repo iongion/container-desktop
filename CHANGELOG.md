@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Assistant sessions a crash or a force-quit left behind are removed at startup, together with the networks they were holding: enough of those and the engine refuses to create another for anything
 - The Context panel says whether the budget reserved for the answer is the provider's published cap or the app's own default, instead of presenting one as the other
 - Estimated cost is a real number: the provider's published rates now reach the session, so a priced model reports what it charged instead of nothing
+- A turn that cost a fraction of a cent reports what it charged instead of rounding to zero, which read exactly like a free local model
+- The demo session's Workspace and VS Code buttons open a folder that exists, instead of a path only an agent container has
+- Demo mode holds its engine connections instead of dropping them every few seconds: it was checking the filesystem for sockets no demo has, so the connected engines flapped and the theme flickered between them
+- A new conversation keeps your containers, your plugins and your workspace — starting one used to tear the pair down and build it again
 
 - Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
 - A local model server session starts again — asking for a key a keyless provider never had used to stop it
@@ -41,9 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - pi's own slash commands, all of them, under pi's own names — the ones this architecture cannot honour are listed with the reason rather than hidden
-- `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog` and `/reload` run against the session itself
+- `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog`, `/reload` and `/new` run against the session itself
+- A session replaced in place brings its conversation with it: the transcript is rebuilt from the session's own history rather than left empty
 - `/fork` and `/tree` open a picker: your earlier messages to start again from, or the session's branches with the one you are on marked
-- Ollama and llama.cpp report their real context window — the length the server actually loaded, not the maximum the model could do
+- llama.cpp reports its real context window — the length the server actually loaded, not the maximum the model could do
 - The assistant reports what it has spent and what it is sending the model, after every turn
 - One Assistant: the full screen and the quake console are the same conversation, with the same transcript, cards and composer — the separate Coding Agent screen is gone
 - Start a session from wherever you are — the console offers it too, instead of a composer that leads nowhere
@@ -114,7 +119,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Providers without model discovery can use a manually entered model
 - Point the assistant at a project folder so it can read, search, edit and run things there, always asking before it changes anything
 - The assistant shows file reads, edits, searches, listings and command output as rich cards instead of raw text
-- Ollama joins the local inference sources you can pick a model from
 - A Plugins screen: install pi plugins from npm or git, then update, disable, re-enable or remove them
 - Each plugin row lists what it contributes — commands, skills and prompt templates — and whether it is enabled and on disk
 - Installing states plainly that the plugin's code will run inside the agent container, and a source with shell characters is refused

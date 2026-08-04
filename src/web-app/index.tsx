@@ -65,13 +65,26 @@ async function boot() {
     const { isMockMode } = await import("@/container-client/mock/mode");
     if (isMockMode()) {
       const { useCodingAgentStore } = await import("@/web-app/stores/codingAgent");
-      void useCodingAgentStore.getState().start({
-        connectionId: "mock-connection",
-        workspacePath: "/workspace",
-        modelId: "mock-assistant",
-        upstreamBaseUrl: "",
-        appVersion: "0.0.0",
-      });
+      const { awaitHostRuntime } = await import("@/platform/provider");
+      // The workspace has to be a HOST path, not the container's `/workspace`: the session header opens this folder
+      // and hands it to VS Code, and `/workspace` exists only inside an agent container the mock never starts. The
+      // home directory is the one directory certain to be there on any machine running the mock.
+      //
+      // Chained off the runtime rather than read here: nothing has registered one yet at this point in boot —
+      // `startApplication()` does, after React mounts — so a synchronous read throws and takes the whole boot with it.
+      void awaitHostRuntime()
+        .then(async (runtime) => {
+          await useCodingAgentStore.getState().start({
+            connectionId: "mock-connection",
+            workspacePath: await runtime.platform.getHomeDir(),
+            modelId: "mock-assistant",
+            upstreamBaseUrl: "",
+            appVersion: "0.0.0",
+          });
+        })
+        .catch((error) => {
+          console.error("mock assistant session did not start", error);
+        });
     }
   }
   const { renderApplication } = await import("./App.render");

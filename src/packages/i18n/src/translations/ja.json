@@ -1659,8 +1659,6 @@
   "There is no Assistant response to copy": "コピーするアシスタントの応答がありません",
   "Clipboard access is unavailable": "クリップボードにアクセスできません",
   "Assistant response copied": "アシスタントの応答をコピーしました",
-  "Unknown access profile: {{value}}": "不明なアクセスプロファイル: {{value}}",
-  "Unknown reasoning level: {{value}}": "不明な推論レベル: {{value}}",
   "No assistant session": "アシスタントのセッションがありません",
   "Start a session to work on a folder with the assistant.": "セッションを開始して、アシスタントとフォルダーで作業します。",
   "It runs in a container on the connection you pick, and only that folder is mounted into it.": "選択した接続上のコンテナーで実行され、そのフォルダーのみがマウントされます。",

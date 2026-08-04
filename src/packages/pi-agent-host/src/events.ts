@@ -34,7 +34,11 @@ export interface PiAgentEvent {
   result?: { content?: PiContentBlock[]; details?: unknown };
 }
 
-function textOf(content: PiContentBlock[] | string | undefined): string {
+// The renderable text of a pi message or result: its text blocks, joined. Exported because the transcript replay
+// reads the same blocks off pi's stored entries, and two implementations would drift the moment one of them changed.
+// Typed on the two fields it reads rather than on `PiContentBlock` — pi's own block interfaces carry no index
+// signature, so they satisfy this and would not satisfy that.
+export function textOfContent(content: readonly { type: string; text?: string }[] | string | undefined): string {
   if (!content) return "";
   if (typeof content === "string") return content;
   return content
@@ -63,13 +67,13 @@ export function mapAgentEvent(event: PiAgentEvent): BridgeEvent[] {
           {
             type: "custom_message",
             customType: message.customType,
-            content: textOf(message.content),
+            content: textOfContent(message.content),
             details: message.details,
           },
         ];
       }
       if (message?.role !== "assistant") return [];
-      const text = textOf(message.content);
+      const text = textOfContent(message.content);
       // An abort is the user stopping the agent — pressing Stop, or rejecting a tool call. pi reports it as
       // stopReason "aborted" WITH an errorMessage, so it must be recognised before the error branch or the
       // user's own decision comes back as a red error callout.
@@ -92,7 +96,9 @@ export function mapAgentEvent(event: PiAgentEvent): BridgeEvent[] {
         { type: "tool_start", toolCallId: event.toolCallId ?? "", toolName: event.toolName ?? "", args: event.args },
       ];
     case "tool_execution_update":
-      return [{ type: "tool_update", toolCallId: event.toolCallId ?? "", text: textOf(event.partialResult?.content) }];
+      return [
+        { type: "tool_update", toolCallId: event.toolCallId ?? "", text: textOfContent(event.partialResult?.content) },
+      ];
     case "tool_execution_end":
       return [
         {
@@ -100,7 +106,7 @@ export function mapAgentEvent(event: PiAgentEvent): BridgeEvent[] {
           toolCallId: event.toolCallId ?? "",
           toolName: event.toolName ?? "",
           isError: event.isError === true,
-          text: textOf(event.result?.content),
+          text: textOfContent(event.result?.content),
           details: event.result?.details,
         },
       ];

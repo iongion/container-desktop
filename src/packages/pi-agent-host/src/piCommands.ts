@@ -5,10 +5,10 @@
 // installed package. Keep them identical: the whole point is that a user who knows pi types what they know, and a
 // renamed or invented variant would be a different product wearing pi's vocabulary.
 //
-// Each command declares where it runs. `session` is performed here, against the SDK. `app` belongs to the GUI —
-// starting a fresh session, stopping one, choosing the model — because the container cannot do those to itself.
-// `unavailable` carries the architectural reason: the credential never enters this container, a session IS one
-// conversation here, the project is deliberately never trusted. Offered and explained beats hidden.
+// Each command declares where it runs. `session` is performed here, against the SDK — including the ones that
+// REPLACE the session, because `AgentSessionRuntime` does that in process. `app` belongs to the GUI: stopping the
+// container pair, choosing the model, writing a file to the host. `unavailable` carries the architectural reason,
+// offered and explained rather than hidden.
 
 import type { AgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
 
@@ -107,7 +107,7 @@ export const PI_BUILTIN_COMMANDS: readonly Builtin[] = [
     runsIn: "unavailable",
     reason: "the provider key stays in a separate gateway container; the agent never holds a credential",
   },
-  { name: "new", description: "Start a new session", runsIn: "app" },
+  { name: "new", description: "Start a new session", runsIn: "session" },
   { name: "compact", description: "Manually compact the session context", runsIn: "session" },
   {
     name: "resume",
@@ -139,6 +139,11 @@ export interface PiCommandDeps {
   // `getLeafId` is what tells the tree which branch is live: pi answers with a leaf id alone, and a picker that
   // cannot say "you are here" is a list of ids.
   sessionManager: Pick<SessionManager, "getTree" | "getSessionName" | "getLeafId">;
+  // pi's session replacements, which its own runtime performs without restarting anything. The host wraps each one
+  // so the app is told why its transcript was reset and is handed the new session's history.
+  runtime: {
+    newSession(): Promise<{ cancelled: boolean }>;
+  };
   // The keys pi's own components respond to inside a focused surface. The GUI has its own bindings everywhere else,
   // which is why this answers with the set that is actually in effect for pi, not a fabricated GUI cheat sheet.
   keybindings: () => Array<{ action: string; keys: string[] }>;
@@ -198,6 +203,12 @@ export async function runPiCommand(deps: PiCommandDeps, name: string, args: stri
       return result.cancelled
         ? { ok: false, error: "the branch switch was cancelled" }
         : { ok: true, data: { movedTo: target, editorText: result.editorText } };
+    }
+    // A fresh conversation on the same containers, the same plugins and the same workspace — pi swaps the session
+    // behind the runtime. Cancellable, because an extension may hold a `session_before_switch` handler.
+    case "new": {
+      const { cancelled } = await deps.runtime.newSession();
+      return cancelled ? { ok: false, error: "an extension cancelled the new session" } : { ok: true };
     }
     case "reload":
       await deps.session.reload();
