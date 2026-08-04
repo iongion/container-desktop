@@ -94,7 +94,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
     setProjectSkillTrust,
   } = useAssistantSkills();
   const mode: AIPermissionMode = useAppStore((s) => s.userSettings.ai?.permissionMode) ?? "ask";
-  const ai: AISettings = useAppStore((s) => s.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
+  const _ai: AISettings = useAppStore((s) => s.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
   // Per-screen starter questions for the empty state (chips), from the current screen the user is on.
   const screenId = useUIStore((s) => s.currentScreen.id);
   const suggestions = resolveScreenPrompt(screenId).suggestions;

@@ -17,26 +17,6 @@ import type { PermissionRule, PermissionsList, PermissionsSnapshot } from "@/ai-
 import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import { validateAIInvokeResponse, validateAIPushPayload } from "@/ai-system/core/schemas";
 import type { ResolveSkillInvocationRequest, SkillHostSnapshot } from "@/ai-system/core/skills";
-import type {
-  ThreadCompactionExecutionResult,
-  ThreadCompactionPreview,
-  ThreadCompactionRevision,
-} from "@/ai-system/core/threadCompaction";
-import type {
-  ResolveThreadApprovalRequest,
-  ResolveThreadApprovalResult,
-  SubmitThreadRequest,
-  SubmitThreadResult,
-  ThreadView,
-} from "@/ai-system/core/threadEvents";
-import type {
-  CreateThreadRequest,
-  ThreadBranchPreview,
-  ThreadBranchResult,
-  ThreadConfigurationPatch,
-  ThreadSummary,
-} from "@/ai-system/core/threads";
-import type { ToolArtifactRecord } from "@/ai-system/core/toolArtifacts";
 import type { WorkspaceChangeSnapshot, WorkspaceDiff } from "@/ai-system/core/workspaceChanges";
 import type { EngineOpResult } from "@/pi-bridge/protocol";
 
@@ -55,24 +35,6 @@ export interface IAI {
     bridgeToken: string;
     gatewayPort: number;
   }) => Promise<{ path: string }>;
-  submitToThread: (request: SubmitThreadRequest) => Promise<SubmitThreadResult>;
-  listThreads: () => Promise<ThreadSummary[]>;
-  createThread: (request: CreateThreadRequest) => Promise<ThreadSummary>;
-  renameThread: (threadId: string, title: string) => Promise<ThreadSummary>;
-  configureThread: (threadId: string, patch: ThreadConfigurationPatch) => Promise<ThreadSummary>;
-  previewThreadBranch: (threadId: string) => Promise<ThreadBranchPreview>;
-  branchThread: (threadId: string, checkpointId: string, title: string) => Promise<ThreadBranchResult>;
-  previewThreadCompaction: (threadId: string) => Promise<ThreadCompactionPreview>;
-  compactThread: (
-    threadId: string,
-    revision: ThreadCompactionRevision,
-    instructions?: string,
-  ) => Promise<ThreadCompactionExecutionResult>;
-  resolveThreadApproval: (request: ResolveThreadApprovalRequest) => Promise<ResolveThreadApprovalResult>;
-  stopThread: (threadId: string) => Promise<{ ok: true }>;
-  getThreadSnapshot: (threadId: string) => Promise<ThreadView | null>;
-  getToolArtifact: (threadId: string, artifactId: string) => Promise<ToolArtifactRecord>;
-  deleteThread: (threadId: string) => Promise<{ ok: true }>;
   getWorkspaceChangeStatus: () => Promise<WorkspaceChangeSnapshot>;
   getWorkspaceDiff: () => Promise<WorkspaceDiff>;
   getProjectContext: () => Promise<ProjectContextSnapshot>;
@@ -106,8 +68,6 @@ export interface IAI {
   invokeSkill: (
     request: ResolveSkillInvocationRequest,
   ) => Promise<AIInvokeResponse<(typeof AI_CHANNELS)["skillsInvoke"]>>;
-  // The workers library. Every mutation answers with the whole library, so the renderer never merges by hand.
-  // The avatar library — custom uploaded faces. Every mutation answers with the whole library, like workers.
 }
 
 export interface IAIBus {
@@ -136,22 +96,6 @@ export function createAIClient(transport: AIClientTransport) {
     setKey: (provider, key, opts) => invoke(AI_CHANNELS.keySet, { provider, key, allowDegraded: opts?.allowDegraded }),
     clearKey: (provider) => invoke(AI_CHANNELS.keyClear, { provider }),
     writeAgentGatewayEnv: (request) => invoke(AI_CHANNELS.agentGatewayEnv, request),
-    listThreads: () => invoke(AI_CHANNELS.threadList),
-    createThread: (request) => invoke(AI_CHANNELS.threadCreate, request),
-    renameThread: (threadId, title) => invoke(AI_CHANNELS.threadRename, { threadId, title }),
-    configureThread: (threadId, patch) => invoke(AI_CHANNELS.threadConfigure, { threadId, ...patch }),
-    previewThreadBranch: (threadId) => invoke(AI_CHANNELS.threadBranchPreview, { threadId }),
-    branchThread: (threadId, checkpointId, title) =>
-      invoke(AI_CHANNELS.threadBranch, { threadId, checkpointId, title }),
-    previewThreadCompaction: (threadId) => invoke(AI_CHANNELS.threadCompactionPreview, { threadId }),
-    compactThread: (threadId, revision, instructions) =>
-      invoke(AI_CHANNELS.threadCompact, { threadId, revision, instructions }),
-    submitToThread: (request) => invoke(AI_CHANNELS.threadSubmit, request),
-    resolveThreadApproval: (request) => invoke(AI_CHANNELS.threadResolveApproval, request),
-    stopThread: (threadId) => invoke(AI_CHANNELS.threadStop, { threadId }),
-    getThreadSnapshot: (threadId) => invoke(AI_CHANNELS.threadSnapshot, { threadId }),
-    getToolArtifact: (threadId, artifactId) => invoke(AI_CHANNELS.toolArtifactGet, { threadId, artifactId }),
-    deleteThread: (threadId) => invoke(AI_CHANNELS.threadDelete, { threadId }),
     getWorkspaceChangeStatus: () => invoke(AI_CHANNELS.changesStatus),
     getWorkspaceDiff: () => invoke(AI_CHANNELS.changesDiff),
     getProjectContext: () => invoke(AI_CHANNELS.projectContextSnapshot),
@@ -186,7 +130,7 @@ export interface AIBusTransport {
 }
 
 export function createAIBus(transport: AIBusTransport) {
-  const SUBSCRIBABLE = new Set<AIPushChannel>([AI_CHANNELS.threadEvent, AI_CHANNELS.skillsChanged]);
+  const SUBSCRIBABLE = new Set<AIPushChannel>([AI_CHANNELS.skillsChanged]);
   return {
     subscribe(channel, callback) {
       if (!SUBSCRIBABLE.has(channel)) {

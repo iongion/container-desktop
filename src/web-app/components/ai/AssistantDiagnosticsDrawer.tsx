@@ -76,7 +76,6 @@ function DiagnosticsContent({
     [i18n.language, i18n.resolvedLanguage],
   );
   const capabilities = [
-    ["Agent Sessions", snapshot.capabilities.agentSessions],
     ["Sandboxed commands", snapshot.capabilities.sandbox],
     ["Container tools", snapshot.capabilities.containerTools],
     ["Workspace tools", snapshot.capabilities.workspaceTools],

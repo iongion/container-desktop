@@ -1,27 +1,13 @@
 import { describe, expect, it, type Mock, vi } from "vitest";
 import { AI_CHANNELS } from "@/ai-system/core/channels";
 import { AI_PERMISSIONS_VERSION, type PermissionsSnapshot } from "@/ai-system/core/permissions";
-import type { AIKeyStore, KnowledgeBankLike } from "@/ai-system/core/ports";
-import type { ProjectContextPack } from "@/ai-system/core/projectContext";
+import type { AIKeyStore } from "@/ai-system/core/ports";
 import type { ResolvedProvider } from "@/ai-system/core/providers";
 import { normalizeAISettings } from "@/ai-system/core/settings";
-import type { ThreadEvent } from "@/ai-system/core/threadEvents";
-import { emptyThreadView, reduceThreadEvent } from "@/ai-system/core/threadReducer";
-import type { ThreadRecord } from "@/ai-system/core/threads";
-import type { ToolArtifactRecord } from "@/ai-system/core/toolArtifacts";
-import type {
-  AgentSessionCreationOptions,
-  AgentSessionPort,
-  AgentSessionTaskSettings,
-  AISettings,
-  CompactThreadContext,
-  ListedModel,
-} from "@/ai-system/core/types";
+import type { AISettings, ListedModel } from "@/ai-system/core/types";
 import { createAIBroker } from "@/ai-system/host/broker";
 import type { ProjectContextHost } from "@/ai-system/host/projectContextHost";
 import type { SkillHost } from "@/ai-system/host/skillHost";
-import { createThreadRepository } from "@/ai-system/host/threadRepository";
-import { createToolArtifactRepository } from "@/ai-system/host/toolArtifactRepository";
 
 const LOCAL_AGENT_SETTINGS = {
   defaultProvider: "llamacpp",
@@ -62,104 +48,20 @@ function fakeKeyStore(): AIKeyStore & {
   };
 }
 
-interface FakeSession extends AgentSessionPort {
-  submitCalls: Array<{ message: any; task?: AgentSessionTaskSettings }>;
-  emitEvent: (event: ThreadEvent) => void;
-  resolveApproval: Mock<AgentSessionPort["resolveApproval"]>;
-  cancel: Mock<AgentSessionPort["cancel"]>;
-  dispose: Mock<AgentSessionPort["dispose"]>;
-}
-
-function createFakeSession(options: AgentSessionCreationOptions): FakeSession {
-  let view = emptyThreadView(options.threadId);
-  let seq = 0;
-  let taskCounter = 0;
-  const submitCalls: FakeSession["submitCalls"] = [];
-  const emitEvent = (event: ThreadEvent): void => {
-    seq += 1;
-    const envelope = {
-      version: 1 as const,
-      threadId: options.threadId,
-      taskId: `task-${taskCounter || 1}`,
-      seq,
-      event,
-    };
-    view = reduceThreadEvent(view, envelope).view;
-    options.emit(envelope);
-  };
-  return {
-    submitCalls,
-    emitEvent,
-    submit: vi.fn(async (message, task) => {
-      submitCalls.push({ message, task });
-      taskCounter += 1;
-      const taskId = `task-${taskCounter}`;
-      seq += 1;
-      const envelope = {
-        version: 1 as const,
-        threadId: options.threadId,
-        taskId,
-        seq,
-        event: {
-          type: "user-message" as const,
-          id: message.id,
-          content: message.displayContent ?? message.content,
-          delivery: "applied" as const,
-        },
-      };
-      view = reduceThreadEvent(view, envelope).view;
-      view = { ...view, phase: "model" };
-      options.emit(envelope);
-      return {
-        accepted: true as const,
-        threadId: options.threadId,
-        taskId,
-        mode: "started" as const,
-        phase: "model" as const,
-      };
-    }),
-    resolveApproval: vi.fn(async () => ({ accepted: true, phase: "model" as const })),
-    cancel: vi.fn(async () => undefined),
-    snapshot: () => structuredClone(view),
-    durableSnapshot: () => ({
-      view: structuredClone(view),
-      modelHistory: options.modelHistory ?? [],
-    }),
-    dispose: vi.fn(async () => undefined),
-  };
-}
-
 function makeBroker(options?: {
   init?: Partial<AISettings>;
   permissions?: Partial<PermissionsSnapshot>;
-  threads?: ThreadRecord[];
   listModels?: (
     provider: ResolvedProvider,
     opts: { fetchImpl: typeof fetch; signal?: AbortSignal },
   ) => Promise<ListedModel[]>;
-  avatarHost?: {
-    ready: () => Promise<void>;
-    list: () => unknown[];
-    save: (avatar: unknown) => Promise<unknown[]>;
-    remove: (id: string) => Promise<unknown[]>;
-  };
   skillHost?: SkillHost;
   projectContextHost?: ProjectContextHost;
-  buildProjectContextPrompt?: (pack: ProjectContextPack) => string;
-  compactThreadContext?: CompactThreadContext;
 }) {
   const handlers = new Map<string, (event: any, payload: any) => any>();
   const sent: Array<{ event: any; channel: string; payload: any }> = [];
   const keyStore = fakeKeyStore();
   let settings = normalizeAISettings(options?.init ?? LOCAL_AGENT_SETTINGS);
-  const sessionOptions: AgentSessionCreationOptions[] = [];
-  const agentSessions: FakeSession[] = [];
-  const createAgentSession = vi.fn((creation: AgentSessionCreationOptions) => {
-    sessionOptions.push(creation);
-    const agentSession = createFakeSession(creation);
-    agentSessions.push(agentSession);
-    return agentSession;
-  });
   const permissionSnapshot: PermissionsSnapshot = {
     status: "ok",
     path: "/tmp/ai-permissions.json",
@@ -175,30 +77,7 @@ function makeBroker(options?: {
     addCommand,
     removeCommand,
   };
-  const knowledgeBank: KnowledgeBankLike = { search: vi.fn(async () => []) };
   const logger = { error: vi.fn() };
-  let persistedThreads = structuredClone(options?.threads ?? []);
-  const threadStore = {
-    load: vi.fn(async () => ({
-      status: "ok" as const,
-      records: structuredClone(persistedThreads),
-      path: "/tmp/ai-threads.json",
-    })),
-    save: vi.fn(async (records: ThreadRecord[]) => {
-      persistedThreads = structuredClone(records);
-    }),
-  };
-  const threadRepository = createThreadRepository({ store: threadStore, logger });
-  let persistedArtifacts: ToolArtifactRecord[] = [];
-  const toolArtifactRepository = createToolArtifactRepository({
-    store: {
-      load: vi.fn(async () => ({ status: "ok" as const, records: [], path: "/tmp/ai-tool-artifacts.json" })),
-      save: vi.fn(async (records) => {
-        persistedArtifacts = structuredClone(records);
-      }),
-    },
-    logger,
-  });
   const broker = createAIBroker<{ allowed?: boolean; senderId?: number | string }>({
     keyStore,
     getAISettings: async () => settings,
@@ -214,8 +93,6 @@ function makeBroker(options?: {
     },
     listModels: options?.listModels ?? (async () => [{ id: "m1" }, { id: "m2" }]),
     buildAgentPrompt: (bundle) => `Assistant. Context: ${JSON.stringify(bundle ?? {})}`,
-    createAgentSession,
-    compactThreadContext: options?.compactThreadContext,
     runSandboxed: vi.fn(async () => ({
       ok: true,
       tier: "ran",
@@ -226,14 +103,10 @@ function makeBroker(options?: {
       truncated: false,
     })),
     permissionsStore,
-    knowledgeBank,
     webSearcher: vi.fn(async () => ({ text: "web result" })),
-    threadRepository,
-    toolArtifactRepository,
     skillHost: options?.skillHost,
     buildSkillInvocationPrompt: ({ body }) => `PROMPT:${body}`,
     projectContextHost: options?.projectContextHost,
-    buildProjectContextPrompt: options?.buildProjectContextPrompt,
     logger,
   });
   broker.register();
@@ -242,17 +115,8 @@ function makeBroker(options?: {
     handlers,
     sent,
     keyStore,
-    agentSessions,
-    sessionOptions,
-    createAgentSession,
-    compactThreadContext: options?.compactThreadContext,
     permissionsStore,
     removeCommand,
-    threadRepository,
-    toolArtifactRepository,
-    threadStore,
-    persistedThreads: () => structuredClone(persistedThreads),
-    persistedArtifacts: () => structuredClone(persistedArtifacts),
     logger,
     setSettings: (next: Partial<AISettings>) => {
       settings = normalizeAISettings(next);
@@ -261,13 +125,6 @@ function makeBroker(options?: {
       handlers.get(channel)!(event, payload),
   };
 }
-
-const _userMessage = (content: string, id = "user-1") => ({ id, role: "user" as const, content, createdAt: 1 });
-const submitRequest = (content = "hello", threadId = "thread-1", id = "user-1") => ({
-  threadId,
-  message: { id, content, createdAt: 1 },
-  history: [],
-});
 
 // The coding agent's gateway container needs the provider key; the renderer cannot read it. So the broker
 // composes that env file host-side, which is the only place the keychain is readable.
@@ -347,7 +204,10 @@ describe("AIBroker security and settings", () => {
     const broker = makeBroker();
     await expect(broker.invoke(AI_CHANNELS.status, undefined, { allowed: false })).rejects.toThrow(/unauthorized/i);
     await expect(
-      broker.invoke(AI_CHANNELS.threadSubmit, submitRequest(), { allowed: false, senderId: 1 }),
+      broker.invoke(AI_CHANNELS.webSearch, { query: "anything" }, { allowed: false, senderId: 1 }),
+    ).rejects.toThrow(/unauthorized/i);
+    await expect(
+      broker.invoke(AI_CHANNELS.engineOp, { op: "listContainers" }, { allowed: false, senderId: 1 }),
     ).rejects.toThrow(/unauthorized/i);
   });
 
@@ -395,7 +255,7 @@ describe("AIBroker security and settings", () => {
         modelCount: 2,
       },
       security: { permissions: "ok", webSearch: "disabled" },
-      capabilities: { agentSessions: true, sandbox: true },
+      capabilities: { sandbox: true },
       extensions: { skills: { state: "unavailable", count: 0, diagnostics: 0 }, mcp: { state: "unavailable" } },
       recentErrors: [],
     });
@@ -449,7 +309,9 @@ describe("AIBroker security and settings", () => {
       },
     });
 
-    await expect(broker.invoke(AI_CHANNELS.threadSubmit, submitRequest())).resolves.toMatchObject({ accepted: true });
+    await expect(
+      broker.invoke(AI_CHANNELS.modelsList, { providerId: "llamacpp", requestId: "models-auth-none" }),
+    ).resolves.toMatchObject({ models: [{ id: "m1" }, { id: "m2" }] });
   });
 
   it("uses the currently configured provider origin without stale permission state", async () => {

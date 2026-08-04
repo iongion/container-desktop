@@ -15,21 +15,6 @@ export const AI_CHANNELS = {
   // Write the coding agent gateway's private env file, with the provider key read from the OS keychain and
   // put in host-side. The renderer cannot read that key — only ask for the file that carries it.
   agentGatewayEnv: "ai:agent:gateway-env", // invoke(AgentGatewayEnvRequest) → { path }
-  threadSubmit: "ai:thread:submit",
-  threadList: "ai:thread:list",
-  threadCreate: "ai:thread:create",
-  threadRename: "ai:thread:rename",
-  threadConfigure: "ai:thread:configure",
-  threadBranchPreview: "ai:thread:branch-preview",
-  threadBranch: "ai:thread:branch",
-  threadCompactionPreview: "ai:thread:compaction-preview",
-  threadCompact: "ai:thread:compact",
-  threadResolveApproval: "ai:thread:resolve-approval",
-  threadSnapshot: "ai:thread:snapshot",
-  toolArtifactGet: "ai:tool-artifact:get",
-  threadDelete: "ai:thread:delete",
-  threadEvent: "ai:thread:event",
-  threadStop: "ai:thread:stop",
   changesStatus: "ai:changes:status",
   changesDiff: "ai:changes:diff",
   projectContextSnapshot: "ai:project-context:snapshot",
@@ -74,7 +59,7 @@ export type { AIDiagnosticsSnapshot };
 // Channel groupings derive from AI_CHANNELS (the independent constant), so the boundary schemas in
 // schemas.ts can be key-checked against them (`satisfies Record<AIInvokeChannel, …>`) with no import cycle.
 type AIChannel = (typeof AI_CHANNELS)[keyof typeof AI_CHANNELS];
-export type AIPushChannel = (typeof AI_CHANNELS)["threadEvent"] | (typeof AI_CHANNELS)["skillsChanged"];
+export type AIPushChannel = (typeof AI_CHANNELS)["skillsChanged"];
 export type AIInvokeChannel = Exclude<AIChannel, AIPushChannel>;
 
 // Request/response shapes derive from those schemas — one source of truth, no hand-kept twin that can drift.

@@ -10,12 +10,6 @@ import {
 import type { EffectiveContextSectionKind, EffectiveContextSourceKind } from "./context";
 import {
   MAX_DIAGNOSTICS_BUNDLE_CHARS,
-  MAX_RETAINED_THREADS,
-  MAX_THREAD_COMPACTION_INSTRUCTIONS_CHARS,
-  MAX_THREAD_COMPACTION_SUMMARY_CHARS,
-  MAX_THREAD_COMPACTIONS,
-  MAX_THREAD_MODEL_MESSAGES,
-  MAX_THREAD_RECORD_BYTES,
   MAX_THREAD_TIMELINE_ITEMS,
   MAX_WORKER_ALLOWED_TOOLS,
   MAX_WORKER_NAME_CHARS,
@@ -26,7 +20,6 @@ import {
 import { PROJECT_CONTEXT_LIMITS } from "./projectContext";
 import { SKILL_DIAGNOSTIC_CODES, SKILL_LIMITS } from "./skills";
 import { MAX_AI_TEXT_CHARS, MAX_INITIAL_THREAD_HISTORY_MESSAGES } from "./threadEvents";
-import { toolArtifactRecordSchema, toolArtifactReferenceSchema } from "./toolArtifacts";
 
 const MAX_ID_CHARS = 256;
 const MAX_PROVIDER_CHARS = 64;
@@ -46,7 +39,7 @@ const provider = z
 const optionalProvider = provider.optional();
 const model = z.string().max(MAX_MODEL_CHARS).optional();
 const empty = z.undefined();
-const threadId = z.object({ threadId: id }).strict();
+const _threadId = z.object({ threadId: id }).strict();
 
 export const diagnosticsBundle = z
   .object({
@@ -451,56 +444,6 @@ export const invokeSchemas = {
       gatewayPort: z.number().int().positive().max(65535),
     })
     .strict(),
-  [AI_CHANNELS.threadList]: empty,
-  [AI_CHANNELS.threadCreate]: z
-    .object({
-      id,
-      title: z.string().trim().min(1).max(MAX_TITLE_CHARS),
-      providerId: optionalProvider,
-      model,
-      accessProfile: accessProfileId.optional(),
-      reasoningLevel: reasoningLevel.optional(),
-    })
-    .strict(),
-  [AI_CHANNELS.threadRename]: z.object({ threadId: id, title: z.string().trim().min(1).max(MAX_TITLE_CHARS) }).strict(),
-  [AI_CHANNELS.threadConfigure]: z
-    .object({
-      threadId: id,
-      accessProfile: accessProfileId.optional(),
-      reasoningLevel: reasoningLevel.optional(),
-    })
-    .strict()
-    .refine((request) => request.accessProfile !== undefined || request.reasoningLevel !== undefined, {
-      message: "AI: Thread configuration is empty",
-    }),
-  [AI_CHANNELS.threadBranchPreview]: threadId,
-  [AI_CHANNELS.threadBranch]: z
-    .object({
-      threadId: id,
-      checkpointId: id,
-      title: z.string().trim().min(1).max(MAX_TITLE_CHARS),
-    })
-    .strict(),
-  [AI_CHANNELS.threadCompactionPreview]: threadId,
-  [AI_CHANNELS.threadCompact]: z
-    .object({
-      threadId: id,
-      revision: z
-        .object({
-          lastSeq: z.number().int().nonnegative(),
-          modelHistoryLength: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-          activeCompactionId: id.optional(),
-        })
-        .strict(),
-      instructions: z.string().trim().min(1).max(MAX_THREAD_COMPACTION_INSTRUCTIONS_CHARS).optional(),
-    })
-    .strict(),
-  [AI_CHANNELS.threadSubmit]: submitThreadRequest,
-  [AI_CHANNELS.threadResolveApproval]: resolveThreadApprovalRequest,
-  [AI_CHANNELS.threadStop]: threadId,
-  [AI_CHANNELS.threadSnapshot]: threadId,
-  [AI_CHANNELS.toolArtifactGet]: z.object({ threadId: id, artifactId: id }).strict(),
-  [AI_CHANNELS.threadDelete]: threadId,
   [AI_CHANNELS.changesStatus]: empty,
   [AI_CHANNELS.changesDiff]: empty,
   [AI_CHANNELS.projectContextSnapshot]: empty,
@@ -671,7 +614,6 @@ const timelineItem = z.discriminatedUnion("kind", [
       status: z.enum(["running", "complete", "error"]),
       ok: z.boolean().optional(),
       result: z.unknown().optional(),
-      artifact: toolArtifactReferenceSchema.optional(),
       message: z.string().max(MAX_AI_TEXT_CHARS).optional(),
     })
     .strict(),
@@ -736,220 +678,6 @@ export const threadView = z
       .strict()
       .optional(),
   })
-  .strict();
-
-function streamingPointerConsistent(view: z.infer<typeof threadView>): boolean {
-  const streaming = view.streamingAssistant;
-  if (!streaming) return true;
-  const item = view.timeline[streaming.timelineIndex];
-  return (
-    item?.kind === "message" && item.role === "assistant" && item.status === "streaming" && item.id === streaming.id
-  );
-}
-
-function withinRecordBytes(record: unknown): boolean {
-  try {
-    return JSON.stringify(record).length <= MAX_THREAD_RECORD_BYTES;
-  } catch {
-    return false;
-  }
-}
-
-// Durable thread record/file. Reuses threadView and adds the cross-field invariants the hand-written
-// validators used to enforce: view.threadId === id, a consistent streaming-assistant pointer, and a
-// per-record serialized-byte ceiling. parseThreadFile layers on the text-byte and unique-id checks.
-export const threadCheckpointSchema = z
-  .object({
-    id,
-    messageId: id,
-    createdAt: z.number().nonnegative(),
-    timelineLength: z.number().int().positive().max(MAX_THREAD_TIMELINE_ITEMS),
-    modelHistoryLength: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-  })
-  .strict();
-
-export const threadLineageSchema = z
-  .object({
-    parentThreadId: id,
-    parentCheckpointId: id,
-  })
-  .strict();
-
-export const threadCompactionSourceSchema = z
-  .object({
-    historyStart: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-    historyEnd: z.number().int().positive().max(MAX_THREAD_MODEL_MESSAGES),
-    messageStartId: id,
-    messageEndId: id,
-  })
-  .strict();
-
-export const threadCompactionSchema = z
-  .object({
-    id,
-    createdAt: z.number().nonnegative(),
-    source: threadCompactionSourceSchema,
-    summary: z.string().trim().min(1).max(MAX_THREAD_COMPACTION_SUMMARY_CHARS),
-    instructions: z.string().trim().min(1).max(MAX_THREAD_COMPACTION_INSTRUCTIONS_CHARS).optional(),
-    providerId: optionalProvider,
-    model,
-    inputTokens: z.number().int().nonnegative(),
-    outputTokens: z.number().int().nonnegative(),
-    fingerprint: z.string().regex(/^[a-f0-9]{64}$/u),
-    contentTrust: z.enum(["application", "external", "user", "project"]),
-    tainted: z.boolean(),
-  })
-  .strict()
-  .refine((artifact) => artifact.source.historyStart < artifact.source.historyEnd, {
-    message: "AI: Thread compaction source range is empty",
-  })
-  .refine((artifact) => artifact.tainted || !["external", "project"].includes(artifact.contentTrust), {
-    message: "AI: untrusted Thread compaction must remain tainted",
-  });
-
-const threadRecordShape = z
-  .object({
-    version: z.literal(5),
-    id,
-    title: z.string().max(MAX_TITLE_CHARS),
-    titleOrigin: z.enum(["default", "message", "user"]).optional(),
-    createdAt: z.number().nonnegative(),
-    updatedAt: z.number().nonnegative(),
-    providerId: optionalProvider,
-    model,
-    accessProfile: accessProfileId,
-    reasoningLevel,
-    view: threadView,
-    // Canonical AI-SDK model messages are opaque to core: bounded JSON only, never the AI SDK's own shapes.
-    modelHistory: z.array(z.unknown()).max(MAX_THREAD_MODEL_MESSAGES),
-    checkpoints: z.array(threadCheckpointSchema).max(MAX_THREAD_TIMELINE_ITEMS),
-    lineage: threadLineageSchema.optional(),
-    compactions: z.array(threadCompactionSchema).max(MAX_THREAD_COMPACTIONS),
-    activeCompactionId: id.optional(),
-  })
-  .strict();
-
-function checkpointsConsistent(record: z.infer<typeof threadRecordShape>): boolean {
-  if (new Set(record.checkpoints.map((checkpoint) => checkpoint.id)).size !== record.checkpoints.length) return false;
-  let timelineLength = 0;
-  let modelHistoryLength = 0;
-  for (const checkpoint of record.checkpoints) {
-    if (
-      checkpoint.timelineLength < timelineLength ||
-      checkpoint.modelHistoryLength < modelHistoryLength ||
-      checkpoint.timelineLength > record.view.timeline.length ||
-      checkpoint.modelHistoryLength > record.modelHistory.length
-    ) {
-      return false;
-    }
-    const boundary = record.view.timeline[checkpoint.timelineLength - 1];
-    if (boundary?.kind !== "message" || boundary.id !== checkpoint.messageId || boundary.delivery !== "applied") {
-      return false;
-    }
-    timelineLength = checkpoint.timelineLength;
-    modelHistoryLength = checkpoint.modelHistoryLength;
-  }
-  return true;
-}
-
-function compactionsConsistent(record: z.infer<typeof threadRecordShape>): boolean {
-  if (new Set(record.compactions.map(({ id: compactionId }) => compactionId)).size !== record.compactions.length) {
-    return false;
-  }
-  if (
-    record.activeCompactionId &&
-    !record.compactions.some(({ id: compactionId }) => compactionId === record.activeCompactionId)
-  ) {
-    return false;
-  }
-  let historyEnd = 0;
-  for (const compaction of record.compactions) {
-    if (compaction.source.historyEnd < historyEnd || compaction.source.historyEnd > record.modelHistory.length)
-      return false;
-    const checkpoint = record.checkpoints.find(
-      (candidate) =>
-        candidate.modelHistoryLength === compaction.source.historyEnd &&
-        candidate.messageId === compaction.source.messageEndId,
-    );
-    const start = record.view.timeline.find(
-      (item) => item.kind === "message" && item.id === compaction.source.messageStartId && item.delivery === "applied",
-    );
-    if (!checkpoint || !start) return false;
-    historyEnd = compaction.source.historyEnd;
-  }
-  return true;
-}
-
-export const threadRecordSchema = threadRecordShape
-  .refine((record) => record.view.threadId === record.id, { message: "AI: thread view/session id mismatch" })
-  .refine((record) => streamingPointerConsistent(record.view), { message: "AI: streaming pointer inconsistent" })
-  .refine(checkpointsConsistent, { message: "AI: Thread checkpoints are inconsistent" })
-  .refine(compactionsConsistent, { message: "AI: Thread compactions are inconsistent" })
-  .refine(withinRecordBytes, { message: "AI: thread record exceeds size limit" });
-
-export const threadFileSchema = z
-  .object({
-    version: z.literal(5),
-    records: z.array(threadRecordSchema).max(MAX_RETAINED_THREADS),
-  })
-  .strict()
-  .refine((file) => new Set(file.records.map((record) => record.id)).size === file.records.length, {
-    message: "AI: duplicate thread id",
-  });
-
-export const threadBranchPreviewSchema = z
-  .object({
-    source: threadSummarySchema,
-    checkpoints: z.array(threadCheckpointSchema).max(MAX_THREAD_TIMELINE_ITEMS),
-    bindings: z
-      .object({
-        providerId: optionalProvider,
-        model,
-        workspaceRoot: z.string().max(MAX_PERMISSION_KEY_CHARS).optional(),
-        permissionMode: z.enum(["ask", "remember", "allow"]),
-        contextPolicy: z.literal("application"),
-        target: z.literal("host"),
-      })
-      .strict(),
-    environmentRestored: z.literal(false),
-  })
-  .strict();
-
-export const threadBranchResultSchema = z.object({ thread: threadSummarySchema, view: threadView }).strict();
-
-const threadCompactionRevisionSchema = z
-  .object({
-    lastSeq: z.number().int().nonnegative(),
-    modelHistoryLength: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-    activeCompactionId: id.optional(),
-  })
-  .strict();
-
-const threadCompactionPlanSchema = z
-  .object({
-    source: threadCompactionSourceSchema,
-    sourceHistoryMessages: z.number().int().positive().max(MAX_THREAD_MODEL_MESSAGES),
-    retainedHistoryMessages: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-    replacesCompactionId: id.optional(),
-    revision: threadCompactionRevisionSchema,
-  })
-  .strict()
-  .refine((plan) => plan.sourceHistoryMessages === plan.source.historyEnd - plan.source.historyStart, {
-    message: "AI: Thread compaction source count is inconsistent",
-  });
-
-const threadCompactionPreviewSchema = z
-  .object({
-    thread: threadSummarySchema,
-    plan: threadCompactionPlanSchema,
-    providerId: provider,
-    model,
-    active: threadCompactionSchema.optional(),
-  })
-  .strict();
-
-const threadCompactionExecutionResultSchema = z
-  .object({ thread: threadSummarySchema, view: threadView, compaction: threadCompactionSchema })
   .strict();
 
 export const permissionsSnapshot = z
@@ -1030,7 +758,6 @@ export const responseSchemas = {
         .strict(),
       capabilities: z
         .object({
-          agentSessions: z.boolean(),
           sandbox: z.boolean(),
           containerTools: z.boolean(),
           workspaceTools: z.boolean(),
@@ -1066,20 +793,6 @@ export const responseSchemas = {
   [AI_CHANNELS.keySet]: ok,
   [AI_CHANNELS.keyClear]: ok,
   [AI_CHANNELS.agentGatewayEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
-  [AI_CHANNELS.threadList]: z.array(threadSummarySchema).max(MAX_RETAINED_THREADS),
-  [AI_CHANNELS.threadCreate]: threadSummarySchema,
-  [AI_CHANNELS.threadRename]: threadSummarySchema,
-  [AI_CHANNELS.threadConfigure]: threadSummarySchema,
-  [AI_CHANNELS.threadBranchPreview]: threadBranchPreviewSchema,
-  [AI_CHANNELS.threadBranch]: threadBranchResultSchema,
-  [AI_CHANNELS.threadCompactionPreview]: threadCompactionPreviewSchema,
-  [AI_CHANNELS.threadCompact]: threadCompactionExecutionResultSchema,
-  [AI_CHANNELS.threadSubmit]: submitThreadResult,
-  [AI_CHANNELS.threadResolveApproval]: resolveThreadApprovalResult,
-  [AI_CHANNELS.threadStop]: ok,
-  [AI_CHANNELS.threadSnapshot]: threadView.nullable(),
-  [AI_CHANNELS.toolArtifactGet]: toolArtifactRecordSchema,
-  [AI_CHANNELS.threadDelete]: ok,
   [AI_CHANNELS.changesStatus]: workspaceChangeStatusSchema,
   [AI_CHANNELS.changesDiff]: workspaceDiffSchema,
   [AI_CHANNELS.projectContextSnapshot]: projectContextSnapshotSchema,
@@ -1141,7 +854,6 @@ export const threadEvent = z.discriminatedUnion("type", [
       title: z.string().max(MAX_TITLE_CHARS),
       ok: z.boolean(),
       result: z.unknown(),
-      artifact: toolArtifactReferenceSchema.optional(),
     })
     .strict(),
   z
@@ -1207,7 +919,6 @@ export const threadEventEnvelope = z
   .strict();
 
 export const pushSchemas = {
-  [AI_CHANNELS.threadEvent]: threadEventEnvelope,
   [AI_CHANNELS.skillsChanged]: skillHostSnapshot,
 } satisfies Record<AIPushChannel, z.ZodType>;
 

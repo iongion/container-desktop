@@ -1,4 +1,3 @@
-import { createKnowledgeFileStorage } from "@/ai-system/adapters/knowledgeFileStorage";
 import { listModels } from "@/ai-system/adapters/localModels";
 import { createPermissionsStore } from "@/ai-system/adapters/permissionsStoreCore";
 import { createProjectContextFileStore } from "@/ai-system/adapters/projectContextFileStore";
@@ -6,20 +5,15 @@ import { executeSandboxed } from "@/ai-system/adapters/sandbox";
 import { sessionWorkspaceRoot } from "@/ai-system/adapters/sessionWorkspace";
 import { sha256Text } from "@/ai-system/adapters/sha256";
 import { createSkillTrustFileStore } from "@/ai-system/adapters/skillTrustFileStore";
-import { createThreadFileStore } from "@/ai-system/adapters/threadFileStore";
-import { createToolArtifactFileStore } from "@/ai-system/adapters/toolArtifactFileStore";
 import { type ResolvedFetch, webSearch } from "@/ai-system/adapters/webSearch";
 import { createGitWorkspaceChanges } from "@/ai-system/adapters/workspaceChanges";
 import type { AIInvokeChannel, AIInvokeResponse, AIPushChannel, AIPushPayload } from "@/ai-system/core/channels";
 import type { ExecutionSelectorFactory } from "@/ai-system/core/ports";
-import type { AISettings, CompactThreadContext, CreateAgentSession, EngineOps } from "@/ai-system/core/types";
+import type { AISettings, EngineOps } from "@/ai-system/core/types";
 import { type AIBroker, createAIBroker } from "@/ai-system/host/broker";
-import { createKnowledgeBank } from "@/ai-system/host/knowledgeBank";
 import { createProjectContextHost } from "@/ai-system/host/projectContextHost";
 import { createSkillHost } from "@/ai-system/host/skillHost";
-import { createThreadRepository } from "@/ai-system/host/threadRepository";
-import { createToolArtifactRepository } from "@/ai-system/host/toolArtifactRepository";
-import { buildAgentPrompt, buildProjectContextPrompt, buildSkillInvocationPrompt } from "@/template/prompts";
+import { buildAgentPrompt, buildSkillInvocationPrompt } from "@/template/prompts";
 import "@/template/templateRegistry.vite";
 import type { ProviderTransport } from "@/ai-system/core/types";
 import type { IHostCapabilities } from "@/host-contract/capabilities";
@@ -64,11 +58,6 @@ export interface AISystemDeps<TEvent = unknown> {
   // Run-scoped factory that builds a worker's execution backend from its target (host/remote/container/sandbox).
   // Absent ⇒ every team-run worker falls back to the run-level engineOps/workspaceAccess (host), the pre-Runs-on behaviour.
   createExecutionSelector?: ExecutionSelectorFactory;
-  // Engine factory, injected by the shell composition root. OPTIONAL since the assistant moved into the
-  // container: the pi session drives the transcript from the renderer, so a shell that offers only the
-  // containerized agent supplies neither. The broker already rejects thread work when they are absent.
-  createAgentSession?: CreateAgentSession;
-  compactThreadContext?: CompactThreadContext;
   // CONTAINER_DESKTOP_MOCK — swap real streamers/stores for scripted mocks.
   mock?: boolean;
   logger?: { error: (...args: unknown[]) => void };
@@ -88,23 +77,9 @@ export async function createAISystem<TEvent = unknown>(
   const mocks = mockModule ? mockModule.createMockAIDeps() : null;
 
   const permissionsPath = await deps.path.join(deps.userDataDir, "ai-permissions.json");
-  const knowledgePath = await deps.path.join(deps.userDataDir, "ai-knowledge.json");
-  const threadsPath = await deps.path.join(deps.userDataDir, "ai-threads.json");
-  const legacyThreadsPath = await deps.path.join(deps.userDataDir, "ai-conversations.json");
-  const toolArtifactsPath = await deps.path.join(deps.userDataDir, "ai-tool-artifacts.json");
   const skillTrustPath = await deps.path.join(deps.userDataDir, "ai-skill-trust.json");
   const projectContextPath = await deps.path.join(deps.userDataDir, "ai-project-context.json");
   const userSkillsRoot = await deps.path.join(deps.userDataDir, "ai-skills");
-  const threadRepository = createThreadRepository({
-    store: createThreadFileStore(threadsPath, deps.fs, deps.path, legacyThreadsPath),
-    logger: deps.logger,
-  });
-  await threadRepository.ready();
-  const toolArtifactRepository = createToolArtifactRepository({
-    store: createToolArtifactFileStore(toolArtifactsPath, deps.fs, deps.path),
-    logger: deps.logger,
-  });
-  await toolArtifactRepository.ready();
 
   // The user-managed allow/reject record. Mock mode: an in-memory store seeded with sample Allow + Reject
   // commands (no disk writes) so the Settings → AI permissions UI is exercisable; otherwise the real FS store.
@@ -136,11 +111,6 @@ export async function createAISystem<TEvent = unknown>(
     : undefined;
   await projectContextHost?.ready();
 
-  const knowledgeBank = createKnowledgeBank({
-    storage: createKnowledgeFileStorage(knowledgePath, deps.fs, deps.path),
-  });
-  void knowledgeBank.init().catch((error) => deps.logger?.error("AI knowledge bank init failed", error));
-
   // Keychain-backed provider keys. Mock mode reports every provider configured so cloud catalogs are browsable
   // and connection-testable without a real key. The dev-key fallback is folded into caps.keychain by the
   // shell root before it reaches here.
@@ -168,8 +138,6 @@ export async function createAISystem<TEvent = unknown>(
     listModels: mocks
       ? (provider, opts) => mocks.listModels(provider, opts)
       : (provider, opts) => listModels(provider, opts),
-    createAgentSession: deps.createAgentSession,
-    compactThreadContext: deps.compactThreadContext,
     // The sandbox POLICY (floor/redaction/timeout/cap + the scrubbed-env allowlist) is reused as-is; only the
     // executor + base env are the shell's ExecuteIsolated capability, and the cwd is the shell's sandbox root.
     runSandboxed: mocks
@@ -192,8 +160,6 @@ export async function createAISystem<TEvent = unknown>(
     skillHost,
     buildSkillInvocationPrompt,
     projectContextHost,
-    buildProjectContextPrompt,
-    knowledgeBank: mocks ? mocks.knowledgeBank : knowledgeBank,
     webSearcher: mocks
       ? (query) => mocks.webSearcher(query)
       : deps.publicWebFetch || deps.publicWebFetchImpl
@@ -204,8 +170,6 @@ export async function createAISystem<TEvent = unknown>(
               fetchImpl: deps.publicWebFetchImpl,
             }).then((r) => ({ text: r.text }))
         : undefined,
-    threadRepository,
-    toolArtifactRepository,
     buildAgentPrompt,
     logger: deps.logger,
   });

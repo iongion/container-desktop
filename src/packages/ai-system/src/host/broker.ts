@@ -1,4 +1,3 @@
-import { sha256Text } from "@/ai-system/adapters/sha256";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -13,32 +12,18 @@ import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
 import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
 import { composeGatewayEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
-import type { AIKeyStore, ExecutionSelectorFactory, KnowledgeBankLike, SandboxRunner } from "@/ai-system/core/ports";
-import type { ProjectContextPack } from "@/ai-system/core/projectContext";
+import type { AIKeyStore, ExecutionSelectorFactory, SandboxRunner } from "@/ai-system/core/ports";
 import { type ResolvedProvider, resolveProvider } from "@/ai-system/core/providers";
 import { redactText } from "@/ai-system/core/redact";
 import { validateAIInvokeRequest } from "@/ai-system/core/schemas";
 import { SKILL_LIMITS } from "@/ai-system/core/skills";
-import { createToolArtifactRecord, toolArtifactReference } from "@/ai-system/core/toolArtifacts";
-import type {
-  AISettings,
-  CompactThreadContext,
-  CreateAgentSession,
-  DiagnosticsBundle,
-  EngineOps,
-  ListedModel,
-  ProviderTransport,
-} from "@/ai-system/core/types";
+import type { AISettings, DiagnosticsBundle, EngineOps, ListedModel, ProviderTransport } from "@/ai-system/core/types";
 import type { WorkspaceChangesPort } from "@/ai-system/core/workspaceChanges";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
-import { randomUUID } from "@/utils/randomUUID";
 import { createDiagnosticsHost } from "./diagnosticsHost";
 import { createModelDiscoveryHost } from "./modelDiscoveryHost";
 import type { ProjectContextHost } from "./projectContextHost";
 import type { SkillHost } from "./skillHost";
-import { createThreadHost } from "./threadHost";
-import type { ThreadRepository } from "./threadRepository";
-import type { ToolArtifactRepository } from "./toolArtifactRepository";
 
 export interface AIBrokerDeps<TEvent = unknown> {
   keyStore: AIKeyStore;
@@ -56,20 +41,16 @@ export interface AIBrokerDeps<TEvent = unknown> {
     options: { fetchImpl: typeof fetch; signal?: AbortSignal },
   ) => Promise<ListedModel[]>;
   buildAgentPrompt: (bundle?: DiagnosticsBundle) => string;
-  buildProjectContextPrompt?: (pack: ProjectContextPack) => string;
   projectContextHost?: ProjectContextHost;
-  createAgentSession?: CreateAgentSession;
-  compactThreadContext?: CompactThreadContext;
   runSandboxed?: SandboxRunner;
   engineOps?: EngineOps;
   workspaceAccess?: IWorkspaceAccess;
   workspaceChanges?: WorkspaceChangesPort;
   createExecutionSelector?: ExecutionSelectorFactory;
   permissionsStore?: PermissionsStoreLike;
-  knowledgeBank?: KnowledgeBankLike;
+  // The public-web search the agent asks the app to run. Absent ⇒ this runtime cannot pin a destination, and the
+  // tool is refused rather than offered.
   webSearcher?: (query: string) => Promise<{ text: string }>;
-  threadRepository: ThreadRepository;
-  toolArtifactRepository?: ToolArtifactRepository;
   skillHost?: SkillHost;
   buildSkillInvocationPrompt?: (context: {
     command: string;
@@ -78,8 +59,6 @@ export interface AIBrokerDeps<TEvent = unknown> {
     arguments: string;
     body: string;
   }) => string;
-  // CONTAINER_DESKTOP_MOCK only — runs the host starts life already holding, so the Runs list has
-  // content in every phase without the user starting one first.
   logger?: { error: (...args: unknown[]) => void };
 }
 
@@ -121,46 +100,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     }
   };
 
-  const threadHost = createThreadHost<TEvent>({
-    senderId: deps.senderId,
-    send: deps.send,
-    getAISettings: deps.getAISettings,
-    resolveProviderAccess,
-    providerTransport: deps.providerTransport,
-    buildAgentPrompt: deps.buildAgentPrompt,
-    buildProjectContextPrompt: deps.buildProjectContextPrompt,
-    projectContextHost: deps.projectContextHost,
-    createAgentSession: deps.createAgentSession,
-    compactThreadContext: deps.compactThreadContext,
-    runSandboxed: deps.runSandboxed,
-    engineOps: deps.engineOps,
-    workspaceAccess: deps.workspaceAccess,
-    workspaceChanges: deps.workspaceChanges,
-    permissionsStore: deps.permissionsStore,
-    knowledgeBank: deps.knowledgeBank,
-    webSearcher: deps.webSearcher,
-    threadRepository: deps.threadRepository,
-    storeToolArtifact: deps.toolArtifactRepository
-      ? async (input) =>
-          toolArtifactReference(
-            await deps.toolArtifactRepository!.put(
-              createToolArtifactRecord({
-                id: randomUUID(),
-                threadId: input.threadId,
-                createdAt: Date.now(),
-                content: input.content,
-                byteLength: input.byteLength,
-                fingerprint: await sha256Text(input.content),
-              }),
-            ),
-          )
-      : undefined,
-    deleteToolArtifacts: deps.toolArtifactRepository
-      ? (threadId) => deps.toolArtifactRepository!.deleteForThread(threadId)
-      : undefined,
-    reportError,
-    logger: deps.logger,
-  });
   const requireProjectContext = (): ProjectContextHost => {
     if (!deps.projectContextHost) throw new Error("AI: project context is unavailable");
     return deps.projectContextHost;
@@ -185,7 +124,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     skillHost: deps.skillHost,
     webSearchAvailable: !!deps.webSearcher,
     capabilities: {
-      agentSessions: !!deps.createAgentSession,
       sandbox: !!deps.runSandboxed,
       containerTools: !!deps.engineOps,
       workspaceTools: !!deps.workspaceAccess,
@@ -268,49 +206,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
         return { path };
       }),
     );
-    onInvoke(AI_CHANNELS.threadList, (event) => guarded(event, () => threadHost.list()));
-    onInvoke(AI_CHANNELS.threadCreate, (event, request) => guarded(event, () => threadHost.create(request)));
-    onInvoke(AI_CHANNELS.threadRename, (event, request) =>
-      guarded(event, () => threadHost.rename(request.threadId, request.title)),
-    );
-    onInvoke(AI_CHANNELS.threadConfigure, (event, request) =>
-      guarded(event, () =>
-        threadHost.configure(request.threadId, {
-          accessProfile: request.accessProfile,
-          reasoningLevel: request.reasoningLevel,
-        }),
-      ),
-    );
-    onInvoke(AI_CHANNELS.threadBranchPreview, (event, request) =>
-      guarded(event, () => threadHost.branchPreview(request.threadId)),
-    );
-    onInvoke(AI_CHANNELS.threadBranch, (event, request) =>
-      guarded(event, () => threadHost.branch(request.threadId, request.checkpointId, request.title)),
-    );
-    onInvoke(AI_CHANNELS.threadCompactionPreview, (event, request) =>
-      guarded(event, () => threadHost.compactionPreview(request.threadId)),
-    );
-    onInvoke(AI_CHANNELS.threadCompact, (event, request) =>
-      guarded(event, () => threadHost.compact(request.threadId, request.revision, request.instructions)),
-    );
-    onInvoke(AI_CHANNELS.threadSubmit, (event, request) => guarded(event, () => threadHost.submit(event, request)));
-    onInvoke(AI_CHANNELS.threadResolveApproval, (event, request) =>
-      guarded(event, () => threadHost.resolve(event, request)),
-    );
-    onInvoke(AI_CHANNELS.threadStop, (event, request) =>
-      guarded(event, () => threadHost.cancel(event, request.threadId)),
-    );
-    onInvoke(AI_CHANNELS.threadSnapshot, (event, request) =>
-      guarded(event, () => threadHost.snapshot(event, request.threadId)),
-    );
-    onInvoke(AI_CHANNELS.toolArtifactGet, (event, request) =>
-      guarded(event, async () => {
-        const artifact = await deps.toolArtifactRepository?.get(request.threadId, request.artifactId);
-        if (!artifact) throw new Error("AI: tool artifact not found");
-        return artifact;
-      }),
-    );
-    onInvoke(AI_CHANNELS.threadDelete, (event, request) => guarded(event, () => threadHost.delete(request.threadId)));
     onInvoke(AI_CHANNELS.changesStatus, (event) =>
       guarded(event, () => {
         if (!deps.workspaceChanges) throw new Error("AI: workspace change review is unavailable");
@@ -445,12 +340,10 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
   return {
     register,
     disposeForSender(senderId: number | string): void {
-      threadHost.disposeForSender(senderId);
       models.disposeForSender(senderId);
       skillObservers.delete(senderId);
     },
     dispose(): void {
-      threadHost.dispose();
       models.dispose();
       unsubscribeSkills?.();
       deps.skillHost?.dispose();

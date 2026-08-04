@@ -4,22 +4,16 @@
 
 import type { z } from "zod";
 import type { FloorScope } from "./commandFloor";
-import type { EffectiveContextSource } from "./context";
 import type {
   AIPermissionMode,
   PermissionDecisionContext,
   PermissionsSnapshot,
-  PermissionsStoreLike,
   WorkerToolPolicyMode,
 } from "./permissions";
 import type { AgentExecutionDeps } from "./ports";
 import type { ProviderKind, ResolvedProvider } from "./providers";
-import type { ReasoningThinking } from "./reasoning";
 import type { approvalDecision, diagnosticsBundle } from "./schemas";
 import type { SkillInvocationProvenance } from "./skills";
-import type { ResolveThreadApprovalResult, SubmitThreadResult, ThreadEventEnvelope, ThreadView } from "./threadEvents";
-import type { ThreadCompaction } from "./threads";
-import type { ToolArtifactReference } from "./toolArtifacts";
 
 export type ThreadRole = "user" | "assistant" | "system";
 
@@ -28,14 +22,6 @@ export interface ThreadMessage {
   role: ThreadRole;
   content: string;
   createdAt: number;
-  skill?: SkillInvocationProvenance;
-}
-
-export interface AgentSessionInputMessage {
-  id: string;
-  content: string;
-  createdAt: number;
-  displayContent?: string;
   skill?: SkillInvocationProvenance;
 }
 
@@ -204,84 +190,6 @@ export interface ProviderTransport {
   request(request: ProviderTransportRequest, signal: AbortSignal): Promise<ProviderTransportResponse>;
   dispose(): void;
 }
-
-// Neutral session-actor PORT. The host supplies resolved task settings + execution capabilities; the concrete
-// AI-SDK actor (runtimes/agent) owns rich model history, streams, tools, and approval state.
-export interface AgentSessionTaskSettings {
-  resolved: ResolvedProvider;
-  providerFetch: typeof fetch;
-  system: string;
-  permissionMode: AIPermissionMode;
-  permissions?: PermissionsSnapshot;
-  // Host-resolved authority scope. Without it remembered decisions are ignored and never persisted.
-  permissionContext?: PermissionDecisionContext;
-  thinking?: ReasoningThinking;
-  execution: AgentExecutionDeps;
-  // Per-turn skill policy can only narrow the normal execution toolset. Undefined keeps every Thread tool.
-  allowedTools?: ReadonlySet<string>;
-  // Project-controlled prompt content must ask again before its first gated action, even with a remembered allow.
-  initialTaint?: boolean;
-  // Provenance metadata for prompt sections already rendered into `system` or the current skill input.
-  // Values never contain the prompt text itself.
-  contextSources?: readonly EffectiveContextSource[];
-}
-
-export interface AgentSessionPort {
-  submit(message: AgentSessionInputMessage, taskSettings?: AgentSessionTaskSettings): Promise<SubmitThreadResult>;
-  resolveApproval(approvalId: string, decision: ApprovalDecision): Promise<ResolveThreadApprovalResult>;
-  cancel(): Promise<void>;
-  snapshot(): ThreadView;
-  durableSnapshot(): AgentSessionDurableSnapshot;
-  dispose(): Promise<void>;
-}
-
-export interface AgentSessionDurableSnapshot {
-  view: ThreadView;
-  modelHistory: unknown[];
-  traceRecords?: unknown[];
-}
-
-export interface AgentSessionCreationOptions {
-  threadId: string;
-  history: ThreadMessage[];
-  view?: ThreadView;
-  modelHistory?: unknown[];
-  activeCompaction?: ThreadCompaction;
-  taskSettings: AgentSessionTaskSettings;
-  permissionsStore?: PermissionsStoreLike;
-  storeToolArtifact?: (input: {
-    threadId: string;
-    toolCallId: string;
-    tool: string;
-    content: string;
-    byteLength: number;
-  }) => Promise<ToolArtifactReference>;
-  emit: (event: ThreadEventEnvelope) => void;
-  logger?: { error: (...args: unknown[]) => void };
-}
-
-export type CreateAgentSession = (options: AgentSessionCreationOptions) => AgentSessionPort;
-
-export interface ThreadCompactionGenerationInput {
-  resolved: ResolvedProvider;
-  providerFetch: typeof fetch;
-  modelHistory: unknown[];
-  source: ThreadCompaction["source"];
-  instructions?: string;
-  signal?: AbortSignal;
-}
-
-export interface ThreadCompactionGenerationResult {
-  summary: string;
-  providerId: string;
-  model?: string;
-  inputTokens: number;
-  outputTokens: number;
-}
-
-export type CompactThreadContext = (
-  input: ThreadCompactionGenerationInput,
-) => Promise<ThreadCompactionGenerationResult>;
 
 // Neutral team-run PORT — the multi-agent counterpart to AgentSessionPort. The host resolves provider access and
 // the cost caps; the engine (@/ai-system/runtime) owns decomposition, scheduling and synthesis and reports as

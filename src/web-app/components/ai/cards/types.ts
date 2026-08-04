@@ -3,8 +3,6 @@
 // shape. The registry's <ToolCard> handles the running/error states centrally, so a card only renders its
 // successful result.
 
-import type { ToolArtifactReference } from "@/ai-system/core/toolArtifacts";
-
 export interface ToolCardProps {
   tool: string;
   title: string;
@@ -15,7 +13,6 @@ export interface ToolCardProps {
   status: "running" | "complete" | "error";
   ok?: boolean;
   result?: unknown;
-  artifact?: ToolArtifactReference;
   threadId?: string;
   message?: string;
 }

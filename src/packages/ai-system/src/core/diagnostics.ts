@@ -29,7 +29,6 @@ export interface AIDiagnosticsSnapshot {
     webSearch: "enabled" | "disabled" | "unavailable";
   };
   capabilities: {
-    agentSessions: boolean;
     sandbox: boolean;
     containerTools: boolean;
     workspaceTools: boolean;

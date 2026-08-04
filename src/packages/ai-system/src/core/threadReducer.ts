@@ -156,7 +156,6 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
                   title: event.title || item.title,
                   ok: event.ok,
                   result: event.result,
-                  ...(event.artifact ? { artifact: event.artifact } : {}),
                   status: event.ok ? "complete" : "error",
                 }
               : item,
@@ -173,7 +172,6 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
             args: {},
             ok: event.ok,
             result: event.result,
-            ...(event.artifact ? { artifact: event.artifact } : {}),
             status: event.ok ? "complete" : "error",
           },
         ];
