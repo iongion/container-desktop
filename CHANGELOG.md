@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Context and Usage panels show real numbers: tokens, cost, the model's budget and the exact tools the model was offered
 - pi's own slash commands are offered under pi's own names; the app no longer answers `/compact`, `/new`, `/session` or `/resume` with something adjacent of its own
 - A plugin's own commands appear in the palette — every one of them was silently dropped before it got there
+- pi's commands work outside demo mode: a real session announced them before the app was listening, so every one of them answered "Unknown command"
 - Diagnostics answer the question that matters: whether the SESSION can reach the model, through its gateway, and not only whether this app can
 - A turn that has read your project's rules, an untrusted skill or a public web page no longer honours a remembered approval
 - The Wails backend no longer lets the web view read a provider key, which Tauri has always refused

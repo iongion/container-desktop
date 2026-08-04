@@ -296,8 +296,8 @@ export function AssistantSettingsDrawer({ view, onRun, onClose }: AssistantSetti
                       scoped: models.scoped.length,
                       total: models.available.length,
                     })
-                  : // The count is the point now that a session registers everything its provider serves: "everything"
-                    // is one model on a llama.cpp server and hundreds on an aggregator.
+                  : // The count is the point: "everything" is the models this session has been pointed at, which
+                    // grows by one each time the user picks another.
                     t("Nothing is scoped, so Ctrl+P cycles all {{total}} of this session's models.", {
                       total: models.available.length,
                     })}

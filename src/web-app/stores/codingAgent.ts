@@ -544,8 +544,12 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
 
       const client = createPiBridgeClient({ url: `ws://127.0.0.1:${running.hostPort}/`, token: running.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));
-      await client.connect();
+      // In the store BEFORE the socket is dialled, because the session announces itself DURING connect: pi's
+      // `ready` lands while that promise is still pending, and every handler for it reads the client back out of
+      // here. Setting it afterwards silently dropped the resource read that `ready` triggers, which is what left
+      // a real session with an empty palette — and answered pi's own commands with "Unknown command".
       set({ client, spec: running, connectionId: options.connectionId });
+      await client.connect();
       // Before the first plugin component can render: a component that draws once with pi's built-in
       // palette and only then hears about the app's would flash the wrong colours.
       await get().publishTheme();
@@ -560,6 +564,9 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         startLog: [...state.startLog, (error as Error).message],
         spec,
         connectionId: options.connectionId,
+        // A socket that never came up is not a session to talk to: the client is published early so the session
+        // can announce itself, and taken back here so nothing dials what failed.
+        client: undefined,
       }));
     }
   },
