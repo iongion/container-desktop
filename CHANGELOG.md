@@ -9,29 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The coding agent can now use an Anthropic model: its gateway speaks Anthropic's own wire shape and signs the request the way Anthropic expects
-- A keyless local model server no longer stops the coding agent's gateway from starting
+- Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
+- A local model server session starts again — asking for a key a keyless provider never had used to stop it
+- The assistant shows that it is working from the moment you send, not only once the answer starts arriving
+- The workspace folder's own start log is styled again
+- The mock model list no longer offers a model that does not exist
+- The assistant can now use an Anthropic model: its gateway speaks Anthropic's own wire shape and signs the request the way Anthropic expects
+- A keyless local model server no longer stops the assistant's gateway from starting
 - The gateway now signs the upstream the way that provider's settings say — bearer token, API-key header, basic auth or a custom header
 
 ### Added
 
-- Start a coding agent session from the app: pick the connection, the workspace folder, the model and whether it may reach the network
+- One Assistant: the full screen and the quake console are the same conversation, with the same transcript, cards and composer — the separate Coding Agent screen is gone
+- Start a session from wherever you are — the console offers it too, instead of a composer that leads nowhere
+- The AI screens are reachable again, from a menu on the header's AI button
+- The session's connection, workspace and container ride in the screen header; open the workspace folder, or open it as a VS Code workspace, from there
+- Start an assistant session from the app: pick the connection, the workspace folder, the model and whether it may reach the network
 - A local model server (LM Studio, llama.cpp) is now reachable from the agent's gateway container
 - A truncated command's full output can be opened from its card — the agent writes it inside the container, the app reads it back
 - The assistant now answers, runs tools and asks for approval in demo mode, with no container engine present
-- Coding Agent screen: pi runs inside a container, streamed into the app over a token-authenticated bridge
+- The assistant runs inside a container, streamed into the app over a token-authenticated bridge
 - `yarn cli agent-image` builds the local pi agent image from the shipped Dockerfile
 - Provider credentials stay in a separate gateway container; the agent container never receives a key
 - The assistant runs on the containerized pi session instead of the in-app OMA engine
 - pi extensions can ask you things through native dialogs, and show status entries and widgets around the composer
-- Every tool the coding agent runs passes your permission settings first; a rejection blocks the call inside pi
-- The coding agent's tool calls read as cards: shell output, file contents, a real diff of every edit, and directory or search results
+- Every tool the assistant runs passes your permission settings first; a rejection blocks the call inside pi
+- The assistant's tool calls read as cards: shell output, file contents, a real diff of every edit, and directory or search results
 - A tool card names the file it touched and says whether it was read or written, and notes when output was truncated
 - Data an extension publishes for the app now appears in the conversation as its own labelled, inspectable card
 - Extension components render in the app: custom dialogs, tool renderers, footers, headers, widgets and editors, with keyboard input
 - Extension output follows the app's own theme, per engine and per light or dark mode
 - Remembered tool decisions are now saved from the approval card, scoped to the workspace and connection
-- The coding agent can work with your containers again — list, inspect, read logs and stats, start, stop, remove, and pull images — across every connection
+- The assistant can work with your containers again — list, inspect, read logs and stats, start, stop, remove, and pull images — across every connection
 - Container reads run unattended; every container change asks first, naming the entity and the connection it would act on
 - Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
 - Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily
@@ -127,10 +136,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Running a skill from the composer or the skills drawer works again — it had stopped reaching the agent after the move into a container, and a skill's declared tool list is now enforced for the turn it runs
-- Rejecting a tool call now stops the coding agent, instead of it asking again for the same command every second
-- A container change the coding agent asks for is now approved once, not twice — the same removal no longer raises a second identical card after you have already allowed it
+- Rejecting a tool call now stops the assistant, instead of it asking again for the same command every second
+- A container change the assistant asks for is now approved once, not twice — the same removal no longer raises a second identical card after you have already allowed it
 - An approval card for a container change now names the connection it will act on even when the agent did not name one, so it is clear which engine is about to lose a container
-- A coding agent session no longer fails to start while the agent container is still opening its port
+- An assistant session no longer fails to start while the agent container is still opening its port
 - The agent container no longer fails to start because one of pi's packages was missing from the image
 - The AI section tabs no longer link to two screens that no longer exist
 - Stopping a turn reads as stopped, not as a model error

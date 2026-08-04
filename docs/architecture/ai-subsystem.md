@@ -22,7 +22,7 @@ contain it; the provider is the user's choice and the allow/reject record is the
 ```mermaid
 flowchart TB
   subgraph renderer["Renderer — Tauri/Wails webview (no Node)"]
-    ui["Assistant · Coding Agent · Plugins<br/>transcript · cards · dialogs · ANSI surfaces"]:::component
+    ui["Assistant · Plugins<br/>transcript · cards · dialogs · ANSI surfaces"]:::component
     store["stores/codingAgent.ts<br/>session · bridge client · projected ThreadView"]:::component
     broker["ai-system host/broker<br/>keys · permissions · models · skills · project context · engine_op"]:::component
     ops["platform/engineOpsAdapter<br/>EngineOps over EngineDataService"]:::component
@@ -113,7 +113,8 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
 
 1. create a session-scoped network (`cd-agent-net-<id>`; a pre-existing one is not an error);
 2. write the **gateway** env file — upstream base URL, **the provider key**, the bridge token — and run
-   `<image> --mode gateway` on that network;
+   `<image> --mode gateway` on that network. The renderer never handles that key: it composes the file with
+   `KEYCHAIN_SECRET_PLACEHOLDER` and the realm owning the vault substitutes it while writing (below);
 3. write the **agent** env file — deliberately *without* the key: bridge token and port, the gateway URL, the
    model id, `/workspace`, the agent dir — and run `<image> --mode agent` with
    `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, and the plugin volume;
@@ -355,6 +356,20 @@ that is a real security difference:
 Both send the key onward to the gateway container when a session starts, so the difference is about the
 discovery/diagnostics path, not the session.
 
+**The credential never crosses into the web view — not even to reach the container.** Tauri's keychain
+deliberately refuses `getKey` there, which is why the gateway env file is not written by the renderer at all:
+
+- the host composes it with `KEYCHAIN_SECRET_PLACEHOLDER` in place of the key (`core/piAgentEnv.ts`, the one
+  composer and one file format), and calls `keyStore.writeSecretFile(provider, fileName, contents)`;
+- the native side (`keychain_write_secret_file` in Rust, `KeychainService.WriteSecretFile` in Go) reads the
+  secret, substitutes it, writes **0600** into `<userData>/agent/`, and answers only the path. The caller names
+  a FILE, never a directory, and a body without the placeholder is refused rather than written unauthenticated;
+- every web-view-reachable read of that directory is refused (`host/fs.rs`, `fs_service.go`) — including a
+  `rename` that would carry the file out of it. Without that, "the key never enters this realm" would be one
+  `fs_read_text_file` away.
+
+`webdriver/specs/agent-secret-file.e2e.js` proves all three against a real app.
+
 `redactPayload` / `redactText` strip provider-key prefixes, bearer tokens, JWTs, URL credentials and
 secret-looking env assignments from what is displayed and stored. Web search, when a shell can pin a
 destination, is SSRF-guarded (reserved/private/loopback/link-local IPs blocked, redirects re-checked, the fetch
@@ -367,10 +382,9 @@ AI is **always on** — `Metadata.RequiresAI` is a surfacing tag, never an acces
 | Screen | `Screen.ID` | Route | Surfacing |
 | ------ | ----------- | ----- | --------- |
 | Assistant | `ai.assistant` | `/screens/ai/assistant` | `RequiresAI`, `ExcludeFromSidebar` |
-| Coding Agent | `ai.codingAgent` | `/screens/ai/coding-agent` | `RequiresAI`, `ExcludeFromSidebar` |
 | Plugins | `ai.plugins` | `/screens/ai/plugins` | `RequiresAI`, `ExcludeFromSidebar` |
 
-All three are reached from the header AI button and cross-link through the AI section tab bar
+Both are reached from the header AI button's menu and cross-link through the AI section tab bar
 (`screens/AI/ScreenHeader.tsx`); build hrefs only with `getAIScreenUrl` (`screens/AI/Navigation.ts`).
 
 **Assistant** is the rich surface: `components/ai/AssistantThread.tsx` renders the transcript (prose, tool
@@ -379,7 +393,10 @@ context, diagnostics, skills, project context, workspace changes, branch, compac
 component backs the summonable **quake console** (`AssistantConsole/`, portaled to `<body>`, mod+backtick),
 so work is continuous across surfaces.
 
-**Coding Agent** is the session's own minimal surface: status, start log, a plain transcript and a composer.
+There is exactly ONE conversation surface. `AssistantScreen` adds only what a full page can carry — the
+session summary in the header (connection, workspace, container) and the start/stop actions; everything else,
+including the no-session empty state and its Start CTA, lives in `AssistantThread` so the console offers it
+too. A session-less surface renders no composer at all: `submit` has no bridge client to reach.
 
 `web-app/stores/useAIStore.ts` is the adapter that lets the whole Assistant UI keep working unchanged: it
 derives the old `AIState` shape from the pi session (one pi session = exactly one thread). Capabilities the
@@ -457,7 +474,7 @@ See [`../testing.md`](../testing.md) for how to run each of these.
 | `ai-system/host/{threadHost,threadRepository,toolArtifactRepository}.ts` | the orphaned thread path (no engine injected) |
 | `web-app/stores/{codingAgent,codingAgentSurfaces,pluginStore}.ts` | the session, its ANSI surfaces, the plugin table |
 | `web-app/stores/useAIStore.ts` | pi session → the Assistant UI's `AIState` shape |
-| `web-app/screens/AI/{AssistantScreen,CodingAgentScreen,ScreenHeader,Navigation}.tsx` | the surfaces and their tab bar |
+| `web-app/screens/AI/{AssistantScreen,AssistantActionsMenu,ScreenHeader,Navigation}.tsx` | the surface, its actions and the tab bar |
 | `web-app/screens/AI/Plugins/` | the Plugins sub-screen |
 | `web-app/components/ai/` | transcript, composer chrome, dialogs, ANSI surfaces, drawers, the card registry |
 | `web-app/themes/appPiTheme.ts` | `--app-*` tokens → the palette the container derives a pi theme from |

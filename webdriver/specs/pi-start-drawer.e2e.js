@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 
-// Verifies the Coding Agent's session-start UI on the real renderer: the empty state and its Start CTA, the
+// Verifies the Assistant's session-start UI on the real renderer: the empty state and its Start CTA, the
 // start drawer (connection, workspace folder, the shared ModelPicker, egress), the refusals that keep a
 // half-filled form from starting anything, the options the form resolves, and the session summary the screen
 // shows once a session is up. Starting a real container pair is covered by the live specs; this covers what
@@ -18,14 +18,14 @@ let filled = {};
 let started = {};
 let ready = {};
 
-describe("pi coding agent session start", () => {
+describe("assistant session start", () => {
   before(async () => {
     await browser.execute(() => {
-      window.location.hash = "#/screens/ai/coding-agent";
+      window.location.hash = "#/screens/ai/assistant";
     });
-    await $('[data-screen="ai.codingAgent"]').waitForExist({
+    await $('[data-screen="ai.assistant"]').waitForExist({
       timeout: 45000,
-      timeoutMsg: "the Coding Agent screen never mounted",
+      timeoutMsg: "the Assistant screen never mounted",
     });
 
     // The mock app boots WITH a scripted session, so "no session" is something to arrange rather than assume.
@@ -40,7 +40,7 @@ describe("pi coding agent session start", () => {
         startLog: [],
       });
     });
-    await $(".CodingAgentEmptyState").waitForExist({
+    await $(".AssistantEmpty--noSession").waitForExist({
       timeout: 15000,
       timeoutMsg: "the empty state never appeared after the session was dropped",
     });
@@ -137,21 +137,24 @@ describe("pi coding agent session start", () => {
         spec: { workspacePath: workspace, modelId: "mock-assistant", agentContainerName: "cd-agent-spec01" },
       });
     }, WORKSPACE);
-    await $(".CodingAgentBar").waitForExist({
+    await $(".AssistantSessionSummary").waitForExist({
       timeout: 15000,
       timeoutMsg: "the session bar never appeared for a ready session",
     });
     await browser.pause(300);
     ready = await browser.execute(() => ({
       drawer: document.querySelector(".AppStartAgentSessionDrawer") !== null,
-      workspace: document.querySelector(".CodingAgentWorkspace")?.textContent ?? "",
-      model: document.querySelector(".CodingAgentModel")?.textContent ?? "",
-      container: document.querySelector(".CodingAgentContainer")?.textContent ?? "",
-      dot: document.querySelector(".CodingAgentStatusDot") !== null,
+      // The workspace is a BUTTON that opens the folder, not a path label — the path is only its tooltip.
+      workspaceLabel: document.querySelector(".AssistantSessionWorkspace")?.textContent ?? "",
+      workspaceTitle: document.querySelector(".AssistantSessionWorkspace")?.getAttribute("title") ?? "",
+      // The model is deliberately NOT repeated here; the composer footer names it.
+      model: document.querySelector(".AssistantSessionModel") !== null,
+      container: document.querySelector(".AssistantSessionContainer")?.textContent ?? "",
+      dot: document.querySelector(".AssistantSessionDot") !== null,
       ctas: Array.from(document.querySelectorAll(".ResourceListActionButton")).map((button) => button.textContent ?? ""),
       utility: document.querySelectorAll('.ResourceListUtilityActions svg[data-icon="more"]').length,
-      composer: document.querySelector(".CodingAgentComposer") !== null,
-      emptyState: document.querySelector(".CodingAgentEmptyState") !== null,
+      composer: document.querySelector(".AIComposer") !== null,
+      emptyState: document.querySelector(".AssistantEmpty--noSession") !== null,
     }));
 
     await browser.execute(() => {
@@ -161,7 +164,7 @@ describe("pi coding agent session start", () => {
 
   it("offers an empty state and a Start CTA when no session is running", () => {
     assert.ok(idle.nonIdeal, "the empty state must be shown");
-    assert.equal(idle.title, "No coding agent session");
+    assert.equal(idle.title, "No assistant session");
     assert.ok(
       idle.ctas.some((text) => text.includes("Start session")),
       `the Start CTA must be in the header, got ${JSON.stringify(idle.ctas)}`,
@@ -170,13 +173,13 @@ describe("pi coding agent session start", () => {
     assert.equal(idle.reload, 1, "the header keeps its reload button");
     assert.equal(idle.drawer, false, "the drawer opens on demand, not on mount");
     assert.ok(
-      idle.tabs.some((tab) => tab.text.includes("Coding Agent") && tab.active),
+      idle.tabs.some((tab) => tab.text.includes("Assistant") && tab.active),
       "the section tab bar must mark this screen active",
     );
   });
 
   it("opens the form in a right-hand drawer with the app's own controls", () => {
-    assert.equal(opened.title, "Start a coding agent session");
+    assert.equal(opened.title, "Start an assistant session");
     assert.ok(opened.position, "the drawer must come from the right, like every other form drawer");
     assert.ok(opened.connection.length > 0, "the ConnectionSelect must offer a connected engine");
     assert.ok(opened.browse, "the workspace field must offer the folder picker");
@@ -222,8 +225,9 @@ describe("pi coding agent session start", () => {
     assert.equal(ready.drawer, false, "a ready session closes the form");
     assert.equal(ready.emptyState, false, "the empty state gives way to the transcript");
     assert.ok(ready.dot, "the summary shows the session is up");
-    assert.equal(ready.workspace, WORKSPACE);
-    assert.equal(ready.model, "mock-assistant");
+    assert.ok(ready.workspaceLabel.length > 0, "the workspace is offered as a button, not a raw path");
+    assert.equal(ready.workspaceTitle, WORKSPACE, "the full path stays available as the button's tooltip");
+    assert.equal(ready.model, false, "the model is named by the composer, not repeated in the summary");
     assert.equal(ready.container, "cd-agent-spec01");
     assert.ok(ready.composer, "a ready session has a composer");
     assert.equal(

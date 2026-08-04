@@ -86,6 +86,25 @@ describe("projectPiThreadView", () => {
     expect(view.timeline[0]).toMatchObject({ kind: "message", role: "user", content: "hello agent" });
   });
 
+  // The longest stretch of a turn is between the prompt and the first token, and nothing is on screen during
+  // it: no output yet, no tool card. Staying idle there leaves every "is it working?" affordance switched off
+  // for exactly as long as the model takes, so the session reads as frozen. The agent owes the answer the
+  // moment the prompt is submitted, not once it starts speaking.
+  it("is working from the moment the user submits, not from the first token", () => {
+    const view = projectPiThreadView(emptyPiThreadView("t1"), { type: "user_message", text: "hello agent" } as never);
+    expect(view.phase).toBe("model");
+  });
+
+  it("still returns to idle when a turn started by a submit ends", () => {
+    const asked = projectPiThreadView(emptyPiThreadView("t1"), { type: "user_message", text: "q" } as never);
+    const done = [
+      { type: "assistant_delta", text: "a" },
+      { type: "assistant_end", text: "a", stopReason: "stop" },
+      { type: "idle" },
+    ].reduce((view, event) => projectPiThreadView(view, event as never), asked);
+    expect(done.phase).toBe("idle");
+  });
+
   it("ignores events that carry no transcript content", () => {
     const view = project([{ type: "turn_end" }, { type: "response", id: "c1", success: true }]);
     expect(view.timeline).toEqual([]);

@@ -32,6 +32,47 @@ pub fn open_storage_folder(app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// openPath — reveal a caller-named DIRECTORY in the OS file manager (the session's workspace). Unlike
+/// open_storage_folder the path comes from the webview, so it is refused unless it already exists and is a
+/// directory: this must never create anything, and never hand a file to the shell's default handler.
+#[tauri::command]
+pub fn open_path(app: AppHandle, path: String) -> Result<(), String> {
+    let target = Path::new(&path);
+    if !target.is_dir() {
+        return Err(format!("not a directory: {path}"));
+    }
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
+/// openInVSCode — open a DIRECTORY as a VS Code workspace. The webview passes a PATH, never a URL: the
+/// `vscode://file/…` URI is built HERE, so this cannot be turned into a general "open any URI" hole. Uses the
+/// registered URI handler rather than the `code` CLI, which is often not on PATH for a GUI-launched app.
+#[tauri::command]
+pub fn open_in_vscode(app: AppHandle, path: String) -> Result<(), String> {
+    let target = Path::new(&path);
+    if !target.is_dir() {
+        return Err(format!("not a directory: {path}"));
+    }
+    // vscode://file/<absolute path>. Percent-encode only what would otherwise break the URI; a path is not a
+    // URL component, so the separators must survive.
+    let encoded: String = path
+        .chars()
+        .map(|c| match c {
+            ' ' => "%20".to_string(),
+            '#' => "%23".to_string(),
+            '?' => "%3F".to_string(),
+            '%' => "%25".to_string(),
+            other => other.to_string(),
+        })
+        .collect();
+    let uri = format!("vscode://file/{}", encoded.trim_start_matches('/'));
+    app.opener()
+        .open_url(uri, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
 /// Open an external URL in the OS browser. The webview gates this with the shared urlPolicy.shouldOpenExternally
 /// BEFORE invoking, so this only ever receives vetted URLs.
 #[tauri::command]

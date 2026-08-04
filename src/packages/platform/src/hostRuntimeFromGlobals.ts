@@ -19,11 +19,13 @@ export function assembleHostRuntimeFromGlobals(source: typeof globalThis = globa
     relaunch: () => messageBus.send("application.relaunch"),
     openDevTools: () => messageBus.send("openDevTools"),
     openStorageFolder: () => messageBus.send("openStorageFolder"),
+    openPath: (path) => messageBus.send("openPath", path),
   };
   const dialogs: IDialogs = {
     openFileSelector: (options) => messageBus.invoke("openFileSelector", options),
     saveFileSelector: (options) => messageBus.invoke("saveFileSelector", options),
     openTerminal: (options) => messageBus.invoke("openTerminal", options),
+    openInVSCode: (path) => messageBus.invoke("openInVSCode", path),
   };
   return {
     command: source.Command,

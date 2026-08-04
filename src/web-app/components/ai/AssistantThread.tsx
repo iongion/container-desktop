@@ -44,6 +44,7 @@ import { resolveThreadReference } from "@/web-app/components/ai/threadHistory";
 import { WorkspaceChangesDrawer, type WorkspaceChangesView } from "@/web-app/components/ai/WorkspaceChangesDrawer";
 import { useAssistantSkills } from "@/web-app/hooks/useAssistantSkills";
 import { Notification } from "@/web-app/Notification";
+import { StartSessionDrawer } from "@/web-app/screens/AI/StartSessionDrawer";
 import { getSettingsUrl } from "@/web-app/screens/Settings/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
@@ -84,6 +85,12 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const extensionChrome = useCodingAgentStore((s) => s.chrome);
   const pendingDialog = useCodingAgentStore((s) => s.pendingDialog);
   const respondToRequest = useCodingAgentStore((s) => s.respondToRequest);
+  // There is exactly ONE session behind every surface, so "is there anything to talk to?" is the thread's own
+  // question. Without a session the composer would accept text and silently drop it (submit returns early with
+  // no bridge client), so the surface offers a way to start one instead of a dead input.
+  const sessionStatus = useCodingAgentStore((s) => s.status);
+  const noSession = sessionStatus !== "ready";
+  const [startOpen, setStartOpen] = useState(false);
   usePiThemeSync();
   const setAssistantConsoleOpen = useUIStore((s) => s.setAssistantConsoleOpen);
   const {
@@ -431,7 +438,34 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         <PluginFocusSurface variant="overlay" />
         <div className="AssistantTranscript" ref={scrollRef} onScroll={onScroll}>
           {recoveryError ? <Callout intent={Intent.DANGER}>{recoveryError}</Callout> : null}
-          {items.length === 0 ? (
+          {noSession ? (
+            // Owned by the THREAD, not by the screen: the console renders this same component, so a session
+            // that can only be started from the screen leaves the console a dead box. Here both surfaces
+            // offer the same way in.
+            <div className="AssistantEmpty AssistantEmpty--noSession">
+              <NonIdealState
+                icon={<Icon icon={IconNames.CHAT} size={40} />}
+                title={t("No assistant session")}
+                description={
+                  <>
+                    <p>{t("Start a session to work on a folder with the assistant.")}</p>
+                    <p>
+                      {t("It runs in a container on the connection you pick, and only that folder is mounted into it.")}
+                    </p>
+                  </>
+                }
+                action={
+                  <Button
+                    intent={Intent.SUCCESS}
+                    icon={IconNames.PLAY}
+                    text={t("Start session")}
+                    loading={sessionStatus === "starting"}
+                    onClick={() => setStartOpen(true)}
+                  />
+                }
+              />
+            </div>
+          ) : items.length === 0 ? (
             <div className="AssistantEmpty">
               <NonIdealState icon={<Icon icon={IconNames.CHAT} size={40} />} title={t("What can I help you with?")} />
               {suggestions.length > 0 ? (
@@ -466,34 +500,39 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         ) : null}
       </div>
 
-      <div className="AssistantComposerDock">
-        <PluginChromeSurface slot="footer" />
-        <ExtensionStatusStrip statuses={extensionChrome.statuses} />
-        <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="aboveEditor" />
-        <PluginWidgetSurfaces placement="aboveEditor" />
-        <PluginFocusSurface variant="inline" />
-        <PluginEditorSurface />
-        {pendingDialog ? <ExtensionDialog request={pendingDialog} onRespond={respondToRequest} /> : null}
-        <AIComposer
-          placeholder={composerPlaceholder ?? t("Message the assistant… (Enter to send, Shift+Enter for newline)")}
-          phase={composerPhase}
-          onStop={cancel}
-          onSubmit={onSubmit}
-          statusLeading={streaming ? <ThinkingStatus /> : null}
-          showPermissionMode
-          threadBindings={{
-            providerId: activeThread?.providerId,
-            model: activeThread?.model,
-            accessProfile: activeThread?.accessProfile,
-            reasoningLevel: activeThread?.reasoningLevel,
-            onChange: onThreadConfigurationChange,
-          }}
-          commands={composerCommands}
-          draft={extensionChrome.editorDraft}
-        />
-        <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="belowEditor" />
-        <PluginWidgetSurfaces placement="belowEditor" />
-      </div>
+      {/* No session ⇒ no dock: its composer, plugin strips and extension dialogs all belong to a running
+          session, and an input that accepts text nothing will read is worse than no input. */}
+      {noSession ? null : (
+        <div className="AssistantComposerDock">
+          <PluginChromeSurface slot="footer" />
+          <ExtensionStatusStrip statuses={extensionChrome.statuses} />
+          <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="aboveEditor" />
+          <PluginWidgetSurfaces placement="aboveEditor" />
+          <PluginFocusSurface variant="inline" />
+          <PluginEditorSurface />
+          {pendingDialog ? <ExtensionDialog request={pendingDialog} onRespond={respondToRequest} /> : null}
+          <AIComposer
+            placeholder={composerPlaceholder ?? t("Message the assistant… (Enter to send, Shift+Enter for newline)")}
+            phase={composerPhase}
+            onStop={cancel}
+            onSubmit={onSubmit}
+            statusLeading={streaming ? <ThinkingStatus /> : null}
+            showPermissionMode
+            threadBindings={{
+              providerId: activeThread?.providerId,
+              model: activeThread?.model,
+              accessProfile: activeThread?.accessProfile,
+              reasoningLevel: activeThread?.reasoningLevel,
+              onChange: onThreadConfigurationChange,
+            }}
+            commands={composerCommands}
+            draft={extensionChrome.editorDraft}
+          />
+          <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="belowEditor" />
+          <PluginWidgetSurfaces placement="belowEditor" />
+        </div>
+      )}
+      {startOpen ? <StartSessionDrawer onClose={() => setStartOpen(false)} /> : null}
       {exportOpen && activeThread && view ? (
         <ThreadExportDrawer thread={activeThread} view={view} onClose={() => setExportOpen(false)} />
       ) : null}

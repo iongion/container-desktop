@@ -1,4 +1,3 @@
-import { writePrivateFileEnsuringDir } from "@/ai-system/adapters/fsHelpers";
 import { createKnowledgeFileStorage } from "@/ai-system/adapters/knowledgeFileStorage";
 import { listModels } from "@/ai-system/adapters/localModels";
 import { createPermissionsStore } from "@/ai-system/adapters/permissionsStoreCore";
@@ -95,14 +94,6 @@ export async function createAISystem<TEvent = unknown>(
   const skillTrustPath = await deps.path.join(deps.userDataDir, "ai-skill-trust.json");
   const projectContextPath = await deps.path.join(deps.userDataDir, "ai-project-context.json");
   const userSkillsRoot = await deps.path.join(deps.userDataDir, "ai-skills");
-  const agentRoot = await deps.path.join(deps.userDataDir, "agent");
-  // The caller names the file; the host decides where it lands and writes it 0600. The gateway env file it
-  // carries holds a provider key, so it must never be world-readable and never leave this directory.
-  const writePrivateAgentFile = async (fileName: string, contents: string): Promise<string> => {
-    const location = await deps.path.join(agentRoot, fileName);
-    await writePrivateFileEnsuringDir(deps.fs, deps.path, location, contents);
-    return location;
-  };
   const threadRepository = createThreadRepository({
     store: createThreadFileStore(threadsPath, deps.fs, deps.path, legacyThreadsPath),
     logger: deps.logger,
@@ -165,7 +156,6 @@ export async function createAISystem<TEvent = unknown>(
 
   const broker = createAIBroker({
     keyStore,
-    writePrivateAgentFile,
     getAISettings: deps.getAISettings,
     onInvoke: deps.onInvoke,
     send: deps.send,

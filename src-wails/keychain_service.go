@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/zalando/go-keyring"
 )
@@ -27,6 +29,9 @@ const (
 	// Degraded-vault fallback store (see Set). A base64 account→secret map at 0600. Same filename as the
 	// Tauri shell writes (keychain-fallback.json) — the format is identical, and both shells share userData.
 	keychainFallbackFile = "keychain-fallback.json"
+	// The token a caller leaves where the secret belongs. Mirrors src-tauri/src/keychain.rs SECRET_PLACEHOLDER
+	// and the renderer's KEYCHAIN_SECRET_PLACEHOLDER — the vocabulary travels as a value, not a shared module.
+	keychainSecretPlaceholder = "__CD_KEYCHAIN_SECRET__"
 )
 
 // EncryptionStatus mirrors the renderer's EncryptionStatus (@/platform/capabilities); JSON field names lower.
@@ -200,4 +205,59 @@ func (s *KeychainService) Clear(req KeychainAccountRequest) error {
 	_ = keyring.Delete(keychainService, req.Account)
 	keychainFallbackClear(req.Account)
 	return nil
+}
+
+// KeychainWriteSecretFileRequest names the account whose secret is substituted, and the file to write it into.
+type KeychainWriteSecretFileRequest struct {
+	Account  string `json:"account"`
+	FileName string `json:"fileName"`
+	Contents string `json:"contents"`
+}
+
+// WriteSecretFile writes a private (0600) file into the protected agent directory, substituting
+// keychainSecretPlaceholder with the secret stored for the account. This is how a credential reaches a
+// container's env file without the web view ever handling it: the caller supplies the SHAPE, this process
+// supplies the secret, and every web-view-reachable read refuses that directory (fs_service.go).
+// An absent secret writes an empty value, which is correct for a keyless local server.
+func (s *KeychainService) WriteSecretFile(req KeychainWriteSecretFileRequest) (string, error) {
+	if !isSafeAgentFileName(req.FileName) {
+		return "", fmt.Errorf("invalid agent file name")
+	}
+	// Fail closed: a body with nowhere to put the secret would silently produce an unauthenticated env file.
+	if !strings.Contains(req.Contents, keychainSecretPlaceholder) {
+		return "", fmt.Errorf("the agent environment carries no secret placeholder")
+	}
+	secret := ""
+	if stored, err := (&KeychainService{}).Get(KeychainAccountRequest{Account: req.Account}); err == nil && stored != nil {
+		secret = *stored
+	}
+	if strings.ContainsAny(secret, "\r\n") {
+		return "", fmt.Errorf("a stored secret cannot contain a newline")
+	}
+	dir, err := agentSecretsDir()
+	if err != nil {
+		return "", err
+	}
+	if mkErr := os.MkdirAll(dir, 0o700); mkErr != nil {
+		return "", mkErr
+	}
+	path := filepath.Join(dir, req.FileName)
+	if writeErr := os.WriteFile(path, []byte(strings.ReplaceAll(req.Contents, keychainSecretPlaceholder, secret)), 0o600); writeErr != nil {
+		return "", writeErr
+	}
+	return path, nil
+}
+
+// isSafeAgentFileName keeps the caller to naming a FILE — never a directory, never a traversal.
+func isSafeAgentFileName(name string) bool {
+	if name == "" || len(name) > 128 || strings.HasPrefix(name, ".") {
+		return false
+	}
+	for _, c := range name {
+		isAllowed := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-'
+		if !isAllowed {
+			return false
+		}
+	}
+	return true
 }

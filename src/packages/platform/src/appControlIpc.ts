@@ -20,8 +20,12 @@ export interface AppControlIpcDeps {
   openFileSelector: (options: any) => Promise<unknown>;
   saveFileSelector: (options: any) => Promise<unknown>;
   openTerminal: (options: any) => Promise<boolean>;
+  // Open a directory as a VS Code workspace; answers false when that is not possible.
+  openInVSCode: (path: string) => Promise<boolean>;
   // Open the app's storage/config directory (userData) in the OS file manager. Main resolves the path.
   openStorageFolder: () => void;
+  // Reveal a caller-named directory in the OS file manager.
+  openPath: (path: string) => void;
   applyProxy?: (options: any) => Promise<unknown> | unknown;
   testProxy?: (options: any) => Promise<unknown> | unknown;
   registerQuit: (options: any) => void;
@@ -71,6 +75,12 @@ export function registerAppControlIpc(deps: AppControlIpcDeps): void {
     gated(() => deps.openStorageFolder()),
   );
   deps.onMessage(
+    "openPath",
+    gated((_event, path) => {
+      if (typeof path === "string" && path.length > 0) deps.openPath(path);
+    }),
+  );
+  deps.onMessage(
     "notify",
     gated((_event, arg) => {
       if (arg && arg.message === "ready") {
@@ -103,6 +113,13 @@ export function registerAppControlIpc(deps: AppControlIpcDeps): void {
       return false;
     }
     return deps.openTerminal(options);
+  });
+  deps.onInvoke("openInVSCode", (event, path) => {
+    // The path comes from the webview, so an unusable one is refused here rather than reaching the OS.
+    if (!deps.isAllowedSender(event) || typeof path !== "string" || path.length === 0) {
+      return false;
+    }
+    return deps.openInVSCode(path);
   });
   deps.onInvoke("proxy.apply", (event, options) => {
     if (!deps.isAllowedSender(event)) {

@@ -12,8 +12,8 @@ interface ScreenHeaderSectionsTabBarProps {
   isActive?: (screen: string) => boolean;
 }
 
-// Mirrors screens/Volume/ScreenHeader.tsx — one shared section tab bar for the AI family (the Assistant, the
-// containerized Coding Agent and its Plugins), highlighting whichever screen is active. The AI screens are
+// Mirrors screens/Volume/ScreenHeader.tsx — one shared section tab bar for the AI family (the Assistant and
+// its Plugins), highlighting whichever screen is active. The AI screens are
 // excluded from the sidebar and reached through the header AI menu, so this bar is how they cross-link.
 export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProps> = ({
   expand,
@@ -28,13 +28,6 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
         icon={IconNames.CHAT}
         text={t("Assistant")}
         href={getAIScreenUrl("assistant")}
-      />
-      <AnchorButton
-        variant="minimal"
-        active={isActive ? isActive("ai.codingAgent") : false}
-        icon={IconNames.CODE}
-        text={t("Coding Agent")}
-        href={getAIScreenUrl("coding-agent")}
       />
       <AnchorButton
         variant="minimal"

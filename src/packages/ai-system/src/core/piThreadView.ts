@@ -50,6 +50,10 @@ export function projectPiThreadView(
     case "user_message":
       return {
         ...next,
+        // The agent owes the answer from here, not from its first token — everything that shows a turn is in
+        // flight reads this phase, and the gap before the first token is the longest part of a turn and the
+        // one with nothing else on screen. The turn still ends on `idle` (or `error`), as it always did.
+        phase: "model",
         timeline: [
           ...view.timeline,
           {

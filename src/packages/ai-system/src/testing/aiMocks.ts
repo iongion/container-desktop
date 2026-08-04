@@ -57,7 +57,7 @@ export function createMockEngineOps(): EngineOps {
 
 // Model listing
 // Per-source fixtures so CONTAINER_DESKTOP_MOCK=1 yarn dev exercises every shape the ModelPicker renders:
-//   • LM Studio (:1234) — a flat list; the "/" in "unsloth/qwen3.5-9b" is an HF org, NOT a vendor prefix.
+//   • LM Studio (:1234) — a flat list; the "/" in "lmstudio-community/qwen3.5-9b" is an HF org, NOT a vendor prefix.
 //   • OpenRouter (openrouter.ai) — vendor-prefixed ids, driving the 3-level gateway→provider→model path.
 //   • llama.cpp (:8080) — exactly one served model (its server binds one at launch via -m).
 //   • other clouds — a small generic list so anthropic/openai/… aren't empty in mock mode.
@@ -93,6 +93,7 @@ export function createMockKeyStore(): AIKeyStore {
     getKey: async () => "mock-key",
     setKey: async () => {},
     clearKey: async () => {},
+    writeSecretFile: async (_provider, fileName) => `/mock/agent/${fileName}`,
   };
 }
 

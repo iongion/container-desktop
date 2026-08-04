@@ -1,4 +1,4 @@
-// The Coding Agent screen header's actions: start a session (the primary CTA, which opens the start drawer)
+// The Assistant screen header's actions: start a session (the primary CTA, which opens the start drawer)
 // or stop the running one. Rendered through the shared ResourceListActions so this header matches every other
 // screen's in size, spacing and order.
 
@@ -12,15 +12,15 @@ import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
 import { StartSessionDrawer } from "./StartSessionDrawer";
 
-export interface CodingAgentActionsMenuProps {
+export interface AssistantActionsMenuProps {
   navigation?: React.ReactNode;
   onReload: () => void;
 }
 
-export const CodingAgentActionsMenu: React.FC<CodingAgentActionsMenuProps> = ({
+export const AssistantActionsMenu: React.FC<AssistantActionsMenuProps> = ({
   navigation,
   onReload,
-}: CodingAgentActionsMenuProps) => {
+}: AssistantActionsMenuProps) => {
   const { t } = useTranslation();
   const status = useCodingAgentStore((state) => state.status);
   const stop = useCodingAgentStore((state) => state.stop);
@@ -47,7 +47,7 @@ export const CodingAgentActionsMenu: React.FC<CodingAgentActionsMenuProps> = ({
             : {
                 icon: IconNames.PLAY,
                 text: t("Start session"),
-                title: t("Start a coding agent session"),
+                title: t("Start an assistant session"),
                 onClick: onStartClick,
                 disabled: starting,
                 loading: starting,

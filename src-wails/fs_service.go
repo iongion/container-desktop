@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,12 +12,52 @@ import (
 // { path, contents } verbatim. Errors reject the JS promise (Wails v3 rejects with error objects).
 type FsService struct{}
 
+// agentSecretsDir is the directory holding the container agent's env files. One of them carries a provider
+// key, substituted in THIS process by KeychainService.WriteSecretFile — so the web view may ask for it to be
+// written and may learn its path, but must never read it back. Every web-view-reachable read below refuses it.
+func agentSecretsDir() (string, error) {
+	dir, err := userDataPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "agent"), nil
+}
+
+// isAgentSecret reports whether path resolves inside the protected agent directory. Both sides are resolved
+// first, so a `..` walk or a symlinked parent cannot step around it.
+func isAgentSecret(path string) bool {
+	dir, err := agentSecretsDir()
+	if err != nil {
+		return false
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		resolved = filepath.Clean(path)
+	}
+	dirResolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		dirResolved = filepath.Clean(dir)
+	}
+	rel, err := filepath.Rel(dirResolved, resolved)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+func refuseAgentSecret(path string) error {
+	if isAgentSecret(path) {
+		return fmt.Errorf("this path is not readable from the web view")
+	}
+	return nil
+}
+
 // ReadTextFileRequest mirrors the Tauri fs_read_text_file / fs_is_file_present payload.
 type ReadTextFileRequest struct {
 	Path string `json:"path"`
 }
 
 func (s *FsService) ReadTextFile(req ReadTextFileRequest) (string, error) {
+	if err := refuseAgentSecret(req.Path); err != nil {
+		return "", err
+	}
 	data, err := os.ReadFile(req.Path)
 	if err != nil {
 		return "", err
@@ -31,12 +72,18 @@ type WriteTextFileRequest struct {
 }
 
 func (s *FsService) WriteTextFile(req WriteTextFileRequest) error {
+	if err := refuseAgentSecret(req.Path); err != nil {
+		return err
+	}
 	return os.WriteFile(req.Path, []byte(req.Contents), 0o644)
 }
 
 // WritePrivateTextFile writes 0600 owner-only (AI credentials), mirroring host.rs
 // fs_write_private_text_file. Best-effort mode on Windows (no unix perms).
 func (s *FsService) WritePrivateTextFile(req WriteTextFileRequest) error {
+	if err := refuseAgentSecret(req.Path); err != nil {
+		return err
+	}
 	if err := os.WriteFile(req.Path, []byte(req.Contents), 0o600); err != nil {
 		return err
 	}
@@ -116,6 +163,12 @@ type RenameRequest struct {
 }
 
 func (s *FsService) Rename(req RenameRequest) error {
+	if err := refuseAgentSecret(req.OldPath); err != nil {
+		return err
+	}
+	if err := refuseAgentSecret(req.NewPath); err != nil {
+		return err
+	}
 	return os.Rename(req.OldPath, req.NewPath)
 }
 

@@ -30,7 +30,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
 import { type CodingAgentStartProblem, resolveCodingAgentStart } from "./startSession";
-import "./CodingAgentScreen.css";
+import "./AssistantScreen.css";
 
 const logger = createLogger("web-app.codingAgent.start");
 
@@ -118,7 +118,7 @@ export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose 
     <AppDrawer
       className="AppStartAgentSessionDrawer"
       icon={IconNames.CODE}
-      title={t("Start a coding agent session")}
+      title={t("Start an assistant session")}
       size={DrawerSize.SMALL}
       onClose={onClose}
       formId={formId}
@@ -188,7 +188,7 @@ export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose 
             </Callout>
           ) : null}
           <div className="AppDrawerPendingIndicator">{starting && <ProgressBar intent={Intent.SUCCESS} />}</div>
-          {startLog.length > 0 ? <pre className="CodingAgentStartLog">{startLog.join("\n")}</pre> : null}
+          {startLog.length > 0 ? <pre className="AssistantStartLog">{startLog.join("\n")}</pre> : null}
           {status === "error" && error ? (
             <Callout intent={Intent.DANGER} icon={IconNames.ERROR} className="AgentStartFailure">
               {error}

@@ -21,6 +21,8 @@ function makeDeps() {
     saveFileSelector: vi.fn(async () => ({ canceled: false, filePath: "/x.json" })),
     openTerminal: vi.fn(async () => true),
     openStorageFolder: vi.fn(),
+    openPath: vi.fn(),
+    openInVSCode: vi.fn(async () => true),
     registerQuit: vi.fn(),
     logger: { debug: vi.fn() },
   } satisfies AppControlIpcDeps;
@@ -50,6 +52,37 @@ describe("registerAppControlIpc", () => {
     message("application.exit", DENIED);
     expect(deps.minimize).toHaveBeenCalledTimes(1); // unchanged
     expect(deps.exit).toHaveBeenCalledTimes(1);
+  });
+
+  // The path comes from the webview, unlike openStorageFolder's, so the channel must refuse an unusable one
+  // rather than forward it to the OS shell.
+  it("reveals a caller-named path only for the allowed sender, and only when it names one", () => {
+    const { deps, message } = makeDeps();
+    registerAppControlIpc(deps);
+
+    message("openPath", ALLOWED, "/home/user/project");
+    expect(deps.openPath).toHaveBeenCalledWith("/home/user/project");
+
+    message("openPath", DENIED, "/home/user/other");
+    message("openPath", ALLOWED, "");
+    message("openPath", ALLOWED, undefined);
+    message("openPath", ALLOWED, { path: "/nope" });
+    expect(deps.openPath).toHaveBeenCalledTimes(1);
+  });
+
+  // Same rule as openPath, on the invoke side: an unusable path is refused before it reaches the OS, and the
+  // caller is told no rather than left waiting on a promise that never means anything.
+  it("opens a VS Code workspace only for the allowed sender, and only when it names a path", async () => {
+    const { deps, invoke } = makeDeps();
+    registerAppControlIpc(deps);
+
+    expect(await invoke("openInVSCode", ALLOWED, "/home/user/project")).toBe(true);
+    expect(deps.openInVSCode).toHaveBeenCalledWith("/home/user/project");
+
+    expect(await invoke("openInVSCode", DENIED, "/home/user/other")).toBe(false);
+    expect(await invoke("openInVSCode", ALLOWED, "")).toBe(false);
+    expect(await invoke("openInVSCode", ALLOWED, undefined)).toBe(false);
+    expect(deps.openInVSCode).toHaveBeenCalledTimes(1);
   });
 
   it("shows the window on a 'ready' notify from the allowed sender", () => {

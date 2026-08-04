@@ -14,6 +14,7 @@ function memKeyStore(): AIKeyStore {
     clearKey: async (p: string) => {
       m.delete(p);
     },
+    writeSecretFile: async (_p: string, fileName: string) => `/tmp/agent/${fileName}`,
   };
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,6 +34,40 @@ func (s *ShellService) OpenStorageFolder() error {
 	}
 	_ = os.MkdirAll(dir, 0o755)
 	return openInShell(dir)
+}
+
+type openPathRequest struct {
+	Path string `json:"path"`
+}
+
+// OpenPath reveals a caller-named DIRECTORY in the OS file manager (the session's workspace). Unlike
+// OpenStorageFolder the path comes from the webview, so it is refused unless it already exists and is a
+// directory: this must never create anything, and never hand a file to the shell's default handler.
+func (s *ShellService) OpenPath(req openPathRequest) error {
+	info, err := os.Stat(req.Path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("not a directory: %s", req.Path)
+	}
+	return openInShell(req.Path)
+}
+
+// OpenInVSCode opens a DIRECTORY as a VS Code workspace. The webview passes a PATH, never a URL: the
+// vscode://file/… URI is built here, so this cannot become a general "open any URI" hole. Uses the registered
+// URI handler rather than the `code` CLI, which is often not on PATH for a GUI-launched app.
+func (s *ShellService) OpenInVSCode(req openPathRequest) error {
+	info, err := os.Stat(req.Path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("not a directory: %s", req.Path)
+	}
+	replacer := strings.NewReplacer("%", "%25", " ", "%20", "#", "%23", "?", "%3F")
+	uri := "vscode://file/" + strings.TrimPrefix(replacer.Replace(req.Path), "/")
+	return application.Get().Browser.OpenURL(uri)
 }
 
 // ToggleDevtools opens the webview devtools. Wails' Go window API exposes only OpenDevTools (no close/toggle), so

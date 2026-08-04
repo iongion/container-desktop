@@ -1,9 +1,9 @@
-// Verifies the Coding Agent screen renders and its store is wired: the route mounts, the composer is
-// disabled until a session is ready, and a projected transcript reaches the DOM. The container session
-// itself is covered end-to-end elsewhere; this spec is about the screen.
+// Verifies the Assistant screen renders and its store is wired: the route mounts, the session bar and the
+// SHARED thread appear, and a projected transcript reaches the DOM. The container session itself is covered
+// end-to-end elsewhere; this spec is about the screen.
 import { strict as assert } from "node:assert";
 
-const ROUTE = "#/screens/ai/coding-agent";
+const ROUTE = "#/screens/ai/assistant";
 
 // The app boots asynchronously (preload bridge, mock backend, router), so poll for the screen rather
 // than pausing a fixed amount — a fixed wait is what makes a spec pass locally and flake in CI.
@@ -11,32 +11,35 @@ async function navigate(route) {
   await browser.execute((hash) => {
     window.location.hash = hash;
   }, route);
-  await $('[data-screen="ai.codingAgent"]').waitForExist({
+  await $('[data-screen="ai.assistant"]').waitForExist({
     timeout: 45000,
-    timeoutMsg: `the Coding Agent screen never mounted at ${route}`,
+    timeoutMsg: `the Assistant screen never mounted at ${route}`,
   });
 }
 
-describe("Coding Agent screen", () => {
-  it("mounts at its route with the status bar and a disabled composer", async () => {
+describe("Assistant screen", () => {
+  // The mock app boots WITH a scripted session, so this is the session-bar-and-chat state. The empty state is
+  // arranged deliberately in pi-start-drawer.e2e.js, which drops the session first.
+  it("mounts at its route with the session bar and the shared chat surface", async () => {
     await navigate(ROUTE);
 
     const screen = await browser.execute(() => {
-      const root = document.querySelector('[data-screen="ai.codingAgent"]');
+      const root = document.querySelector('[data-screen="ai.assistant"]');
       if (!root) return { mounted: false };
-      const composer = root.querySelector(".CodingAgentComposer");
       return {
         mounted: true,
-        status: root.querySelector(".CodingAgentStatus")?.textContent?.trim(),
-        composerDisabled: composer ? composer.disabled : null,
-        hasTranscript: Boolean(root.querySelector(".CodingAgentTranscript")),
+        status: root.querySelector(".AssistantSessionSummary")?.getAttribute("data-status"),
+        // Not a transcript of this screen's own making: the SAME component the Assistant and the quake
+        // console render, so one conversation looks the same wherever it is opened.
+        thread: Boolean(root.querySelector(".AssistantThread")),
+        composer: Boolean(root.querySelector(".AIComposerInput")),
       };
     });
 
     assert.equal(screen.mounted, true, "the screen did not mount at its route");
-    assert.equal(screen.status, "idle", "a fresh screen should report idle");
-    assert.equal(screen.composerDisabled, true, "the composer must stay disabled until a session is ready");
-    assert.equal(screen.hasTranscript, true, "the transcript region is missing");
+    assert.equal(screen.status, "ready", "the scripted mock session should be ready");
+    assert.equal(screen.thread, true, "the screen must render the shared assistant thread");
+    assert.equal(screen.composer, true, "a ready session must be messageable");
   });
 
   it("renders assistant, tool and error items from the projected transcript", async () => {
@@ -89,42 +92,49 @@ describe("Coding Agent screen", () => {
 
     // Read through WebDriver element queries rather than browser.execute: evaluating script right after
     // this state change proved unreliable under WebKitWebDriver, and element queries assert the same DOM.
-    const messages = await $$(".CodingAgentMessage").map((node) => node.getText());
-    const toolName = await $(".CodingAgentToolName").getText();
-    const toolOutput = await $(".CodingAgentToolOutput").getText();
-    const toolState = await $(".CodingAgentTool").getAttribute("data-state");
-    const errorText = await $(".CodingAgentError").getText();
-    const composerDisabled = !(await $(".CodingAgentComposer").isEnabled());
-    const status = await $(".CodingAgentStatus").getText();
+    // The selectors are the SHARED thread's, because this screen renders the same <AssistantThread> as the
+    // Assistant and the quake console — the tool cards it draws are covered by pi-tool-cards.e2e.js.
+    const messages = await $$(".AssistantThread .AssistantMessage").map((node) => node.getText());
+    const threadText = await $(".AssistantThread").getText();
+    const composerEnabled = await $(".AIComposerInput").isEnabled();
+    const status = await $(".AssistantSessionSummary").getAttribute("data-status");
 
     assert.deepEqual(messages, ["hello agent", "PI-GUI-OK"], "user and assistant text did not render");
-    assert.equal(toolName, "bash");
-    assert.equal(toolOutput, "README.md");
-    assert.equal(toolState, "complete");
-    assert.equal(errorText, "boom");
-    // getText() returns RENDERED text and the status chip is uppercased by --app theme styling, so compare
-    // case-insensitively rather than encoding the CSS transform into the assertion.
-    assert.equal(status.toLowerCase(), "ready");
-    assert.equal(composerDisabled, false, "the composer should enable once the session is ready");
+    assert.ok(threadText.includes("boom"), `the error item did not render: ${threadText.slice(0, 300)}`);
+    assert.equal(status, "ready");
+    assert.equal(composerEnabled, true, "a ready session must be messageable");
 
-    await browser.saveScreenshot("/tmp/coding-agent-transcript.png");
+    await browser.saveScreenshot("/tmp/assistant-transcript.png");
   });
 
+  // The summary now rides in the header, which owns the surface, so what this screen must prove is that its
+  // OWN colours come from tokens: the muted summary text and the session dot's success colour.
   it("takes its colours from the app theme tokens rather than hardcoded values", async () => {
     await navigate(ROUTE);
     const styling = await browser.execute(() => {
-      const root = document.querySelector('[data-screen="ai.codingAgent"]');
-      const bar = root?.querySelector(".CodingAgentBar");
-      if (!bar) return { barBackground: null, surfaceToken: "" };
-      const surface = getComputedStyle(document.documentElement).getPropertyValue("--app-surface").trim();
-      return { barBackground: getComputedStyle(bar).backgroundColor, surfaceToken: surface };
+      const root = document.querySelector('[data-screen="ai.assistant"]');
+      const summary = root?.querySelector(".AssistantSessionSummary");
+      const dot = root?.querySelector(".AssistantSessionDot");
+      if (!summary || !dot) return { summaryColor: "", dotBackground: "", mutedToken: "", successToken: "" };
+      const styles = getComputedStyle(document.documentElement);
+      return {
+        summaryColor: getComputedStyle(summary).color,
+        dotBackground: getComputedStyle(dot).backgroundColor,
+        mutedToken: styles.getPropertyValue("--app-text-muted").trim(),
+        successToken: styles.getPropertyValue("--app-intent-success-rest").trim(),
+      };
     });
-    assert.ok(styling.surfaceToken.length > 0, "--app-surface token is not defined");
-    assert.ok(styling.barBackground && styling.barBackground !== "rgba(0, 0, 0, 0)", "the bar has no themed surface");
+    assert.ok(styling.mutedToken.length > 0, "--app-text-muted token is not defined");
+    assert.ok(styling.successToken.length > 0, "--app-intent-success-rest token is not defined");
+    assert.ok(styling.summaryColor.length > 0, "the summary has no resolved colour");
+    assert.ok(
+      styling.dotBackground && styling.dotBackground !== "rgba(0, 0, 0, 0)",
+      "the session dot has no themed colour",
+    );
   });
 });
 
-describe("Coding Agent error item", () => {
+describe("Assistant error item", () => {
   it("renders an error transcript item without crashing the renderer", async () => {
     await navigate(ROUTE);
     await browser.execute(() => {
@@ -151,9 +161,9 @@ describe("Coding Agent error item", () => {
     }
     const captured = await browser.execute(() => window.__cdErrors ?? []);
     const rendered = await browser.execute(
-      () => document.querySelector('[data-screen="ai.codingAgent"] .CodingAgentError')?.textContent ?? null,
+      () => document.querySelector('[data-screen="ai.assistant"] .AssistantThread')?.textContent ?? "",
     );
     assert.equal(captured.length, 0, `renderer threw while rendering an error item:\n${captured.join("\n")}`);
-    assert.equal(rendered, "boom", "the error item did not render");
+    assert.ok(rendered.includes("boom"), "the error item did not render");
   });
 });

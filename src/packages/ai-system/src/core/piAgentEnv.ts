@@ -21,6 +21,11 @@ export function gatewayBaseUrl(origin: string, api: UpstreamModelApi): string {
   return api === "anthropic-messages" ? origin : `${origin}/v1`;
 }
 
+// What the host substitutes with the real credential. The renderer composes the gateway's env file with this
+// in place of the key, so the plaintext exists only in the realm that owns the vault. Mirrored verbatim in
+// each shell's native keychain (SECRET_PLACEHOLDER), the same way the auth-scheme vocabulary is mirrored.
+export const KEYCHAIN_SECRET_PLACEHOLDER = "__CD_KEYCHAIN_SECRET__";
+
 export interface GatewayEnvironment {
   baseUrl: string;
   apiKey: string;

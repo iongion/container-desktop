@@ -42,5 +42,10 @@ export async function createTauriKeychain(invoke: TauriInvoke): Promise<IKeychai
     },
 
     clearKey: (provider) => invoke<void>("keychain_clear", { account: provider }),
+
+    // The counterpart to getKey's refusal: the secret still has to reach a container's env file, so Rust
+    // substitutes it while writing and answers only the path. Nothing plaintext crosses back.
+    writeSecretFile: (provider, fileName, contents) =>
+      invoke<string>("keychain_write_secret_file", { account: provider, fileName, contents }),
   };
 }

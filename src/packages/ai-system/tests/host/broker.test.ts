@@ -28,8 +28,13 @@ const LOCAL_AGENT_SETTINGS = {
   providers: { llamacpp: { model: "m", baseURL: "http://127.0.0.1:8080/v1" } },
 };
 
-function fakeKeyStore(): AIKeyStore & { getKey: Mock; setDegraded: (degraded: boolean) => void } {
+function fakeKeyStore(): AIKeyStore & {
+  getKey: Mock;
+  setDegraded: (degraded: boolean) => void;
+  files: () => Array<{ fileName: string; contents: string }>;
+} {
   const keys = new Map<string, string>();
+  const written: Array<{ fileName: string; contents: string }> = [];
   let degraded = false;
   return {
     getEncryptionStatus: () => ({ available: !degraded, backend: degraded ? "basic_text" : "kwallet", degraded }),
@@ -44,9 +49,16 @@ function fakeKeyStore(): AIKeyStore & { getKey: Mock; setDegraded: (degraded: bo
     clearKey: async (provider) => {
       keys.delete(provider);
     },
+    // Stands in for the vault-owning realm: it substitutes the placeholder itself, so a test can assert the
+    // file the container receives WITHOUT the secret ever passing through the broker.
+    writeSecretFile: vi.fn(async (provider: string, fileName: string, contents: string) => {
+      written.push({ fileName, contents: contents.replace("__CD_KEYCHAIN_SECRET__", keys.get(provider) ?? "") });
+      return `/data/agent/${fileName}`;
+    }),
     setDegraded: (value) => {
       degraded = value;
     },
+    files: () => written,
   };
 }
 
@@ -164,11 +176,6 @@ function makeBroker(options?: {
     removeCommand,
   };
   const knowledgeBank: KnowledgeBankLike = { search: vi.fn(async () => []) };
-  const agentFiles: Array<{ fileName: string; contents: string }> = [];
-  const writePrivateAgentFile = vi.fn(async (fileName: string, contents: string) => {
-    agentFiles.push({ fileName, contents });
-    return `/data/agent/${fileName}`;
-  });
   const logger = { error: vi.fn() };
   let persistedThreads = structuredClone(options?.threads ?? []);
   const threadStore = {
@@ -194,7 +201,6 @@ function makeBroker(options?: {
   });
   const broker = createAIBroker<{ allowed?: boolean; senderId?: number | string }>({
     keyStore,
-    writePrivateAgentFile,
     getAISettings: async () => settings,
     onInvoke: (channel, handler) => handlers.set(channel, handler),
     send: (event, channel, payload) => sent.push({ event, channel, payload }),
@@ -245,7 +251,6 @@ function makeBroker(options?: {
     threadRepository,
     toolArtifactRepository,
     threadStore,
-    agentFiles: () => agentFiles.slice(),
     persistedThreads: () => structuredClone(persistedThreads),
     persistedArtifacts: () => structuredClone(persistedArtifacts),
     logger,
@@ -282,7 +287,10 @@ describe("AIBroker agent gateway environment", () => {
     const result = await broker.invoke(AI_CHANNELS.agentGatewayEnv, request);
 
     expect(result).toEqual({ path: "/data/agent/8f21ac-gateway.env" });
-    const [written] = broker.agentFiles();
+    // The broker NEVER reads the secret: it composes a placeholder and the realm that owns the vault
+    // substitutes it while writing. That is what lets this run in a web view whose getKey refuses outright.
+    expect(broker.keyStore.getKey).not.toHaveBeenCalled();
+    const [written] = broker.keyStore.files();
     expect(written.fileName).toBe("8f21ac-gateway.env");
     expect(written.contents).toContain("CD_UPSTREAM_API_KEY=sk-secret");
     expect(written.contents).toContain("CD_UPSTREAM_BASE_URL=https://api.openai.com/v1");
@@ -300,7 +308,29 @@ describe("AIBroker agent gateway environment", () => {
   it("writes an empty key when the provider has none stored", async () => {
     const broker = makeBroker();
     await broker.invoke(AI_CHANNELS.agentGatewayEnv, request);
-    expect(broker.agentFiles()[0].contents).toContain("CD_UPSTREAM_API_KEY=\n");
+    expect(broker.keyStore.files()[0].contents).toContain("CD_UPSTREAM_API_KEY=\n");
+  });
+
+  // The webview-realm keychain REFUSES to hand a secret to this realm — on Tauri the key is only ever resolved
+  // natively, so getKey throws rather than answering. A keyless provider has no secret to ask for, so reading
+  // one anyway is both pointless and fatal: it threw before the empty value it would have used, and every
+  // keyless session died at start with an error nowhere near the cause. Same rule as routeByAuthScheme.
+  it("composes a keyless provider's env without reading the keychain", async () => {
+    const broker = makeBroker();
+    broker.keyStore.getKey.mockRejectedValue(
+      new Error("AI: reading the provider key is not available in the web view"),
+    );
+
+    const result = await broker.invoke(AI_CHANNELS.agentGatewayEnv, {
+      ...request,
+      provider: "llamacpp",
+      baseUrl: "http://host.containers.internal:8080/v1",
+    });
+
+    expect(result).toEqual({ path: "/data/agent/8f21ac-gateway.env" });
+    expect(broker.keyStore.getKey).not.toHaveBeenCalled();
+    expect(broker.keyStore.files()[0].contents).toContain("CD_UPSTREAM_API_KEY=\n");
+    expect(broker.keyStore.files()[0].contents).toContain("CD_UPSTREAM_AUTH_SCHEME=none");
   });
 
   it("refuses an unauthorized sender", async () => {
@@ -308,7 +338,7 @@ describe("AIBroker agent gateway environment", () => {
     await expect(broker.invoke(AI_CHANNELS.agentGatewayEnv, request, { allowed: false })).rejects.toThrow(
       /unauthorized/i,
     );
-    expect(broker.agentFiles()).toEqual([]);
+    expect(broker.keyStore.files()).toEqual([]);
   });
 });
 

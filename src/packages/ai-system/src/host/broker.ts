@@ -12,7 +12,7 @@ import type { AIRecordedError } from "@/ai-system/core/diagnostics";
 import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
 import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
-import { composeGatewayEnv } from "@/ai-system/core/piAgentEnv";
+import { composeGatewayEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
 import type { AIKeyStore, ExecutionSelectorFactory, KnowledgeBankLike, SandboxRunner } from "@/ai-system/core/ports";
 import type { ProjectContextPack } from "@/ai-system/core/projectContext";
 import { type ResolvedProvider, resolveProvider } from "@/ai-system/core/providers";
@@ -68,9 +68,6 @@ export interface AIBrokerDeps<TEvent = unknown> {
   permissionsStore?: PermissionsStoreLike;
   knowledgeBank?: KnowledgeBankLike;
   webSearcher?: (query: string) => Promise<{ text: string }>;
-  // Writes a PRIVATE file into the host's own agent directory, named by the caller but placed by the host.
-  // Absent ⇒ the coding agent's gateway env channel is not offered.
-  writePrivateAgentFile?: (fileName: string, contents: string) => Promise<string>;
   threadRepository: ThreadRepository;
   toolArtifactRepository?: ToolArtifactRepository;
   skillHost?: SkillHost;
@@ -251,25 +248,23 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     // keyless local server.
     onInvoke(AI_CHANNELS.agentGatewayEnv, (event, request) =>
       guarded(event, async () => {
-        if (!deps.writePrivateAgentFile) {
-          throw new Error("AI: this runtime cannot write the agent gateway environment");
-        }
-        const key = (await deps.keyStore.getKey(request.provider)) ?? "";
         // The credential SHAPE is derived here too, from the settings this host reads itself — the renderer
         // never describes how a provider authenticates, only which one it picked. `baseUrl` stays the caller's:
         // it carries the engine's host-alias rewrite, which only the renderer knows.
         const resolved = resolveProvider(await deps.getAISettings(), request.provider);
-        const path = await deps.writePrivateAgentFile(
-          request.fileName,
-          composeGatewayEnv({
-            baseUrl: request.baseUrl,
-            apiKey: key,
-            bridgeToken: request.bridgeToken,
-            gatewayPort: request.gatewayPort,
-            providerKind: resolved.kind,
-            auth: resolved.auth,
-          }),
-        );
+        // The key is NEVER read here. This host can run in a web-view realm, where the vault deliberately
+        // refuses to hand over a secret at all — so the file is composed with a placeholder and the realm that
+        // owns the vault substitutes it while writing, answering only the path. That keeps one composer and one
+        // file format while the plaintext stays where it started.
+        const contents = composeGatewayEnv({
+          baseUrl: request.baseUrl,
+          apiKey: KEYCHAIN_SECRET_PLACEHOLDER,
+          bridgeToken: request.bridgeToken,
+          gatewayPort: request.gatewayPort,
+          providerKind: resolved.kind,
+          auth: resolved.auth,
+        });
+        const path = await deps.keyStore.writeSecretFile(request.provider, request.fileName, contents);
         return { path };
       }),
     );

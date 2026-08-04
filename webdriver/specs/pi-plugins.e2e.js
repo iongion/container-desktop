@@ -201,8 +201,8 @@ describe("pi plugins screen", () => {
     assert.match(empty.title, /No plugins installed/);
     assert.deepEqual(
       empty.tabs.map((tab) => tab.href.replace(/^.*#/, "#")),
-      ["#/screens/ai/assistant", "#/screens/ai/coding-agent", "#/screens/ai/plugins"],
-      "the tab bar must link the three AI screens that exist",
+      ["#/screens/ai/assistant", "#/screens/ai/plugins"],
+      "the tab bar must link the two AI screens that exist",
     );
     assert.ok(
       empty.tabs.find((tab) => tab.href.endsWith("/plugins"))?.active,

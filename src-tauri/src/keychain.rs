@@ -192,6 +192,47 @@ pub(crate) async fn keychain_get(account: String) -> Result<Option<String>, Stri
     })
 }
 
+/// The token a caller leaves where the secret belongs. The web view composes the file WITHOUT the secret and
+/// this process substitutes it, so the plaintext exists only here — the same rule the native provider
+/// transport follows. Deliberately not derived from anything the caller sends.
+pub const SECRET_PLACEHOLDER: &str = "__CD_KEYCHAIN_SECRET__";
+
+/// Write a private (0600) file into the protected agent directory, substituting SECRET_PLACEHOLDER with the
+/// secret stored for `account`. This is how a credential reaches a container's env file without ever crossing
+/// into the web view: the caller supplies the SHAPE, this process supplies the secret.
+///
+/// The caller names only the FILE, never the directory, and every web-view-reachable read refuses that
+/// directory (host::fs) — otherwise "the key never enters this realm" would be one fs_read_text_file away.
+/// An absent secret writes an empty value, which is correct for a keyless local server.
+#[tauri::command]
+pub async fn keychain_write_secret_file(
+    account: String,
+    file_name: String,
+    contents: String,
+) -> Result<String, String> {
+    if file_name.is_empty()
+        || file_name.len() > 128
+        || !file_name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
+        || file_name.starts_with('.')
+    {
+        return Err("invalid agent file name".into());
+    }
+    // Fail closed: a body with nowhere to put the secret would silently produce an unauthenticated env file,
+    // which surfaces later as a 401 from the provider rather than as the programming error it is.
+    if !contents.contains(SECRET_PLACEHOLDER) {
+        return Err("the agent environment carries no secret placeholder".into());
+    }
+    let secret = keychain_get(account).await?.unwrap_or_default();
+    if secret.contains('\n') || secret.contains('\r') {
+        return Err("a stored secret cannot contain a newline".into());
+    }
+    let path = crate::host::fs::agent_secrets_dir().join(&file_name);
+    crate::host::fs::write_private_file(&path, &contents.replace(SECRET_PLACEHOLDER, &secret))?;
+    Ok(path.to_string_lossy().to_string())
+}
+
 /// Store (or overwrite) the secret for `account` in the OS vault. If the vault write fails and the caller opted
 /// into degraded storage, fall back to the 0600 file instead; otherwise the vault
 /// error propagates.

@@ -41,5 +41,10 @@ export async function createWailsKeychain(invoke: WailsInvoke): Promise<IKeychai
     },
 
     clearKey: (provider) => invoke<void>("keychain_clear", { account: provider }),
+
+    // Go substitutes the secret while writing and answers only the path, so a container's env file can carry a
+    // credential the caller never handled.
+    writeSecretFile: (provider, fileName, contents) =>
+      invoke<string>("keychain_write_secret_file", { account: provider, fileName, contents }),
   };
 }

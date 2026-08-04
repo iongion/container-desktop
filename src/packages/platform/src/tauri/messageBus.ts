@@ -69,8 +69,12 @@ export function createMessageBus(deps: TauriMessageBusDeps): IMessageBus {
     openFileSelector: (options) => openFileSelector(deps, options),
     saveFileSelector: (options) => saveFileSelector(deps, options),
     openTerminal: (options) => openTerminal(deps, options),
+    openInVSCode: (path) => openInVSCode(deps, path),
     openStorageFolder: () => {
       void deps.invoke("open_storage_folder").catch(() => undefined);
+    },
+    openPath: (path: string) => {
+      void deps.invoke("open_path", { path }).catch(() => undefined);
     },
     applyProxy: deps.applyProxy,
     testProxy: deps.testProxy,
@@ -127,6 +131,16 @@ async function openFileSelector(deps: TauriMessageBusDeps, options: any): Promis
     .catch(() => null);
   const filePaths = selected == null ? [] : Array.isArray(selected) ? selected : [selected];
   return { canceled: selected == null, filePaths };
+}
+
+async function openInVSCode(deps: TauriMessageBusDeps, path: string): Promise<boolean> {
+  try {
+    await deps.invoke("open_in_vscode", { path });
+    return true;
+  } catch {
+    // VS Code absent, or no handler registered for vscode:// — the caller says so rather than failing silently.
+    return false;
+  }
 }
 
 async function openTerminal(deps: TauriMessageBusDeps, options: any): Promise<boolean> {

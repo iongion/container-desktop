@@ -26,10 +26,10 @@ describe("buildModelTree — flat source (LM Studio / clouds, source == provider
   });
 
   it("keeps an HF-org-prefixed flat id intact (no aggregator split)", () => {
-    const tree = buildModelTree({ entry: lmstudio, models: ["unsloth/qwen3.5-9b"], savedModel: "" });
+    const tree = buildModelTree({ entry: lmstudio, models: ["lmstudio-community/qwen3.5-9b"], savedModel: "" });
     expect(tree.groups).toHaveLength(1);
-    expect(tree.groups[0].models[0].model).toBe("unsloth/qwen3.5-9b");
-    expect(tree.groups[0].models[0].label).toBe("unsloth/qwen3.5-9b");
+    expect(tree.groups[0].models[0].model).toBe("lmstudio-community/qwen3.5-9b");
+    expect(tree.groups[0].models[0].label).toBe("lmstudio-community/qwen3.5-9b");
   });
 
   it("auto-selects the first model when none is saved", () => {

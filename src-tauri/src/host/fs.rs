@@ -34,13 +34,65 @@ fn metadata_kind(metadata: &std::fs::Metadata) -> String {
     .to_string()
 }
 
+/// The directory holding the container agent's env files. One of them carries a provider key, substituted in
+/// THIS process by keychain_write_secret_file — so the web view may ask for it to be written and may learn its
+/// path, but must never read it back. Every web-view-reachable read below refuses it.
+pub fn agent_secrets_dir() -> std::path::PathBuf {
+    std::path::PathBuf::from(crate::host::platform::get_user_data_path()).join("agent")
+}
+
+/// True when `path` resolves inside the protected agent directory. Compared after normalising both sides, so
+/// a `..` walk or a symlinked parent cannot step around it.
+fn is_agent_secret(path: &Path) -> bool {
+    let dir = agent_secrets_dir();
+    let resolved = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let dir_resolved = dir.canonicalize().unwrap_or(dir);
+    resolved.starts_with(&dir_resolved)
+}
+
+fn refuse_agent_secret(path: &Path) -> Result<(), String> {
+    if is_agent_secret(path) {
+        return Err("this path is not readable from the web view".into());
+    }
+    Ok(())
+}
+
+/// Write a file hardened to owner-only, creating parents. Shared by fs_write_private_text_file and by the
+/// keychain's secret-substituting writer, so both produce the same 0600 guarantee.
+pub fn write_private_file(path: &Path, contents: &str) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(path)
+            .map_err(|e| e.to_string())?;
+        file.write_all(contents.as_bytes()).map_err(|e| e.to_string())?;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(path, contents).map_err(|e| e.to_string())
+    }
+}
+
 #[tauri::command]
 pub fn fs_read_text_file(path: String) -> Result<String, String> {
+    refuse_agent_secret(Path::new(&path))?;
     std::fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn fs_write_text_file(path: String, contents: String) -> Result<(), String> {
+    refuse_agent_secret(Path::new(&path))?;
     if let Some(parent) = Path::new(&path).parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -52,6 +104,7 @@ pub fn fs_write_text_file(path: String, contents: String) -> Result<(), String> 
 /// chmod'ed 0o600. On Windows there is no unix mode, so the hardening is best-effort and the write still succeeds.
 #[tauri::command]
 pub fn fs_write_private_text_file(path: String, contents: String) -> Result<(), String> {
+    refuse_agent_secret(Path::new(&path))?;
     if let Some(parent) = Path::new(&path).parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -135,6 +188,8 @@ pub fn fs_mkdir(path: String, recursive: Option<bool>) -> Result<(), String> {
 
 #[tauri::command]
 pub fn fs_rename(old_path: String, new_path: String) -> Result<(), String> {
+    refuse_agent_secret(Path::new(&old_path))?;
+    refuse_agent_secret(Path::new(&new_path))?;
     std::fs::rename(&old_path, &new_path).map_err(|e| e.to_string())
 }
 
