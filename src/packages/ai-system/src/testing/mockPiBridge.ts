@@ -19,6 +19,9 @@ import type {
   BridgeEvent,
   ContributedResources,
   EngineOpResult,
+  PiProjectTrust,
+  PiScopedModels,
+  PiSessionSettings,
   PluginListPayload,
   PluginScope,
   WebSearchAnswer,
@@ -141,20 +144,54 @@ const MOCK_SESSIONS = [
 
 // pi's project trust, which lives in the agent dir. The demo workspace has resources trust would gate, so the
 // decision is offered rather than reported as moot.
-const MOCK_TRUST = { decision: null as boolean | null, matters: true, path: "/workspace" };
+const MOCK_TRUST: PiProjectTrust = { decision: null, matters: true, path: "/workspace" };
 
-const MOCK_SETTINGS = {
+const MOCK_SETTINGS: PiSessionSettings = {
   autoCompaction: true,
-  steeringMode: "all" as const,
-  followUpMode: "all" as const,
+  steeringMode: "all",
+  followUpMode: "all",
   thinkingLevel: "medium",
   availableThinkingLevels: ["minimal", "low", "medium", "high"],
 };
 
-const MOCK_MODELS = {
+const MOCK_MODELS: PiScopedModels = {
   available: [{ id: "mock-assistant", name: "Mock Assistant", provider: "container-desktop-mock" }],
-  scoped: [] as string[],
+  scoped: [],
 };
+
+// `/settings <key> <value>` and `/scoped-models <ids|all>` in pi's own grammar, applied to the fixtures so the
+// settings drawer can be driven with no container. Answering a write with the state it had before would make every
+// control look inert, which is the bug this mock exists to catch — not to reproduce.
+function writeMockSettings(args: string): string | undefined {
+  const [key, ...rest] = args.trim().split(/\s+/).filter(Boolean);
+  const value = rest.join(" ");
+  if (!key || !value) return undefined;
+  if (key === "autoCompaction") {
+    MOCK_SETTINGS.autoCompaction = value.toLowerCase() === "on";
+    return undefined;
+  }
+  if (key === "steeringMode" || key === "followUpMode") {
+    if (value !== "all" && value !== "one-at-a-time") return `${key} is all or one-at-a-time`;
+    MOCK_SETTINGS[key] = value;
+    return undefined;
+  }
+  if (key === "thinkingLevel") {
+    if (!MOCK_SETTINGS.availableThinkingLevels.includes(value)) return `this model cannot think at ${value}`;
+    MOCK_SETTINGS.thinkingLevel = value;
+    return undefined;
+  }
+  return `this session has no setting called ${key}`;
+}
+
+function writeMockScopedModels(args: string): string | undefined {
+  const target = args.trim();
+  if (!target) return undefined;
+  const ids = target.toLowerCase() === "all" ? [] : target.split(/[\s,]+/).filter(Boolean);
+  const unknown = ids.filter((id) => !MOCK_MODELS.available.some((model) => model.id === id));
+  if (unknown.length) return `this session has no model ${unknown.join(", ")}`;
+  MOCK_MODELS.scoped = ids;
+  return undefined;
+}
 
 // What a bare `/fork` answers with: the user's own messages, which are the only points pi can restart from.
 const MOCK_FORK_POINTS = [
@@ -449,8 +486,16 @@ export function createMockPiBridgeClient(): PiBridgeClient {
         if (args.trim()) MOCK_TRUST.decision = args.trim().toLowerCase() === "on";
         return { ok: true as const, data: { trust: { ...MOCK_TRUST } } };
       }
-      if (name === "settings") return { ok: true as const, data: { settings: { ...MOCK_SETTINGS } } };
-      if (name === "scoped-models") return { ok: true as const, data: { models: { ...MOCK_MODELS } } };
+      if (name === "settings") {
+        const refused = writeMockSettings(args);
+        if (refused) return { ok: false as const, error: refused };
+        return { ok: true as const, data: { settings: { ...MOCK_SETTINGS } } };
+      }
+      if (name === "scoped-models") {
+        const refused = writeMockScopedModels(args);
+        if (refused) return { ok: false as const, error: refused };
+        return { ok: true as const, data: { models: { ...MOCK_MODELS, scoped: [...MOCK_MODELS.scoped] } } };
+      }
       // The three that REPLACE the session. A real container replays the conversation the new session holds; the
       // mock has one transcript, so `/clone` and `/resume` come back with the turns this session already had.
       if (name === "clone" || name === "resume") {

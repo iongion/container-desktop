@@ -16,7 +16,12 @@ import type {
   AssistantCommandSurface,
   BuiltinAssistantCommandId,
 } from "@/ai-system/ui/core/commands/commandTypes";
-import { readSessionTreeAnswer } from "@/ai-system/ui/core/commands/piCommandAnswers";
+import {
+  readProjectTrustAnswer,
+  readScopedModelsAnswer,
+  readSessionSettingsAnswer,
+  readSessionTreeAnswer,
+} from "@/ai-system/ui/core/commands/piCommandAnswers";
 import { resolveScreenPrompt } from "@/template/screenPrompts";
 import { AIComposer, type ParsedAssistantCommand } from "@/web-app/components/AIComposer";
 import { AssistantContextDrawer, type AssistantContextSection } from "@/web-app/components/ai/AssistantContextDrawer";
@@ -25,6 +30,7 @@ import {
   AssistantSessionTreeDrawer,
   type AssistantSessionTreeView,
 } from "@/web-app/components/ai/AssistantSessionTreeDrawer";
+import { AssistantSettingsDrawer, type AssistantSettingsView } from "@/web-app/components/ai/AssistantSettingsDrawer";
 import { AssistantSkillsDrawer } from "@/web-app/components/ai/AssistantSkillsDrawer";
 import { type AssistantTimelineContext, AssistantTimelineItem } from "@/web-app/components/ai/AssistantTimelineItem";
 import { ExtensionDialog } from "@/web-app/components/ai/ExtensionDialog";
@@ -57,6 +63,13 @@ export interface AssistantThreadProps {
   composerPlaceholder?: string;
   surface?: AssistantCommandSurface;
 }
+
+// Which of pi's commands a picked row goes back to. A session is answered by `/resume`, not by a tree move.
+const PICKED_COMMAND: Record<AssistantSessionTreeView["kind"], string> = {
+  fork: "fork",
+  tree: "tree",
+  sessions: "resume",
+};
 
 export const AssistantThread: React.FC<AssistantThreadProps> = ({
   className,
@@ -129,8 +142,16 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   }>();
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [workspaceChangesView, setWorkspaceChangesView] = useState<WorkspaceChangesView>();
-  // The points a bare `/fork` or `/tree` answered with, held until the user picks one.
+  // The points a bare `/fork`, `/tree` or `/resume` answered with, held until the user picks one.
   const [sessionPoints, setSessionPoints] = useState<AssistantSessionTreeView>();
+  // The state a bare `/settings`, `/trust` or `/scoped-models` answered with.
+  const [settingsView, setSettingsView] = useState<AssistantSettingsView>();
+
+  // Stable, because the settings drawer reads the rest of pi's state once on open.
+  const runPiCommand = useCallback(
+    (name: string, args: string) => useCodingAgentStore.getState().runPiCommand(name, args),
+    [],
+  );
 
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -196,10 +217,25 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         }
         const result = await useCodingAgentStore.getState().runPiCommand(command.commandName, parsed.rawArguments);
         if (!result.ok) throw new Error(result.error);
-        // `/fork` and `/tree` with no argument are QUESTIONS: the session answers with the points it could move to
-        // and waits to be told which. Without this the answer was discarded and the command looked inert.
+        // A bare pi command is a QUESTION: the session answers with what it is about and waits. Without reading the
+        // answer here it is discarded and the command looks inert, which is what every one of these did before.
         const points = readSessionTreeAnswer(result.data);
-        if (points) setSessionPoints(points);
+        if (points) {
+          setSessionPoints(points);
+          return undefined;
+        }
+        const settings = readSessionSettingsAnswer(result.data);
+        if (settings) {
+          setSettingsView({ kind: "settings", settings });
+          return undefined;
+        }
+        const trust = readProjectTrustAnswer(result.data);
+        if (trust) {
+          setSettingsView({ kind: "trust", trust });
+          return undefined;
+        }
+        const scoped = readScopedModelsAnswer(result.data);
+        if (scoped) setSettingsView({ kind: "scoped-models", models: scoped });
         return undefined;
       }
       if (parsed.command.kind === "skill") {
@@ -504,13 +540,14 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
           onPick={async (id) => {
             // The SAME command the user typed, now with the id it was asking for. A refusal comes back as a reason
             // for the drawer to show rather than as a throw, because a cancelled branch switch is an answer.
-            const answer = await useCodingAgentStore
-              .getState()
-              .runPiCommand(sessionPoints.kind === "fork" ? "fork" : "tree", id);
+            const answer = await runPiCommand(PICKED_COMMAND[sessionPoints.kind], id);
             return answer.ok ? undefined : answer.error;
           }}
           onClose={() => setSessionPoints(undefined)}
         />
+      ) : null}
+      {settingsView ? (
+        <AssistantSettingsDrawer view={settingsView} onRun={runPiCommand} onClose={() => setSettingsView(undefined)} />
       ) : null}
     </div>
   );
