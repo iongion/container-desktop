@@ -1671,5 +1671,10 @@
   "File and command tools act on THIS machine, outside any container. Every write and command asks first.": "File and command tools act on THIS machine, outside any container. Every write and command asks first.",
   "File and command tools act on the engine's own host, over the connection's transport.": "File and command tools act on the engine's own host, over the connection's transport.",
   "File and command tools act inside a container that is already running on this connection.": "File and command tools act inside a container that is already running on this connection.",
-  "A throwaway container is created for the session from this image, and removed when it ends.": "A throwaway container is created for the session from this image, and removed when it ends."
+  "A throwaway container is created for the session from this image, and removed when it ends.": "A throwaway container is created for the session from this image, and removed when it ends.",
+  "Where": "Where",
+  "The agent's own settings": "The agent's own settings",
+  "This project": "This project",
+  "This project is not trusted, so pi will only write the agent's own settings. Trust it in the session settings to install for the project.": "This project is not trusted, so pi will only write the agent's own settings. Trust it in the session settings to install for the project.",
+  "The agent's own settings follow you between projects; the project's stay with the workspace.": "The agent's own settings follow you between projects; the project's stay with the workspace."
 }

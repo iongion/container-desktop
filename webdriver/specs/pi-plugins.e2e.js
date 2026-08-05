@@ -81,6 +81,14 @@ describe("pi plugins screen", () => {
             setPluginEnabled: async (source, enabled, scope) =>
               window.__cdPluginCalls.push(["setEnabled", source, enabled, scope]),
             reloadSession: async () => window.__cdPluginCalls.push(["reload"]),
+            // pi's own `/trust`, which the install drawer reads to decide whether the project scope can be chosen.
+            // The spec moves this the way trusting a project would.
+            runCommand: async (name, args) => {
+              window.__cdPluginCalls.push(["runCommand", name, args]);
+              if (name !== "trust") return { ok: true };
+              if (args) window.__cdPluginTrust = args === "on";
+              return { ok: true, data: { trust: { decision: window.__cdPluginTrust ?? null, matters: true, path: "/workspace" } } };
+            },
             onEvent: () => () => {},
             prompt: async () => {},
             abort: async () => {},
@@ -191,7 +199,44 @@ describe("pi plugins screen", () => {
       ),
     }));
 
-    drawer = { rejected, accepted };
+    // pi writes a project's own packages only on a TRUSTED project, so the choice is offered against pi's own
+    // decision — read by pi's own command, which the mock answers undecided.
+    const untrusted = await browser.execute(() => {
+      const select = document.querySelector("#pluginScope");
+      return {
+        options: Array.from(select?.options ?? []).map((option) => option.value),
+        value: select?.value,
+        disabled: select?.hasAttribute("disabled") ?? false,
+        help: select?.closest(".bp6-form-group")?.querySelector(".bp6-form-helper-text")?.textContent ?? "",
+      };
+    });
+
+    // Trust it the way the session settings do, then reopen: the same read now answers yes.
+    await browser.executeAsync((done) => {
+      window.__cdCodingAgentStore
+        .getState()
+        .runPiCommand("trust", "on")
+        .then(() => done(true));
+    });
+    await browser.pause(200);
+    await browser.execute(() => {
+      document.querySelector(".AppInstallPluginDrawer .AppDrawerHeaderActions button:last-child")?.click();
+    });
+    await browser.pause(400);
+    await browser.execute(() => {
+      const cta = Array.from(document.querySelectorAll(".ResourceListActionButton")).find((button) =>
+        (button.textContent ?? "").includes("Install"),
+      );
+      cta?.click();
+    });
+    await $("#pluginScope").waitForExist({ timeout: 15000, timeoutMsg: "the install drawer never reopened" });
+    await browser.pause(500);
+    const trustedScope = await browser.execute(() => {
+      const select = document.querySelector("#pluginScope");
+      return { disabled: select?.hasAttribute("disabled") ?? false };
+    });
+
+    drawer = { rejected, accepted, untrusted, trustedScope };
     await browser.saveScreenshot(process.env.PI_PLUGINS_SHOT || "/tmp/pi-plugins.png");
   });
 
@@ -238,6 +283,14 @@ describe("pi plugins screen", () => {
 
   it("shows the container's install progress", () => {
     assert.match(table.progress, /fetching @acme\/deploy-kit/);
+  });
+
+  it("offers both of pi's package scopes, and only lets the project one be chosen once pi trusts the project", () => {
+    assert.deepEqual(drawer.untrusted.options, ["user", "project"]);
+    assert.equal(drawer.untrusted.value, "user", "the agent's own settings are the default");
+    assert.equal(drawer.untrusted.disabled, true, "an untrusted project must not be installable into");
+    assert.match(drawer.untrusted.help, /not trusted/);
+    assert.equal(drawer.trustedScope.disabled, false, "trusting the project must open the choice");
   });
 
   it("routes a row's Disable through the bridge and reloads pi", () => {

@@ -62,7 +62,16 @@ export interface SessionTrust {
 
 // pi's project trust lives in the AGENT dir — our named volume — not in the project. That is what makes the
 // decision survive a session without putting anything in the user's workspace.
-export function createSessionTrust(options: { agentDir: string; cwd: string }): SessionTrust {
+//
+// The decision also has to REACH pi's settings manager, which defaults `projectTrusted` to TRUE when nobody says
+// otherwise: without this the project's own settings — packages above all — were writable into the user's workspace
+// by a project they had never trusted. `onDecision` is called with the stored answer at construction and again on
+// every write, so the two can never drift.
+export function createSessionTrust(options: {
+  agentDir: string;
+  cwd: string;
+  onDecision?: (trusted: boolean) => void;
+}): SessionTrust {
   const store = new ProjectTrustStore(options.agentDir);
   const read = (): PiProjectTrust => ({
     decision: store.get(options.cwd),
@@ -71,10 +80,13 @@ export function createSessionTrust(options: { agentDir: string; cwd: string }): 
     matters: hasTrustRequiringProjectResources(options.cwd),
     path: options.cwd,
   });
+  // An undecided project is not a trusted one: pi's own default would have been to trust it.
+  options.onDecision?.(store.get(options.cwd) === true);
   return {
     read,
     write(trusted) {
       store.set(options.cwd, trusted);
+      options.onDecision?.(trusted);
       return read();
     },
   };

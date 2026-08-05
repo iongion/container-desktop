@@ -196,13 +196,14 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   const systemContext = createSystemContextExtension();
 
   // Settings are file-backed at `agentDir`, which is the named plugin volume: installing a plugin writes its
-  // source into `packages` there, so the set survives the session that installed it. `projectTrusted` stays
-  // false, so pi refuses project-scoped package storage — nothing is written into the user's workspace.
+  // source into `packages` there, so the set survives the session that installed it. `projectTrusted` starts FALSE
+  // and follows the user's own trust decision (`createSessionTrust` below): pi's own default is to trust the
+  // project, which would let a project nobody vouched for have packages written into the user's workspace.
   //
   // ONE instance for the life of the container, shared by every session it runs and by the plugin package manager.
   // pi would let the factory build a fresh one per cwd; here that would hand the Plugins screen a different
   // settings instance from the session's, and the two would disagree about what is installed.
-  const settingsManager = SettingsManager.create(cwd, agentDir);
+  const settingsManager = SettingsManager.create(cwd, agentDir, { projectTrusted: false });
 
   // What pi calls to build a session — once at start, and again for every replacement (`/new`, `/resume`, `/clone`,
   // `/import`). Everything above it is fixed for the life of the container; everything in it is per session.
@@ -463,7 +464,13 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     sessionDir: () => runtime.session.sessionManager.getSessionDir(),
     currentPath: () => runtime.session.sessionFile,
   });
-  const sessionTrust = createSessionTrust({ agentDir, cwd });
+  // The trust decision drives pi's own `projectTrusted`, so a project the user has not trusted cannot have its
+  // settings — its packages above all — written into the user's workspace.
+  const sessionTrust = createSessionTrust({
+    agentDir,
+    cwd,
+    onDecision: (trusted) => settingsManager.setProjectTrusted(trusted),
+  });
   const sessionSettings = createSessionSettings(() => runtime.session);
   const scopedModels = createScopedModels({
     session: () => runtime.session,

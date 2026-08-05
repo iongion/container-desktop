@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A turn that cost a fraction of a cent reports what it charged instead of rounding to zero, which read exactly like a free local model
 - The demo session's Workspace and VS Code buttons open a folder that exists, instead of a path only an agent container has
 - Demo mode holds its engine connections instead of dropping them every few seconds: it was checking the filesystem for sockets no demo has, so the connected engines flapped and the theme flickered between them
+- A project you have not trusted can no longer have plugin settings written into it: pi's own default is to trust the project, and the assistant now starts it untrusted and follows your decision
 - A new conversation keeps your containers, your plugins and your workspace — starting one used to tear the pair down and build it again
 
 - Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
@@ -51,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A plugin can be installed for THIS PROJECT rather than for the agent everywhere — pi's own second package scope, offered once pi trusts the project and explained when it does not
 - The assistant can look up the app's own built-in troubleshooting knowledge — curated podman, docker, WSL and SSH connection failures with the fix and the commands — as a search it makes when it needs one, not as prose in every prompt
 - The assistant can act on files and run commands OUTSIDE its own container, where you choose: this machine, the engine's own host, a container already running, or a disposable one created for the session and removed with it. Chosen on the start form, off until you choose it, and every write or command asks first
 - Sign in to OpenRouter instead of pasting a key: pi's own login flow runs in a one-shot container, the browser does the signing in, and the permanent key it hands back goes to the OS keychain like any other

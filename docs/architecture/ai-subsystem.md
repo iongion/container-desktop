@@ -172,8 +172,11 @@ queueing frames that arrive while it is still starting. `createPiSession` (`sess
 - **the container toolset** — 21 tools that call back over `engine_op`.
 
 Settings and packages are file-backed at the mounted agent dir, so `pi install` survives a session and an
-image rebuild. `projectTrusted` stays false, so pi refuses project-scoped package storage and nothing is
-written into the user's workspace. **pi owns session persistence** (its own JSONL entry tree); the GUI
+image rebuild. `projectTrusted` starts **false** and follows the user's own trust decision — pi's own default is to
+TRUST the project, which would let a project nobody vouched for have packages written into the user's workspace. The
+decision lives in the agent dir (`ProjectTrustStore`, so nothing is written into the project to record it) and reaches
+pi through `setProjectTrusted` at construction and on every `/trust` write. The install drawer offers the project
+scope only while that answer is yes, and says why when it is not. **pi owns session persistence** (its own JSONL entry tree); the GUI
 transcript is a projection of the event stream, which is why the app has no thread store of its own on this
 path.
 
