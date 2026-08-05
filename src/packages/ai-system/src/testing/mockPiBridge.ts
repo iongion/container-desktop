@@ -25,6 +25,7 @@ import {
   type PiProjectTrust,
   type PiScopedModels,
   type PiSessionSettings,
+  type PiSessionSummary,
   type PluginListPayload,
   type PluginScope,
   piThinkingLevels,
@@ -171,7 +172,7 @@ const MOCK_RESOURCES: ContributedResources = {
 
 // What a bare `/resume` answers with: the sessions this workspace has, the live one marked so a picker will not
 // offer to resume what is already open.
-const MOCK_SESSIONS = [
+const MOCK_SESSIONS: PiSessionSummary[] = [
   {
     path: "/home/agent/.pi/agent/sessions/2026-08-04_demo.jsonl",
     id: "mock-pi-session-1",
@@ -651,8 +652,15 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
       if (builtin.runsIn !== "session") {
         return { ok: false as const, error: builtin.reason ?? `/${name} is not performed by the session` };
       }
-      if (name === "name" && !args.trim())
-        return { ok: false as const, error: "give the session a name: /name <text>" };
+      if (name === "name") {
+        const label = args.trim();
+        if (!label) return { ok: false as const, error: "give the session a name: /name <text>" };
+        // The real container stores the name ON the session, so its own listing answers with it afterwards. The mock
+        // does the same, or a rename would look like it stuck until the list was opened again.
+        const current = MOCK_SESSIONS.find((session) => session.current);
+        if (current) current.name = label;
+        return { ok: true as const, data: { name: label } };
+      }
       if (name === "new") {
         replaceSession("new", false);
         return { ok: true as const };

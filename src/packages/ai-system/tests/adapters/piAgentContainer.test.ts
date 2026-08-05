@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   agentRunArgv,
+  attachedPiAgentSessionFrom,
+  attachPiAgentSession,
   defaultSessionFrom,
   defaultSessionNames,
   egressNetworkName,
@@ -199,10 +201,60 @@ describe("startPiAgentSession", () => {
     const result = await startPiAgentSession(host, spec, async () => "/tmp/env");
     const commands = (host as unknown as { runHostCommand: { mock: { calls: unknown[][] } } }).runHostCommand.mock
       .calls;
-    expect((commands[0][1] as string[])[0]).toBe("network");
-    expect((commands[1][1] as string[]).join(" ")).toContain(spec.gatewayContainerName);
-    expect((commands[2][1] as string[]).join(" ")).toContain(spec.agentContainerName);
+    // The names are asked about first — nothing is holding them here — and only then is anything created.
+    expect((commands[0][1] as string[])[0]).toBe("inspect");
+    expect((commands[2][1] as string[])[0]).toBe("network");
+    expect((commands[3][1] as string[]).join(" ")).toContain(spec.gatewayContainerName);
+    expect((commands[4][1] as string[]).join(" ")).toContain(spec.agentContainerName);
     expect(result.agentContainerId).toBe("container-id-abc");
+  });
+
+  // A reusable session's names are deterministic, so a pair the user stopped — or half a pair a crash left — still
+  // holds them, and `run` answers a taken name with a conflict instead of reusing it. That conflict IS what a click on
+  // Resume used to report.
+  it("frees the names a stopped pair still holds before rebuilding under them", async () => {
+    const host = fakeHost({
+      runHostCommand: vi.fn(async (_program: string, args: string[]) => ({
+        pid: 1,
+        code: 0,
+        success: true,
+        stdout: args[0] === "inspect" ? "false\n" : args[0] === "run" ? "container-id-abc\n" : "",
+        stderr: "",
+      })),
+    });
+    await startPiAgentSession(host, spec, async () => "/tmp/env");
+    expect(
+      commandsOf(host)
+        .map((call) => (call[1] as string[]).join(" "))
+        .slice(0, 4),
+    ).toEqual([
+      "inspect cd-gateway-1 --format {{.State.Running}}",
+      "rm --force cd-gateway-1",
+      "inspect cd-agent-1 --format {{.State.Running}}",
+      "rm --force cd-agent-1",
+    ]);
+  });
+
+  // Rebuilding a RUNNING pair would take the user's live session away to make room for a new one. Continuing it is
+  // attachPiAgentSession's job, so this refuses and says so.
+  it("refuses to take the names of a pair that is still running", async () => {
+    const host = fakeHost({
+      runHostCommand: vi.fn(async (_program: string, args: string[]) => ({
+        pid: 1,
+        code: 0,
+        success: true,
+        stdout: args[0] === "inspect" ? "true\n" : "",
+        stderr: "",
+      })),
+    });
+    await expect(startPiAgentSession(host, spec, async () => "/tmp/env")).rejects.toThrow(/already running/);
+    expect(commandsOf(host).map((call) => (call[1] as string[]).join(" "))).not.toContain("rm --force cd-gateway-1");
+  });
+
+  it("removes nothing when the names are free", async () => {
+    const host = fakeHost();
+    await startPiAgentSession(host, spec, async () => "/tmp/env");
+    expect(commandsOf(host).filter((call) => (call[1] as string[])[0] === "rm")).toEqual([]);
   });
 
   // The session spec carries NO credential at all, so this path cannot compose one even by mistake. A gateway that
@@ -344,7 +396,7 @@ describe("startPiAgentSession", () => {
     expect(written[0]).not.toContain("sk-real-secret");
     const commands = (host as unknown as { runHostCommand: { mock: { calls: unknown[][] } } }).runHostCommand.mock
       .calls;
-    expect((commands[1][1] as string[]).join(" ")).toContain("/run/secrets/gateway.env");
+    expect((commands[3][1] as string[]).join(" ")).toContain("/run/secrets/gateway.env");
   });
 
   it("asks for no second network when egress is allowed", async () => {
@@ -363,6 +415,8 @@ describe("startPiAgentSession", () => {
     await startPiAgentSession(host, { ...spec, egress: false }, async () => "/tmp/env");
     const argvs = commandsOf(host).map((call) => (call[1] as string[]).join(" "));
     expect(argvs).toEqual([
+      "inspect cd-gateway-1 --format {{.State.Running}}",
+      "inspect cd-agent-1 --format {{.State.Running}}",
       "network create --internal cd-agent-net-1",
       "network create cd-agent-net-1-egress",
       expect.stringContaining("--name cd-gateway-1"),
@@ -371,9 +425,9 @@ describe("startPiAgentSession", () => {
     ]);
     // The agent's run names only its own network, and the gateway's run starts on it so the agent can still
     // resolve the gateway by name after the second network is attached.
-    expect(argvs[2]).toContain("--network cd-agent-net-1 ");
     expect(argvs[4]).toContain("--network cd-agent-net-1 ");
-    expect(argvs[4]).not.toContain("-egress");
+    expect(argvs[6]).toContain("--network cd-agent-net-1 ");
+    expect(argvs[6]).not.toContain("-egress");
   });
 
   // Without egress the gateway has no other way to the provider, so a failed attach must not be swallowed the way
@@ -649,6 +703,73 @@ describe("findDefaultSession", () => {
   it("reports nothing when the engine refuses", async () => {
     const host = fakeHost({ runHostCommand: vi.fn(async () => Promise.reject(new Error("no such host"))) });
     expect(await findDefaultSession(host, "podman-1")).toBeUndefined();
+  });
+});
+
+// Continuing a session whose pair is already running means DIALLING it: the names are taken, and taking them back
+// would mean removing the user's containers. Everything needed to dial is in the engine's own inspection.
+describe("attachedPiAgentSessionFrom", () => {
+  const inspection = (overrides: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      ports: { "8787/tcp": [{ HostIp: "127.0.0.1", HostPort: "43521" }] },
+      env: ["CD_BRIDGE_TOKEN=tok-abc", "CD_MODEL_ID=qwen/qwen3-4b", "PATH=/usr/bin"],
+      ...overrides,
+    });
+
+  it("reads the published port, the bridge token and the model the pair is running", () => {
+    expect(attachedPiAgentSessionFrom(inspection())).toEqual({
+      hostPort: 43521,
+      bridgeToken: "tok-abc",
+      modelId: "qwen/qwen3-4b",
+    });
+  });
+
+  // A token is opaque and may carry the separator itself; splitting on every "=" would truncate it silently.
+  it("keeps an env value that contains its own separator", () => {
+    const payload = inspection({ env: ["CD_BRIDGE_TOKEN=a=b=c"] });
+    expect(attachedPiAgentSessionFrom(payload)?.bridgeToken).toBe("a=b=c");
+  });
+
+  it("has nothing to dial when the bridge port is not published", () => {
+    expect(attachedPiAgentSessionFrom(inspection({ ports: {} }))).toBeUndefined();
+    expect(attachedPiAgentSessionFrom(inspection({ ports: null }))).toBeUndefined();
+  });
+
+  // Without the token the socket refuses the connection, so an attach that "succeeded" would fail one step later
+  // with an authorisation error nobody could act on.
+  it("has nothing to dial without the token that authorises the socket", () => {
+    expect(attachedPiAgentSessionFrom(inspection({ env: ["PATH=/usr/bin"] }))).toBeUndefined();
+  });
+
+  it("treats an answer it cannot parse as nothing to adopt", () => {
+    expect(attachedPiAgentSessionFrom("")).toBeUndefined();
+    expect(attachedPiAgentSessionFrom("no such object: cd-agent-1")).toBeUndefined();
+  });
+});
+
+describe("attachPiAgentSession", () => {
+  it("asks the engine to inspect the agent container alone", async () => {
+    const host = fakeHost({
+      runHostCommand: vi.fn(async () => ({
+        pid: 1,
+        code: 0,
+        success: true,
+        stdout: JSON.stringify({
+          ports: { "8787/tcp": [{ HostPort: "43000" }] },
+          env: ["CD_BRIDGE_TOKEN=tok"],
+        }),
+        stderr: "",
+      })),
+    });
+    expect(await attachPiAgentSession(host, "cd-agent-1")).toEqual({ hostPort: 43000, bridgeToken: "tok" });
+    const argv = commandsOf(host)[0][1] as string[];
+    expect(argv.slice(0, 2)).toEqual(["inspect", "cd-agent-1"]);
+  });
+
+  // The pair may have been removed between the listing and the click. That is "nothing to adopt", not a crash.
+  it("reports nothing when the engine has no such container", async () => {
+    const host = fakeHost({ runHostCommand: vi.fn(async () => Promise.reject(new Error("no such object"))) });
+    expect(await attachPiAgentSession(host, "cd-agent-1")).toBeUndefined();
   });
 });
 

@@ -21,6 +21,9 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 220ms ease;
+  /* Its own compositor layer: without it the fade repaints the whole viewport every frame, on top of the panel's
+     own slide. */
+  will-change: opacity;
   /* Above app content/sidebar (z ≤ 10) but below Blueprint portals (z 20) so the composer's model-picker
      popover renders above the console. */
   z-index: 18;
@@ -54,6 +57,10 @@
   transition:
     transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 200ms ease;
+  /* The slide has to be a COMPOSITE, not a repaint. This panel is app-wide, translucent while open and carries a
+     48px blurred shadow, so without its own layer WebKitGTK re-rasterises all of it — shadow included — on every
+     frame, which is what made the summon animation stutter instead of gliding. */
+  will-change: transform, opacity;
 }
 .AssistantConsoleRoot[data-open="true"] .AssistantConsole {
   opacity: 1;

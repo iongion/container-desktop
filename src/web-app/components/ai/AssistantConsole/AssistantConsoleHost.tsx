@@ -33,13 +33,16 @@ export const AssistantConsoleHost: React.FC = () => {
 
   // Lazy-mount the session only once the console has actually been opened, so app start never eagerly
   // creates an Agent Session or runs model discovery; once mounted it stays (smooth close animation, live store).
+  //
+  // Flipped DURING the render that opens, not in an effect afterwards: an effect mounts the whole transcript,
+  // composer and plugin surfaces one paint AFTER the slide has already started, and that commit lands on top of the
+  // animation's first frames — which is exactly what made the first summon stutter. React re-renders a state update
+  // made while rendering before it paints, so mounting and opening become one frame.
   const [everOpened, setEverOpened] = useState(open);
   const asideRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    if (open) {
-      setEverOpened(true);
-    }
-  }, [open]);
+  if (open && !everOpened) {
+    setEverOpened(true);
+  }
 
   // When the console opens, put the caret in the composer so the user can type immediately — on first open
   // and on re-opens of the already-mounted session. rAF waits for the slide-in/layout to settle.

@@ -59,8 +59,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The assistant no longer asks you to fill in a form before it will do anything: the empty state IS the bootstrap. A row per engine, the one this app favours offered first, each saying where it runs and what it may read, write and reach — and a verb that follows its state, so a running session is continued, a stopped one resumed with its conversation intact, and a new one started in a click
 - Sessions you define yourself sit beside the offered default and are remembered, so the assistant is set up once rather than on every launch
+- Continuing a session whose containers are already running works: the app dials the pair it finds instead of asking the engine for names it already holds, which answered with a conflict
+- Resuming a stopped session works: its containers still held their names, so they are rebuilt under them — which costs the user nothing, because the conversation lives in the assistant's volume and not in the container
+- A long workspace path no longer squeezes a launcher row's verb into a clipped smear, and the row's buttons are compact
+- The Assistant's error message no longer prints its icon on top of its first line
+- Summoning the assistant console glides instead of stuttering: the panel and its dim animate on their own compositor layers, and the conversation mounts in the same frame the slide starts rather than one frame into it
 
 ### Added
+
+- The Assistant's header carries the session itself: its name, renamed in place, and the conversations that workspace already has — switch to one, or start another, without leaving the row. The workspace, the editor and the stop moved into the header's overflow, and the container id into the session list, because what belongs in a header row is the name
 
 - A plugin can be installed for THIS PROJECT rather than for the agent everywhere — pi's own second package scope, offered once pi trusts the project and explained when it does not
 - The assistant can look up the app's own built-in troubleshooting knowledge — curated podman, docker, WSL and SSH connection failures with the fix and the commands — as a search it makes when it needs one, not as prose in every prompt

@@ -7,6 +7,7 @@ import { create } from "zustand";
 import type { ModelWindow } from "@/ai-system/adapters/modelWindow";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
+  attachPiAgentSession,
   findDefaultSession,
   GATEWAY_PORT_IN_IMAGE,
   gatewayUpstreamUrl,
@@ -50,6 +51,7 @@ import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import type { AIAuthSettings, AIDefaultSessionConfig } from "@/ai-system/core/types";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
 import { isWorkspaceToolName } from "@/ai-system/core/workspaceToolNames";
+import { readSessionNameAnswer, readSessionTreeAnswer } from "@/ai-system/ui/core/commands/piCommandAnswers";
 import { isMockMode } from "@/container-client/mock/mode";
 import { t } from "@/i18n";
 import { createLogger } from "@/logger";
@@ -59,6 +61,7 @@ import type {
   ContributedResources,
   EngineOpResult,
   PiCommandResult,
+  PiSessionSummary,
   SessionProviderCheck,
   WebSearchAnswer,
   WorkspaceOpResult,
@@ -70,6 +73,7 @@ import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import { resolveCodingAgentStart } from "@/web-app/screens/AI/startSession";
+import { currentWorkspaceSessionName } from "@/web-app/screens/AI/workspaceSessions";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { applySurfaceEvent, type CodingAgentSurfaces, noSurfaces } from "@/web-app/stores/codingAgentSurfaces";
 import { composeSessionSystemContext, type SessionSystemContext } from "@/web-app/stores/codingAgentSystemContext";
@@ -429,6 +433,20 @@ export interface CodingAgentState {
   // What this session was started with, so it can be started again identically. A pi session IS the
   // conversation, so "start a fresh conversation" can only mean starting a fresh session.
   lastStart?: StartCodingAgentOptions;
+  // What pi calls the conversation this session is on, when the app knows it: set by a rename, learned from pi's own
+  // listing, and carried by a resumed conversation. Absent means the app has not been told — the header then falls
+  // back to what the user named this connection's session in settings, which is the name of the session itself.
+  sessionName?: string;
+  // Name the running conversation. Both records are written: pi's own `/name`, so its listing, its export and the next
+  // resume carry it, and the connection's configured session, so the launcher row and the next boot read the same.
+  // An empty name gives the connection its offered default back rather than storing a blank.
+  renameSession(name: string): Promise<void>;
+  // Every conversation pi can see for the mounted folder, newest first, with the one it is on marked. Asked of the
+  // container on demand — pi reads and parses every session file to answer, so this is not something to poll.
+  listWorkspaceSessions(): Promise<PiSessionSummary[]>;
+  // Leave this conversation for another one of the workspace's. pi swaps the session in place, so the containers, the
+  // plugins and the mounted folder are untouched.
+  resumeWorkspaceSession(session: PiSessionSummary): Promise<void>;
   // The model the RUNNING session answers with, read off the container: `/model` switches it in place and a resumed
   // conversation can carry one pi resolved for itself, so the id this session STARTED with is not the answer. The one
   // model fact this store keeps — what a provider serves is the picker's question, asked one level at a time.
@@ -448,6 +466,10 @@ export interface CodingAgentState {
   // screen where every other container is removed.
   forgetSession(connectionId: string): Promise<void>;
   start(options: StartCodingAgentOptions): Promise<void>;
+  // Talk to the pair that is ALREADY running on this connection, instead of building one. `start` cannot: the reusable
+  // names are taken, and the engine refuses `run` on a name in use — which is what a click on Continue used to report.
+  // Freeing the names would mean removing the user's containers, which this app does not do behind their back.
+  attachSession(options: StartCodingAgentOptions): Promise<void>;
   submit(text: string): Promise<void>;
   submitSkill(input: SkillSubmission): Promise<void>;
   stop(): Promise<void>;
@@ -640,6 +662,33 @@ function launchProblem(problems: readonly string[]): string {
   return t("Pick the folder the agent may read and write.");
 }
 
+// A session is arriving: everything the previous one left behind goes, and what is known about this one so far is
+// written. Shared by starting and by attaching, because a stale card, dialog or held operation belongs to the session
+// that is gone either way.
+function freshSessionState(options: StartCodingAgentOptions): Partial<CodingAgentState> {
+  return {
+    status: "starting",
+    startLog: [],
+    view: emptyPiSessionView("pi-session"),
+    chrome: emptyCodingAgentChrome(),
+    surfaces: noSurfaces(),
+    resources: noContributedResources(),
+    pendingDialog: undefined,
+    pendingEngineOps: {},
+    activeSkill: undefined,
+    turnReadPublicWeb: false,
+    retrying: undefined,
+    systemContext: undefined,
+    error: undefined,
+    lastStart: options,
+    // The model asked for, until the container says what it is actually running. A chip left empty until the first
+    // report would read as "no model" during the wait.
+    sessionModel: options.modelId,
+    // Nothing has told us what pi calls this conversation yet, so the header names the session itself.
+    sessionName: undefined,
+  };
+}
+
 // Record what a connection's reusable session was launched with, so the row survives the app and reads the same next
 // time. Merged rather than replaced: another connection's session is none of this one's business.
 async function writeDefaultSession(connectionId: string, config: AIDefaultSessionConfig): Promise<void> {
@@ -726,7 +775,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     }
     set({ launching: row.connectionId, error: undefined });
     try {
-      await get().start({ ...resolved.options, sessionKind: "default" });
+      // Continue is not a start. Its pair is up, so it is DIALLED — building one would ask the engine for names it
+      // already holds, and it answers that with a conflict, which is exactly what this row used to report.
+      const options = { ...resolved.options, sessionKind: "default" as const };
+      if (row.state === "running") await get().attachSession(options);
+      else await get().start(options);
       // Remember what was launched, so the row survives the app and reads the same next time.
       await writeDefaultSession(row.connectionId, {
         workspacePath: row.workspacePath,
@@ -748,26 +801,127 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     await get().refreshLaunchers();
   },
 
+  async renameSession(name) {
+    const label = name.trim();
+    const { spec, connectionId, client, lastStart } = get();
+    if (!spec || !connectionId) throw new Error(t("There is no session to rename"));
+    // pi is told FIRST, because it can refuse: recording a name the conversation does not carry would be a lie the
+    // launcher would then repeat. An empty name is never offered to it — its own answer to one is to ask for a name —
+    // so clearing goes only to the app's record, which is what gives the connection its offered default back.
+    if (label && client) {
+      const result = await get().runPiCommand("name", label);
+      if (!result.ok) throw new Error(result.error);
+      set({ sessionName: readSessionNameAnswer(result.data) ?? label });
+    } else {
+      set({ sessionName: undefined });
+    }
+    const settings = useAppStore.getState().userSettings.ai;
+    // What this connection's session was configured with, or what the RUNNING one is actually made of when nothing was
+    // configured — a session started from the form has no record yet, and naming it is how it gets one.
+    const configured = settings?.defaultSessions?.[connectionId];
+    const { name: _previous, ...base } = configured ?? {
+      workspacePath: spec.workspacePath,
+      ...(lastStart?.providerId ? { providerId: lastStart.providerId } : {}),
+      ...(spec.modelId ? { modelId: spec.modelId } : {}),
+      egress: spec.egress ?? true,
+    };
+    await writeDefaultSession(connectionId, { ...base, ...(label ? { name: label } : {}) });
+  },
+
+  async listWorkspaceSessions() {
+    const result = await get().runPiCommand("resume", "");
+    if (!result.ok) throw new Error(result.error);
+    const answer = readSessionTreeAnswer(result.data);
+    const sessions = answer?.kind === "sessions" ? answer.sessions : [];
+    // Asking is also how the app learns what pi calls the conversation it is on: nothing announces that on its own.
+    const current = currentWorkspaceSessionName(sessions);
+    if (current) set({ sessionName: current });
+    return sessions;
+  },
+
+  async resumeWorkspaceSession(session) {
+    const result = await get().runPiCommand("resume", session.path);
+    if (!result.ok) throw new Error(result.error);
+    // `session_replaced` has just cleared what the app knew about the name, and the conversation that arrived carries
+    // its own — which the row the user picked already told us.
+    set({ sessionName: session.name?.trim() || undefined });
+  },
+
+  // Adopt the pair that is already running. Everything `start` does before the socket — rotating a credential,
+  // loading the model into a local server, writing the env files — belongs to CREATING a session, and this pair was
+  // created with all of it. What remains is to dial it, with the port and the token read off the engine.
+  //
+  // A connection is one pi session, so this lands in a fresh conversation on the same containers, plugins and folder.
+  // The ones this workspace already has are in the header's session list, one click away — deliberately not resumed
+  // for the user, because a second window on the same pair would then be driving the same session file as the first.
+  async attachSession(options) {
+    set(freshSessionState(options));
+    if (isMockMode() && import.meta.env.ENVIRONMENT !== "production") {
+      await get().start(options);
+      return;
+    }
+    const host = await resolveConnectionHost(options.connectionId);
+    if (!host) {
+      set({ status: "error", error: `no engine host for connection ${options.connectionId}` });
+      return;
+    }
+    const names = defaultSessionNamesFor(options.connectionId);
+    const attached = await attachPiAgentSession(host, names.agentContainerName, options.scope);
+    if (!attached) {
+      set({
+        status: "error",
+        error: t(
+          "This session's containers are running, but the app cannot reach them. Stop the session to rebuild it.",
+        ),
+      });
+      return;
+    }
+    // The pair's OWN facts win where it has them — the model it is running, the socket it publishes — and the rest is
+    // what this connection's session was configured with.
+    const spec: PiAgentSessionSpec = {
+      ...names,
+      imageTag: agentImageTag(options.appVersion),
+      workspacePath: options.workspacePath,
+      hostPort: attached.hostPort,
+      bridgeToken: attached.bridgeToken,
+      pluginVolumeName: ASSISTANT_PLUGIN_VOLUME,
+      connectionId: options.connectionId,
+      sessionKind: "default",
+      upstreamBaseUrl: options.upstreamBaseUrl,
+      providerKind: options.providerKind ?? "openai-compatible",
+      upstreamAuth: options.upstreamAuth ?? { scheme: "bearer" },
+      modelId: attached.modelId ?? options.modelId,
+      egress: options.egress ?? true,
+      ...(options.executionTarget ? { executionTarget: options.executionTarget } : {}),
+      scope: options.scope,
+      hostAlias: host.PROGRAM === "podman" ? "host.containers.internal" : "host.docker.internal",
+      userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
+    };
+    try {
+      set((state) => ({ startLog: [...state.startLog, `attaching to ${spec.agentContainerName}`] }));
+      const client = createPiBridgeClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
+      client.onEvent((event) => get().applyBridgeEvent(event));
+      // Published before the socket is dialled, for the same reason `start` does it: the session announces itself
+      // DURING connect, and every handler for that reads the client back out of here.
+      set({ client, spec, connectionId: options.connectionId, sessionModel: spec.modelId });
+      await client.connect();
+      await get().publishTheme();
+      await get().publishSystemContext();
+    } catch (error) {
+      logger.error("attaching to the running assistant session failed", error);
+      set((state) => ({
+        status: "error",
+        error: (error as Error).message,
+        startLog: [...state.startLog, (error as Error).message],
+        spec,
+        connectionId: options.connectionId,
+        client: undefined,
+      }));
+    }
+  },
+
   async start(options) {
-    set({
-      status: "starting",
-      startLog: [],
-      view: emptyPiSessionView("pi-session"),
-      chrome: emptyCodingAgentChrome(),
-      surfaces: noSurfaces(),
-      resources: noContributedResources(),
-      pendingDialog: undefined,
-      pendingEngineOps: {},
-      activeSkill: undefined,
-      turnReadPublicWeb: false,
-      retrying: undefined,
-      systemContext: undefined,
-      error: undefined,
-      lastStart: options,
-      // The model asked for, until the container says what it is actually running. A chip left empty until the first
-      // report would read as "no model" during the wait.
-      sessionModel: options.modelId,
-    });
+    set(freshSessionState(options));
     const suffix = randomUUID().slice(0, 8);
     // Mock mode has no engine to run a container on, so the far end of the socket is scripted instead. Only
     // the transport is replaced: the renderer runs its production path over the same bridge events. The import
@@ -1028,6 +1182,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       retrying: undefined,
       systemContext: undefined,
       sessionModel: undefined,
+      sessionName: undefined,
     });
   },
 
@@ -1055,6 +1210,9 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         activeSkill: undefined,
         turnReadPublicWeb: false,
         retrying: undefined,
+        // The conversation on screen is not the one that was named, so whatever the app knew about the name is stale.
+        // A resume puts the picked row's name back; a fresh one has none until the user gives it one.
+        sessionName: undefined,
         // A resumed or imported conversation can name a different model, and pi says which in the same frame.
         ...(modelIdOf(event.model) ? { sessionModel: modelIdOf(event.model) } : {}),
       });

@@ -92,6 +92,14 @@ export function readSessionTreeAnswer(data: unknown): PiSessionPointsAnswer | un
   return undefined;
 }
 
+// What `/name` answered: the name pi actually gave the session, which is what the header should show. Read back
+// rather than assumed, because the label the user typed and the one pi stored are not the same claim.
+export function readSessionNameAnswer(data: unknown): string | undefined {
+  if (typeof data !== "object" || data === null) return undefined;
+  const name = (data as Record<string, unknown>).name;
+  return typeof name === "string" && name.trim() ? name.trim() : undefined;
+}
+
 // What a bare `/settings` answered. Every field is checked because a drawer that renders half of pi's settings is
 // worse than one that says it could not read them.
 export function readSessionSettingsAnswer(data: unknown): PiSessionSettings | undefined {

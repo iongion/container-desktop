@@ -41,15 +41,9 @@
   background: var(--app-intent-success-rest);
 }
 
-.AssistantScreen .AssistantSessionContainer {
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* Compactness comes from Blueprint's own `compact` prop, never from overriding the padding: the callout's icon is
+   absolutely positioned against that padding, so a hand-set one puts the icon on top of the first line. */
 .AssistantScreen .AssistantSessionError {
-  padding: 6px 8px;
   border: 1px solid var(--app-intent-danger-rest);
   border-radius: 3px;
   color: var(--app-intent-danger-text);

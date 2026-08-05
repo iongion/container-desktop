@@ -105,6 +105,7 @@ export const AssistantLauncher: React.FC<AssistantLauncherProps> = ({
               </span>
             </span>
             <Button
+              size="small"
               intent={row.action === "resume" ? Intent.NONE : Intent.PRIMARY}
               variant={row.action === "resume" ? "outlined" : "solid"}
               text={actionLabel(row, t)}
@@ -112,6 +113,7 @@ export const AssistantLauncher: React.FC<AssistantLauncherProps> = ({
               onClick={() => onLaunch(row)}
             />
             <Button
+              size="small"
               icon={IconNames.COG}
               variant="minimal"
               title={t("Configure")}

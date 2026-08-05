@@ -128,6 +128,10 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
 `useCodingAgentStore.start()` (`web-app/stores/codingAgent.ts`) drives `startPiAgentSession`
 (`adapters/piAgentContainer.ts`) against the connection's `HostClientFacade`:
 
+0. free the two names this spec is about to ask for. The reusable session's names are deterministic, so a pair the
+   user stopped — or half a pair a crash left — still holds them, and `run` answers a name in use with a conflict;
+   removing them IS "rebuilt under the same names", and it costs nothing because the conversation lives in the plugin
+   volume. A pair still RUNNING is refused instead: continuing that one is `attachPiAgentSession`;
 1. create a session-scoped network (`cd-agent-net-<id>`; a pre-existing one is not an error);
 2. write the **gateway** env file — upstream base URL, **the provider key**, the bridge token — and run
    `<image> --mode gateway` on that network. The renderer never handles that key: it composes the file with
@@ -137,6 +141,13 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
    `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, and the plugin volume;
 4. connect the WebSocket client and publish the app's theme palette **before** the first plugin frame, so no
    component paints in pi's colours and then flashes to the app's.
+
+**Continuing one that is already up** is `attachSession()` → `attachPiAgentSession`, and it creates nothing: one
+`inspect` of the agent container yields the published bridge port and, from its env, the token that authorises the
+socket — everything `start` would have written is already in that container. A connection is one pi session, so this
+lands in a fresh conversation on the same pair, plugins and folder; the ones the workspace already has are in the
+header's session list rather than resumed for the user, because a second window doing that would drive the same
+session file as the first.
 
 Env files are written privately under `~/.local/share/container-desktop/agent/`, never passed in argv.
 A **scoped** engine (WSL, Lima, a podman machine) runs every command through the scope wrapper, and the
@@ -598,10 +609,18 @@ context, diagnostics, skills, project context, workspace changes, branch, compac
 component backs the summonable **quake console** (`AssistantConsole/`, portaled to `<body>`, mod+backtick),
 so work is continuous across surfaces.
 
-There is exactly ONE conversation surface. `AssistantScreen` adds only what a full page can carry — the
-session summary in the header (connection, workspace, container) and the start/stop actions; everything else,
-including the no-session empty state and its Start CTA, lives in `AssistantSession` so the console offers it
-too. A session-less surface renders no composer at all: `submit` has no bridge client to reach.
+There is exactly ONE conversation surface. `AssistantScreen` adds only what a full page can carry — the connection,
+the session control (`AssistantSessionPicker`) and the start/stop actions; everything else, including the no-session
+empty state and its Start CTA, lives in `AssistantSession` so the console offers it too. A session-less surface
+renders no composer at all: `submit` has no bridge client to reach.
+
+**The session control is the header's one control for the session's identity.** The name renames — pi's own `/name`
+AND `ai.defaultSessions[<connection>].name`, so the conversation carries it and the launcher row reads the same — and
+the caret lists what a bare `/resume` answered, one row per conversation in the mounted folder, plus a new one and the
+pair's container id. What it displaces went where a header row has room: **Workspace** and **VS Code** into the "…"
+overflow beside Stop session, the container id into the list's footer. The displayed name is pi's when the app has
+been told it (a rename, the listing, a resumed row) and the connection's configured one otherwise — the name belongs
+to the session, and a fresh conversation inside it inherits that.
 
 **A turn that produced nothing still says so.** `piSessionView` projects an `assistant_end` carrying no text into a
 `notice` timeline item, branching on pi's own stop reason: `stop` becomes `empty-answer` — a small model does exactly
@@ -722,7 +741,7 @@ then failed from inside a store.
 | `ai-system/host/{skillHost,projectContextHost,modelDiscoveryHost,diagnosticsHost}.ts` | the live sub-hosts |
 | `web-app/stores/{codingAgent,codingAgentSurfaces,pluginStore}.ts` | the session, its ANSI surfaces, the plugin table |
 | `web-app/stores/{useAIStore,codingAgentSystemContext}.ts` | pi session → the Assistant UI's state; the project prose the session is given |
-| `web-app/screens/AI/{AssistantScreen,AssistantActionsMenu,ScreenHeader,StartSessionDrawer}.tsx`, `Navigation.ts` | the surface, its actions, the start drawer and the tab bar |
+| `web-app/screens/AI/{AssistantScreen,AssistantActionsMenu,AssistantSessionPicker,ScreenHeader,StartSessionDrawer}.tsx`, `workspaceSessions.ts`, `Navigation.ts` | the surface, its actions, the session control, the start drawer and the tab bar |
 | `web-app/screens/AI/Plugins/` | the Plugins sub-screen |
 | `web-app/components/ai/` | transcript, composer chrome, dialogs, ANSI surfaces, drawers, the card registry |
 | `web-app/themes/appPiTheme.ts` | `--app-*` tokens → the palette the container derives a pi theme from |

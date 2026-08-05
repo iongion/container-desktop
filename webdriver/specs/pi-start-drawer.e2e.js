@@ -46,8 +46,10 @@ describe("assistant session start", () => {
     });
 
     idle = await browser.execute(() => ({
-      nonIdeal: document.querySelector(".bp6-non-ideal-state-visual") !== null,
-      title: document.querySelector(".bp6-non-ideal-state .bp6-heading")?.textContent ?? "",
+      // The empty state IS the launcher now — a row per engine. What this spec still owns is the header's Start CTA
+      // and the form behind it; the launcher's own behaviour is assistant-launcher.e2e.js.
+      launcher: document.querySelector(".AssistantLauncher") !== null,
+      launcherRows: document.querySelectorAll(".AssistantLauncherRow").length,
       ctas: Array.from(document.querySelectorAll(".ResourceListActionButton")).map((button) => button.textContent ?? ""),
       // Nothing to stop when nothing runs, so the "…" utility menu must be absent.
       utility: document.querySelectorAll('.ResourceListUtilityActions svg[data-icon="more"]').length,
@@ -144,12 +146,12 @@ describe("assistant session start", () => {
     await browser.pause(300);
     ready = await browser.execute(() => ({
       drawer: document.querySelector(".AppStartAgentSessionDrawer") !== null,
-      // The workspace is a BUTTON that opens the folder, not a path label — the path is only its tooltip.
-      workspaceLabel: document.querySelector(".AssistantSessionWorkspace")?.textContent ?? "",
-      workspaceTitle: document.querySelector(".AssistantSessionWorkspace")?.getAttribute("title") ?? "",
+      // What the header carries once a session is up: the session control. The workspace and the editor moved into
+      // the "…" overflow and the container id into that control's own list — assistant-session-control.e2e.js owns
+      // all three.
+      picker: document.querySelector(".AssistantSessionPicker") !== null,
       // The model is deliberately NOT repeated here; the composer footer names it.
       model: document.querySelector(".AssistantSessionModel") !== null,
-      container: document.querySelector(".AssistantSessionContainer")?.textContent ?? "",
       dot: document.querySelector(".AssistantSessionDot") !== null,
       ctas: Array.from(document.querySelectorAll(".ResourceListActionButton")).map((button) => button.textContent ?? ""),
       utility: document.querySelectorAll('.ResourceListUtilityActions svg[data-icon="more"]').length,
@@ -163,8 +165,8 @@ describe("assistant session start", () => {
   });
 
   it("offers an empty state and a Start CTA when no session is running", () => {
-    assert.ok(idle.nonIdeal, "the empty state must be shown");
-    assert.equal(idle.title, "No assistant session");
+    assert.ok(idle.launcher, "the empty state must be shown");
+    assert.ok(idle.launcherRows > 0, "the empty state must offer something to start");
     assert.ok(
       idle.ctas.some((text) => text.includes("Start session")),
       `the Start CTA must be in the header, got ${JSON.stringify(idle.ctas)}`,
@@ -228,10 +230,8 @@ describe("assistant session start", () => {
     assert.equal(ready.drawer, false, "a ready session closes the form");
     assert.equal(ready.emptyState, false, "the empty state gives way to the transcript");
     assert.ok(ready.dot, "the summary shows the session is up");
-    assert.ok(ready.workspaceLabel.length > 0, "the workspace is offered as a button, not a raw path");
-    assert.equal(ready.workspaceTitle, WORKSPACE, "the full path stays available as the button's tooltip");
+    assert.ok(ready.picker, "the header carries the session control once there is a session");
     assert.equal(ready.model, false, "the model is named by the composer, not repeated in the summary");
-    assert.equal(ready.container, "cd-agent-spec01");
     assert.ok(ready.composer, "a ready session has a composer");
     assert.equal(
       ready.ctas.some((text) => text.includes("Start session")),

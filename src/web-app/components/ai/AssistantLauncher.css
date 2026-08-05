@@ -30,9 +30,9 @@
 
 .AssistantLauncherRow {
   display: flex;
-  gap: 11px;
+  gap: 8px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 10px;
   color: var(--app-text);
   background: var(--app-bg);
   border: 1px solid var(--app-border);
@@ -68,6 +68,17 @@
   flex-direction: column;
   gap: 3px;
   min-width: 0;
+}
+
+/* The verb is the whole point of the row, so it never gives up width. A Blueprint button shrinks by default, and a
+   long workspace path took the row past its width and squeezed "Continue" into a clipped smear — what yields is the
+   path, which ellipsizes, and never the action. */
+.AssistantLauncherRow .bp6-button {
+  flex: 0 0 auto;
+}
+
+.AssistantLauncherRow .bp6-button-text {
+  white-space: nowrap;
 }
 
 .AssistantLauncherTitle {

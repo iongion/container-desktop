@@ -252,6 +252,68 @@ export async function findDefaultSession(
   return defaultSessionFrom(connectionId, listingRows(listing));
 }
 
+// What a pair that is ALREADY RUNNING can be dialled with. Read off the engine rather than remembered: the app may
+// have been closed since the session started, and nothing about it was persisted.
+export interface AttachedPiAgentSession {
+  hostPort: number;
+  bridgeToken: string;
+  // The model the pair was started with, as its own environment records it. The session says what it is actually
+  // answering with when it announces itself; this is what fills the spec until then.
+  modelId?: string;
+}
+
+// One inspection asked for as JSON, so the two things that matter arrive in one call and neither is scraped out of a
+// tab-separated line: the port the bridge is published on, and the token that authorises it.
+const ATTACH_FORMAT = '{"ports":{{json .NetworkSettings.Ports}},"env":{{json .Config.Env}}}';
+
+interface InspectedAgent {
+  ports?: Record<string, { HostPort?: string }[] | null> | null;
+  env?: string[] | null;
+}
+
+// An env line is `KEY=VALUE`, and a VALUE may contain the separator — a token is opaque. Splitting on the FIRST one is
+// what keeps it whole.
+function envOf(lines: readonly string[]): Map<string, string> {
+  const values = new Map<string, string>();
+  for (const line of lines) {
+    const separator = line.indexOf("=");
+    if (separator > 0) values.set(line.slice(0, separator), line.slice(separator + 1));
+  }
+  return values;
+}
+
+// Pure, so the parsing is settled by fixtures rather than by a live container. Anything missing means there is nothing
+// to adopt: without the published port there is no socket to dial, and without the token it would refuse us.
+export function attachedPiAgentSessionFrom(payload: string): AttachedPiAgentSession | undefined {
+  let inspected: InspectedAgent;
+  try {
+    inspected = JSON.parse(payload) as InspectedAgent;
+  } catch {
+    return undefined;
+  }
+  const hostPort = Number(inspected?.ports?.[`${BRIDGE_PORT_IN_IMAGE}/tcp`]?.[0]?.HostPort);
+  const env = envOf(inspected?.env ?? []);
+  const bridgeToken = env.get("CD_BRIDGE_TOKEN");
+  if (!bridgeToken || !Number.isInteger(hostPort) || hostPort <= 0) return undefined;
+  const modelId = env.get("CD_MODEL_ID");
+  return { hostPort, bridgeToken, ...(modelId ? { modelId } : {}) };
+}
+
+// Adopt the pair that is already up. `run` would refuse — the names are taken — and taking them back would mean
+// removing the user's containers, which this app promises never to do. So continuing dials what is there instead.
+// Absent means nothing to adopt: the pair may have gone between the listing and the click, which is an answer.
+export async function attachPiAgentSession(
+  host: HostClientFacade,
+  agentContainerName: string,
+  scope?: string,
+): Promise<AttachedPiAgentSession | undefined> {
+  const output = await run(host, ["inspect", agentContainerName, "--format", ATTACH_FORMAT], scope).catch((error) => {
+    logger.debug(`inspecting ${agentContainerName} to attach failed`, error);
+    return "";
+  });
+  return attachedPiAgentSessionFrom(output);
+}
+
 // Attached after the gateway is running, so it keeps the internal network as its first: the agent addresses the
 // gateway by container name, which only resolves on the network they share.
 export function egressAttachArgv(spec: PiAgentSessionSpec): string[] {
@@ -312,6 +374,28 @@ async function run(host: HostClientFacade, args: string[], scope?: string): Prom
   return (result.stdout ?? "").trim();
 }
 
+// Free the two names this spec is about to ask the engine for. A reusable session's names are deterministic, so a pair
+// the user stopped — or half a pair a crash left behind — still holds them, and `run` answers a name in use with a
+// conflict rather than reusing it. Removing them is exactly what "rebuilt under the same names" means, and it costs
+// nothing: the conversation lives in the plugin volume, not in these containers.
+//
+// A pair that is still RUNNING is never touched. Continuing that one is `attachPiAgentSession`, and removing it here
+// would be taking the user's live session away to make room for a new one.
+async function freeSessionNames(host: HostClientFacade, spec: PiAgentSessionSpec): Promise<void> {
+  for (const name of [spec.gatewayContainerName, spec.agentContainerName]) {
+    // A name nothing holds makes the engine fail this, which is the answer: there is nothing to free.
+    const state = await run(host, ["inspect", name, "--format", "{{.State.Running}}"], spec.scope).catch(() => "");
+    if (!state.trim()) continue;
+    if (state.trim() === "true") {
+      throw new Error(`${name} is already running — continue that session instead of starting another`);
+    }
+    await run(host, ["rm", "--force", name], spec.scope).catch((error) => {
+      logger.debug(`freeing the name ${name} failed`, error);
+      return "";
+    });
+  }
+}
+
 export async function startPiAgentSession(
   host: HostClientFacade,
   spec: PiAgentSessionSpec,
@@ -320,6 +404,7 @@ export async function startPiAgentSession(
   // env file. When it has, that file is used as-is — composing a second one here would carry an empty key.
   options?: { gatewayEnvFile?: () => Promise<string> },
 ): Promise<PiAgentSessionContainers> {
+  await freeSessionNames(host, spec);
   const guestWorkspacePath = spec.scope
     ? await host.resolveGuestPath(spec.workspacePath, spec.scope)
     : spec.workspacePath;
