@@ -8,7 +8,7 @@
 // real one, which is why `loginCredentialVerdict` is left to judge the credential rather than being told the answer.
 
 import type { PiLoginClient, PiLoginEvent } from "@/ai-system/adapters/piLoginClient";
-import type { PiAuthLoginOutcome } from "@/pi-bridge/protocol";
+import type { PiAuthLoginOutcome, PiAuthRefreshOutcome } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 
 const AUTHORIZE_URL = "https://openrouter.ai/auth?callback_url=http%3A%2F%2F127.0.0.1%3A41999%2Foauth%2Fcallback";
@@ -70,6 +70,12 @@ export function createMockPiLoginClient(): PiLoginClient {
           },
         });
       });
+    },
+
+    // The real container reads the credential out of its own env and rotates only what needs it. Mock mode's sign-in
+    // returns a permanent key, so `unchanged` is the honest answer — the same one the real container gives for a key.
+    async refresh(): Promise<PiAuthRefreshOutcome> {
+      return { ok: true, unchanged: true };
     },
 
     answerPrompt(id, ok, value) {

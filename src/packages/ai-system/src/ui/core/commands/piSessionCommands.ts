@@ -26,7 +26,7 @@ function literal(value: string): AssistantCommandText {
 function availability(venue: AssistantPiCommandVenue) {
   return venue === "unavailable"
     ? ({ availabilityId: "always", bypassTier: "immediate-ui" } as const)
-    : ({ availabilityId: "thread-idle", bypassTier: "queued" } as const);
+    : ({ availabilityId: "session-idle", bypassTier: "queued" } as const);
 }
 
 export function piBuiltinCommandDefinitions(
@@ -89,7 +89,7 @@ export function piPluginCommandDefinitions(resources: ContributedResources): Ass
           description: literal(resource.description ?? pluginId),
           hiddenSearchTerms: [resource.name, pluginId, group.kind],
           source: { kind: "pi-plugin" as const, pluginId },
-          availabilityId: "thread-idle" as const,
+          availabilityId: "session-idle" as const,
           bypassTier: "queued" as const,
           confirmation: "none" as const,
           arguments: { kind: "text" as const, required: false },

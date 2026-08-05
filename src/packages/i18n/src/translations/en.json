@@ -1630,7 +1630,7 @@
   "Start an assistant session": "Start an assistant session",
   "Stop session": "Stop session",
   "Stop this session? Its containers are removed.": "Stop this session? Its containers are removed.",
-  "Start or select a Thread first": "Start or select a Thread first",
+  "Start or select a Session first": "Start or select a Session first",
   "{{count}} skills loaded": "{{count}} skills loaded",
   "There is no Assistant response to copy": "There is no Assistant response to copy",
   "Clipboard access is unavailable": "Clipboard access is unavailable",

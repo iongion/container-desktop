@@ -82,12 +82,12 @@ describe("assembleHostRuntimeFromGlobals", () => {
     const { dialogs } = assembleHostRuntimeFromGlobals(w as any);
 
     await dialogs.openFileSelector({ directory: true } as any);
-    await dialogs.saveFileSelector({ defaultPath: "thread.json" });
+    await dialogs.saveFileSelector({ defaultPath: "session.json" });
     await dialogs.openTerminal({ command: "sh" } as any);
 
     expect(invoked).toEqual([
       { channel: "openFileSelector", args: [{ directory: true }] },
-      { channel: "saveFileSelector", args: [{ defaultPath: "thread.json" }] },
+      { channel: "saveFileSelector", args: [{ defaultPath: "session.json" }] },
       { channel: "openTerminal", args: [{ command: "sh" }] },
     ]);
   });

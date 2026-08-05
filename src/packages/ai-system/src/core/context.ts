@@ -58,7 +58,7 @@ export interface EffectiveContextSnapshot {
   truncation: { applied: boolean; omittedMessages: number };
 }
 
-export interface ThreadUsageSnapshot {
+export interface SessionUsageSnapshot {
   requests: number;
   inputTokens: number;
   outputTokens: number;

@@ -1630,7 +1630,7 @@
   "Start an assistant session": "启动助手会话",
   "Stop session": "停止会话",
   "Stop this session? Its containers are removed.": "停止此会话？其容器将被移除。",
-  "Start or select a Thread first": "请先开始或选择一个会话线程",
+  "Start or select a Session first": "请先开始或选择一个会话线程",
   "{{count}} skills loaded": "已加载 {{count}} 个技能",
   "There is no Assistant response to copy": "没有可复制的助手回复",
   "Clipboard access is unavailable": "无法访问剪贴板",

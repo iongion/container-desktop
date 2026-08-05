@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toEffectiveContext, toThreadUsage, undersizedWindow } from "@/ai-system/core/piContextReport";
+import { toEffectiveContext, toSessionUsage, undersizedWindow } from "@/ai-system/core/piContextReport";
 import type { SessionContextReport } from "@/pi-bridge/protocol";
 
 const report = (patch: Partial<SessionContextReport> = {}): SessionContextReport => ({
@@ -23,9 +23,9 @@ const report = (patch: Partial<SessionContextReport> = {}): SessionContextReport
 
 const facts = { providerId: "lmstudio", permissionMode: "ask" as const };
 
-describe("toThreadUsage", () => {
+describe("toSessionUsage", () => {
   it("carries the session's totals through", () => {
-    expect(toThreadUsage({ requests: 3, inputTokens: 1200, outputTokens: 340, costUsd: 0.5 })).toEqual({
+    expect(toSessionUsage({ requests: 3, inputTokens: 1200, outputTokens: 340, costUsd: 0.5 })).toEqual({
       requests: 3,
       inputTokens: 1200,
       outputTokens: 340,
@@ -36,7 +36,7 @@ describe("toThreadUsage", () => {
   // A local model costs nothing to run and publishes no price. An empty list is what makes the panel say so
   // instead of printing a confident zero.
   it("offers no cost at all when nothing was priced", () => {
-    expect(toThreadUsage({ requests: 1, inputTokens: 10, outputTokens: 5, costUsd: 0 }).costs).toEqual([]);
+    expect(toSessionUsage({ requests: 1, inputTokens: 10, outputTokens: 5, costUsd: 0 }).costs).toEqual([]);
   });
 });
 

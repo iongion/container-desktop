@@ -8,8 +8,8 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { describeError } from "@/ai-system/core/errors";
+import type { SessionPhase } from "@/ai-system/core/sessionEvents";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
-import type { ThreadPhase } from "@/ai-system/core/threadEvents";
 import type { AISettings } from "@/ai-system/core/types";
 import {
   type AssistantCommandExecutionContext,
@@ -47,7 +47,7 @@ export type ParsedAssistantCommand = Extract<AssistantInputParseResult, { kind: 
 export interface AIComposerCommands {
   registry: AssistantCommandRegistry;
   context: AssistantCommandExecutionContext;
-  threadId: string | null;
+  sessionId: string | null;
   onExecute: (
     command: ParsedAssistantCommand,
   ) => AssistantCommandExecutionResult | Promise<AssistantCommandExecutionResult>;
@@ -56,10 +56,10 @@ export interface AIComposerCommands {
 export interface AIComposerProps {
   // Called with the (trimmed, non-empty) text and the chosen provider/model when the user sends.
   onSubmit: (text: string, ctx: AIComposerContext) => unknown | Promise<unknown>;
-  phase?: ThreadPhase;
+  phase?: SessionPhase;
   onStop?: () => Promise<void> | void;
   placeholder?: string;
-  // Optional left-aligned toolbar content, e.g. the Assistant's "New Thread" button.
+  // Optional left-aligned toolbar content, e.g. the Assistant's "New Session" button.
   leadingActions?: React.ReactNode;
   // Optional working indicator shown before the composer's status in the overlay strip.
   statusLeading?: React.ReactNode;
@@ -184,7 +184,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   useEffect(() => {
     const entry = queuedCommands[0];
     if (!commands || !entry || processingQueueRef.current) return;
-    const execution = revalidateQueuedAssistantCommand(entry, commands.registry, commands.context, commands.threadId);
+    const execution = revalidateQueuedAssistantCommand(entry, commands.registry, commands.context, commands.sessionId);
     if (execution.kind === "queue") return;
     if (execution.kind === "unavailable") {
       setSubmitError(t(execution.reasonKey));
@@ -255,7 +255,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
               queueCounterRef.current,
               parsed,
               commands!.registry,
-              commands!.threadId,
+              commands!.sessionId,
               Date.now(),
             ),
           );

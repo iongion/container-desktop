@@ -324,6 +324,13 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 // `modelId` is the model this session starts on — what the real container is given as CD_MODEL_ID. Without it the
 // chip would show a fixture id that is not in the provider's list at all.
+const gatewayCredentials: string[] = [];
+
+// What a mock session was handed mid-session, for a spec that has to prove a renewal reached the gateway.
+export function mockGatewayCredentials(): readonly string[] {
+  return gatewayCredentials;
+}
+
 export function createMockPiBridgeClient(options?: { modelId?: string }): PiBridgeClient {
   const listeners = new Set<(event: BridgeEvent) => void>();
   // A host request the store has not answered yet. The real session parks the tool on it, so the mock must
@@ -591,6 +598,11 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
     },
     async checkProvider() {
       return { reachable: true, status: 200, models: MOCK_MODELS.available.length };
+    },
+    // Recorded rather than performed: there is no gateway behind a mock session, and what a test wants to know is
+    // that the app pushed the renewed credential at all.
+    async setGatewayCredential(credential: string) {
+      gatewayCredentials.push(credential);
     },
     // Applied rather than acknowledged: a mock that kept its one fixture would leave the model chip and
     // `/scoped-models` looking exactly as inert as the session used to be. Like the real host, the set grows by use —

@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { Readable } from "node:stream";
 
 import { createLogger } from "@/logger";
+import { decodeProviderCredential, upstreamSecretOf } from "@/pi-bridge/providerCredential";
 
 const logger = createLogger("pi-agent-host.gateway");
 
@@ -80,27 +81,35 @@ export interface GatewayConfig {
 
 // The credential headers to sign the upstream request with, mirroring the app's own
 // providerTransport/authenticatedHeaders so one provider cannot mean two different things.
+//
+// The env value may be a plain key OR the app's stored credential envelope, because a sign-in that returns an
+// expiring pair has to keep all three of its fields. Only the ACCESS token ever signs a request; the refresh token
+// goes nowhere but the provider's token endpoint, from the one-shot auth container.
 export function upstreamCredentialHeaders(config: GatewayConfig): Record<string, string> {
   const scheme = config.authScheme ?? "bearer";
+  const secret = upstreamSecret(config);
   switch (scheme) {
     case "none":
       return {};
     case "basic":
       return {
-        authorization: `Basic ${Buffer.from(`${config.authUsername ?? ""}:${config.apiKey}`).toString("base64")}`,
+        authorization: `Basic ${Buffer.from(`${config.authUsername ?? ""}:${secret}`).toString("base64")}`,
       };
     case "header": {
       const name = (config.authHeaderName ?? "").trim().toLowerCase();
       if (!name || FORBIDDEN_CUSTOM_AUTH_HEADERS.has(name)) {
         throw new Error("gateway: invalid custom upstream auth header");
       }
-      return { [name]: config.apiKey };
+      return { [name]: secret };
     }
     default:
-      return config.upstreamKind === "anthropic"
-        ? { "x-api-key": config.apiKey }
-        : { authorization: `Bearer ${config.apiKey}` };
+      return config.upstreamKind === "anthropic" ? { "x-api-key": secret } : { authorization: `Bearer ${secret}` };
   }
+}
+
+function upstreamSecret(config: GatewayConfig): string {
+  const stored = decodeProviderCredential(config.apiKey);
+  return stored ? upstreamSecretOf(stored) : "";
 }
 
 // pi sends the bridge token as its provider credential, so it arrives in whichever header that client shape
@@ -130,7 +139,27 @@ export interface GatewayHandle {
   close(): Promise<void>;
 }
 
+// The one route this proxy answers itself: replace the credential it signs with. A session outlives an expiring
+// access token, and the app is the only party that can renew one — it exchanges the refresh token in a one-shot auth
+// container and pushes the result here, so a long session never has to be restarted to stay signed in. Authorized by
+// the same bridge token every other request carries, and the body is the credential ALONE — nothing else is settable.
+export const GATEWAY_CREDENTIAL_PATH = "/__cd/credential";
+
+async function readBody(request: {
+  on: (event: string, listener: (chunk?: unknown) => void) => void;
+}): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    request.on("data", (chunk) => chunks.push(Buffer.from(chunk as Uint8Array)));
+    request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    request.on("error", (error) => reject(error as Error));
+  });
+}
+
 export async function startGateway(config: GatewayConfig, port: number): Promise<GatewayHandle> {
+  // Mutable on purpose: `config` is captured by the request path, so replacing the field is what makes a rotation
+  // take effect on the very next turn without restarting the container.
+  const live: GatewayConfig = { ...config };
   const server = createServer(async (request, response) => {
     const headers = Object.fromEntries(
       Object.entries(request.headers).map(([key, value]) => [
@@ -138,15 +167,36 @@ export async function startGateway(config: GatewayConfig, port: number): Promise
         Array.isArray(value) ? value.join(",") : (value ?? ""),
       ]),
     );
-    if (!isAuthorized({ headers }, config)) {
+    if (!isAuthorized({ headers }, live)) {
       response.writeHead(401).end();
+      return;
+    }
+    if ((request.url ?? "").split("?")[0] === GATEWAY_CREDENTIAL_PATH) {
+      if (request.method !== "POST") {
+        response.writeHead(405).end();
+        return;
+      }
+      try {
+        const body = await readBody(request);
+        const credential = String((JSON.parse(body) as { credential?: unknown }).credential ?? "");
+        if (!credential) {
+          response.writeHead(400).end();
+          return;
+        }
+        live.apiKey = credential;
+        logger.info("gateway credential replaced");
+        response.writeHead(204).end();
+      } catch (error) {
+        logger.error("gateway credential replacement failed", error);
+        response.writeHead(400).end();
+      }
       return;
     }
     const hasBody = request.method !== "GET" && request.method !== "HEAD";
     try {
       // Inside the try: composing the request can itself fail on a misconfigured custom auth header, and an
       // uncaught throw here would take the whole gateway process down instead of failing one request.
-      const built = buildUpstreamRequest({ path: request.url ?? "/", headers }, config);
+      const built = buildUpstreamRequest({ path: request.url ?? "/", headers }, live);
       const upstream = await fetch(built.url, {
         method: request.method,
         headers: built.headers,

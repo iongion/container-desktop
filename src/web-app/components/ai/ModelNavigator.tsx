@@ -35,8 +35,8 @@ import {
 import { useTranslation } from "react-i18next";
 import type { ProviderCatalogEntry } from "@/ai-system/core/providers";
 import { getProviderEntry } from "@/ai-system/core/providers";
+import type { SubmitSessionRequest } from "@/ai-system/core/sessionEvents";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
-import type { SubmitThreadRequest } from "@/ai-system/core/threadEvents";
 import type { AISettings } from "@/ai-system/core/types";
 import { buildModelTree, type ModelLeaf, type SourceModelNotice } from "@/ai-system/ui/core/modelCatalog";
 import { formatModelFacts } from "@/ai-system/ui/core/modelFacts";
@@ -48,7 +48,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { ProviderSourceList } from "./ProviderSourceList";
 import { type ModelDiscovery, NO_KEY } from "./useModelDiscovery";
 
-export type ModelPickerValue = Required<Pick<SubmitThreadRequest, "providerId" | "model">>;
+export type ModelPickerValue = Required<Pick<SubmitSessionRequest, "providerId" | "model">>;
 
 export interface ModelNavigatorProps {
   value: ModelPickerValue;

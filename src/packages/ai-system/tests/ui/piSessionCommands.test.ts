@@ -118,7 +118,7 @@ describe("the registry", () => {
           hiddenSearchTerms: [],
           source: { kind: "user-skill" as const, fingerprint: "a".repeat(64) },
           bypassTier: "queued" as const,
-          availabilityId: "thread-idle" as const,
+          availabilityId: "session-idle" as const,
           confirmation: "none" as const,
           arguments: { kind: "text" as const, required: false },
           surfaces: ["assistant", "quake-console"] as const,

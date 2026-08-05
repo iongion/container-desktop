@@ -13,7 +13,7 @@ import type {
   EffectiveContextSnapshot,
   EffectiveContextSource,
   EffectiveToolView,
-  ThreadUsageSnapshot,
+  SessionUsageSnapshot,
 } from "./context";
 import type { AIPermissionMode } from "./permissions";
 import { isPiToolGated } from "./piApprovals";
@@ -28,7 +28,7 @@ function estimateTokens(characters: number): number {
   return Math.ceil(characters / CHARS_PER_TOKEN);
 }
 
-export function toThreadUsage(report: SessionUsageReport): ThreadUsageSnapshot {
+export function toSessionUsage(report: SessionUsageReport): SessionUsageSnapshot {
   return {
     requests: report.requests,
     inputTokens: report.inputTokens,

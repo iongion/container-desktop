@@ -62,7 +62,7 @@ describe("pi component surfaces", () => {
       window.__cdSurfaceTheme = [];
       window.__cdCodingAgentStore.setState({
         status: "ready",
-        view: { threadId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
+        view: { sessionId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
         chrome: { statuses: {}, widgets: {} },
         surfaces: {},
         pendingDialog: undefined,

@@ -1630,7 +1630,7 @@
   "Start an assistant session": "Assistenzsitzung starten",
   "Stop session": "Sitzung beenden",
   "Stop this session? Its containers are removed.": "Diese Sitzung beenden? Ihre Container werden entfernt.",
-  "Start or select a Thread first": "Zuerst einen Thread starten oder auswählen",
+  "Start or select a Session first": "Zuerst einen Session starten oder auswählen",
   "{{count}} skills loaded": "{{count}} Skills geladen",
   "There is no Assistant response to copy": "Es gibt keine Assistentenantwort zum Kopieren",
   "Clipboard access is unavailable": "Kein Zugriff auf die Zwischenablage",

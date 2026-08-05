@@ -54,7 +54,7 @@ function skillCommand(descriptor: SkillViewDescriptor): AssistantSkillCommandDef
     ...(descriptor.argumentHint ? { argumentHint: literal(descriptor.argumentHint) } : {}),
     source: commandSource(descriptor),
     bypassTier: "queued",
-    availabilityId: "thread-idle",
+    availabilityId: "session-idle",
     confirmation: "none",
     arguments: { kind: "text", required: false },
     surfaces: SURFACES,

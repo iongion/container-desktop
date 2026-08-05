@@ -1,6 +1,6 @@
 // The full-page Assistant surface — the ONE conversation the app has. The session runs in a container pair
 // (useCodingAgentStore) and the transcript, cards, empty state and composer all come from the shared
-// <AssistantThread>, which also backs the summonable quake console, so the same conversation looks and
+// <AssistantSession>, which also backs the summonable quake console, so the same conversation looks and
 // behaves the same wherever it is opened. This screen adds only what a full page can carry: the session
 // summary and the header's start/stop actions.
 import { Button, ButtonGroup, Callout, Intent } from "@blueprintjs/core";
@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { getHostRuntime } from "@/platform/provider";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { AssistantThread } from "@/web-app/components/ai/AssistantThread";
+import { AssistantSession } from "@/web-app/components/ai/AssistantSession";
 import { EngineCell } from "@/web-app/components/EngineCell";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -94,7 +94,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onReload = useCallback(() => void refreshResources(), [refreshResources]);
 
   // Focus the composer on mount so the user can type immediately (mirrors the console's focus-on-open). Only
-  // once a session exists — before that the thread shows its start affordance instead of an input.
+  // once a session exists — before that the session shows its start affordance instead of an input.
   useEffect(() => {
     if (!ready) return;
     const root = rootRef.current;
@@ -123,9 +123,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </Callout>
         ) : null}
         {/* Only the session SUMMARY is the screen's own, and it rides in the header; the conversation —
-            including what to show when there is no session yet — belongs to the shared thread, which the
+            including what to show when there is no session yet — belongs to the shared session, which the
             quake console renders too. */}
-        <AssistantThread composerPlaceholder={t("Message the assistant… (Enter to send, Shift+Enter for newline)")} />
+        <AssistantSession composerPlaceholder={t("Message the assistant… (Enter to send, Shift+Enter for newline)")} />
       </div>
     </div>
   );

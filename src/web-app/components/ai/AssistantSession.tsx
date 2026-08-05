@@ -1,6 +1,6 @@
-// The shared assistant thread: the ordered transcript (prose, command steps, results, approval cards,
+// The shared assistant session: the ordered transcript (prose, command steps, results, approval cards,
 // tool → generative-UI cards) plus the AIComposer. Rendered by BOTH the full-page AssistantScreen and the
-// summonable quake console, against the SAME useAIStore Thread, so a thread is continuous across
+// summonable quake console, against the SAME useAIStore Session, so a session is continuous across
 // surfaces. Layout-only: it fills its parent as a flex column; the surface (screen vs console body) owns the
 // outer chrome. Extracted from AssistantScreen so the two surfaces can never drift.
 import { Button, Callout, Icon, Intent, NonIdealState } from "@blueprintjs/core";
@@ -8,8 +8,8 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AIPermissionMode } from "@/ai-system/core/permissions";
+import { latestAssistantResponse } from "@/ai-system/core/sessionExport";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
-import { latestAssistantResponse } from "@/ai-system/core/threadExport";
 import type {
   AssistantCommandExecutionResult,
   AssistantCommandSurface,
@@ -43,8 +43,8 @@ import {
   usePiThemeSync,
 } from "@/web-app/components/ai/PluginSurfaces";
 import type { ProjectContextRequest } from "@/web-app/components/ai/ProjectContextPanel";
+import { SessionExportDrawer } from "@/web-app/components/ai/SessionExportDrawer";
 import { ThinkingStatus } from "@/web-app/components/ai/ThinkingStatus";
-import { ThreadExportDrawer } from "@/web-app/components/ai/ThreadExportDrawer";
 import { WorkspaceChangesDrawer, type WorkspaceChangesView } from "@/web-app/components/ai/WorkspaceChangesDrawer";
 import { useAssistantSkills } from "@/web-app/hooks/useAssistantSkills";
 import { Notification } from "@/web-app/Notification";
@@ -55,9 +55,9 @@ import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 import { useUIStore } from "@/web-app/stores/uiStore";
 import { useAIStore } from "@/web-app/stores/useAIStore";
 
-import "./AssistantThread.css";
+import "./AssistantSession.css";
 
-export interface AssistantThreadProps {
+export interface AssistantSessionProps {
   // Extra class on the flex-column root (e.g. the console passes one to scope tweaks).
   className?: string;
   composerPlaceholder?: string;
@@ -71,28 +71,28 @@ const PICKED_COMMAND: Record<AssistantSessionTreeView["kind"], string> = {
   sessions: "resume",
 };
 
-export const AssistantThread: React.FC<AssistantThreadProps> = ({
+export const AssistantSession: React.FC<AssistantSessionProps> = ({
   className,
   composerPlaceholder,
   surface = "assistant",
 }) => {
   const { t } = useTranslation();
 
-  const activeThreadId = useAIStore((s) => s.activeThreadId);
+  const activeSessionId = useAIStore((s) => s.activeSessionId);
   const lifecycle = useAIStore((s) => s.lifecycle);
-  const threads = useAIStore((s) => s.threads);
+  const sessions = useAIStore((s) => s.sessions);
   const views = useAIStore((s) => s.views);
   const recoveryErrors = useAIStore((s) => s.recoveryErrors);
   const submitMessage = useAIStore((s) => s.submitMessage);
-  const newThread = useAIStore((s) => s.newThread);
+  const newSession = useAIStore((s) => s.newSession);
   const resolveApproval = useAIStore((s) => s.resolveApproval);
   const cancel = useAIStore((s) => s.cancel);
-  // Extension chrome and dialogs are pi-session state with no place in the neutral ThreadView, and since the
+  // Extension chrome and dialogs are pi-session state with no place in the neutral SessionView, and since the
   // Assistant surface IS the pi session they are read from its store directly rather than widening AIState.
   const extensionChrome = useCodingAgentStore((s) => s.chrome);
   const pendingDialog = useCodingAgentStore((s) => s.pendingDialog);
   const respondToRequest = useCodingAgentStore((s) => s.respondToRequest);
-  // There is exactly ONE session behind every surface, so "is there anything to talk to?" is the thread's own
+  // There is exactly ONE session behind every surface, so "is there anything to talk to?" is the session's own
   // question. Without a session the composer would accept text and silently drop it (submit returns early with
   // no bridge client), so the surface offers a way to start one instead of a dead input.
   const sessionStatus = useCodingAgentStore((s) => s.status);
@@ -120,9 +120,9 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const screenId = useUIStore((s) => s.currentScreen.id);
   const suggestions = resolveScreenPrompt(screenId).suggestions;
 
-  const activeThread = threads.find((thread) => thread.id === activeThreadId);
-  const view = activeThreadId ? views[activeThreadId] : undefined;
-  const recoveryError = activeThreadId ? recoveryErrors[activeThreadId] : undefined;
+  const activeSession = sessions.find((session) => session.id === activeSessionId);
+  const view = activeSessionId ? views[activeSessionId] : undefined;
+  const recoveryError = activeSessionId ? recoveryErrors[activeSessionId] : undefined;
   const items = view?.timeline ?? [];
   const streamingContent = view?.streamingAssistant?.content ?? "";
   const phase = view?.phase ?? "idle";
@@ -322,7 +322,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         },
         // pi's `/new`: a pi session IS the conversation, so a fresh one means a fresh session on the same settings.
         "session.new": async () => {
-          await newThread();
+          await newSession();
         },
         // pi's `/quit`: it quits pi, which here means tearing down the container pair.
         "session.quit": async () => {
@@ -391,22 +391,22 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
       if (parsed.command.kind !== "control") throw new Error(t("Command is not available here"));
       return handlers[parsed.command.handlerId](parsed);
     },
-    [cancel, navigate, submitMessage, newThread, reloadSkills, t, view],
+    [cancel, navigate, submitMessage, newSession, reloadSkills, t, view],
   );
 
   const composerCommands = useMemo(
     () => ({
       registry: skillRegistry,
-      threadId: activeThreadId,
+      sessionId: activeSessionId,
       context: {
         surface,
         hostStatus: lifecycle === "hydrating" ? ("connecting" as const) : ("ready" as const),
-        hasThread: !!activeThreadId,
-        threadPhase: composerPhase,
+        hasSession: !!activeSessionId,
+        sessionPhase: composerPhase,
       },
       onExecute: executeCommand,
     }),
-    [activeThreadId, composerPhase, executeCommand, lifecycle, skillRegistry, surface],
+    [activeSessionId, composerPhase, executeCommand, lifecycle, skillRegistry, surface],
   );
 
   // Starter chips send straight to the running session, like any other submission.
@@ -431,8 +431,8 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
 
   const timelineContext: AssistantTimelineContext = {
     view,
-    activeThread,
-    activeThreadId: activeThreadId ?? undefined,
+    activeSession,
+    activeSessionId: activeSessionId ?? undefined,
     rememberApprovals: mode === "remember",
     onResolveApproval: resolveApproval,
     onOpenWorkspaceChanges: () => setWorkspaceChangesView("diff"),
@@ -441,14 +441,14 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const showJump = !atBottom && items.length > 0;
 
   return (
-    <div className={`AssistantThread${className ? ` ${className}` : ""}`}>
+    <div className={`AssistantSession${className ? ` ${className}` : ""}`}>
       <PluginChromeSurface slot="header" />
       <div className="AssistantScroll">
         <PluginFocusSurface variant="overlay" />
         <div className="AssistantTranscript" ref={scrollRef} onScroll={onScroll}>
           {recoveryError ? <Callout intent={Intent.DANGER}>{recoveryError}</Callout> : null}
           {noSession ? (
-            // Owned by the THREAD, not by the screen: the console renders this same component, so a session
+            // Owned by the SESSION, not by the screen: the console renders this same component, so a session
             // that can only be started from the screen leaves the console a dead box. Here both surfaces
             // offer the same way in.
             <div className="AssistantEmpty AssistantEmpty--noSession">
@@ -540,8 +540,8 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         </div>
       )}
       {startOpen ? <StartSessionDrawer onClose={() => setStartOpen(false)} /> : null}
-      {exportOpen && activeThread && view ? (
-        <ThreadExportDrawer thread={activeThread} view={view} onClose={() => setExportOpen(false)} />
+      {exportOpen && activeSession && view ? (
+        <SessionExportDrawer session={activeSession} view={view} onClose={() => setExportOpen(false)} />
       ) : null}
       {skillsOpen ? (
         <AssistantSkillsDrawer
@@ -563,7 +563,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         />
       ) : null}
       {diagnosticsOpen ? (
-        <AssistantDiagnosticsDrawer providerId={activeThread?.providerId} onClose={() => setDiagnosticsOpen(false)} />
+        <AssistantDiagnosticsDrawer providerId={activeSession?.providerId} onClose={() => setDiagnosticsOpen(false)} />
       ) : null}
       {workspaceChangesView ? (
         <WorkspaceChangesDrawer initialView={workspaceChangesView} onClose={() => setWorkspaceChangesView(undefined)} />

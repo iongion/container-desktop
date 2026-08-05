@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { ThreadView } from "@/ai-system/core/threadEvents";
+import type { SessionView } from "@/ai-system/core/sessionEvents";
 import {
-  createSanitizedThreadExport,
+  createSanitizedSessionExport,
   latestAssistantResponse,
-  threadExportFilename,
-  threadExportSchema,
-} from "@/ai-system/core/threadExport";
-import type { ThreadSummary } from "@/ai-system/core/threads";
+  sessionExportFilename,
+  sessionExportSchema,
+} from "@/ai-system/core/sessionExport";
+import type { SessionSummary } from "@/ai-system/core/sessions";
 
-const summary: ThreadSummary = {
-  id: "thread-secret-id",
+const summary: SessionSummary = {
+  id: "session-secret-id",
   title: "Production / audit",
   titleOrigin: "user",
   createdAt: 10,
@@ -20,8 +20,8 @@ const summary: ThreadSummary = {
   lastSeq: 3,
 };
 
-const view: ThreadView = {
-  threadId: summary.id,
+const view: SessionView = {
+  sessionId: summary.id,
   phase: "model",
   activeTaskId: "task-secret-id",
   lastSeq: 3,
@@ -57,15 +57,15 @@ const view: ThreadView = {
   streamingAssistant: { id: "assistant-secret-id", timelineIndex: 2, content: "Complete answer" },
 };
 
-describe("sanitized Thread export", () => {
+describe("sanitized Session export", () => {
   it("exports a versioned redacted projection without internal runtime IDs", () => {
-    const exported = createSanitizedThreadExport(summary, view, 30);
+    const exported = createSanitizedSessionExport(summary, view, 30);
 
-    expect(threadExportSchema.parse(exported)).toEqual(exported);
+    expect(sessionExportSchema.parse(exported)).toEqual(exported);
     expect(exported).toMatchObject({
       version: 1,
       exportedAt: 30,
-      thread: {
+      session: {
         title: "Production / audit",
         createdAt: 10,
         updatedAt: 20,
@@ -96,17 +96,17 @@ describe("sanitized Thread export", () => {
   // A turn that produced nothing is part of what happened. An export that dropped it would show a question with no
   // answer and no reason for either — the same defect the transcript notice exists to close, one layer out.
   it("carries a turn notice through the export", () => {
-    const withNotice: ThreadView = {
+    const withNotice: SessionView = {
       ...view,
       timeline: [...view.timeline, { kind: "notice", id: "notice-secret-id", notice: "empty-answer" }],
     };
-    const exported = createSanitizedThreadExport(summary, withNotice, 1000);
+    const exported = createSanitizedSessionExport(summary, withNotice, 1000);
     expect(exported.entries.at(-1)).toEqual({ kind: "notice", notice: "empty-answer" });
   });
 
   it("creates a bounded cross-platform JSON filename", () => {
-    expect(threadExportFilename(summary.title)).toBe("production-audit.json");
-    expect(threadExportFilename("***")).toBe("thread-export.json");
-    expect(threadExportFilename("x".repeat(200))).toHaveLength(69);
+    expect(sessionExportFilename(summary.title)).toBe("production-audit.json");
+    expect(sessionExportFilename("***")).toBe("session-export.json");
+    expect(sessionExportFilename("x".repeat(200))).toHaveLength(69);
   });
 });

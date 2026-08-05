@@ -1,0 +1,26 @@
+.ExecutionTargetOption {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ExecutionTargetOptionName {
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ExecutionTargetOptionMeta {
+  color: var(--app-text-muted);
+  font-family: var(--monospace-font);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ExecutionTargetEmpty {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}

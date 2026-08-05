@@ -120,7 +120,8 @@ export async function createAISystem<TEvent = unknown>(
   const engineOps = mocks ? mocks.engineOps : deps.engineOps;
   const workspaceChanges = deps.workspaceAccess
     ? createGitWorkspaceChanges({
-        target: { kind: "host" },
+        // The app reads the workspace folder itself, so the change set comes from the app — not from a target.
+        origin: { kind: "app" },
         workspace: deps.workspaceAccess,
         exec: caps.executeIsolated,
         baseEnv: caps.env,

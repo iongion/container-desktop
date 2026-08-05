@@ -14,7 +14,15 @@ import {
   attachBridgeChannel,
   type BridgeConnection,
 } from "@/pi-agent-host/bridgeChannel";
-import type { BridgeCommand, BridgeEvent, PiAuthEvent, PiAuthLoginOutcome, PiAuthPrompt } from "@/pi-bridge/protocol";
+import type {
+  BridgeCommand,
+  BridgeEvent,
+  PiAuthEvent,
+  PiAuthLoginOutcome,
+  PiAuthPrompt,
+  PiAuthRefreshOutcome,
+} from "@/pi-bridge/protocol";
+import { credentialNeedsRefresh, decodeProviderCredential } from "@/pi-bridge/providerCredential";
 import { randomUUID } from "@/utils/randomUUID";
 
 const logger = createLogger("pi-agent-host.authLogin");
@@ -31,9 +39,26 @@ export interface ProviderLoginRunner {
   // One login, start to finish. Answers with a value rather than throwing: "the user closed it" and "the provider
   // refused" are both outcomes the app renders, not faults.
   login(providerId: string): Promise<PiAuthLoginOutcome>;
+  // One refresh exchange for the credential this container was handed. No interaction — pi's `refresh` is a token
+  // call, and the user is not asked anything.
+  refresh(providerId: string): Promise<PiAuthRefreshOutcome>;
   answerPrompt(promptId: string, ok: boolean, value?: string): void;
   // Abandon the running login. pi's flows watch `interaction.signal` and tear their callback server down on it.
   cancel(): void;
+}
+
+// A spent refresh token has to be told apart from a network failure: one means sign in again, the other means try
+// again. OAuth 2.0 names it `invalid_grant`, and every flow pi carries surfaces the provider's own error text.
+function isInvalidGrant(error: unknown): boolean {
+  return /invalid[_\s-]?grant/i.test((error as Error)?.message ?? "");
+}
+
+// The env name the app writes the stored credential into for a refresh run. Named here because this is the only
+// reader; the writer is the app's own login-container env composer.
+export const STORED_CREDENTIAL_ENV = "CD_CREDENTIAL";
+
+function readStoredCredential(): string | undefined {
+  return process.env[STORED_CREDENTIAL_ENV];
 }
 
 function toProtocolPrompt(prompt: AuthPrompt): PiAuthPrompt {
@@ -136,6 +161,34 @@ export function createProviderLoginRunner(options: {
       }
     },
 
+    async refresh(providerId): Promise<PiAuthRefreshOutcome> {
+      // Read where the vault's owning realm put it. The app cannot pass it in: `getKey` refuses in the web view, so
+      // the credential reaches this container the same way the gateway's does — substituted into a private env file.
+      const stored = decodeProviderCredential(readStoredCredential());
+      if (!stored) return { ok: false, error: "no credential was handed to this container" };
+      if (stored.kind !== "oauth") return { ok: true, unchanged: true };
+      if (!credentialNeedsRefresh(stored, Date.now())) {
+        return { ok: true, unchanged: true, expiresAt: stored.credential.expires };
+      }
+      try {
+        const flow = oauthFlow(findProvider(providerId), providerId);
+        // pi's own exchange, handed pi's own credential shape. `type` is what pi's stored credential carries and
+        // what its refresh implementations read back out, so it travels here rather than being invented downstream.
+        const rotated = await flow.refresh({ type: "oauth", ...stored.credential });
+        return {
+          ok: true,
+          credential: { access: rotated.access, refresh: rotated.refresh, expires: rotated.expires },
+        };
+      } catch (error) {
+        logger.debug(`refreshing ${providerId} did not complete`, error);
+        return {
+          ok: false,
+          error: (error as Error).message || "the refresh did not complete",
+          ...(isInvalidGrant(error) ? { invalidGrant: true } : {}),
+        };
+      }
+    },
+
     answerPrompt(promptId, ok, value) {
       const waiting = pending.get(promptId);
       if (!waiting) return;
@@ -152,9 +205,9 @@ export function createProviderLoginRunner(options: {
   };
 }
 
-// The login container's whole conversation. No session on this socket — nothing is mounted, no model is registered
-// and no turn can be taken — so the only commands it answers are the three a login needs, and everything else is
-// refused by name rather than half-served.
+// The one-shot auth container's whole conversation. No session on this socket — nothing is mounted, no model is
+// registered and no turn can be taken — so the only commands it answers are a sign-in, its prompts, and the refresh
+// exchange that keeps one alive. Everything else is refused by name rather than half-served.
 export function attachLoginConnection(
   connection: BridgeConnection,
   options: { token: string; findProvider: (providerId: string) => LoginCapableProvider | undefined },
@@ -166,6 +219,8 @@ export function attachLoginConnection(
       switch (command.type) {
         case "auth_login":
           return runner?.login(command.provider);
+        case "auth_refresh":
+          return runner?.refresh(command.provider);
         case "auth_prompt_answer":
           runner?.answerPrompt(command.promptId, command.ok, command.value);
           return;

@@ -1,30 +1,30 @@
 import { describe, expect, it } from "vitest";
 
-import type { ThreadEvent, ThreadEventEnvelope, ThreadView } from "@/ai-system/core/threadEvents";
-import { emptyThreadView, reduceThreadEvent, replaceThreadSnapshot } from "@/ai-system/core/threadReducer";
+import type { SessionEvent, SessionEventEnvelope, SessionView } from "@/ai-system/core/sessionEvents";
+import { emptySessionView, reduceSessionEvent, replaceSessionSnapshot } from "@/ai-system/core/sessionReducer";
 
-const event = (seq: number, value: ThreadEvent): ThreadEventEnvelope => ({
+const event = (seq: number, value: SessionEvent): SessionEventEnvelope => ({
   version: 1,
-  threadId: "session-1",
+  sessionId: "session-1",
   taskId: "task-1",
   segmentId: "segment-1",
   seq,
   event: value,
 });
 
-function apply(view: ThreadView, seq: number, value: ThreadEvent): ThreadView {
-  const result = reduceThreadEvent(view, event(seq, value));
+function apply(view: SessionView, seq: number, value: SessionEvent): SessionView {
+  const result = reduceSessionEvent(view, event(seq, value));
   expect(result.needsSnapshot).toBe(false);
   return result.view;
 }
 
 describe("chat event reducer", () => {
   it("persists a target-bound workspace change summary in the timeline", () => {
-    let view = emptyThreadView("session-1");
+    let view = emptySessionView("session-1");
     view = apply(view, 1, {
       type: "workspace-changes",
       summary: {
-        target: { kind: "container", connectionId: "podman", containerId: "dev" },
+        origin: { kind: "container", connectionId: "podman", containerId: "dev" },
         workspaceRoot: "/workspace",
         beforeCount: 1,
         afterCount: 2,
@@ -40,7 +40,7 @@ describe("chat event reducer", () => {
       {
         kind: "workspace-changes",
         id: "session-1:1",
-        target: { kind: "container", connectionId: "podman", containerId: "dev" },
+        origin: { kind: "container", connectionId: "podman", containerId: "dev" },
         workspaceRoot: "/workspace",
         beforeCount: 1,
         afterCount: 2,
@@ -54,7 +54,7 @@ describe("chat event reducer", () => {
   });
 
   it("accumulates assistant deltas without scanning or cloning the timeline", () => {
-    let view = emptyThreadView("session-1");
+    let view = emptySessionView("session-1");
     view = apply(view, 1, { type: "user-message", id: "user-1", content: "hello", delivery: "applied" });
     view = apply(view, 2, { type: "assistant-start", id: "assistant-1" });
     const timelineAtStart = view.timeline;
@@ -74,7 +74,7 @@ describe("chat event reducer", () => {
   });
 
   it("projects user and assistant messages by stable id and settles an interrupted response", () => {
-    let view = emptyThreadView("session-1");
+    let view = emptySessionView("session-1");
     view = apply(view, 1, { type: "phase-changed", phase: "model" });
     view = apply(view, 2, { type: "user-message", id: "user-1", content: "diagnose it", delivery: "applied" });
     view = apply(view, 3, { type: "assistant-start", id: "assistant-1" });
@@ -114,7 +114,7 @@ describe("chat event reducer", () => {
   });
 
   it("correlates parallel calls and approvals by SDK ids instead of tool name", () => {
-    let view = emptyThreadView("session-1");
+    let view = emptySessionView("session-1");
     view = apply(view, 1, {
       type: "tool-start",
       toolCallId: "call-1",
@@ -154,7 +154,7 @@ describe("chat event reducer", () => {
   });
 
   it("projects tool errors, denials, task completion, stopping, and scoped errors", () => {
-    let view = emptyThreadView("session-1");
+    let view = emptySessionView("session-1");
     view = apply(view, 1, {
       type: "tool-start",
       toolCallId: "bad-call",
@@ -198,7 +198,7 @@ describe("chat event reducer", () => {
   });
 
   it("keeps the latest effective context and accumulates exact provider usage", () => {
-    let view = emptyThreadView("session-1");
+    let view = emptySessionView("session-1");
     const context = {
       providerId: "openrouter",
       model: "model-a",
@@ -238,7 +238,7 @@ describe("chat event reducer", () => {
   });
 
   it("appends a completed tool when native approval resumes directly with its result", () => {
-    let view = emptyThreadView("session-1");
+    let view = emptySessionView("session-1");
     view = apply(view, 1, {
       type: "tool-result",
       toolCallId: "approved-call",
@@ -260,34 +260,34 @@ describe("chat event reducer", () => {
   });
 
   it("ignores duplicates and requests a snapshot for a sequence gap", () => {
-    const initial = emptyThreadView("session-1");
-    const first = reduceThreadEvent(initial, event(1, { type: "phase-changed", phase: "model" }));
+    const initial = emptySessionView("session-1");
+    const first = reduceSessionEvent(initial, event(1, { type: "phase-changed", phase: "model" }));
     expect(first.needsSnapshot).toBe(false);
 
-    const duplicate = reduceThreadEvent(first.view, event(1, { type: "phase-changed", phase: "tool" }));
+    const duplicate = reduceSessionEvent(first.view, event(1, { type: "phase-changed", phase: "tool" }));
     expect(duplicate).toEqual({ view: first.view, needsSnapshot: false });
 
-    const gap = reduceThreadEvent(first.view, event(3, { type: "phase-changed", phase: "tool" }));
+    const gap = reduceSessionEvent(first.view, event(3, { type: "phase-changed", phase: "tool" }));
     expect(gap).toEqual({ view: first.view, needsSnapshot: true });
   });
 
   it("ignores another session and replaces state from a newer snapshot", () => {
-    const initial = emptyThreadView("session-1");
-    const foreign = reduceThreadEvent(initial, {
+    const initial = emptySessionView("session-1");
+    const foreign = reduceSessionEvent(initial, {
       ...event(1, { type: "phase-changed", phase: "model" }),
-      threadId: "session-2",
+      sessionId: "session-2",
     });
     expect(foreign).toEqual({ view: initial, needsSnapshot: false });
 
-    const snapshot: ThreadView = {
-      threadId: "session-1",
+    const snapshot: SessionView = {
+      sessionId: "session-1",
       phase: "tool",
       activeTaskId: "task-2",
       activeSegmentId: "segment-4",
       lastSeq: 9,
       timeline: [],
     };
-    expect(replaceThreadSnapshot(initial, snapshot)).toEqual(snapshot);
-    expect(replaceThreadSnapshot(snapshot, { ...snapshot, lastSeq: 8, phase: "idle" })).toBe(snapshot);
+    expect(replaceSessionSnapshot(initial, snapshot)).toEqual(snapshot);
+    expect(replaceSessionSnapshot(snapshot, { ...snapshot, lastSeq: 8, phase: "idle" })).toBe(snapshot);
   });
 });

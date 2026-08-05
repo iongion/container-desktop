@@ -12,16 +12,18 @@ export interface CodingAgentStartForm {
   providerId: string;
   model: string;
   egress: boolean;
-  // Where the session's workspace tools run. "off" is not a target: it withholds the toolset entirely, which is the
-  // default — the agent's own file tools already see the mounted workspace inside its container, and reaching
-  // anywhere else is a choice the user makes, never one this form makes for them.
+  // Which container the session's workspace tools run in. "off" is not a target: it withholds the toolset
+  // entirely, which is the default — the agent's own file tools already see the mounted workspace inside its own
+  // container, and entering another one is a choice the user makes, never one this form makes for them.
   executionKind: ExecutionTargetKind;
   // The container the tools run in, or the image a disposable one is created from. Which of the two it is follows
   // from `executionKind`; one field because exactly one of them is ever asked for.
   executionRef: string;
 }
 
-export type ExecutionTargetKind = "off" | "host" | "remote" | "container" | "sandbox";
+// A target is a CONTAINER — the connection above is how it is reached, not a target of its own. Connections are
+// this app's core principle: local, remote over SSH, WSL or a machine VM, all reached the same way.
+export type ExecutionTargetKind = "off" | "container" | "sandbox";
 
 export type CodingAgentStartProblem =
   | "no-connection"
@@ -45,16 +47,13 @@ export interface ResolvedCodingAgentStart {
   options?: StartCodingAgentOptions;
 }
 
-// The form's own words turned into the target vocabulary `ExecutionTarget` already owns. `remote`, `container` and
-// `sandbox` all act through the connection the session was started on — that is the transport the app holds.
+// The form's own words turned into the target vocabulary `ExecutionTarget` already owns. Both targets act through
+// the connection the session was started on — that is the transport the app holds, and the only way a container is
+// reached whether the engine is on this machine, in a VM or across SSH.
 function executionTargetFor(form: CodingAgentStartForm, executionRef: string): ExecutionTarget | undefined {
   switch (form.executionKind) {
     case "off":
       return undefined;
-    case "host":
-      return { kind: "host" };
-    case "remote":
-      return { kind: "remote", connectionId: form.connectionId };
     case "container":
       return { kind: "container", connectionId: form.connectionId, containerId: executionRef };
     case "sandbox":

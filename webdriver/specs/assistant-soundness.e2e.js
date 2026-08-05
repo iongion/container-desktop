@@ -145,8 +145,13 @@ describe("the assistant tells the truth about its session", () => {
       return resources.builtins.map((builtin) => ({ name: builtin.name, runsIn: builtin.runsIn }));
     });
     assert.ok(String(commands.map((command) => command.name)).includes("compact"), `expected to contain ${"compact"}`);
+    // `/login` is one the APP performs: it runs pi's own flow in a one-shot container and stores what comes back, so
+    // the session reports it as the app's rather than as something nothing here can honour.
     const login = commands.find((command) => command.name === "login");
-    assert.equal(login.runsIn, "unavailable");
+    assert.equal(login.runsIn, "app");
+    // And pi's session-venue commands are still reported as pi's own.
+    const compact = commands.find((command) => command.name === "compact");
+    assert.equal(compact.runsIn, "session");
   });
 
   it("runs one of pi's own commands against the session", async () => {

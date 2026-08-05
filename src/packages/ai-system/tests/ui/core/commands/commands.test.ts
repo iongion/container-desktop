@@ -22,7 +22,7 @@ function userSkill(overrides: Partial<AssistantSkillCommandDefinition> = {}): As
     hiddenSearchTerms: ["pull request", "review"],
     argumentHint: { kind: "literal", value: "[focus]" },
     bypassTier: "queued",
-    availabilityId: "thread-idle",
+    availabilityId: "session-idle",
     confirmation: "none",
     arguments: { kind: "text", required: false },
     surfaces: ["assistant", "quake-console"],
@@ -224,7 +224,7 @@ describe("parseAssistantInput", () => {
       "/cls",
       "/branch",
       "/offload",
-      "/thread list",
+      "/session list",
       "/context",
       "/access",
       "/security",
@@ -301,7 +301,7 @@ describe("completeCommands", () => {
     ]);
     expect(completeCommands("/qui", BUILTIN_ASSISTANT_COMMAND_REGISTRY)[0]?.command.id).toBe("session.quit");
     // A hidden search term, so someone reaching for the old vocabulary still lands on the command that replaced it.
-    expect(completeCommands("thread", BUILTIN_ASSISTANT_COMMAND_REGISTRY).map((m) => m.command.id)).toContain(
+    expect(completeCommands("session", BUILTIN_ASSISTANT_COMMAND_REGISTRY).map((m) => m.command.id)).toContain(
       "session.new",
     );
   });

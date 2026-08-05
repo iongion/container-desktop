@@ -53,32 +53,7 @@ export function createExecutionSelector(options: ExecutionSelectorOptions): Exec
 
   async function build(target: ExecutionTarget): Promise<ResolvedExecution> {
     const floorScope = floorScopeFor(target);
-    if (target.kind === "host") {
-      return {
-        engineOps: options.engineOps,
-        workspaceAccess: options.localWorkspace,
-        floorScope,
-        dispose: async () => undefined,
-      };
-    }
-
     const connectionId = target.connectionId;
-
-    if (target.kind === "remote") {
-      const exec: TargetExec = (program, args, opts) =>
-        connectionExec.execOnConnection(connectionId, program, args, opts);
-      const root = offHostRoot(runId);
-      const made = await connectionExec.execOnConnection(connectionId, "mkdir", ["-p", root]);
-      if (made.code !== 0) {
-        throw new Error(`Unable to prepare the remote workspace ${root}: ${made.stderr || "mkdir failed"}`);
-      }
-      return {
-        engineOps: scopeEngineOps(options.engineOps, connectionId),
-        workspaceAccess: createExecWorkspaceAccess({ root, exec }),
-        floorScope,
-        dispose: async () => undefined,
-      };
-    }
 
     if (target.kind === "container") {
       const containerId = target.containerId;

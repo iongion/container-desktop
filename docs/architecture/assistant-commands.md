@@ -9,8 +9,8 @@ Registry revision: `builtin-v12`
 | `/help` | `/h` | Find an available command | [query] | `immediate-ui` | `always` | `none` |
 | `/skills` | — | Open the skill library | — | `immediate-ui` | `always` | `none` |
 | `/reload` | — | Reload keybindings, extensions, skills, prompts, themes, and context files | — | `side-effect-free` | `always` | `none` |
-| `/tokens` | — | Inspect context and token usage | — | `immediate-ui` | `thread` | `none` |
-| `/tools` | — | Inspect effective tools | — | `immediate-ui` | `thread` | `none` |
+| `/tokens` | — | Inspect context and token usage | — | `immediate-ui` | `session` | `none` |
+| `/tools` | — | Inspect effective tools | — | `immediate-ui` | `session` | `none` |
 | `/doctor` | `/status` | Check AI system health | — | `immediate-ui` | `always` | `none` |
 | `/changes status` | `/changes` | Inspect workspace changes | — | `immediate-ui` | `always` | `none` |
 | `/changes diff` | `/diff` | Review the full workspace diff | — | `immediate-ui` | `always` | `none` |
@@ -22,13 +22,13 @@ Registry revision: `builtin-v12`
 | `/rules init` | `/init` | Prepare Project Rules initialization | — | `immediate-ui` | `always` | `none` |
 | `/new` | — | Start a new session | — | `queued` | `idle` | `none` |
 | `/quit` | — | Stop the session | — | `queued` | `always` | `required` |
-| `/session` | — | Show session info and stats | — | `immediate-ui` | `thread` | `none` |
-| `/stop` | — | Stop the active turn | — | `always` | `thread-active` | `none` |
-| `/copy` | — | Copy last agent message to clipboard | — | `side-effect-free` | `thread` | `none` |
-| `/export` | — | Export session (HTML default, or specify path: .html/.jsonl) | — | `immediate-ui` | `thread` | `none` |
-| `/import` | — | Import and resume a session from a JSONL file | — | `queued` | `thread-idle` | `none` |
-| `/share` | — | Share the session as one standalone HTML file | — | `immediate-ui` | `thread` | `none` |
+| `/session` | — | Show session info and stats | — | `immediate-ui` | `session` | `none` |
+| `/stop` | — | Stop the active turn | — | `always` | `session-active` | `none` |
+| `/copy` | — | Copy last agent message to clipboard | — | `side-effect-free` | `session` | `none` |
+| `/export` | — | Export session (HTML default, or specify path: .html/.jsonl) | — | `immediate-ui` | `session` | `none` |
+| `/import` | — | Import and resume a session from a JSONL file | — | `queued` | `session-idle` | `none` |
+| `/share` | — | Share the session as one standalone HTML file | — | `immediate-ui` | `session` | `none` |
 | `/login` | — | Configure provider authentication | — | `immediate-ui` | `always` | `none` |
 | `/logout` | — | Remove provider authentication | — | `immediate-ui` | `always` | `required` |
-| `/model` | — | Select model (opens selector UI) | <provider/model> | `immediate-ui` | `thread-idle-only` | `none` |
+| `/model` | — | Select model (opens selector UI) | <provider/model> | `immediate-ui` | `session-idle-only` | `none` |
 | `/permissions` | — | Open AI permissions settings | — | `immediate-ui` | `always` | `none` |

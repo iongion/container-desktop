@@ -1,5 +1,5 @@
 /* The full-page Assistant surface. The conversation itself — transcript, cards, empty state and composer —
-   lives in the shared components/ai/AssistantThread.{tsx,css}; this screen provides the full-height column,
+   lives in the shared components/ai/AssistantSession.{tsx,css}; this screen provides the full-height column,
    the session summary bar, and the start drawer's own rules. */
 .AppScreen[data-screen="ai.assistant"] {
   display: flex;
@@ -16,8 +16,8 @@
   overflow: hidden;
 }
 
-/* The shared thread lays itself out as a flex column, so the screen only gives it the remaining height. */
-.AssistantScreen .AssistantThread {
+/* The shared session lays itself out as a flex column, so the screen only gives it the remaining height. */
+.AssistantScreen .AssistantSession {
   flex: 1;
   min-height: 0;
 }

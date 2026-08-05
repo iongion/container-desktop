@@ -1630,7 +1630,7 @@
   "Start an assistant session": "Запустить сеанс ассистента",
   "Stop session": "Остановить сеанс",
   "Stop this session? Its containers are removed.": "Остановить этот сеанс? Его контейнеры будут удалены.",
-  "Start or select a Thread first": "Сначала начните или выберите тред",
+  "Start or select a Session first": "Сначала начните или выберите тред",
   "{{count}} skills loaded": "Загружено навыков: {{count}}",
   "There is no Assistant response to copy": "Нет ответа ассистента для копирования",
   "Clipboard access is unavailable": "Доступ к буферу обмена недоступен",

@@ -21,6 +21,7 @@ import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import { createLogger } from "@/logger";
 import { createContainerToolsExtension } from "@/pi-agent-host/containerTools";
 import { mapAgentEvent, type PiAgentEvent } from "@/pi-agent-host/events";
+import { GATEWAY_CREDENTIAL_PATH } from "@/pi-agent-host/gateway";
 import { GuiTui } from "@/pi-agent-host/guiTui";
 import { createHostRpc } from "@/pi-agent-host/hostRpc";
 import { createKnowledgeToolExtension, KNOWLEDGE_TOOL_NAME } from "@/pi-agent-host/knowledgeTool";
@@ -547,6 +548,18 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     },
     checkProvider() {
       return checkSessionProvider({ gatewayUrl, gatewayToken });
+    },
+    // The app renewed an expiring sign-in and the gateway is still signing with the old access token. Signed with the
+    // bridge token, like every other call this container makes to the gateway — the real credential is the gateway's
+    // alone, and this hands it the new one without restarting the pair.
+    async setGatewayCredential(credential: string) {
+      const url = `${gatewayUrl.replace(/\/+$/, "").replace(/\/v1$/, "")}${GATEWAY_CREDENTIAL_PATH}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { authorization: `Bearer ${gatewayToken}`, "content-type": "application/json" },
+        body: JSON.stringify({ credential }),
+      });
+      if (!response.ok) throw new Error(`the gateway refused the renewed credential: HTTP ${response.status}`);
     },
     selectModel,
     // One of pi's own commands, by pi's own name. The dispatcher answers with a value, never a throw: the palette

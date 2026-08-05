@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { MAX_THREAD_TIMELINE_ITEMS } from "./limits";
+import { MAX_SESSION_TIMELINE_ITEMS } from "./limits";
 import { redactPayload } from "./redact";
-import { MAX_AI_TEXT_CHARS, type ThreadTimelineItem, type ThreadView } from "./threadEvents";
-import type { ThreadSummary } from "./threads";
+import { MAX_AI_TEXT_CHARS, type SessionTimelineItem, type SessionView } from "./sessionEvents";
+import type { SessionSummary } from "./sessions";
 
-export const THREAD_EXPORT_VERSION = 1 as const;
+export const SESSION_EXPORT_VERSION = 1 as const;
 
 const exportMessage = z
   .object({
@@ -55,9 +55,8 @@ const exportError = z
 const exportWorkspaceChanges = z
   .object({
     kind: z.literal("workspace-changes"),
-    target: z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("host") }).strict(),
-      z.object({ kind: z.literal("remote"), connectionId: z.string() }).strict(),
+    origin: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("app") }).strict(),
       z.object({ kind: z.literal("container"), connectionId: z.string(), containerId: z.string() }).strict(),
       z.object({ kind: z.literal("sandbox"), connectionId: z.string(), image: z.string() }).strict(),
     ]),
@@ -87,11 +86,11 @@ const exportData = z
 // that dropped it would show a conversation with a question and no answer and no reason for either.
 const exportNotice = z.object({ kind: z.literal("notice"), notice: z.string() }).strict();
 
-export const threadExportSchema = z
+export const sessionExportSchema = z
   .object({
-    version: z.literal(THREAD_EXPORT_VERSION),
+    version: z.literal(SESSION_EXPORT_VERSION),
     exportedAt: z.number().nonnegative(),
-    thread: z
+    session: z
       .object({
         title: z.string(),
         createdAt: z.number().nonnegative(),
@@ -113,19 +112,19 @@ export const threadExportSchema = z
           exportNotice,
         ]),
       )
-      .max(MAX_THREAD_TIMELINE_ITEMS),
+      .max(MAX_SESSION_TIMELINE_ITEMS),
   })
   .strict();
 
-export type SanitizedThreadExport = z.infer<typeof threadExportSchema>;
-type SanitizedThreadExportEntry = SanitizedThreadExport["entries"][number];
+export type SanitizedSessionExport = z.infer<typeof sessionExportSchema>;
+type SanitizedSessionExportEntry = SanitizedSessionExport["entries"][number];
 
-function messageContent(view: ThreadView, item: Extract<ThreadTimelineItem, { kind: "message" }>, index: number) {
+function messageContent(view: SessionView, item: Extract<SessionTimelineItem, { kind: "message" }>, index: number) {
   const streaming = view.streamingAssistant;
   return streaming?.id === item.id && streaming.timelineIndex === index ? streaming.content : item.content;
 }
 
-function sanitizeEntry(view: ThreadView, item: ThreadTimelineItem, index: number): SanitizedThreadExportEntry {
+function sanitizeEntry(view: SessionView, item: SessionTimelineItem, index: number): SanitizedSessionExportEntry {
   switch (item.kind) {
     case "message":
       return redactPayload({
@@ -162,7 +161,7 @@ function sanitizeEntry(view: ThreadView, item: ThreadTimelineItem, index: number
     case "workspace-changes":
       return redactPayload({
         kind: item.kind,
-        target: item.target,
+        origin: item.origin,
         workspaceRoot: item.workspaceRoot,
         beforeCount: item.beforeCount,
         afterCount: item.afterCount,
@@ -184,7 +183,7 @@ function sanitizeEntry(view: ThreadView, item: ThreadTimelineItem, index: number
   }
 }
 
-export function latestAssistantResponse(view: ThreadView): string | undefined {
+export function latestAssistantResponse(view: SessionView): string | undefined {
   for (let index = view.timeline.length - 1; index >= 0; index -= 1) {
     const item = view.timeline[index];
     if (item.kind !== "message" || item.role !== "assistant") continue;
@@ -193,15 +192,15 @@ export function latestAssistantResponse(view: ThreadView): string | undefined {
   return undefined;
 }
 
-export function createSanitizedThreadExport(
-  summary: ThreadSummary,
-  view: ThreadView,
+export function createSanitizedSessionExport(
+  summary: SessionSummary,
+  view: SessionView,
   exportedAt = Date.now(),
-): SanitizedThreadExport {
-  return threadExportSchema.parse({
-    version: THREAD_EXPORT_VERSION,
+): SanitizedSessionExport {
+  return sessionExportSchema.parse({
+    version: SESSION_EXPORT_VERSION,
     exportedAt,
-    thread: {
+    session: {
       title: summary.title,
       createdAt: summary.createdAt,
       updatedAt: summary.updatedAt,
@@ -212,12 +211,12 @@ export function createSanitizedThreadExport(
   });
 }
 
-export function threadExportFilename(title: string): string {
+export function sessionExportFilename(title: string): string {
   const base = title
     .normalize("NFKD")
     .toLocaleLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 64);
-  return `${base || "thread-export"}.json`;
+  return `${base || "session-export"}.json`;
 }

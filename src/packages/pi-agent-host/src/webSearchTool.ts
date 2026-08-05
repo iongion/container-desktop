@@ -54,7 +54,7 @@ export function createWebSearchExtension(options: { rpc: HostRpc; description: s
             // pi marks a result isError by catching a throw; there is no error field to set.
             throw new Error(result.error);
           }
-          // `details` is what the GUI card renders (piThreadView maps tool_end.details onto it), so it carries the
+          // `details` is what the GUI card renders (piSessionView maps tool_end.details onto it), so it carries the
           // query too — a card showing only prose cannot say what was asked.
           return { content: [{ type: "text" as const, text: result.text }], details: { query, text: result.text } };
         },

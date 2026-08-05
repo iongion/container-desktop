@@ -9,12 +9,16 @@
 // prompt pi races that callback against. That is pi's own documented path for a browser on another machine, which is
 // exactly what a browser outside the container is.
 
+import { KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
 
 const logger = createLogger("ai.piLoginContainer");
 
-const BRIDGE_PORT_IN_IMAGE = 8787;
+// The port the container's bridge binds inside the image. Exported because a refresh run's env file is composed
+// host-side, so the caller has to name the same port this adapter publishes to.
+export const PI_BRIDGE_PORT_IN_IMAGE = 8787;
+const BRIDGE_PORT_IN_IMAGE = PI_BRIDGE_PORT_IN_IMAGE;
 
 export interface PiLoginContainerSpec {
   imageTag: string;
@@ -24,10 +28,19 @@ export interface PiLoginContainerSpec {
   // pi's OWN provider id, because the container asks pi for the provider by pi's name.
   piProviderId: string;
   scope?: string;
+  // Set for a refresh run: the env file carries the stored credential, substituted by the vault's owning realm.
+  carriesStoredCredential?: boolean;
 }
 
+// A REFRESH run in the same container needs the stored credential, which the web view cannot read: `getKey` refuses
+// there. So the placeholder goes into the env file and the realm that owns the vault substitutes it while writing —
+// the same route the gateway's credential takes. A sign-in has nothing to substitute and writes no such line.
 export function loginEnvFileContents(spec: PiLoginContainerSpec): string {
-  return [`CD_BRIDGE_TOKEN=${spec.bridgeToken}`, `CD_BRIDGE_PORT=${BRIDGE_PORT_IN_IMAGE}`].join("\n");
+  return [
+    `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
+    `CD_BRIDGE_PORT=${BRIDGE_PORT_IN_IMAGE}`,
+    ...(spec.carriesStoredCredential ? [`CD_CREDENTIAL=${KEYCHAIN_SECRET_PLACEHOLDER}`] : []),
+  ].join("\n");
 }
 
 export function loginRunArgv(spec: PiLoginContainerSpec, envFilePath: string): string[] {

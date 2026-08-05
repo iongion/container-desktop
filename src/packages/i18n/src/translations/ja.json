@@ -1630,7 +1630,7 @@
   "Start an assistant session": "アシスタントのセッションを開始",
   "Stop session": "セッションを停止",
   "Stop this session? Its containers are removed.": "このセッションを停止しますか？コンテナーは削除されます。",
-  "Start or select a Thread first": "最初にスレッドを開始または選択してください",
+  "Start or select a Session first": "最初にスレッドを開始または選択してください",
   "{{count}} skills loaded": "{{count}} 個のスキルを読み込みました",
   "There is no Assistant response to copy": "コピーするアシスタントの応答がありません",
   "Clipboard access is unavailable": "クリップボードにアクセスできません",

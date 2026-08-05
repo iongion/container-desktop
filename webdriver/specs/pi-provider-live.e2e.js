@@ -331,7 +331,7 @@ describe("the provider-shape contract against real containers", () => {
       openaiShape.turn = await askAndSettle("the openai-completions turn never finished");
       report("OPENAI-COMPLETIONS TURN", openaiShape.turn);
 
-      // The action behind the composer's New-thread button: useAIStore.newThread() is a one-line wrapper
+      // The action behind the composer's New-session button: useAIStore.newSession() is a one-line wrapper
       // around this, and only this store is exposed to a spec.
       const restart = await browser.executeAsync((done) => {
         window.__cdCodingAgentStore

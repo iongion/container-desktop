@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { ThreadView } from "@/ai-system/core/threadEvents";
-import { threadExportHtml, threadHtmlFilename } from "@/ai-system/core/threadExportHtml";
+import type { SessionView } from "@/ai-system/core/sessionEvents";
+import { sessionExportHtml, sessionHtmlFilename } from "@/ai-system/core/sessionExportHtml";
 
-function view(timeline: ThreadView["timeline"]): ThreadView {
-  return { threadId: "pi-session", phase: "idle", lastSeq: timeline.length, timeline };
+function view(timeline: SessionView["timeline"]): SessionView {
+  return { sessionId: "pi-session", phase: "idle", lastSeq: timeline.length, timeline };
 }
 
-describe("threadExportHtml", () => {
+describe("sessionExportHtml", () => {
   it("writes one standalone document, with the conversation in order", () => {
-    const html = threadExportHtml("Release triage", "container-desktop-gateway/canned", "2026-08-04T10:00:00.000Z", {
+    const html = sessionExportHtml("Release triage", "container-desktop-gateway/canned", "2026-08-04T10:00:00.000Z", {
       ...view([
         {
           kind: "message",
@@ -33,7 +33,7 @@ describe("threadExportHtml", () => {
   // The conversation is model output and tool output. Both can contain anything, and this file is opened in a
   // browser — so every value goes through escaping, or a shared transcript is a scripting vector.
   it("escapes what the model and the tools said", () => {
-    const html = threadExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
+    const html = sessionExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
       ...view([
         {
           kind: "message",
@@ -64,7 +64,7 @@ describe("threadExportHtml", () => {
   });
 
   it("shows a tool call with its arguments, and marks one that failed", () => {
-    const html = threadExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
+    const html = sessionExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
       ...view([
         {
           kind: "tool",
@@ -89,7 +89,7 @@ describe("threadExportHtml", () => {
   // A shared transcript carries what the user was asked and what they answered. Dropping the approvals would make a
   // gated run read as if nothing had ever been asked.
   it("keeps the approvals and the errors", () => {
-    const html = threadExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
+    const html = sessionExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
       ...view([
         {
           kind: "approval",
@@ -114,7 +114,7 @@ describe("threadExportHtml", () => {
   // A turn the model answered with nothing is part of the conversation. Without this a shared transcript shows a
   // question, no answer, and no reason for either — which is exactly the confusion the transcript notice removed.
   it("keeps a turn that produced no answer", () => {
-    const html = threadExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
+    const html = sessionExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
       ...view([
         { kind: "message", id: "1", role: "user", content: "say alpha", delivery: "applied", status: "complete" },
         { kind: "notice", id: "2", notice: "empty-answer" },
@@ -126,8 +126,8 @@ describe("threadExportHtml", () => {
   });
 
   it("names the file after the conversation, not after the clock alone", () => {
-    expect(threadHtmlFilename("Release triage")).toBe("release-triage.html");
-    expect(threadHtmlFilename("  ")).toBe("assistant-session.html");
-    expect(threadHtmlFilename("../../etc/passwd")).toBe("etc-passwd.html");
+    expect(sessionHtmlFilename("Release triage")).toBe("release-triage.html");
+    expect(sessionHtmlFilename("  ")).toBe("assistant-session.html");
+    expect(sessionHtmlFilename("../../etc/passwd")).toBe("etc-passwd.html");
   });
 });

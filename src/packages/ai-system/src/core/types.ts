@@ -8,11 +8,11 @@ import type { ProviderKind } from "./providers";
 import type { approvalDecision, diagnosticsBundle } from "./schemas";
 import type { SkillInvocationProvenance } from "./skills";
 
-export type ThreadRole = "user" | "assistant" | "system";
+export type SessionRole = "user" | "assistant" | "system";
 
-export interface ThreadMessage {
+export interface SessionMessage {
   id: string;
-  role: ThreadRole;
+  role: SessionRole;
   content: string;
   createdAt: number;
   skill?: SkillInvocationProvenance;

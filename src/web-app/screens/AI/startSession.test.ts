@@ -156,14 +156,17 @@ describe("the workspace execution target", () => {
     expect(resolveCodingAgentStart(form(), context).options?.executionTarget).toBeUndefined();
   });
 
-  it("resolves this machine, and the connection's own host", () => {
-    expect(resolveCodingAgentStart(form({ executionKind: "host" }), context).options?.executionTarget).toEqual({
-      kind: "host",
-    });
-    expect(resolveCodingAgentStart(form({ executionKind: "remote" }), context).options?.executionTarget).toEqual({
-      kind: "remote",
-      connectionId: "podman-default",
-    });
+  // A target is a container, and nothing else. Reaching one is the connection's job — local, in a machine VM or
+  // across SSH — so the form never offers "this machine" or "the engine's host" as targets of their own.
+  it("offers containers only, each reached through the session's connection", () => {
+    expect(
+      resolveCodingAgentStart(form({ executionKind: "container", executionRef: "web-1" }), context).options
+        ?.executionTarget?.kind,
+    ).toBe("container");
+    expect(
+      resolveCodingAgentStart(form({ executionKind: "sandbox", executionRef: "alpine:3" }), context).options
+        ?.executionTarget?.kind,
+    ).toBe("sandbox");
   });
 
   it("acts through the connection the session runs on, for a container and for a sandbox", () => {

@@ -45,10 +45,10 @@ export type AssistantCommandBypassTier = "always" | "connecting" | "immediate-ui
 export type AssistantCommandAvailabilityId =
   | "always"
   | "idle"
-  | "thread"
-  | "thread-idle"
-  | "thread-idle-only"
-  | "thread-active"
+  | "session"
+  | "session-idle"
+  | "session-idle-only"
+  | "session-active"
   | "assistant-only"
   | "quake-console-only";
 

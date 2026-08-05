@@ -1,5 +1,5 @@
 // Verifies the Assistant screen renders and its store is wired: the route mounts, the session bar and the
-// SHARED thread appear, and a projected transcript reaches the DOM. The container session itself is covered
+// SHARED session appear, and a projected transcript reaches the DOM. The container session itself is covered
 // end-to-end elsewhere; this spec is about the screen.
 import { strict as assert } from "node:assert";
 
@@ -31,14 +31,14 @@ describe("Assistant screen", () => {
         status: root.querySelector(".AssistantSessionSummary")?.getAttribute("data-status"),
         // Not a transcript of this screen's own making: the SAME component the Assistant and the quake
         // console render, so one conversation looks the same wherever it is opened.
-        thread: Boolean(root.querySelector(".AssistantThread")),
+        session: Boolean(root.querySelector(".AssistantSession")),
         composer: Boolean(root.querySelector(".AIComposerInput")),
       };
     });
 
     assert.equal(screen.mounted, true, "the screen did not mount at its route");
     assert.equal(screen.status, "ready", "the scripted mock session should be ready");
-    assert.equal(screen.thread, true, "the screen must render the shared assistant thread");
+    assert.equal(screen.session, true, "the screen must render the shared assistant session");
     assert.equal(screen.composer, true, "a ready session must be messageable");
   });
 
@@ -57,7 +57,7 @@ describe("Assistant screen", () => {
       store.setState({
         status: "ready",
         view: {
-          threadId: "spec",
+          sessionId: "spec",
           phase: "idle",
           lastSeq: 4,
           timeline: [
@@ -92,15 +92,15 @@ describe("Assistant screen", () => {
 
     // Read through WebDriver element queries rather than browser.execute: evaluating script right after
     // this state change proved unreliable under WebKitWebDriver, and element queries assert the same DOM.
-    // The selectors are the SHARED thread's, because this screen renders the same <AssistantThread> as the
+    // The selectors are the SHARED session's, because this screen renders the same <AssistantSession> as the
     // Assistant and the quake console — the tool cards it draws are covered by pi-tool-cards.e2e.js.
-    const messages = await $$(".AssistantThread .AssistantMessage").map((node) => node.getText());
-    const threadText = await $(".AssistantThread").getText();
+    const messages = await $$(".AssistantSession .AssistantMessage").map((node) => node.getText());
+    const sessionText = await $(".AssistantSession").getText();
     const composerEnabled = await $(".AIComposerInput").isEnabled();
     const status = await $(".AssistantSessionSummary").getAttribute("data-status");
 
     assert.deepEqual(messages, ["hello agent", "PI-GUI-OK"], "user and assistant text did not render");
-    assert.ok(threadText.includes("boom"), `the error item did not render: ${threadText.slice(0, 300)}`);
+    assert.ok(sessionText.includes("boom"), `the error item did not render: ${sessionText.slice(0, 300)}`);
     assert.equal(status, "ready");
     assert.equal(composerEnabled, true, "a ready session must be messageable");
 
@@ -145,7 +145,7 @@ describe("Assistant error item", () => {
       window.__cdCodingAgentStore.setState({
         status: "ready",
         view: {
-          threadId: "spec",
+          sessionId: "spec",
           phase: "error",
           lastSeq: 1,
           timeline: [{ kind: "error", id: "e1", scope: "model", message: "boom" }],
@@ -161,7 +161,7 @@ describe("Assistant error item", () => {
     }
     const captured = await browser.execute(() => window.__cdErrors ?? []);
     const rendered = await browser.execute(
-      () => document.querySelector('[data-screen="ai.assistant"] .AssistantThread')?.textContent ?? "",
+      () => document.querySelector('[data-screen="ai.assistant"] .AssistantSession')?.textContent ?? "",
     );
     assert.equal(captured.length, 0, `renderer threw while rendering an error item:\n${captured.join("\n")}`);
     assert.ok(rendered.includes("boom"), "the error item did not render");

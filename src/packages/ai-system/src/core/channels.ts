@@ -18,6 +18,10 @@ export const AI_CHANNELS = {
   // invoke({ fileName, contents }) → { path }. The AGENT container's env file, written into the same protected
   // directory as the gateway's so one guard covers both. Carries the bridge token, never a provider key.
   agentEnvFile: "ai:agent:env-file", // invoke(AgentGatewayEnvRequest) → { path }
+  // invoke({ provider, fileName, bridgeToken, bridgePort }) → { path }. The one-shot auth container's env file for a
+  // REFRESH run: it carries the stored credential, put in host-side, because the web view cannot read one out of the
+  // vault. Same protected directory and same guard as the two above.
+  authRefreshEnv: "ai:auth:refresh-env",
   changesStatus: "ai:changes:status",
   changesDiff: "ai:changes:diff",
   projectContextSnapshot: "ai:project-context:snapshot",

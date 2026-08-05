@@ -445,9 +445,11 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <p>The assistant runs <strong>inside a container</strong> on one of your engine connections, not in the app. You start a session by picking that connection and a <strong>workspace folder</strong> from your machine, which is mounted into the container as the one folder its file and command tools can reach.</p>
 <ul>
 <li><strong>Your key never enters it.</strong> Inference goes through a second, separate container that holds the provider credential; the agent container has no key, no access to your keychain and no route to your provider except through that proxy.</li>
+<li><strong>Sign in instead of pasting a key.</strong> Where the provider offers it, <strong>Settings → AI</strong> runs that provider's own sign-in — in a throwaway container, because the sign-in needs one — and stores what it returns in your OS keychain. A sign-in that expires is <strong>renewed for you</strong>, before it lapses and without interrupting the conversation.</li>
 <li><strong>Network access is yours to give.</strong> Leave it on so package managers work, or turn it off for a session and only the inference proxy stays reachable.</li>
 <li><strong>The container is disposable, the folder is not.</strong> Stopping a session removes the pair; your workspace is a normal folder on your machine and whatever the assistant wrote is simply there. <strong>Workspace changes</strong> shows you exactly what it touched, as a Git status and diff.</li>
 <li><strong>Change the model mid-conversation</strong> from the chip in the message box: the session, the containers and everything installed in them survive it, and a reasoning model's <strong>thinking level</strong> is offered when its provider says it has one.</li>
+<li><strong>Give the assistant a second container to work in</strong>, if you want it acting somewhere other than its own: on the start form, choose an <strong>existing container</strong> on that connection — picked from a list of what is actually running, with its image and id — or a <strong>disposable one</strong> created from an image and removed when the session ends. Every file write and command there asks first.</li>
 </ul>
 </section>
 <section class="guide-sec" id="assistant-plugins">
@@ -455,7 +457,7 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <p>The assistant is a GUI for the <a href="https://github.com/earendil-works/pi">pi</a> coding agent, so pi's own ecosystem works here.</p>
 <ul>
 <li><strong>Plugins</strong> install from <strong>npm or a Git URL</strong> on the <strong>Plugins</strong> screen — reachable from the <strong>AI menu</strong> — and stay installed across sessions. What a plugin contributes (extra commands, skills and prompts) appears in the message box's slash-command palette, and anything it asks you is shown as a native dialog rather than terminal text.</li>
-<li><strong>Slash commands</strong> cover the session itself: start a new conversation, resume or duplicate an earlier one, compact the context, review project trust, or save the whole conversation as a single standalone <strong>HTML file</strong>.</li>
+<li><strong>Slash commands</strong> cover the session itself: start a new one, compact the context, review project trust, look something up in the built-in troubleshooting notes, or save the whole conversation as a single standalone <strong>HTML file</strong>. They are pi's commands under pi's names, so <a href="https://github.com/earendil-works/pi">pi's own documentation</a> applies here unchanged.</li>
 <li><strong>Skills</strong> are reusable prompt-backed workflows you invoke by name; the app checks a skill's fingerprint and your project's trust before it runs one.</li>
 </ul>
 </section>

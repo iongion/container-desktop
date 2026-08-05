@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import type { PiForkPoint, PiSessionSummary, PiSessionTreeNode } from "@/pi-bridge/protocol";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
-import { threadRelativeAge } from "@/web-app/components/ai/threadHistory";
+import { sessionRelativeAge } from "@/web-app/components/ai/sessionHistory";
 
 import "./AssistantSessionTreeDrawer.css";
 
@@ -245,7 +245,7 @@ export function AssistantSessionTreeDrawer({ view, onPick, onClose }: AssistantS
                       <TreeRow key={node.id} node={node} depth={0} busy={busy} onPick={(id) => void pick(id)} />
                     ))
                   : view.sessions.map((session) => {
-                      const age = threadRelativeAge(Date.parse(session.modified));
+                      const age = sessionRelativeAge(Date.parse(session.modified));
                       return (
                         <SessionRow
                           key={session.path}

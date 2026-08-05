@@ -8,7 +8,12 @@
 import type { WebSocketLike } from "@/ai-system/adapters/piBridgeClient";
 import { createLogger } from "@/logger";
 import { decodeEvent, encodeCommand } from "@/pi-bridge/codec";
-import { type BridgeEvent, PI_BRIDGE_PROTOCOL_VERSION, type PiAuthLoginOutcome } from "@/pi-bridge/protocol";
+import {
+  type BridgeEvent,
+  PI_BRIDGE_PROTOCOL_VERSION,
+  type PiAuthLoginOutcome,
+  type PiAuthRefreshOutcome,
+} from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 
 const logger = createLogger("ai.piLoginClient");
@@ -22,6 +27,9 @@ const CONNECT_DELAY_MS = 250;
 // it would report a timeout while the user is still typing their password.
 const LOGIN_TIMEOUT_MS = 900_000;
 
+// A refresh asks the user nothing — it is one token call — so it gets a request timeout, not a login's patience.
+const REFRESH_TIMEOUT_MS = 30_000;
+
 export type PiLoginEvent = Extract<BridgeEvent, { type: "auth_prompt" | "auth_prompt_closed" | "auth_event" }>;
 
 export interface PiLoginClient {
@@ -29,6 +37,9 @@ export interface PiLoginClient {
   // Run pi's flow for one provider, by PI's provider id. Answers with an outcome rather than throwing: a cancelled
   // login and a refused code are things to show, not faults.
   login(piProviderId: string): Promise<PiAuthLoginOutcome>;
+  // Exchange the credential this container was handed for a live one, through pi's own flow. Same container and same
+  // reason as a login — plus the credential itself, which the web view cannot read out of the vault.
+  refresh(piProviderId: string): Promise<PiAuthRefreshOutcome>;
   answerPrompt(promptId: string, ok: boolean, value?: string): void;
   cancel(): void;
   onEvent(listener: (event: PiLoginEvent) => void): () => void;
@@ -153,6 +164,19 @@ export function createPiLoginClient(options: {
         }, LOGIN_TIMEOUT_MS);
         pending.set(id, { settle: (result) => resolve(result as PiAuthLoginOutcome), fail: reject, timer });
         send({ id, type: "auth_login", provider: piProviderId });
+      });
+    },
+
+    refresh(piProviderId: string): Promise<PiAuthRefreshOutcome> {
+      if (!socket) return Promise.reject(new Error("the sign-in bridge is not connected"));
+      const id = randomUUID();
+      return new Promise<PiAuthRefreshOutcome>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error("the refresh did not finish in time"));
+        }, REFRESH_TIMEOUT_MS);
+        pending.set(id, { settle: (result) => resolve(result as PiAuthRefreshOutcome), fail: reject, timer });
+        send({ id, type: "auth_refresh", provider: piProviderId });
       });
     },
 

@@ -68,7 +68,7 @@ export async function closeOpenAppDrawer(driver) {
 // Reliably start from a CLEAN assistant composer. The flows share one app session, and a prior flow's turn can
 // still be streaming when the next submits — a submit into an active session STEERS it, so a gated-tool message
 // would land in the previous turn and its approval card would auto-resolve. A pi session is ONE conversation, so
-// there is no new-thread escape hatch: wait for the turn to settle, then clear the composer and the palette.
+// there is no new-session escape hatch: wait for the turn to settle, then clear the composer and the palette.
 export async function newAssistantChat(driver) {
   await closeOpenAppDrawer(driver);
   await driver.waitFor(() => !document.querySelector('[data-screen="ai.assistant"] .AIComposerStop'), undefined, {

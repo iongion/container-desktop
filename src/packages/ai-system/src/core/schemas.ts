@@ -9,10 +9,10 @@ import {
   type AIPushPayload,
 } from "./channels";
 import type { EffectiveContextSectionKind, EffectiveContextSourceKind } from "./context";
-import { MAX_ALLOWED_TOOLS, MAX_DIAGNOSTICS_BUNDLE_CHARS, MAX_THREAD_TIMELINE_ITEMS } from "./limits";
+import { MAX_ALLOWED_TOOLS, MAX_DIAGNOSTICS_BUNDLE_CHARS, MAX_SESSION_TIMELINE_ITEMS } from "./limits";
 import { PROJECT_CONTEXT_LIMITS } from "./projectContext";
+import { MAX_AI_TEXT_CHARS, MAX_INITIAL_SESSION_HISTORY_MESSAGES } from "./sessionEvents";
 import { SKILL_DIAGNOSTIC_CODES, SKILL_LIMITS } from "./skills";
-import { MAX_AI_TEXT_CHARS, MAX_INITIAL_THREAD_HISTORY_MESSAGES } from "./threadEvents";
 
 const MAX_ID_CHARS = 256;
 const MAX_PROVIDER_CHARS = 64;
@@ -32,7 +32,7 @@ const provider = z
 const optionalProvider = provider.optional();
 const model = z.string().max(MAX_MODEL_CHARS).optional();
 const empty = z.undefined();
-const _threadId = z.object({ threadId: id }).strict();
+const _sessionId = z.object({ sessionId: id }).strict();
 
 export const diagnosticsBundle = z
   .object({
@@ -55,21 +55,21 @@ const historyMessage = z
   })
   .strict();
 
-export const submitThreadRequest = z
+export const submitSessionRequest = z
   .object({
-    threadId: id,
+    sessionId: id,
     message: z
       .object({
         id,
         content: z
           .string()
           .trim()
-          .min(1, "AI: Thread message is empty")
-          .max(MAX_AI_TEXT_CHARS, "AI: Thread message is too long"),
+          .min(1, "AI: Session message is empty")
+          .max(MAX_AI_TEXT_CHARS, "AI: Session message is too long"),
         createdAt: z.number().nonnegative(),
       })
       .strict(),
-    history: z.array(historyMessage).max(MAX_INITIAL_THREAD_HISTORY_MESSAGES, "AI: Thread history is too large"),
+    history: z.array(historyMessage).max(MAX_INITIAL_SESSION_HISTORY_MESSAGES, "AI: Session history is too large"),
     providerId: optionalProvider,
     model,
     bundle: diagnosticsBundle.optional(),
@@ -77,8 +77,8 @@ export const submitThreadRequest = z
   .strict();
 
 export const approvalDecision = z.enum(["allow", "reject"]);
-export const resolveThreadApprovalRequest = z
-  .object({ threadId: id, approvalId: id, decision: approvalDecision })
+export const resolveSessionApprovalRequest = z
+  .object({ sessionId: id, approvalId: id, decision: approvalDecision })
   .strict();
 export const permissionsList = z.enum(["allowed", "blocked"]);
 
@@ -105,14 +105,12 @@ export const permissionRule = z
   })
   .strict();
 
-// Where the assistant's tools execute. The union grows by adding members; a stored {kind:"host"} record is
-// unaffected.
-// A container/sandbox whose connection is an SSH (*_REMOTE) connection IS the remote-container case — the
-// transport wraps argv in `ssh … --`, so no separate remote-container kind is needed.
+// Where the assistant's tools execute. A target is a CONTAINER — either one already running or a disposable one —
+// and the connection is HOW it is reached, never a target of its own. Connections are this app's core principle: a
+// local engine, a machine VM, WSL and an SSH host are all reached the same way, and a container on an SSH
+// (*_REMOTE) connection IS the remote case, because the transport wraps argv in `ssh … --`.
 const executionRef = z.string().trim().min(1).max(MAX_TITLE_CHARS);
 export const executionTarget = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("host") }).strict(),
-  z.object({ kind: z.literal("remote"), connectionId: id }).strict(),
   z.object({ kind: z.literal("container"), connectionId: id, containerId: executionRef }).strict(),
   z.object({ kind: z.literal("sandbox"), connectionId: id, image: executionRef }).strict(),
 ]);
@@ -146,8 +144,12 @@ const workspaceChangeEntrySchema = z
   })
   .strict();
 
+// Where the change set was READ, which is not an execution target: the app reads its own workspace folder, and only
+// a session's container origin is one of the two target shapes.
+const workspaceChangeOrigin = z.union([z.object({ kind: z.literal("app") }).strict(), executionTarget]);
+
 const workspaceChangeLocationSchema = {
-  target: executionTarget,
+  origin: workspaceChangeOrigin,
   workspaceRoot: z.string().min(1).max(8_192),
 };
 
@@ -414,6 +416,21 @@ export const invokeSchemas = {
       gatewayPort: z.number().int().positive().max(65535),
     })
     .strict(),
+  // The refresh run's env file. Same naming rule, and the credential is never described by the caller — only which
+  // provider's it is.
+  [AI_CHANNELS.authRefreshEnv]: z
+    .object({
+      provider,
+      fileName: z
+        .string()
+        .trim()
+        .min(1)
+        .max(128)
+        .regex(/^[a-zA-Z0-9._-]+\.env$/, "AI: the auth env file name must be a simple <name>.env"),
+      bridgeToken: z.string().trim().min(1).max(256),
+      bridgePort: z.number().int().positive().max(65535),
+    })
+    .strict(),
   [AI_CHANNELS.agentEnvFile]: z
     .object({
       // The same naming rule as the gateway's: a simple <name>.env, never a path. Both writers refuse anything else
@@ -467,9 +484,9 @@ export const invokeSchemas = {
     .strict(),
 } satisfies Record<AIInvokeChannel, z.ZodType>;
 
-export const threadPhase = z.enum(["idle", "model", "tool", "interrupting", "awaiting-approval", "stopping", "error"]);
+export const sessionPhase = z.enum(["idle", "model", "tool", "interrupting", "awaiting-approval", "stopping", "error"]);
 const ok = z.object({ ok: z.literal(true) }).strict();
-export const threadSummarySchema = z
+export const sessionSummarySchema = z
   .object({
     id,
     title: z.string().max(MAX_TITLE_CHARS),
@@ -478,14 +495,14 @@ export const threadSummarySchema = z
     updatedAt: z.number().nonnegative(),
     providerId: optionalProvider,
     model,
-    phase: threadPhase,
+    phase: sessionPhase,
     lastSeq: z.number().int().nonnegative(),
   })
   .strict();
 const args = z.record(z.string(), z.unknown());
 const assistantMessageStatus = z.enum(["streaming", "complete", "interrupted", "stopped", "error"]);
 const userMessageDelivery = z.enum(["queued", "applied", "discarded"]);
-const threadErrorScope = z.enum(["submit", "model", "tool", "approval", "session"]);
+const sessionErrorScope = z.enum(["submit", "model", "tool", "approval", "session"]);
 const skillInvocationProvenance = z
   .object({
     skillId: id,
@@ -573,7 +590,7 @@ const effectiveContext = z
     truncation: z.object({ applied: z.boolean(), omittedMessages: z.number().int().nonnegative() }).strict(),
   })
   .strict();
-const threadUsage = z
+const sessionUsage = z
   .object({
     requests: z.number().int().nonnegative(),
     inputTokens: z.number().int().nonnegative(),
@@ -631,7 +648,7 @@ const timelineItem = z.discriminatedUnion("kind", [
     })
     .strict(),
   z
-    .object({ kind: z.literal("error"), id, scope: threadErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) })
+    .object({ kind: z.literal("error"), id, scope: sessionErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) })
     .strict(),
   // Something the TURN did that the transcript would otherwise have nothing to show for. A code, not prose: the
   // projector is pure and cannot translate, so the renderer owns the words.
@@ -656,16 +673,16 @@ const timelineItem = z.discriminatedUnion("kind", [
     })
     .strict(),
 ]);
-export const threadView = z
+export const sessionView = z
   .object({
-    threadId: id,
-    phase: threadPhase,
+    sessionId: id,
+    phase: sessionPhase,
     activeTaskId: id.optional(),
     activeSegmentId: id.optional(),
     lastSeq: z.number().int().nonnegative(),
-    timeline: z.array(timelineItem).max(MAX_THREAD_TIMELINE_ITEMS),
+    timeline: z.array(timelineItem).max(MAX_SESSION_TIMELINE_ITEMS),
     context: effectiveContext.optional(),
-    usage: threadUsage.optional(),
+    usage: sessionUsage.optional(),
     streamingAssistant: z
       .object({ id, timelineIndex: z.number().int().nonnegative(), content: z.string().max(MAX_AI_TEXT_CHARS) })
       .strict()
@@ -683,16 +700,16 @@ export const permissionsSnapshot = z
   })
   .strict();
 
-export const submitThreadResult = z
+export const submitSessionResult = z
   .object({
     accepted: z.literal(true),
-    threadId: id,
+    sessionId: id,
     taskId: id,
     mode: z.enum(["started", "interrupting", "queued", "duplicate"]),
-    phase: threadPhase,
+    phase: sessionPhase,
   })
   .strict();
-export const resolveThreadApprovalResult = z.object({ accepted: z.boolean(), phase: threadPhase }).strict();
+export const resolveSessionApprovalResult = z.object({ accepted: z.boolean(), phase: sessionPhase }).strict();
 
 // A resolved skill, rendered but not yet sent. The host owns resolution — the trust check, the fingerprint
 // match and the prompt template — and the renderer owns submission, because the agent lives on the pi bridge
@@ -787,6 +804,7 @@ export const responseSchemas = {
   [AI_CHANNELS.keyClear]: ok,
   [AI_CHANNELS.agentGatewayEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.agentEnvFile]: z.object({ path: z.string().min(1).max(4096) }).strict(),
+  [AI_CHANNELS.authRefreshEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.changesStatus]: workspaceChangeStatusSchema,
   [AI_CHANNELS.changesDiff]: workspaceDiffSchema,
   [AI_CHANNELS.projectContextSnapshot]: projectContextSnapshotSchema,
@@ -842,11 +860,11 @@ export const responseSchemas = {
   [AI_CHANNELS.skillsInvoke]: skillInvocationResult,
 } satisfies Record<AIInvokeChannel, z.ZodType>;
 
-export const threadEvent = z.discriminatedUnion("type", [
+export const sessionEvent = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("phase-changed"),
-      phase: threadPhase,
+      phase: sessionPhase,
     })
     .strict(),
   z
@@ -923,20 +941,20 @@ export const threadEvent = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("error"),
-      scope: threadErrorScope,
+      scope: sessionErrorScope,
       message: z.string().max(MAX_AI_TEXT_CHARS),
     })
     .strict(),
 ]);
 
-export const threadEventEnvelope = z
+export const sessionEventEnvelope = z
   .object({
     version: z.literal(1),
-    threadId: id,
+    sessionId: id,
     taskId: id.optional(),
     segmentId: id.optional(),
     seq: z.number().int().nonnegative(),
-    event: threadEvent,
+    event: sessionEvent,
   })
   .strict();
 

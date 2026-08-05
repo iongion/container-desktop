@@ -63,6 +63,8 @@ export interface PiBridgeClient {
   // Ask the SESSION whether it can reach the model. The app's own provider check answers for the app's realm, which
   // is not the one a turn runs in.
   checkProvider(): Promise<SessionProviderCheck>;
+  // Hand the session's gateway a renewed credential, through the container that can reach it.
+  setGatewayCredential(credential: string): Promise<void>;
   // Point the running session at a model the user picked, with whatever the provider published about it — the app
   // asks, because the gateway forwards completions and not a catalogue. Answers with what pi ended up on, so the
   // caller adopts the switch rather than assuming it. The conversation, the containers and the plugins all survive it.
@@ -257,6 +259,9 @@ export function createPiBridgeClient(options: {
     },
     checkProvider(): Promise<SessionProviderCheck> {
       return request({ id: randomUUID(), type: "check_provider" }, READ_TIMEOUT_MS);
+    },
+    async setGatewayCredential(credential: string): Promise<void> {
+      await request({ id: randomUUID(), type: "gateway_credential", credential }, READ_TIMEOUT_MS);
     },
     selectModel(model: PiModelRegistration): Promise<PiSessionModel> {
       // pi swaps the model on the session and writes its own settings — a memory operation, not a turn.

@@ -1,21 +1,21 @@
-import type { ThreadEventEnvelope, ThreadTimelineItem, ThreadView } from "./threadEvents";
-import type { ThreadMessage } from "./types";
+import type { SessionEventEnvelope, SessionTimelineItem, SessionView } from "./sessionEvents";
+import type { SessionMessage } from "./types";
 
-export interface ThreadEventReduction {
-  view: ThreadView;
+export interface SessionEventReduction {
+  view: SessionView;
   needsSnapshot: boolean;
 }
 
-export function emptyThreadView(threadId: string): ThreadView {
-  return { threadId, phase: "idle", lastSeq: 0, timeline: [] };
+export function emptySessionView(sessionId: string): SessionView {
+  return { sessionId, phase: "idle", lastSeq: 0, timeline: [] };
 }
 
 // Seed a view's timeline from persisted (or restored) prose. Content is projected verbatim — callers that
 // cross a trust boundary (the host actor) redact before handing messages in. Shared by the host session
 // snapshot seed and the renderer store so the two never drift.
-export function viewFromMessages(threadId: string, messages: ThreadMessage[]): ThreadView {
+export function viewFromMessages(sessionId: string, messages: SessionMessage[]): SessionView {
   return {
-    ...emptyThreadView(threadId),
+    ...emptySessionView(sessionId),
     timeline: messages
       .filter((message) => message.role !== "system")
       .map((message) => ({
@@ -30,8 +30,8 @@ export function viewFromMessages(threadId: string, messages: ThreadMessage[]): T
   };
 }
 
-export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelope): ThreadEventReduction {
-  if (envelope.threadId !== view.threadId || envelope.seq <= view.lastSeq) {
+export function reduceSessionEvent(view: SessionView, envelope: SessionEventEnvelope): SessionEventReduction {
+  if (envelope.sessionId !== view.sessionId || envelope.seq <= view.lastSeq) {
     return { view, needsSnapshot: false };
   }
   if (envelope.seq !== view.lastSeq + 1) {
@@ -74,7 +74,7 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
       break;
     case "user-message-applied":
       timeline = timeline.map(
-        (item): ThreadTimelineItem =>
+        (item): SessionTimelineItem =>
           item.kind === "message" && item.id === event.id && item.role === "user"
             ? { ...item, delivery: "applied" }
             : item,
@@ -82,7 +82,7 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
       break;
     case "user-message-discarded":
       timeline = timeline.map(
-        (item): ThreadTimelineItem =>
+        (item): SessionTimelineItem =>
           item.kind === "message" && item.id === event.id && item.role === "user"
             ? { ...item, delivery: "discarded" }
             : item,
@@ -149,7 +149,7 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
     case "tool-result":
       if (timeline.some((item) => item.kind === "tool" && item.toolCallId === event.toolCallId)) {
         timeline = timeline.map(
-          (item): ThreadTimelineItem =>
+          (item): SessionTimelineItem =>
             item.kind === "tool" && item.toolCallId === event.toolCallId
               ? {
                   ...item,
@@ -180,7 +180,7 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
     case "tool-error":
       if (timeline.some((item) => item.kind === "tool" && item.toolCallId === event.toolCallId)) {
         timeline = timeline.map(
-          (item): ThreadTimelineItem =>
+          (item): SessionTimelineItem =>
             item.kind === "tool" && item.toolCallId === event.toolCallId
               ? { ...item, title: event.title || item.title, message: event.message, ok: false, status: "error" }
               : item,
@@ -233,7 +233,7 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
       break;
     case "approval-resolved":
       timeline = timeline.map(
-        (item): ThreadTimelineItem =>
+        (item): SessionTimelineItem =>
           item.kind === "approval" && item.approvalId === event.approvalId
             ? { ...item, status: event.decision === "allow" ? "allowed" : "rejected" }
             : item,
@@ -244,7 +244,7 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
         ...timeline,
         {
           kind: "workspace-changes",
-          id: `${envelope.threadId}:${envelope.seq}`,
+          id: `${envelope.sessionId}:${envelope.seq}`,
           ...event.summary,
         },
       ];
@@ -278,7 +278,7 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
         ...timeline,
         {
           kind: "error",
-          id: `${envelope.threadId}:${envelope.seq}`,
+          id: `${envelope.sessionId}:${envelope.seq}`,
           scope: event.scope,
           message: event.message,
         },
@@ -300,7 +300,7 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
   return {
     needsSnapshot: false,
     view: {
-      threadId: view.threadId,
+      sessionId: view.sessionId,
       phase,
       activeTaskId,
       activeSegmentId,
@@ -313,17 +313,17 @@ export function reduceThreadEvent(view: ThreadView, envelope: ThreadEventEnvelop
   };
 }
 
-export function threadTimelineMessageContent(
-  view: ThreadView,
-  item: Extract<ThreadTimelineItem, { kind: "message" }>,
+export function sessionTimelineMessageContent(
+  view: SessionView,
+  item: Extract<SessionTimelineItem, { kind: "message" }>,
   timelineIndex: number,
 ): string {
   const streaming = view.streamingAssistant;
   return streaming?.id === item.id && streaming.timelineIndex === timelineIndex ? streaming.content : item.content;
 }
 
-export function replaceThreadSnapshot(current: ThreadView, snapshot: ThreadView): ThreadView {
-  if (snapshot.threadId !== current.threadId || snapshot.lastSeq < current.lastSeq) {
+export function replaceSessionSnapshot(current: SessionView, snapshot: SessionView): SessionView {
+  if (snapshot.sessionId !== current.sessionId || snapshot.lastSeq < current.lastSeq) {
     return current;
   }
   return snapshot;

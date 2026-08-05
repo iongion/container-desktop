@@ -51,7 +51,7 @@ describe("createContainerToolsExtension", () => {
     );
   });
 
-  // The cards read `details` (piThreadView maps tool_end.details → the card's result), so the engine payload has
+  // The cards read `details` (piSessionView maps tool_end.details → the card's result), so the engine payload has
   // to travel there unchanged; the text is what the model reads.
   it("returns the engine payload as details and as text", async () => {
     const result = await harness.byName("listContainers").execute("call-1", {});

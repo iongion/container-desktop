@@ -17,7 +17,7 @@ async function openAssistant() {
   await browser.execute(() => {
     window.__cdCodingAgentStore.setState({
       status: "ready",
-      view: { threadId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
+      view: { sessionId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
       chrome: { statuses: {}, widgets: {} },
       pendingDialog: undefined,
     });
@@ -79,7 +79,7 @@ describe("pi extension UI", () => {
     await openAssistant();
     await browser.execute(() => {
       window.__cdCodingAgentStore.setState({
-        view: { threadId: "pi-session", phase: "model", lastSeq: 0, timeline: [] },
+        view: { sessionId: "pi-session", phase: "model", lastSeq: 0, timeline: [] },
       });
     });
     await $(".ThinkingStatusText").waitForExist({ timeout: 15000, timeoutMsg: "the working indicator never rendered" });

@@ -9,7 +9,7 @@ import { getProviderEntry } from "@/ai-system/core/providers";
 import type { SessionProviderCheck } from "@/pi-bridge/protocol";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { groupDiagnosticErrors } from "@/web-app/components/ai/diagnosticErrors";
-import { threadRelativeAge } from "@/web-app/components/ai/threadHistory";
+import { sessionRelativeAge } from "@/web-app/components/ai/sessionHistory";
 import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
 import "./AssistantDiagnosticsDrawer.css";
@@ -146,7 +146,7 @@ function DiagnosticsContent({
             <Tag minimal>{errors.length}</Tag>
           </h5>
           {errors.map(({ error, count }) => {
-            const age = threadRelativeAge(error.at);
+            const age = sessionRelativeAge(error.at);
             return (
               <details key={`${error.at}:${error.message}`} className="AssistantDiagnosticError">
                 <summary>

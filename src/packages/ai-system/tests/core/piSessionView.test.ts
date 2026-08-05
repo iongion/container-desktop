@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { emptyPiThreadView, projectPiThreadView } from "@/ai-system/core/piThreadView";
-import { threadView as threadViewSchema } from "@/ai-system/core/schemas";
+import { emptyPiSessionView, projectPiSessionView } from "@/ai-system/core/piSessionView";
+import { sessionView as sessionViewSchema } from "@/ai-system/core/schemas";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 
 const project = (events: BridgeEvent[]) =>
-  events.reduce((view, event) => projectPiThreadView(view, event), emptyPiThreadView("t1"));
+  events.reduce((view, event) => projectPiSessionView(view, event), emptyPiSessionView("t1"));
 
-describe("projectPiThreadView", () => {
-  it("produces a view that satisfies the shipped ThreadView schema", () => {
+describe("projectPiSessionView", () => {
+  it("produces a view that satisfies the shipped SessionView schema", () => {
     const view = project([
       { type: "assistant_delta", text: "Hello" },
       { type: "assistant_end", text: "Hello", stopReason: "stop" },
     ]);
-    expect(() => threadViewSchema.parse(view)).not.toThrow();
+    expect(() => sessionViewSchema.parse(view)).not.toThrow();
   });
 
   it("streams assistant text into one message item and tracks the streaming pointer", () => {
@@ -82,7 +82,7 @@ describe("projectPiThreadView", () => {
   });
 
   it("records a user message so the transcript shows what was asked", () => {
-    const view = projectPiThreadView(emptyPiThreadView("t1"), { type: "user_message", text: "hello agent" } as never);
+    const view = projectPiSessionView(emptyPiSessionView("t1"), { type: "user_message", text: "hello agent" } as never);
     expect(view.timeline[0]).toMatchObject({ kind: "message", role: "user", content: "hello agent" });
   });
 
@@ -91,17 +91,17 @@ describe("projectPiThreadView", () => {
   // for exactly as long as the model takes, so the session reads as frozen. The agent owes the answer the
   // moment the prompt is submitted, not once it starts speaking.
   it("is working from the moment the user submits, not from the first token", () => {
-    const view = projectPiThreadView(emptyPiThreadView("t1"), { type: "user_message", text: "hello agent" } as never);
+    const view = projectPiSessionView(emptyPiSessionView("t1"), { type: "user_message", text: "hello agent" } as never);
     expect(view.phase).toBe("model");
   });
 
   it("still returns to idle when a turn started by a submit ends", () => {
-    const asked = projectPiThreadView(emptyPiThreadView("t1"), { type: "user_message", text: "q" } as never);
+    const asked = projectPiSessionView(emptyPiSessionView("t1"), { type: "user_message", text: "q" } as never);
     const done = [
       { type: "assistant_delta", text: "a" },
       { type: "assistant_end", text: "a", stopReason: "stop" },
       { type: "idle" },
-    ].reduce((view, event) => projectPiThreadView(view, event as never), asked);
+    ].reduce((view, event) => projectPiSessionView(view, event as never), asked);
     expect(done.phase).toBe("idle");
   });
 
@@ -120,7 +120,7 @@ describe("projectPiThreadView", () => {
     ]);
     expect(view.timeline).toHaveLength(2);
     expect(view.timeline[1]).toMatchObject({ kind: "notice", notice: "empty-answer" });
-    expect(() => threadViewSchema.parse(view)).not.toThrow();
+    expect(() => sessionViewSchema.parse(view)).not.toThrow();
   });
 
   // A cap reached with nothing to show is its own fact: the answer is not missing, it was cut off before it began.
@@ -153,11 +153,11 @@ describe("projectPiThreadView", () => {
   });
 
   it("keeps an empty view schema-valid", () => {
-    expect(() => threadViewSchema.parse(emptyPiThreadView("t1"))).not.toThrow();
+    expect(() => sessionViewSchema.parse(emptyPiSessionView("t1"))).not.toThrow();
   });
 
   it("appends a pending approval card for a gated tool call and settles it in place", () => {
-    const pending = projectPiThreadView(emptyPiThreadView("t1"), {
+    const pending = projectPiSessionView(emptyPiSessionView("t1"), {
       type: "host_request",
       requestId: "r1",
       method: "approval",
@@ -171,9 +171,9 @@ describe("projectPiThreadView", () => {
       reason: "rm -rf build",
     });
     expect(pending.phase).toBe("awaiting-approval");
-    expect(() => threadViewSchema.parse(pending)).not.toThrow();
+    expect(() => sessionViewSchema.parse(pending)).not.toThrow();
 
-    const settled = projectPiThreadView(pending, { type: "approval_settled", requestId: "r1", allowed: false });
+    const settled = projectPiSessionView(pending, { type: "approval_settled", requestId: "r1", allowed: false });
     expect(settled.timeline[0]).toMatchObject({ kind: "approval", status: "rejected" });
     expect(settled.phase).toBe("tool");
   });
@@ -193,7 +193,7 @@ describe("projectPiThreadView", () => {
         payload: { toolName: "write", toolCallId: "tc2", args: { path: "a.ts" } },
       },
     ]);
-    const settled = projectPiThreadView(view, { type: "approval_settled", requestId: "r2", allowed: true });
+    const settled = projectPiSessionView(view, { type: "approval_settled", requestId: "r2", allowed: true });
     expect(settled.timeline.map((item) => item.kind === "approval" && item.status)).toEqual(["pending", "allowed"]);
   });
 
@@ -213,7 +213,7 @@ describe("projectPiThreadView", () => {
     expect(view.timeline).toHaveLength(1);
     expect(view.timeline[0]).toMatchObject({ kind: "message", status: "stopped", content: "half a th" });
     expect(view.phase).toBe("idle");
-    expect(() => threadViewSchema.parse(view)).not.toThrow();
+    expect(() => sessionViewSchema.parse(view)).not.toThrow();
   });
 
   it("adds no bubble when an aborted turn produced nothing", () => {
@@ -227,13 +227,13 @@ describe("projectPiThreadView", () => {
   it("appends a data item for a plugin entry", () => {
     const view = project([{ type: "entry", entryId: "e2", customType: "my-plugin:card", data: { status: "ok" } }]);
     expect(view.timeline[0]).toMatchObject({ kind: "data", customType: "my-plugin:card", data: { status: "ok" } });
-    expect(() => threadViewSchema.parse(view)).not.toThrow();
+    expect(() => sessionViewSchema.parse(view)).not.toThrow();
   });
 
   it("appends a data item for a custom message and keeps its text", () => {
     const view = project([{ type: "custom_message", customType: "my-plugin", content: "status", details: { n: 1 } }]);
     expect(view.timeline[0]).toMatchObject({ kind: "data", customType: "my-plugin", text: "status", data: { n: 1 } });
-    expect(() => threadViewSchema.parse(view)).not.toThrow();
+    expect(() => sessionViewSchema.parse(view)).not.toThrow();
   });
 
   it("does not disturb a streaming assistant message when plugin data arrives mid-turn", () => {
@@ -278,11 +278,11 @@ describe("projectPiThreadView", () => {
     ]);
     expect(view.context?.totals.estimatedTokens).toBe(1200);
     expect(view.timeline).toEqual([]);
-    expect(() => threadViewSchema.parse(view)).not.toThrow();
+    expect(() => sessionViewSchema.parse(view)).not.toThrow();
   });
 
   it("ignores a settle for an approval it never saw", () => {
-    const view = projectPiThreadView(emptyPiThreadView("t1"), {
+    const view = projectPiSessionView(emptyPiSessionView("t1"), {
       type: "approval_settled",
       requestId: "ghost",
       allowed: true,

@@ -67,7 +67,7 @@ export interface SandboxExecResult {
   rejectedReason?: string;
 }
 
-// `enforceFloor` defaults true; the tool gate threads `false` in "always allow" mode so the catastrophic
+// `enforceFloor` defaults true; the tool gate sessions `false` in "always allow" mode so the catastrophic
 // floor (denylist/metachars/traversal) is bypassed — every other structural guard (no shell, scrubbed env,
 // timeout, output cap + redaction) still applies.
 export type SandboxRunner = (cmd: SandboxCommand, opts?: { enforceFloor?: boolean }) => Promise<SandboxExecResult>;

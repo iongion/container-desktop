@@ -4,29 +4,29 @@ import { IconNames } from "@blueprintjs/icons";
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { describeError } from "@/ai-system/core/errors";
-import type { ThreadView } from "@/ai-system/core/threadEvents";
-import { createSanitizedThreadExport, threadExportFilename } from "@/ai-system/core/threadExport";
-import type { ThreadSummary } from "@/ai-system/core/threads";
+import type { SessionView } from "@/ai-system/core/sessionEvents";
+import { createSanitizedSessionExport, sessionExportFilename } from "@/ai-system/core/sessionExport";
+import type { SessionSummary } from "@/ai-system/core/sessions";
 import { createLogger } from "@/logger";
 import { getHostRuntime } from "@/platform/provider";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { CopyButton } from "@/web-app/components/CopyButton";
-import "./ThreadExportDrawer.css";
+import "./SessionExportDrawer.css";
 
-const logger = createLogger("web.ai.thread-export");
+const logger = createLogger("web.ai.session-export");
 
-export interface ThreadExportDrawerProps {
-  thread: ThreadSummary;
-  view: ThreadView;
+export interface SessionExportDrawerProps {
+  session: SessionSummary;
+  view: SessionView;
   onClose: () => void;
 }
 
-export function ThreadExportDrawer({ thread, view, onClose }: ThreadExportDrawerProps) {
+export function SessionExportDrawer({ session, view, onClose }: SessionExportDrawerProps) {
   const { t } = useTranslation();
   const formId = useId();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
-  const content = useMemo(() => JSON.stringify(createSanitizedThreadExport(thread, view), null, 2), [thread, view]);
+  const content = useMemo(() => JSON.stringify(createSanitizedSessionExport(session, view), null, 2), [session, view]);
   const messageCount = view.timeline.filter((item) => item.kind === "message").length;
   const operationCount = view.timeline.length - messageCount;
 
@@ -37,7 +37,7 @@ export function ThreadExportDrawer({ thread, view, onClose }: ThreadExportDrawer
     try {
       const runtime = getHostRuntime();
       const selection = await runtime.dialogs.saveFileSelector({
-        defaultPath: threadExportFilename(thread.title),
+        defaultPath: sessionExportFilename(session.title),
         filters: [{ name: t("JSON files"), extensions: ["json"] }],
       });
       if (selection?.canceled || !selection?.filePath) return;
@@ -45,7 +45,7 @@ export function ThreadExportDrawer({ thread, view, onClose }: ThreadExportDrawer
       onClose();
     } catch (cause) {
       const message = describeError(cause);
-      logger.error("Thread export failed", { threadId: thread.id, error: message });
+      logger.error("Session export failed", { sessionId: session.id, error: message });
       setError(message);
     } finally {
       setSaving(false);
@@ -54,9 +54,9 @@ export function ThreadExportDrawer({ thread, view, onClose }: ThreadExportDrawer
 
   return (
     <AppDrawer
-      className="ThreadExportDrawer"
+      className="SessionExportDrawer"
       icon={IconNames.EXPORT}
-      title={t("Export Thread")}
+      title={t("Export Session")}
       size={DrawerSize.SMALL}
       onClose={onClose}
       formId={formId}
@@ -66,10 +66,10 @@ export function ThreadExportDrawer({ thread, view, onClose }: ThreadExportDrawer
     >
       <div className={Classes.DRAWER_BODY}>
         <form id={formId} className={Classes.DIALOG_BODY} onSubmit={(event) => void save(event)}>
-          <div className="AppDataForm ThreadExportSummary">
+          <div className="AppDataForm SessionExportSummary">
             <div>
-              <span>{t("Thread")}</span>
-              <strong>{thread.title}</strong>
+              <span>{t("Session")}</span>
+              <strong>{session.title}</strong>
             </div>
             <div>
               <span>{t("Messages")}</span>

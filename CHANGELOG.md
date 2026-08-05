@@ -54,9 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A plugin can be installed for THIS PROJECT rather than for the agent everywhere — pi's own second package scope, offered once pi trusts the project and explained when it does not
 - The assistant can look up the app's own built-in troubleshooting knowledge — curated podman, docker, WSL and SSH connection failures with the fix and the commands — as a search it makes when it needs one, not as prose in every prompt
-- The assistant can act on files and run commands OUTSIDE its own container, where you choose: this machine, the engine's own host, a container already running, or a disposable one created for the session and removed with it. Chosen on the start form, off until you choose it, and every write or command asks first
-- Sign in to OpenRouter instead of pasting a key: pi's own login flow runs in a one-shot container, the browser does the signing in, and the permanent key it hands back goes to the OS keychain like any other
-- A sign-in whose credential expires is refused with the reason rather than stored — this app hands the gateway one static secret and cannot refresh a token
+- The assistant can act on files and run commands in ANOTHER container, where you choose: one already running on the connection, picked from what is actually running with its image and id, or a disposable one created from an image and removed when the session ends. Chosen on the start form, off until you choose it, and every write or command asks first
+- Sign in to any provider pi carries a flow for — Anthropic, GitHub Copilot, Kimi, xAI, Radius, OpenAI Codex and OpenRouter — under that provider's own label: pi's own login runs in a one-shot container, the browser does the signing in, and what it returns goes to the OS keychain
+- A sign-in that expires is renewed for you, before it lapses and without interrupting the conversation — the exchange runs pi's own refresh in a throwaway container, and the renewed credential reaches a running session's gateway without restarting it
 - Every provider pi ships is offered in the model picker — 37 of them, with names and model counts read from pi itself — behind their own heading, under the sources you already use
 - A provider the app was never set up for can be browsed and then added in one click: its endpoint comes from what pi publishes, and only the key is left to paste
 - Every model row in the picker says what it costs, how much room it has and whether it thinks, instead of an id alone
@@ -161,6 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The assistant speaks pi's vocabulary throughout: what the app used to call a thread is a **session**, because that is what pi calls it — pi's documentation now reads directly onto this app, with nothing to translate
 - A session is one conversation: the thread list, rename, delete, branch and compaction drawers are gone, replaced by pi's own `/resume`, `/name`, `/fork`, `/tree` and `/compact`
 - The access-profile and reasoning-level pickers are gone, with `/access` and `/reasoning`: a session takes both when it starts and neither can be changed afterwards, so the controls only ever looked live
 - The in-app agent engine's whole path is gone — its thread store, tool-artifact store, knowledge bank and fifteen IPC channels had no caller left once the assistant moved into a container

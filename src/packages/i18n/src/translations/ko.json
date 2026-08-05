@@ -1630,7 +1630,7 @@
   "Start an assistant session": "어시스턴트 세션 시작",
   "Stop session": "세션 중지",
   "Stop this session? Its containers are removed.": "이 세션을 중지할까요? 컨테이너가 제거됩니다.",
-  "Start or select a Thread first": "먼저 스레드를 시작하거나 선택하세요",
+  "Start or select a Session first": "먼저 스레드를 시작하거나 선택하세요",
   "{{count}} skills loaded": "스킬 {{count}}개 로드됨",
   "There is no Assistant response to copy": "복사할 어시스턴트 응답이 없습니다",
   "Clipboard access is unavailable": "클립보드에 접근할 수 없습니다",

@@ -9,10 +9,10 @@
 // Standalone means standalone: no script, no stylesheet link, nothing to fetch. The file opens years from now with
 // no app and no network.
 
-import type { ThreadView } from "@/ai-system/core/threadEvents";
+import type { SessionView } from "@/ai-system/core/sessionEvents";
 import stylesheet from "@/resources/ai/sessionExport.css?raw";
 
-type TimelineItem = ThreadView["timeline"][number];
+type TimelineItem = SessionView["timeline"][number];
 
 // Every value in here is model output, tool output or a path the agent chose, and the result is opened in a
 // browser. Nothing reaches the document without going through this.
@@ -83,7 +83,7 @@ function itemHtml(item: TimelineItem): string {
   }
 }
 
-export function threadExportHtml(title: string, model: string, exportedAt: string, view: ThreadView): string {
+export function sessionExportHtml(title: string, model: string, exportedAt: string, view: SessionView): string {
   const heading = title.trim() || "Assistant session";
   return [
     "<!doctype html>",
@@ -104,7 +104,7 @@ export function threadExportHtml(title: string, model: string, exportedAt: strin
 
 // Named after the conversation so a folder of these is readable. Reduced to a safe stem for the same reason the
 // container sanitizes an imported name: a title is chosen by the user, but it also becomes a path.
-export function threadHtmlFilename(title: string): string {
+export function sessionHtmlFilename(title: string): string {
   const stem = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

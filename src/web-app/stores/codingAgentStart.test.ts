@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PiBridgeClient } from "@/ai-system/adapters/piBridgeClient";
-import { emptyPiThreadView } from "@/ai-system/core/piThreadView";
+import { emptyPiSessionView } from "@/ai-system/core/piSessionView";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
@@ -83,7 +83,7 @@ describe("useCodingAgentStore start", () => {
       status: "idle",
       spec: undefined,
       resources: { extensions: [], commands: [], skills: [], prompts: [], builtins: [] },
-      view: emptyPiThreadView("pi-session"),
+      view: emptyPiSessionView("pi-session"),
       sessionModel: undefined,
     });
   });

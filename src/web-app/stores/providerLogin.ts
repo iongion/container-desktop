@@ -9,6 +9,7 @@ import { create } from "zustand";
 import { pickHostPort } from "@/ai-system/adapters/piAgentContainer";
 import { createPiLoginClient, type PiLoginClient } from "@/ai-system/adapters/piLoginClient";
 import {
+  PI_BRIDGE_PORT_IN_IMAGE,
   type PiLoginContainerSpec,
   removePiLoginContainer,
   startPiLoginContainer,
@@ -20,6 +21,7 @@ import { createLogger } from "@/logger";
 import { agentImageTag } from "@/pi-bridge/image";
 import { piProviderIdFor } from "@/pi-bridge/modelBaseline";
 import type { PiAuthPrompt } from "@/pi-bridge/protocol";
+import { encodeProviderCredential } from "@/pi-bridge/providerCredential";
 import { randomUUID } from "@/utils/randomUUID";
 import { connectedConnections, pickActiveConnection } from "@/web-app/components/ConnectionSelect.logic";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
@@ -34,6 +36,20 @@ export type ProviderLoginStatus = "idle" | "starting" | "waiting" | "stored" | "
 // What the sign-in produced. `stored: false` is never a fault: the user closed it, or the provider answered with a
 // credential this app cannot keep, and both are things to say plainly.
 export type ProviderLoginResult = { stored: true } | { stored: false; reason: string };
+
+// What a rotation attempt did. `refreshed: false` with no reason is the ordinary case — a permanent key, or a token
+// with life left. `mustSignInAgain` is the one the caller has to surface: the refresh token is spent.
+export interface ProviderRefreshResult {
+  refreshed: boolean;
+  reason?: string;
+  mustSignInAgain?: boolean;
+  // When the credential in the vault lapses, so a running session can schedule the next rotation rather than poll.
+  // Absent for a permanent key.
+  expiresAt?: number;
+  // The access token a rotation produced, for a caller that has to hand it to a gateway already running. Present
+  // ONLY on a rotation, and never read back out of the vault — this is the same exposure the sign-in itself has.
+  accessToken?: string;
+}
 
 export interface ProviderLoginState {
   status: ProviderLoginStatus;
@@ -55,6 +71,8 @@ export interface ProviderLoginState {
   client?: PiLoginClient;
 
   signIn(providerId: string, options: { allowDegraded: boolean }): Promise<ProviderLoginResult>;
+  // Rotate the stored credential if it is near expiry, so nothing starts on a token about to lapse.
+  refreshCredential(providerId: string): Promise<ProviderRefreshResult>;
   answerPrompt(value: string): void;
   // Refuse the question. pi's own flows read a rejected prompt as the user abandoning that step, which for OpenRouter
   // is what hands the login back to its loopback callback server.
@@ -179,7 +197,11 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
         set({ status: "refused", prompt: undefined, message: verdict.reason });
         return { stored: false, reason: verdict.reason };
       }
-      await bridge.setKey(providerId, verdict.secret, { allowDegraded: options.allowDegraded });
+      // A permanent key is stored as itself; an expiring pair is stored whole, because its refresh token is what the
+      // next exchange needs. One vault entry either way — the gateway reads the access token out of it.
+      await bridge.setKey(providerId, encodeProviderCredential(verdict.credential), {
+        allowDegraded: options.allowDegraded,
+      });
       set({ status: "stored", prompt: undefined, authUrl: undefined, message: undefined });
       return { stored: true };
     } catch (error) {
@@ -192,6 +214,72 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
       set({ client: undefined });
       // Removed whatever happened: it holds a published port and keeps listening, so leaving one behind costs the
       // next sign-in its port and the engine a container nobody owns.
+      if (startedOn) await removePiLoginContainer(startedOn, spec);
+    }
+  },
+
+  // Keep a stored credential usable, before anything depends on it. The credential never crosses into this realm:
+  // the container reads it from its own env file — substituted by the vault's owning realm — decides whether it is
+  // near expiry, exchanges it through pi's own flow, and answers with the rotation, which is stored exactly the way a
+  // sign-in's is. A provider holding a permanent key answers `unchanged` and costs one short-lived container.
+  async refreshCredential(providerId): Promise<ProviderRefreshResult> {
+    const offer = providerLoginOffer(providerId);
+    if (!offer) return { refreshed: false };
+    const bridge = typeof window !== "undefined" ? window.AI : undefined;
+    if (!bridge) return { refreshed: false, reason: "the AI host bridge is unavailable" };
+    if (!(await bridge.hasKey(providerId).catch(() => false))) return { refreshed: false };
+
+    const suffix = randomUUID().slice(0, 8);
+    const spec: PiLoginContainerSpec = {
+      imageTag: agentImageTag(PROJECT_VERSION),
+      containerName: `cd-login-${suffix}`,
+      hostPort: pickHostPort(),
+      bridgeToken: randomUUID(),
+      piProviderId: piProviderIdFor(providerId),
+      carriesStoredCredential: true,
+    };
+    let client: PiLoginClient | undefined;
+    let startedOn: HostClientFacade | undefined;
+    try {
+      if (isMockMode() && import.meta.env.ENVIRONMENT !== "production") {
+        const { createMockPiLoginClient } = await import("@/ai-system/testing/mockPiLoginClient");
+        client = createMockPiLoginClient();
+      } else {
+        const engine = engineForLogin();
+        if (!engine) return { refreshed: false, reason: "no connected container engine" };
+        const host = await resolveConnectionHost(engine.connectionId);
+        if (!host) return { refreshed: false, reason: "no engine host" };
+        // The env file is composed HOST-side for this one, because it carries the stored credential: the realm that
+        // owns the vault substitutes it while writing and answers only the path. So the contents this adapter would
+        // have composed are not used — the file is asked for by provider instead.
+        await startPiLoginContainer(host, spec, async () => {
+          const { path } = await bridge.writeAuthRefreshEnv({
+            provider: providerId,
+            fileName: `${suffix}-refresh.env`,
+            bridgeToken: spec.bridgeToken,
+            bridgePort: PI_BRIDGE_PORT_IN_IMAGE,
+          });
+          return path;
+        });
+        startedOn = host;
+        client = createPiLoginClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
+      }
+      await client.connect();
+      const outcome = await client.refresh(spec.piProviderId);
+      if (!outcome.ok) return { refreshed: false, reason: outcome.error, mustSignInAgain: !!outcome.invalidGrant };
+      if ("unchanged" in outcome) {
+        return { refreshed: false, ...(outcome.expiresAt ? { expiresAt: outcome.expiresAt } : {}) };
+      }
+      const verdict = loginCredentialVerdict(outcome.credential, Date.now());
+      if (!verdict.storable) return { refreshed: false, reason: verdict.reason };
+      await bridge.setKey(providerId, encodeProviderCredential(verdict.credential), { allowDegraded: true });
+      return { refreshed: true, expiresAt: outcome.credential.expires, accessToken: outcome.credential.access };
+    } catch (error) {
+      const message = (error as Error).message;
+      logger.error("refreshing the provider credential failed", error);
+      return { refreshed: false, reason: message };
+    } finally {
+      client?.close();
       if (startedOn) await removePiLoginContainer(startedOn, spec);
     }
   },

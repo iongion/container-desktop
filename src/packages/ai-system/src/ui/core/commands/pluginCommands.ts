@@ -35,9 +35,9 @@ export function pluginSkillCommands(resources: ContributedResources): AssistantS
         description: literal(resource.description ?? pluginId),
         hiddenSearchTerms: [resource.name, pluginId, "skill"],
         source: { kind: "plugin-skill" as const, pluginId, fingerprint: `${pluginId}:${resource.name}` },
-        // The text goes to pi as a prompt, so it waits for an idle thread like any other queued invocation.
+        // The text goes to pi as a prompt, so it waits for an idle session like any other queued invocation.
         bypassTier: "queued" as const,
-        availabilityId: "thread-idle" as const,
+        availabilityId: "session-idle" as const,
         confirmation: "none" as const,
         arguments: { kind: "text" as const, required: false },
         surfaces: SURFACES,

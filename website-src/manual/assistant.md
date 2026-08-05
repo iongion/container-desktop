@@ -61,9 +61,11 @@ The assistant doesn't just chat — it calls **typed tools** and renders the res
 The assistant runs **inside a container** on one of your engine connections, not in the app. You start a session by picking that connection and a **workspace folder** from your machine, which is mounted into the container as the one folder its file and command tools can reach.
 
 - **Your key never enters it.** Inference goes through a second, separate container that holds the provider credential; the agent container has no key, no access to your keychain and no route to your provider except through that proxy.
+- **Sign in instead of pasting a key.** Where the provider offers it, **Settings → AI** runs that provider's own sign-in — in a throwaway container, because the sign-in needs one — and stores what it returns in your OS keychain. A sign-in that expires is **renewed for you**, before it lapses and without interrupting the conversation.
 - **Network access is yours to give.** Leave it on so package managers work, or turn it off for a session and only the inference proxy stays reachable.
 - **The container is disposable, the folder is not.** Stopping a session removes the pair; your workspace is a normal folder on your machine and whatever the assistant wrote is simply there. **Workspace changes** shows you exactly what it touched, as a Git status and diff.
 - **Change the model mid-conversation** from the chip in the message box: the session, the containers and everything installed in them survive it, and a reasoning model's **thinking level** is offered when its provider says it has one.
+- **Give the assistant a second container to work in**, if you want it acting somewhere other than its own: on the start form, choose an **existing container** on that connection — picked from a list of what is actually running, with its image and id — or a **disposable one** created from an image and removed when the session ends. Every file write and command there asks first.
 
 </section>
 
@@ -74,7 +76,7 @@ The assistant runs **inside a container** on one of your engine connections, not
 The assistant is a GUI for the [pi](https://github.com/earendil-works/pi) coding agent, so pi's own ecosystem works here.
 
 - **Plugins** install from **npm or a Git URL** on the **Plugins** screen — reachable from the **AI menu** — and stay installed across sessions. What a plugin contributes (extra commands, skills and prompts) appears in the message box's slash-command palette, and anything it asks you is shown as a native dialog rather than terminal text.
-- **Slash commands** cover the session itself: start a new conversation, resume or duplicate an earlier one, compact the context, review project trust, or save the whole conversation as a single standalone **HTML file**.
+- **Slash commands** cover the session itself: start a new one, compact the context, review project trust, look something up in the built-in troubleshooting notes, or save the whole conversation as a single standalone **HTML file**. They are pi's commands under pi's names, so [pi's own documentation](https://github.com/earendil-works/pi) applies here unchanged.
 - **Skills** are reusable prompt-backed workflows you invoke by name; the app checks a skill's fingerprint and your project's trust before it runs one.
 
 </section>

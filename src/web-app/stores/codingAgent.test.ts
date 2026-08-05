@@ -6,7 +6,7 @@ import { sessionWorkspaceRoot } from "@/ai-system/adapters/sessionWorkspace";
 import type { AIPermissionMode, PermissionsSnapshot } from "@/ai-system/core/permissions";
 import { toolRule } from "@/ai-system/core/permissions";
 import { piPermissionContext } from "@/ai-system/core/piApprovals";
-import { emptyPiThreadView } from "@/ai-system/core/piThreadView";
+import { emptyPiSessionView } from "@/ai-system/core/piSessionView";
 import type { ProjectContextPack, ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import type { HostRequestEvent } from "@/ai-system/core/uiRequests";
 import { Notification } from "@/web-app/Notification";
@@ -48,7 +48,7 @@ function attachFakeClient() {
     spec,
     connectionId: "podman-1",
     status: "ready",
-    view: emptyPiThreadView("pi-session"),
+    view: emptyPiSessionView("pi-session"),
     chrome: emptyCodingAgentChrome(),
     pendingDialog: undefined,
     pendingEngineOps: {},

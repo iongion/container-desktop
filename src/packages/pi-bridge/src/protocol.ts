@@ -46,7 +46,7 @@ export type EngineOpResult = { ok: true; value?: unknown } | { ok: false; error:
 
 // One workspace file or command operation the agent wants performed. Its own method rather than an `engine_op`
 // because it lands somewhere else entirely: an engine operation goes to a container ENGINE, while this goes to a
-// filesystem — the local host, a remote host over SSH, a container, or a disposable sandbox — chosen for the session.
+// filesystem inside the container the session chose — one already running, or a disposable one.
 // The op name is the app's own workspace tool name, so the cards and the gating it already owns keep working.
 export interface WorkspaceOpRequest {
   op: string;
@@ -58,13 +58,11 @@ export interface WorkspaceOpRequest {
 // the two travel on separate methods and nothing should be able to route one as the other.
 export type WorkspaceOpResult = { ok: true; value?: unknown } | { ok: false; error: string };
 
-// Where the session's workspace tools run. `host` is this machine; `remote` a connection's own host over its
-// transport; `container` an existing container on a connection; `sandbox` a disposable container created for the
-// session and removed with it. Mirrors `ExecutionTarget` in the app, which is its single origin — the wire carries
-// it so the app can resolve the same backend a worker would.
+// Where the session's workspace tools run: a CONTAINER, either one already running on a connection or a disposable
+// one created for the session and removed with it. The connection is how that container is reached — local, in a
+// machine VM, over WSL or across SSH — and never a target of its own. Mirrors `ExecutionTarget` in the app, which is
+// its single origin; the wire carries it so the app resolves the same backend the session chose.
 export type PiExecutionTarget =
-  | { kind: "host" }
-  | { kind: "remote"; connectionId: string }
   | { kind: "container"; connectionId: string; containerId: string }
   | { kind: "sandbox"; connectionId: string; image: string };
 
@@ -388,7 +386,17 @@ export type BridgeCommand =
   | { id: string; type: "auth_login"; provider: string }
   // Answer a prompt the flow raised. `ok: false` is a cancel, which pi's own flows treat as abandoning the login.
   | { id: string; type: "auth_prompt_answer"; promptId: string; ok: boolean; value?: string }
-  | { id: string; type: "auth_cancel" };
+  | { id: string; type: "auth_cancel" }
+  // Exchange the stored refresh token for a live credential, through pi's own `OAuthAuth.refresh`. Answered by the
+  // same one-shot container a login runs in, for two reasons: the exchange is that provider's flow code, which the
+  // web view cannot load, AND the credential itself never crosses into the web view — `getKey` refuses there by
+  // design, so the container reads it from the env file the vault's owning realm substituted it into. No
+  // interaction: a refresh asks the user nothing.
+  | { id: string; type: "auth_refresh"; provider: string }
+  // Replace the credential the SESSION's gateway signs with. Routed through this socket because the gateway sits on
+  // the pair's `--internal` network with no published port — the agent container is the only thing that can reach it,
+  // which is exactly the isolation worth keeping. Sent when the app has renewed an expiring sign-in mid-session.
+  | { id: string; type: "gateway_credential"; credential: string };
 
 // What a provider login asks the user, in pi's own vocabulary (`AuthPrompt` minus its AbortSignal, which cannot
 // cross a socket — a withdrawn prompt travels as `auth_prompt_closed` instead). `secret` masks what is typed;
@@ -414,9 +422,9 @@ export type PiAuthEvent =
     }
   | { type: "progress"; message: string };
 
-// The three fields of pi's `OAuthCredential` this app can honour. pi's own shape carries provider extras through an
-// index signature; they are deliberately dropped, because one static secret per provider is all the gateway is
-// handed and pretending otherwise would store half a credential.
+// The three fields of pi's `OAuthCredential` this app keeps. pi's own shape carries provider extras through an
+// index signature; they are deliberately dropped, because these three are what an exchange needs — the access token
+// the gateway signs with, the refresh token the next exchange uses, and when the first stops being valid.
 export interface PiOAuthCredential {
   access: string;
   refresh: string;
@@ -424,6 +432,16 @@ export interface PiOAuthCredential {
 }
 
 export type PiAuthLoginOutcome = { ok: true; credential: PiOAuthCredential } | { ok: false; error: string };
+
+// A refresh answers with the ROTATED credential, with nothing when the stored one is still good (`unchanged`), or
+// with why it could not. `invalidGrant` separates "this refresh token is spent, sign in again" from a network failure
+// worth retrying — the app renders the two differently.
+export type PiAuthRefreshOutcome =
+  | { ok: true; credential: PiOAuthCredential }
+  // `expiresAt` is metadata, not a secret: it is what lets the app schedule the NEXT rotation instead of polling, and
+  // it is absent for a permanent key, which never lapses.
+  | { ok: true; unchanged: true; expiresAt?: number }
+  | { ok: false; error: string; invalidGrant?: boolean };
 
 // pi's ProgressEvent, split the way it reads: `action` is what is being done, `phase` how far along it is.
 export type PluginProgressAction = "install" | "remove" | "update" | "clone" | "pull";
@@ -521,6 +539,8 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "auth_login",
   "auth_prompt_answer",
   "auth_cancel",
+  "auth_refresh",
+  "gateway_credential",
 ]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([

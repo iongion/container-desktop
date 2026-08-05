@@ -244,8 +244,8 @@
   display: none;
 }
 
-/* the shared thread fills the console below the header */
-.AssistantConsole .AssistantThread {
+/* the shared session fills the console below the header */
+.AssistantConsole .AssistantSession {
   flex: 1;
   min-height: 0;
 }

@@ -113,7 +113,7 @@ runs.
 
 Both halves are ordinary Vitest and run in `yarn test:run`:
 
-- **Renderer side** — the bridge codec, the transcript projection (`piThreadView`), card resolution
+- **Renderer side** — the bridge codec, the transcript projection (`piSessionView`), card resolution
   (`piToolCards`), the permission policy (`piApprovals`, `permissions`, `commandFloor`), host-request routing
   (`uiRequests`), `engineOpDispatch`, `pluginCatalog`, providers, the model probe (`modelWindow`) against each
   provider's real listing shape, the context report (`piContextReport`), redaction, the stores.

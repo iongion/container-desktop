@@ -2,9 +2,9 @@ import { Button, ButtonGroup, Callout, Card, Icon, Intent, Tag } from "@blueprin
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
-import type { ThreadTimelineItem, ThreadView } from "@/ai-system/core/threadEvents";
-import { threadTimelineMessageContent } from "@/ai-system/core/threadReducer";
-import type { ThreadSummary } from "@/ai-system/core/threads";
+import type { SessionTimelineItem, SessionView } from "@/ai-system/core/sessionEvents";
+import { sessionTimelineMessageContent } from "@/ai-system/core/sessionReducer";
+import type { SessionSummary } from "@/ai-system/core/sessions";
 import { toolTitle } from "@/ai-system/ui/core/toolTitle";
 import { AssistantMarkdown } from "@/web-app/components/ai/AssistantMarkdown";
 import { DataCard } from "@/web-app/components/ai/cards/DataCard";
@@ -12,16 +12,16 @@ import { ToolCard } from "@/web-app/components/ai/cards/registry";
 import { WorkspaceChangesCard } from "@/web-app/components/ai/WorkspaceChangesDrawer";
 
 export interface AssistantTimelineContext {
-  view?: ThreadView;
-  activeThread?: ThreadSummary;
-  activeThreadId?: string;
+  view?: SessionView;
+  activeSession?: SessionSummary;
+  activeSessionId?: string;
   rememberApprovals: boolean;
   onResolveApproval: (approvalId: string, decision: "allow" | "reject") => Promise<unknown>;
   onOpenWorkspaceChanges: () => void;
 }
 
 interface AssistantTimelineItemProps {
-  item: ThreadTimelineItem;
+  item: SessionTimelineItem;
   timelineIndex: number;
   context: AssistantTimelineContext;
 }
@@ -30,7 +30,7 @@ function ApprovalActions({
   item,
   context,
 }: {
-  item: Extract<ThreadTimelineItem, { kind: "approval" }>;
+  item: Extract<SessionTimelineItem, { kind: "approval" }>;
   context: AssistantTimelineContext;
 }) {
   const { t } = useTranslation();
@@ -74,7 +74,7 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
   const { t } = useTranslation();
   switch (item.kind) {
     case "message": {
-      const content = context.view ? threadTimelineMessageContent(context.view, item, timelineIndex) : item.content;
+      const content = context.view ? sessionTimelineMessageContent(context.view, item, timelineIndex) : item.content;
       return (
         <div className={`AssistantMessage AssistantMessage--${item.role}`}>
           <div className="AssistantMessageContent">
@@ -149,7 +149,11 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
         );
       }
       return (
-        <ToolCard {...item} threadId={context.activeThreadId} title={toolTitle(item.tool, item.args, t, item.title)} />
+        <ToolCard
+          {...item}
+          sessionId={context.activeSessionId}
+          title={toolTitle(item.tool, item.args, t, item.title)}
+        />
       );
     default:
       return null;

@@ -29,7 +29,7 @@ function skill(index: number): AssistantSkillCommandDefinition {
     description: { kind: "literal", value: `Test skill ${index}` },
     hiddenSearchTerms: [],
     bypassTier: "queued",
-    availabilityId: "thread-idle",
+    availabilityId: "session-idle",
     confirmation: "none",
     arguments: { kind: "text", required: false },
     surfaces: ["assistant"],

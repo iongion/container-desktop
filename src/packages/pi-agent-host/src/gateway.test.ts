@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDownstreamHeaders,
   buildUpstreamRequest,
+  GATEWAY_CREDENTIAL_PATH,
   type GatewayConfig,
   isAuthorized,
   parseUpstreamAuthScheme,
@@ -173,5 +174,42 @@ describe("parseUpstreamAuthScheme", () => {
   // A typo would otherwise surface as an unexplained 401 on the first turn.
   it("refuses a scheme it does not know", () => {
     expect(() => parseUpstreamAuthScheme("oauth")).toThrow(/CD_UPSTREAM_AUTH_SCHEME/);
+  });
+});
+
+describe("the stored credential envelope", () => {
+  const config = (apiKey: string): GatewayConfig => ({
+    upstreamBaseUrl: "https://api.anthropic.com",
+    apiKey,
+    bridgeToken: "bridge",
+    upstreamKind: "anthropic",
+    authScheme: "bearer",
+  });
+
+  // A sign-in that returns an expiring pair is stored whole, so the value reaching this container is an envelope. Only
+  // the ACCESS token may sign a request — a refresh token sent upstream would be a credential leak AND a 401.
+  it("signs with the access token, never the refresh token", () => {
+    const envelope = JSON.stringify({
+      cd: "cd-provider-credential",
+      access: "at-live",
+      refresh: "rt-secret",
+      expires: 1_800_000_000_000,
+    });
+    expect(upstreamCredentialHeaders(config(envelope))).toEqual({ "x-api-key": "at-live" });
+  });
+
+  it("still signs a plain key exactly as it did before", () => {
+    expect(upstreamCredentialHeaders(config("sk-plain"))).toEqual({ "x-api-key": "sk-plain" });
+  });
+
+  // A keyless local server writes an empty value, and demanding one here killed the container before it listened.
+  it("signs nothing when no credential was written", () => {
+    expect(upstreamCredentialHeaders(config(""))).toEqual({ "x-api-key": "" });
+  });
+});
+
+describe("the credential-replacement route", () => {
+  it("is the path the agent container posts a renewed credential to", () => {
+    expect(GATEWAY_CREDENTIAL_PATH).toBe("/__cd/credential");
   });
 });

@@ -1630,7 +1630,7 @@
   "Start an assistant session": "Pornește o sesiune de asistent",
   "Stop session": "Oprește sesiunea",
   "Stop this session? Its containers are removed.": "Oprești această sesiune? Containerele ei vor fi eliminate.",
-  "Start or select a Thread first": "Pornește sau selectează mai întâi un fir",
+  "Start or select a Session first": "Pornește sau selectează mai întâi un fir",
   "{{count}} skills loaded": "{{count}} competențe încărcate",
   "There is no Assistant response to copy": "Nu există niciun răspuns al asistentului de copiat",
   "Clipboard access is unavailable": "Accesul la clipboard nu este disponibil",

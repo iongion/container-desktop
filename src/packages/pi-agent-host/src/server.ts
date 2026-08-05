@@ -36,6 +36,9 @@ export interface BridgeSessionHandle {
   importSession(fileName: string, contents: string): Promise<void>;
   // Whether this session can reach the model, probed through the gateway from in here.
   checkProvider(): Promise<SessionProviderCheck>;
+  // Hand the session's gateway a renewed credential. Only this container can reach it — the gateway has no published
+  // port — so a mid-session renewal travels through here rather than being dialed from the app.
+  setGatewayCredential(credential: string): Promise<void>;
   // Point the running session at a model, in place, registering it the first time this session is asked for it.
   // Answers with what pi ended up on rather than an echo.
   selectModel(model: PiModelRegistration): Promise<PiSessionModel>;
@@ -84,6 +87,8 @@ export function attachBridgeConnection(
         return session.runCommand(command.name, command.args);
       case "check_provider":
         return session.checkProvider();
+      case "gateway_credential":
+        return session.setGatewayCredential(command.credential);
       case "plugins_list":
         return session.plugins.list();
       case "plugins_install":

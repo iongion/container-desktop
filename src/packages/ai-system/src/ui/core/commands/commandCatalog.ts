@@ -88,7 +88,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     descriptionKey: "Inspect context and token usage",
     hiddenSearchTerms: ["usage", "cost", "budget", "sources"],
     bypassTier: "immediate-ui",
-    availabilityId: "thread",
+    availabilityId: "session",
     arguments: { kind: "none" },
   }),
   control({
@@ -98,7 +98,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     descriptionKey: "Inspect effective tools",
     hiddenSearchTerms: ["capabilities", "permissions", "available"],
     bypassTier: "immediate-ui",
-    availabilityId: "thread",
+    availabilityId: "session",
     arguments: { kind: "none" },
   }),
   control({
@@ -207,7 +207,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     path: "/new",
     categoryKey: "Session",
     descriptionKey: "Start a new session",
-    hiddenSearchTerms: ["clear", "reset", "thread", "pi"],
+    hiddenSearchTerms: ["clear", "reset", "session", "pi"],
     bypassTier: "queued",
     availabilityId: "idle",
     arguments: { kind: "none" },
@@ -230,7 +230,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     descriptionKey: "Show session info and stats",
     hiddenSearchTerms: ["usage", "cost", "tokens", "stats", "pi"],
     bypassTier: "immediate-ui",
-    availabilityId: "thread",
+    availabilityId: "session",
     arguments: { kind: "none" },
   }),
   control({
@@ -241,7 +241,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     descriptionKey: "Stop the active turn",
     hiddenSearchTerms: ["cancel", "interrupt", "abort"],
     bypassTier: "always",
-    availabilityId: "thread-active",
+    availabilityId: "session-active",
     arguments: { kind: "none" },
   }),
   control({
@@ -251,7 +251,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     descriptionKey: "Copy last agent message to clipboard",
     hiddenSearchTerms: ["clipboard", "response"],
     bypassTier: "side-effect-free",
-    availabilityId: "thread",
+    availabilityId: "session",
     arguments: { kind: "none" },
   }),
   control({
@@ -261,7 +261,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     descriptionKey: "Export session (HTML default, or specify path: .html/.jsonl)",
     hiddenSearchTerms: ["save", "json", "download"],
     bypassTier: "immediate-ui",
-    availabilityId: "thread",
+    availabilityId: "session",
     arguments: { kind: "none" },
   }),
   control({
@@ -272,7 +272,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     descriptionKey: "Import and resume a session from a JSONL file",
     hiddenSearchTerms: ["jsonl", "open", "restore", "pi"],
     bypassTier: "queued",
-    availabilityId: "thread-idle",
+    availabilityId: "session-idle",
     arguments: { kind: "none" },
   }),
   control({
@@ -284,7 +284,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     descriptionKey: "Share the session as one standalone HTML file",
     hiddenSearchTerms: ["html", "export", "save", "gist", "pi"],
     bypassTier: "immediate-ui",
-    availabilityId: "thread",
+    availabilityId: "session",
     arguments: { kind: "none" },
   }),
   control({
@@ -318,7 +318,7 @@ export const BUILTIN_ASSISTANT_COMMANDS: readonly AssistantControlCommandDefinit
     // session is re-pointed in place either way, so this is no longer a choice that costs the conversation.
     argumentHintKey: "<provider/model>",
     bypassTier: "immediate-ui",
-    availabilityId: "thread-idle-only",
+    availabilityId: "session-idle-only",
     arguments: { kind: "text", required: false },
   }),
   control({

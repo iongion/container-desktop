@@ -75,7 +75,7 @@ describe("pi container tools", () => {
     await browser.execute(() => {
       window.__cdCodingAgentStore.setState({
         status: "ready",
-        view: { threadId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
+        view: { sessionId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
         chrome: { statuses: {}, widgets: {} },
         pendingDialog: undefined,
         pendingEngineOps: {},

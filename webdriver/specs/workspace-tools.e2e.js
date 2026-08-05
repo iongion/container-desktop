@@ -131,9 +131,10 @@ describe("the workspace toolset", () => {
         ref: document.querySelector("#agentExecutionRef") !== null,
       };
     });
+    // A target is a container; the connection chosen above is how it is reached, never a target of its own.
     assert.deepEqual(
       offered.options.map((option) => option.value),
-      ["off", "host", "remote", "container", "sandbox"],
+      ["off", "container", "sandbox"],
     );
     assert.equal(offered.value, "off", "the toolset must not be offered until the user chooses a target");
     assert.match(offered.help, /keeps to its own container/);
@@ -151,6 +152,19 @@ describe("the workspace toolset", () => {
       timeout: 10000,
       timeoutMsg: "a sandbox target never asked for an image",
     });
+    // Existing is not rendered: the field mounts, then React fills it from the kind. Wait for the image copy and
+    // for the form to have said what is missing, or the read below races the cycle that produces both.
+    await browser.waitUntil(
+      async () =>
+        !!(await browser.execute(
+          () =>
+            /Pick an image/.test(document.querySelector("#agentExecutionRef")?.placeholder ?? "") &&
+            Array.from(document.querySelectorAll(".AgentStartProblems div")).some((line) =>
+              /Name the container the tools run in/.test(line.textContent ?? ""),
+            ),
+        )),
+      { timeout: 10000, timeoutMsg: "the sandbox target never asked for an image and said what was missing" },
+    );
     const sandbox = await browser.execute(() => {
       const submit = document.querySelector('.AppStartAgentSessionDrawer .bp6-dialog-body button[type="submit"]');
       return {
@@ -162,7 +176,74 @@ describe("the workspace toolset", () => {
       };
     });
     assert.match(sandbox.label ?? "", /Image/);
-    assert.match(sandbox.placeholder ?? "", /Image reference/);
+    assert.match(sandbox.placeholder ?? "", /Pick an image, or type a reference/);
+
+    // The picker is the point: a container is named by choosing one the CONNECTION actually runs, not by
+    // remembering it. Rows carry the image and the short id, because that is what tells two apart.
+    await browser.execute(() => {
+      const select = document.querySelector("#agentExecutionKind");
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+      setter?.call(select, "container");
+      select?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    // The field is the SAME element the sandbox step left behind, so its existence proves nothing here: wait for
+    // the container kind to have actually re-rendered it before reading or clicking it.
+    await browser.waitUntil(
+      async () =>
+        /Pick a running container/.test(
+          (await browser.execute(() => document.querySelector("#agentExecutionRef")?.placeholder)) ?? "",
+        ),
+      { timeout: 10000, timeoutMsg: "a container target never asked for a container" },
+    );
+    await $("#agentExecutionRef").click();
+    await browser.waitUntil(
+      async () => (await browser.execute(() => document.querySelectorAll(".ExecutionTargetOptionName").length)) > 0,
+      { timeout: 15000, timeoutMsg: "the picker never offered a running container on this connection" },
+    );
+    const picker = await browser.execute(() => ({
+      placeholder: document.querySelector("#agentExecutionRef")?.placeholder,
+      rows: Array.from(document.querySelectorAll(".ExecutionTargetOption")).map((row) => ({
+        name: row.querySelector(".ExecutionTargetOptionName")?.textContent ?? "",
+        meta: row.querySelector(".ExecutionTargetOptionMeta")?.textContent ?? "",
+      })),
+    }));
+    assert.match(picker.placeholder ?? "", /Pick a running container, or type a name or id/);
+    assert.ok(picker.rows.length > 0, "the picker offered nothing");
+    for (const row of picker.rows) {
+      assert.ok(row.name.length > 0, `a picker row had no name: ${JSON.stringify(row)}`);
+      assert.match(row.meta, /[0-9a-f]{12}/, `a picker row did not carry a short id: ${JSON.stringify(row)}`);
+    }
+
+    // And a name the list has not seen is still accepted — a container can be started between filling this in and
+    // starting the session, so the picker must never be the only way to name one.
+    const typed = `never-listed-${Date.now().toString(36)}`;
+    await browser.keys(typed);
+    await browser.waitUntil(
+      async () =>
+        !!(await browser.execute(
+          (value) =>
+            Array.from(document.querySelectorAll(".bp6-menu-item")).some((item) =>
+              (item.textContent ?? "").includes(`Use "${value}"`),
+            ),
+          typed,
+        )),
+      { timeout: 10000, timeoutMsg: "the picker refused a reference it had not listed" },
+    );
+    await browser.keys("Enter");
+    await browser.waitUntil(
+      async () =>
+        (await browser.execute(() => document.querySelector("#agentExecutionRef")?.value)) === typed,
+      { timeout: 10000, timeoutMsg: "the typed reference never reached the field" },
+    );
+    const committed = await browser.execute(() => ({
+      value: document.querySelector("#agentExecutionRef")?.value,
+      problems: Array.from(document.querySelectorAll(".AgentStartProblems div")).map((line) => line.textContent),
+    }));
+    assert.equal(committed.value, typed, "the typed reference did not reach the field");
+    assert.ok(
+      !committed.problems.some((line) => /Name the container the tools run in/.test(line ?? "")),
+      `the form still complained after a reference was named: ${JSON.stringify(committed.problems)}`,
+    );
     // Nothing named yet, so the form refuses to start rather than starting a session whose every call would fail.
     assert.equal(sandbox.submitDisabled, true);
     assert.ok(
@@ -184,7 +265,7 @@ describe("the workspace toolset", () => {
     await browser.execute(() => {
       window.__cdCodingAgentStore.setState({
         status: "ready",
-        view: { threadId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
+        view: { sessionId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
       });
       const store = window.__cdCodingAgentStore.getState();
       store.applyBridgeEvent({
@@ -255,7 +336,7 @@ describe("the workspace toolset", () => {
     await browser.execute(() => {
       window.__cdCodingAgentStore.setState({
         status: "ready",
-        view: { threadId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
+        view: { sessionId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
         pendingEngineOps: {},
       });
     });

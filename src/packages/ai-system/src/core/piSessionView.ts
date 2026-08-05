@@ -1,30 +1,30 @@
-// Projects pi bridge events into the app's existing ThreadView. This is the seam that lets the whole
+// Projects pi bridge events into the app's existing SessionView. This is the seam that lets the whole
 // assistant UI — markdown, tool cards, approvals, thinking — render pi output with no component changes:
 // the vocabulary stays the app's and the producer is the pi bridge.
 
 import type { EffectiveContextSource } from "@/ai-system/core/context";
 import type { AIPermissionMode } from "@/ai-system/core/permissions";
 import { piApprovalSummary } from "@/ai-system/core/piApprovals";
-import { toEffectiveContext, toThreadUsage } from "@/ai-system/core/piContextReport";
-import type { ThreadView } from "@/ai-system/core/threadEvents";
+import { toEffectiveContext, toSessionUsage } from "@/ai-system/core/piContextReport";
+import type { SessionView } from "@/ai-system/core/sessionEvents";
 import { classifyHostRequest } from "@/ai-system/core/uiRequests";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 
-type TimelineItem = ThreadView["timeline"][number];
+type TimelineItem = SessionView["timeline"][number];
 
 // A live user turn has no bridge event — the app knows what it submitted — so the store injects `user_message`
 // through this projector to keep every timeline mutation in a single tested place. It is a bridge event as well,
 // because a REPLACED session replays its history through the same case, which is why there is one projection here
 // and not two that drift. `approval_settled` is the same idea for the answer the user gave a gated tool call: the
 // container is told over the bridge, the transcript is told through here.
-export type PiThreadViewEvent = BridgeEvent | { type: "approval_settled"; requestId: string; allowed: boolean };
+export type PiSessionViewEvent = BridgeEvent | { type: "approval_settled"; requestId: string; allowed: boolean };
 
-export function emptyPiThreadView(threadId: string): ThreadView {
-  return { threadId, phase: "idle", lastSeq: 0, timeline: [] };
+export function emptyPiSessionView(sessionId: string): SessionView {
+  return { sessionId, phase: "idle", lastSeq: 0, timeline: [] };
 }
 
-function settleStreaming(view: ThreadView, status: "complete" | "error"): TimelineItem[] {
+function settleStreaming(view: SessionView, status: "complete" | "error"): TimelineItem[] {
   const streaming = view.streamingAssistant;
   if (!streaming) return view.timeline;
   return view.timeline.map((item, index) =>
@@ -44,7 +44,7 @@ function turnNotice(stopReason: string): NoticeItem["notice"] | undefined {
 
 type ToolItem = Extract<TimelineItem, { kind: "tool" }>;
 
-function withTool(view: ThreadView, toolCallId: string, patch: (item: ToolItem) => ToolItem): TimelineItem[] {
+function withTool(view: SessionView, toolCallId: string, patch: (item: ToolItem) => ToolItem): TimelineItem[] {
   return view.timeline.map((item) => (item.kind === "tool" && item.toolCallId === toolCallId ? patch(item) : item));
 }
 
@@ -52,7 +52,7 @@ function withTool(view: ThreadView, toolCallId: string, patch: (item: ToolItem) 
 // approval card can name where a container mutation lands even when the agent left it to the app to decide, plus the
 // app-side facts a usage or context report needs — which configured provider this is, the permission mode in force,
 // and the project sources the app itself put into the prompt.
-export interface PiThreadViewSession {
+export interface PiSessionViewContext {
   connectionId?: string;
   providerId?: string;
   permissionMode?: AIPermissionMode;
@@ -60,11 +60,11 @@ export interface PiThreadViewSession {
   now?: () => number;
 }
 
-export function projectPiThreadView(
-  view: ThreadView,
-  event: PiThreadViewEvent,
-  session?: PiThreadViewSession,
-): ThreadView {
+export function projectPiSessionView(
+  view: SessionView,
+  event: PiSessionViewEvent,
+  session?: PiSessionViewContext,
+): SessionView {
   const next = { ...view, lastSeq: view.lastSeq + 1 };
 
   switch (event.type) {
@@ -241,7 +241,7 @@ export function projectPiThreadView(
     // Neither report is transcript content: they replace what the usage and context panels show. `lastSeq` still
     // moves, because a subscriber watching it has something new to render.
     case "usage":
-      return { ...next, usage: toThreadUsage(event.usage) };
+      return { ...next, usage: toSessionUsage(event.usage) };
 
     case "request_context":
       return {

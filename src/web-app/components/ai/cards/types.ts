@@ -13,6 +13,6 @@ export interface ToolCardProps {
   status: "running" | "complete" | "error";
   ok?: boolean;
   result?: unknown;
-  threadId?: string;
+  sessionId?: string;
   message?: string;
 }

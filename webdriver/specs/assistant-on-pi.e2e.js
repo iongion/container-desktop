@@ -14,7 +14,7 @@ describe("Assistant surface on the pi session", () => {
       window.__cdCodingAgentStore.setState({
         status: "ready",
         view: {
-          threadId: "pi-session",
+          sessionId: "pi-session",
           phase: "idle",
           lastSeq: 2,
           timeline: [

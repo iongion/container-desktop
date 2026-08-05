@@ -13,7 +13,7 @@ import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
-import { composeGatewayEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
+import { composeAuthRefreshEnv, composeGatewayEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
 import type {
   AIKeyStore,
   ExecutionSelector,
@@ -101,7 +101,7 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     if (recentErrors.length > 20) recentErrors.splice(0, recentErrors.length - 20);
     try {
       deps.logger?.error(message, {
-        ...(id ? { threadId: id } : {}),
+        ...(id ? { sessionId: id } : {}),
         error: detail,
       });
     } catch {
@@ -236,6 +236,22 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
         const path = await deps.keyStore.writeSecretFile(request.provider, request.fileName, contents);
         return { path };
       }),
+    );
+    // The one-shot auth container's env file for a refresh. Composed with the same placeholder the gateway's uses, so
+    // the credential is substituted by the realm that owns the vault and never crosses into the web view — which is
+    // precisely why the exchange happens in a container rather than here.
+    onInvoke(AI_CHANNELS.authRefreshEnv, (event, request) =>
+      guarded(event, async () => ({
+        path: await deps.keyStore.writeSecretFile(
+          request.provider,
+          request.fileName,
+          composeAuthRefreshEnv({
+            bridgeToken: request.bridgeToken,
+            bridgePort: request.bridgePort,
+            credential: KEYCHAIN_SECRET_PLACEHOLDER,
+          }),
+        ),
+      })),
     );
     // The AGENT container's env file, into the SAME protected directory. It carries the bridge token — a secret in its
     // own right — so it belongs behind the same guard rather than in a second directory the web view can read back.

@@ -28,7 +28,7 @@ function inspector(exec: ExecuteIsolated, root = "/workspace"): WorkspaceChanges
   return createGitWorkspaceChanges({
     exec,
     workspace: workspace(root),
-    target: { kind: "host" },
+    origin: { kind: "app" },
     baseEnv: {
       PATH: "/usr/bin:/bin",
       HOME: "/home/user",
@@ -80,7 +80,7 @@ describe("Git workspace changes", () => {
 
     const snapshot = await inspector(exec).status();
 
-    expect(snapshot.target).toEqual({ kind: "host" });
+    expect(snapshot.origin).toEqual({ kind: "app" });
     expect(snapshot.workspaceRoot).toBe("/workspace");
     expect(snapshot.state).toBe("changes");
     if (snapshot.state !== "changes") throw new Error("expected changes");

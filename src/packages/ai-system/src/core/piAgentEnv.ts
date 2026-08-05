@@ -57,3 +57,20 @@ export function composeGatewayEnv(environment: GatewayEnvironment): string {
     envValue("CD_GATEWAY_PORT", String(environment.gatewayPort)),
   ].join("\n");
 }
+
+// The one-shot auth container's env file for a REFRESH run: the bridge it listens on, plus the credential it is to
+// exchange. Composed here beside the gateway's for the same reason — one producer, so the placeholder the vault's
+// realm substitutes cannot drift from the name the container reads.
+export interface AuthRefreshEnvironment {
+  bridgeToken: string;
+  bridgePort: number;
+  credential: string;
+}
+
+export function composeAuthRefreshEnv(environment: AuthRefreshEnvironment): string {
+  return [
+    envValue("CD_BRIDGE_TOKEN", environment.bridgeToken),
+    envValue("CD_BRIDGE_PORT", String(environment.bridgePort)),
+    envValue("CD_CREDENTIAL", environment.credential),
+  ].join("\n");
+}

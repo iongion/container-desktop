@@ -26,6 +26,10 @@ export interface PiProvider {
   // `lazyOAuth` keeps the name and the label on the wrapper and defers only the Node-only implementation. So the
   // button wears pi's label and this app invents no copy for someone else's login.
   oauthLabel?: string;
+  // pi's name for the auth METHOD — "Anthropic (Claude Pro/Max)". Only three of pi's flows declare a `loginLabel`;
+  // every one names itself, so this is what a button says when there is no selector label, and the app still never
+  // invents copy for someone else's login.
+  oauthName?: string;
   models: readonly Model<Api>[];
 }
 
@@ -38,6 +42,7 @@ const PI_PROVIDERS: readonly PiProvider[] = builtinProviders()
     apiKey: !!provider.auth?.apiKey,
     oauth: !!provider.auth?.oauth,
     ...(provider.auth?.oauth?.loginLabel ? { oauthLabel: provider.auth.oauth.loginLabel } : {}),
+    ...(provider.auth?.oauth?.name ? { oauthName: provider.auth.oauth.name } : {}),
     models: safeModels(provider),
   }))
   .sort((a, b) => a.name.localeCompare(b.name));

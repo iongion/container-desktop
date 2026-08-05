@@ -30,6 +30,7 @@ import { PROJECT_VERSION } from "@/web-app/Environment";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
+import { ExecutionTargetSelect } from "./ExecutionTargetSelect";
 import { type CodingAgentStartProblem, type ExecutionTargetKind, resolveCodingAgentStart } from "./startSession";
 import "./AssistantScreen.css";
 
@@ -39,9 +40,10 @@ export interface StartSessionDrawerProps {
   onClose: () => void;
 }
 
-// What each choice means, in the drawer's own words. `off` is not a target — it withholds the toolset, which is why
-// it reads as the agent keeping to its own container.
-const EXECUTION_KINDS: readonly ExecutionTargetKind[] = ["off", "host", "remote", "container", "sandbox"];
+// What each choice means, in the drawer's own words. A target is a CONTAINER; the connection chosen above is how it
+// is reached. `off` is not a target — it withholds the toolset, which is why it reads as the agent keeping to its
+// own container.
+const EXECUTION_KINDS: readonly ExecutionTargetKind[] = ["off", "container", "sandbox"];
 
 export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose }: StartSessionDrawerProps) => {
   const { t } = useTranslation();
@@ -145,17 +147,13 @@ export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose 
   // prose the form reads; the KINDS list is the vocabulary and lives at module level.
   const EXECUTION_LABEL: Record<ExecutionTargetKind, string> = {
     off: t("Not offered"),
-    host: t("This machine"),
-    remote: t("The engine's own host"),
     container: t("An existing container"),
     sandbox: t("A disposable container"),
   };
   const EXECUTION_HELP: Record<ExecutionTargetKind, string> = {
     off: t("The agent keeps to its own container, which already has the workspace folder mounted."),
-    host: t("File and command tools act on THIS machine, outside any container. Every write and command asks first."),
-    remote: t("File and command tools act on the engine's own host, over the connection's transport."),
-    container: t("File and command tools act inside a container that is already running on this connection."),
-    sandbox: t("A throwaway container is created for the session from this image, and removed when it ends."),
+    container: t("File and command tools act inside a container already running on the connection chosen above."),
+    sandbox: t("A throwaway container is created on that connection from this image, and removed when it ends."),
   };
   // Only what the user can act on: an unanswered key probe is not a complaint.
   const blockers = keyPresent === undefined ? [] : resolved.problems;
@@ -249,16 +247,18 @@ export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose 
               <FormGroup
                 disabled={starting}
                 label={executionKind === "container" ? t("Container") : t("Image")}
-                labelFor="agentExecutionRef"
+                helperText={
+                  executionKind === "container"
+                    ? t("Running on this connection. A name the list has not seen is accepted too.")
+                    : t("Pulled on this connection. A reference the list has not seen is pulled at start.")
+                }
               >
-                <InputGroup
-                  fill
-                  disabled={starting}
-                  id="agentExecutionRef"
-                  leftIcon={executionKind === "container" ? IconNames.BOX : IconNames.CUBE}
-                  placeholder={executionKind === "container" ? t("Container name or id") : t("Image reference")}
+                <ExecutionTargetSelect
+                  kind={executionKind}
+                  connectionId={connectionId}
                   value={executionRef}
-                  onInput={(event) => setExecutionRef(event.currentTarget.value)}
+                  onChange={setExecutionRef}
+                  disabled={starting}
                 />
               </FormGroup>
             ) : null}

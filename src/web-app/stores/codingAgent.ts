@@ -30,11 +30,11 @@ import {
 } from "@/ai-system/core/permissions";
 import { decidePiToolCall, piPermissionContext } from "@/ai-system/core/piApprovals";
 import { undersizedWindow } from "@/ai-system/core/piContextReport";
-import { emptyPiThreadView, type PiThreadViewSession, projectPiThreadView } from "@/ai-system/core/piThreadView";
+import { emptyPiSessionView, type PiSessionViewContext, projectPiSessionView } from "@/ai-system/core/piSessionView";
 import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import type { ProviderKind } from "@/ai-system/core/providers";
-import type { ThreadView } from "@/ai-system/core/threadEvents";
-import { threadExportHtml, threadHtmlFilename } from "@/ai-system/core/threadExportHtml";
+import type { SessionView } from "@/ai-system/core/sessionEvents";
+import { sessionExportHtml, sessionHtmlFilename } from "@/ai-system/core/sessionExportHtml";
 import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
@@ -60,15 +60,56 @@ import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { applySurfaceEvent, type CodingAgentSurfaces, noSurfaces } from "@/web-app/stores/codingAgentSurfaces";
 import { composeSessionSystemContext, type SessionSystemContext } from "@/web-app/stores/codingAgentSystemContext";
+import { useProviderLoginStore } from "@/web-app/stores/providerLogin";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { readAppPiThemePalette } from "@/web-app/themes/appPiTheme";
 
 const logger = createLogger("web-app.codingAgent");
 
+// A session outlives an expiring sign-in, and the gateway signs with the access token it was started with. So the app
+// renews the credential just BEFORE it lapses and hands the new one to the gateway through the agent container — the
+// only thing that can reach it. Module-level because a timer is not state the UI renders, and one session at a time
+// means one timer.
+const RENEWAL_MARGIN_MS = 60_000;
+let renewalTimer: ReturnType<typeof setTimeout> | undefined;
+
+function cancelCredentialRenewal(): void {
+  if (renewalTimer) clearTimeout(renewalTimer);
+  renewalTimer = undefined;
+}
+
+function scheduleCredentialRenewal(
+  providerId: string,
+  expiresAt: number,
+  client: () => PiBridgeClient | undefined,
+): void {
+  cancelCredentialRenewal();
+  const delay = expiresAt - Date.now() - RENEWAL_MARGIN_MS;
+  if (!Number.isFinite(delay)) return;
+  renewalTimer = setTimeout(
+    () => {
+      void (async () => {
+        const outcome = await useProviderLoginStore.getState().refreshCredential(providerId);
+        if (outcome.accessToken) {
+          await client()
+            ?.setGatewayCredential(outcome.accessToken)
+            .catch((error) => logger.error("the renewed credential did not reach the gateway", error));
+        }
+        // Reschedule off what the exchange reported, so a provider with a short token is renewed as often as it needs.
+        if (outcome.expiresAt) scheduleCredentialRenewal(providerId, outcome.expiresAt, client);
+        else if (outcome.mustSignInAgain) {
+          Notification.show({ message: t("The assistant's sign-in expired — sign in again."), intent: Intent.WARNING });
+        }
+      })();
+    },
+    Math.max(delay, 1_000),
+  );
+}
+
 type HostRequestEvent = Extract<BridgeEvent, { type: "host_request" }>;
 
 // Session UI an extension drives outside the transcript: footer statuses, composer widgets, the window title
-// and a composer draft. Kept apart from the ThreadView so a status update never reads as model output.
+// and a composer draft. Kept apart from the SessionView so a status update never reads as model output.
 export interface CodingAgentChrome {
   statuses: Record<string, string>;
   widgets: Record<string, { lines: string[]; placement: "aboveEditor" | "belowEditor" }>;
@@ -278,7 +319,7 @@ export interface ActiveSkillScope {
 
 // What the projector cannot read off a bridge event: which connection this session runs on, which configured
 // provider answers it, the permission mode in force, and the project sources the app itself put in the prompt.
-function viewSession(state: CodingAgentState): PiThreadViewSession {
+function viewSession(state: CodingAgentState): PiSessionViewContext {
   return {
     connectionId: state.connectionId,
     ...(state.lastStart?.providerId ? { providerId: state.lastStart.providerId } : {}),
@@ -318,7 +359,7 @@ export interface StartCodingAgentOptions {
 
 export interface CodingAgentState {
   status: "idle" | "starting" | "ready" | "error";
-  view: ThreadView;
+  view: SessionView;
   startLog: string[];
   error?: string;
   spec?: PiAgentSessionSpec;
@@ -483,7 +524,7 @@ async function writeAgentEnvFile(name: string, contents: string): Promise<string
 
 export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   status: "idle",
-  view: emptyPiThreadView("pi-session"),
+  view: emptyPiSessionView("pi-session"),
   startLog: [],
   chrome: emptyCodingAgentChrome(),
   surfaces: noSurfaces(),
@@ -495,7 +536,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     set({
       status: "starting",
       startLog: [],
-      view: emptyPiThreadView("pi-session"),
+      view: emptyPiSessionView("pi-session"),
       chrome: emptyCodingAgentChrome(),
       surfaces: noSurfaces(),
       resources: noContributedResources(),
@@ -526,6 +567,29 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       await client.connect();
       return;
     }
+    // A credential that expires is rotated BEFORE the gateway's env file is written, because that file is where the
+    // access token is frozen for the session's life. A permanent key answers "unchanged" and costs one short-lived
+    // container; a spent refresh token is said out loud here rather than surfacing as a 401 on the first turn.
+    // A keyless local provider names none, and has nothing to rotate.
+    const credentialProvider = options.providerId;
+    if (credentialProvider) {
+      const rotation = await useProviderLoginStore.getState().refreshCredential(credentialProvider);
+      if (rotation.mustSignInAgain) {
+        set({
+          status: "error",
+          error: `${credentialProvider}: the stored sign-in can no longer be renewed — sign in again`,
+        });
+        return;
+      }
+      if (rotation.refreshed) {
+        set((state) => ({ startLog: [...state.startLog, `renewed the ${credentialProvider} sign-in`] }));
+      }
+      // A credential with a deadline gets a renewal scheduled before it; a permanent key reports none and gets none.
+      if (rotation.expiresAt) {
+        scheduleCredentialRenewal(credentialProvider, rotation.expiresAt, () => get().client);
+      }
+    }
+
     const host = await resolveConnectionHost(options.connectionId);
     if (!host) {
       set({ status: "error", error: `no engine host for connection ${options.connectionId}` });
@@ -613,7 +677,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     const { client } = get();
     if (!client) return;
     await get().publishSystemContext();
-    set((state) => ({ view: projectPiThreadView(state.view, { type: "user_message", text }) }));
+    set((state) => ({ view: projectPiSessionView(state.view, { type: "user_message", text }) }));
     await client.prompt(text);
   },
 
@@ -622,7 +686,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     if (!client) return;
     await get().publishSystemContext();
     set((state) => ({
-      view: projectPiThreadView(state.view, { type: "user_message", text: input.displayContent }),
+      view: projectPiSessionView(state.view, { type: "user_message", text: input.displayContent }),
       activeSkill: {
         allowedTools: input.allowedTools ? new Set(input.allowedTools) : undefined,
         tainted: !!input.initialTaint,
@@ -670,7 +734,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     const { view, spec, lastStart } = get();
     if (!view.timeline.length) throw new Error("there is no conversation to share yet");
     const title = view.context?.model ?? spec?.modelId ?? "Assistant session";
-    const html = threadExportHtml(
+    const html = sessionExportHtml(
       title,
       lastStart?.providerId ? `${lastStart.providerId}/${spec?.modelId ?? ""}` : (spec?.modelId ?? "unknown model"),
       new Date().toISOString(),
@@ -678,7 +742,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     );
     const runtime = getHostRuntime();
     const selection = await runtime.dialogs.saveFileSelector({
-      defaultPath: threadHtmlFilename(title),
+      defaultPath: sessionHtmlFilename(title),
       filters: [{ name: t("HTML files"), extensions: ["html"] }],
     });
     if (selection?.canceled || !selection?.filePath) return false;
@@ -692,6 +756,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
 
   async stop() {
     const { client, spec, connectionId } = get();
+    cancelCredentialRenewal();
     client?.close();
     // Whatever this session's workspace target built — above all a disposable sandbox container, which exists for
     // this run and nothing else. Released before the pair goes, and never fatal: the session is ending either way.
@@ -731,7 +796,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // The client, the spec and the connection stay: same socket, same containers.
     if (event.type === "session_replaced") {
       set({
-        view: emptyPiThreadView("pi-session"),
+        view: emptyPiSessionView("pi-session"),
         chrome: emptyCodingAgentChrome(),
         surfaces: noSurfaces(),
         pendingDialog: undefined,
@@ -750,7 +815,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       return;
     }
     // A surface frame is a paint, not transcript content: it replaces what that component last drew and
-    // must never append an item to the thread.
+    // must never append an item to the session.
     if (event.type === "surface_frame" || event.type === "surface_closed") {
       set((state) => ({ surfaces: applySurfaceEvent(state.surfaces, event) }));
       return;
@@ -762,7 +827,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       return;
     }
     if (event.type === "plugin_progress") return;
-    set((state) => ({ view: projectPiThreadView(state.view, event, viewSession(state)) }));
+    set((state) => ({ view: projectPiSessionView(state.view, event, viewSession(state)) }));
     // A skill narrows only the turn it started. Lifting it here rather than on the next submit keeps a
     // follow-up prompt from inheriting a restriction the user never asked for.
     if (event.type === "turn_end" || event.type === "idle") {
@@ -820,14 +885,14 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
           return;
         }
         // Both a rejection and a question get a card: a remembered block should be visible, not silent.
-        set((state) => ({ view: projectPiThreadView(state.view, event) }));
+        set((state) => ({ view: projectPiSessionView(state.view, event) }));
         if (action === "reject") {
           await get().respondToRequest(requestId, {
             ok: true,
             value: { allow: false, reason: "blocked by a remembered decision" },
           });
           set((state) => ({
-            view: projectPiThreadView(state.view, { type: "approval_settled", requestId, allowed: false }),
+            view: projectPiSessionView(state.view, { type: "approval_settled", requestId, allowed: false }),
           }));
           await stopAfterRejection(get().client);
         }
@@ -859,14 +924,14 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
           await get().runEngineOp(requestId, { op, args });
           return;
         }
-        set((state) => ({ view: projectPiThreadView(state.view, event, viewSession(state)) }));
+        set((state) => ({ view: projectPiSessionView(state.view, event, viewSession(state)) }));
         if (action === "reject") {
           await get().respondToRequest(requestId, {
             ok: true,
             value: { ok: false, error: "blocked by a remembered decision" } satisfies EngineOpResult,
           });
           set((state) => ({
-            view: projectPiThreadView(state.view, { type: "approval_settled", requestId, allowed: false }),
+            view: projectPiSessionView(state.view, { type: "approval_settled", requestId, allowed: false }),
           }));
           await stopAfterRejection(get().client);
           return;
@@ -901,14 +966,14 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
           await get().runWorkspaceOp(requestId, { op, args });
           return;
         }
-        set((state) => ({ view: projectPiThreadView(state.view, event, viewSession(state)) }));
+        set((state) => ({ view: projectPiSessionView(state.view, event, viewSession(state)) }));
         if (action === "reject") {
           await get().respondToRequest(requestId, {
             ok: true,
             value: { ok: false, error: "blocked by a remembered decision" } satisfies WorkspaceOpResult,
           });
           set((state) => ({
-            view: projectPiThreadView(state.view, { type: "approval_settled", requestId, allowed: false }),
+            view: projectPiSessionView(state.view, { type: "approval_settled", requestId, allowed: false }),
           }));
           await stopAfterRejection(get().client);
           return;
@@ -1001,7 +1066,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       });
     }
     set((state) => ({
-      view: projectPiThreadView(state.view, { type: "approval_settled", requestId: approvalId, allowed: allow }),
+      view: projectPiSessionView(state.view, { type: "approval_settled", requestId: approvalId, allowed: allow }),
     }));
     if (!allow) await stopAfterRejection(get().client);
     if (permissionMode() !== "remember") return;

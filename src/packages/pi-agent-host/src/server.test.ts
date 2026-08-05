@@ -20,6 +20,7 @@ function harness(token = "tok") {
     runCommand: vi.fn(async () => ({ ok: true as const, data: { ran: true } })),
     importSession: vi.fn(async () => {}),
     checkProvider: vi.fn(async () => ({ reachable: true, status: 200 })),
+    setGatewayCredential: vi.fn(async () => undefined),
     selectModel: vi.fn(async (model: { id: string }) => ({ provider: "test", id: model.id })),
     plugins: {
       list: vi.fn(() => ({ configured: [{ source: "npm:@foo/bar", scope: "user" as const, filtered: false }] })),

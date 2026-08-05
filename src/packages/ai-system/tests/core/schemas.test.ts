@@ -29,19 +29,22 @@ const readyProjectContext = {
 };
 
 describe("executionTarget", () => {
-  it("accepts the four supported target kinds", () => {
-    expect(executionTarget.safeParse({ kind: "host" }).success).toBe(true);
-    expect(executionTarget.safeParse({ kind: "remote", connectionId: "c1" }).success).toBe(true);
+  // A target is a CONTAINER, and the connection is how it is reached — so there are two kinds, not four. "This
+  // machine" and "the engine's own host" are not targets: they name a transport, which the connection already is.
+  it("accepts the two container kinds", () => {
     expect(executionTarget.safeParse({ kind: "container", connectionId: "c1", containerId: "abc" }).success).toBe(true);
     expect(executionTarget.safeParse({ kind: "sandbox", connectionId: "c1", image: "alpine:3" }).success).toBe(true);
   });
 
-  it("rejects missing ids, unknown kinds, and extra keys", () => {
+  it("refuses a target that is not a container, and one missing its id", () => {
+    expect(executionTarget.safeParse({ kind: "host" }).success).toBe(false);
+    expect(executionTarget.safeParse({ kind: "remote", connectionId: "c1" }).success).toBe(false);
     expect(executionTarget.safeParse({ kind: "container", connectionId: "c1" }).success).toBe(false);
     expect(executionTarget.safeParse({ kind: "sandbox", connectionId: "c1" }).success).toBe(false);
-    expect(executionTarget.safeParse({ kind: "remote" }).success).toBe(false);
     expect(executionTarget.safeParse({ kind: "bogus" }).success).toBe(false);
-    expect(executionTarget.safeParse({ kind: "host", extra: true }).success).toBe(false);
+    expect(
+      executionTarget.safeParse({ kind: "container", connectionId: "c1", containerId: "abc", extra: true }).success,
+    ).toBe(false);
   });
 });
 
@@ -70,6 +73,12 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.keyHas]: { provider: "openai" },
       [AI_CHANNELS.keySet]: { provider: "openai", key: "secret" },
       [AI_CHANNELS.keyClear]: { provider: "openai" },
+      [AI_CHANNELS.authRefreshEnv]: {
+        provider: "anthropic",
+        fileName: "8f21ac-refresh.env",
+        bridgeToken: "t",
+        bridgePort: 8787,
+      },
       [AI_CHANNELS.agentGatewayEnv]: {
         provider: "openrouter",
         fileName: "8f21ac-gateway.env",
@@ -155,9 +164,9 @@ describe("AI protocol boundary validation", () => {
   });
 
   it("validates invoke responses before they enter renderer state", () => {
-    const _thread = {
-      id: "thread-1",
-      title: "Thread",
+    const _session = {
+      id: "session-1",
+      title: "Session",
       createdAt: 1,
       updatedAt: 1,
       phase: "idle" as const,
@@ -170,6 +179,7 @@ describe("AI protocol boundary validation", () => {
       },
       [AI_CHANNELS.agentGatewayEnv]: { path: "/home/me/.local/share/container-desktop/agent/8f21ac-gateway.env" },
       [AI_CHANNELS.agentEnvFile]: { path: "/home/me/.config/container-desktop/agent/8f21ac.env" },
+      [AI_CHANNELS.authRefreshEnv]: { path: "/home/me/.config/container-desktop/agent/8f21ac-refresh.env" },
       [AI_CHANNELS.diagnostics]: {
         capturedAt: 1,
         provider: {
@@ -202,7 +212,7 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.keySet]: { ok: true },
       [AI_CHANNELS.keyClear]: { ok: true },
       [AI_CHANNELS.changesStatus]: {
-        target: { kind: "host" },
+        origin: { kind: "app" },
         workspaceRoot: "/workspace",
         state: "changes",
         entries: [{ path: "src/app.ts", index: "modified", worktree: "unchanged" }],
@@ -210,7 +220,7 @@ describe("AI protocol boundary validation", () => {
         truncated: false,
       },
       [AI_CHANNELS.changesDiff]: {
-        target: { kind: "host" },
+        origin: { kind: "app" },
         workspaceRoot: "/workspace",
         state: "changes",
         staged: "diff --git a/src/app.ts b/src/app.ts",

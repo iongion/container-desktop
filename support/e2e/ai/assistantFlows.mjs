@@ -1,4 +1,4 @@
-// Assistant conversation, composer, completion, and Thread-history flows.
+// Assistant conversation, composer, completion, and Session-history flows.
 import {
   closeOpenAppDrawer,
   composerReadyOn,
@@ -102,15 +102,6 @@ export async function slashCommandKeyboardFlow(driver) {
   await driver.waitFor(composerReadyOn, "ai.assistant", { timeout: 20000, message: "assistant composer" });
   await closeOpenAppDrawer(driver);
   await newAssistantChat(driver);
-  if (await driver.evaluate(() => !!document.querySelector(".ThreadHistoryPopover"))) {
-    await driver.evaluate(() =>
-      document.querySelector('[data-screen="ai.assistant"] [aria-label="Thread history"]')?.click(),
-    );
-    await driver.waitFor(() => !document.querySelector(".ThreadHistoryPopover"), undefined, {
-      timeout: 3000,
-      message: "close Thread history before slash completion",
-    });
-  }
   await driver.evaluate(() => {
     const input = document.querySelector('[data-screen="ai.assistant"] .AIComposerInput');
     const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
@@ -129,12 +120,17 @@ export async function slashCommandKeyboardFlow(driver) {
   );
   if (!focusRetained) return { name: "slashCommandKeyboard", ok: false, detail: "palette stole composer focus" };
 
-  await driver.typeText("thread");
+  await driver.typeText("memory");
   await driver.waitFor(
-    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/thread",
+    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/memory",
     undefined,
     { timeout: 3000, message: "typed slash query" },
   );
+  // `/memory` narrows to the four Project-context commands, so ArrowDown below has somewhere to move.
+  await driver.waitFor(() => document.querySelectorAll(".AssistantCommandPaletteRow").length === 4, undefined, {
+    timeout: 3000,
+    message: "slash query narrowed to a navigable set",
+  });
   await driver.waitFor(
     () => {
       const input = document.querySelector('[data-screen="ai.assistant"] .AIComposerInput');
@@ -155,7 +151,7 @@ export async function slashCommandKeyboardFlow(driver) {
       anchor: palette?.getAttribute("data-command-anchor") || null,
       aboveInput: !!inputRect && !!paletteRect && paletteRect.bottom <= inputRect.top + 2,
       sameWidth: !!inputRect && !!paletteRect && Math.abs(paletteRect.width - inputRect.width) <= 2,
-      textVisible: input?.value === "/thread",
+      textVisible: input?.value === "/memory",
     };
   });
   if (typedAnchor.anchor !== "input" || !typedAnchor.aboveInput || !typedAnchor.sameWidth || !typedAnchor.textVisible) {
@@ -169,7 +165,7 @@ export async function slashCommandKeyboardFlow(driver) {
     () => document.querySelector('.AssistantCommandPaletteRow[aria-selected="true"] code')?.textContent || "",
   );
 
-  await driver.typeText(" ren");
+  await driver.typeText(" add");
   await driver.waitFor(() => document.querySelectorAll(".AssistantCommandPaletteRow").length === 1, undefined, {
     timeout: 3000,
     message: "filtered slash-command result",
@@ -202,14 +198,14 @@ export async function slashCommandKeyboardFlow(driver) {
     { timeout: 3000, message: "composer cleared before button palette" },
   );
   await driver.evaluate(() => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.focus());
-  await driver.typeText("/thread swi");
+  await driver.typeText("/memory rem");
   await driver.waitFor(() => document.querySelectorAll(".AssistantCommandPaletteRow").length === 1, undefined, {
     timeout: 3000,
     message: "Tab completion result",
   });
   await driver.press("Tab");
   await driver.waitFor(
-    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/thread switch ",
+    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/memory remove ",
     undefined,
     { timeout: 3000, message: "Tab inserted command" },
   );
@@ -224,7 +220,7 @@ export async function slashCommandKeyboardFlow(driver) {
   });
   await driver.typeText("/worker");
   await driver.waitFor(
-    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/thread switch /worker",
+    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/memory remove /worker",
     undefined,
     { timeout: 3000, message: "slash remains argument text after command completion" },
   );
@@ -266,7 +262,7 @@ export async function slashCommandKeyboardFlow(driver) {
   const ok =
     before !== after &&
     highlighted &&
-    completed.value === "/thread rename " &&
+    completed.value === "/memory add " &&
     completed.selectionStart === completed.value.length &&
     completed.selectionEnd === completed.value.length &&
     !completed.paletteOpen &&

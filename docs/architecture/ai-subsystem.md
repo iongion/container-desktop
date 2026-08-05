@@ -42,7 +42,7 @@ contain it; the provider is the user's choice and the allow/reject record is the
 flowchart TB
   subgraph renderer["Renderer — Tauri/Wails webview (no Node)"]
     ui["Assistant · Plugins<br/>transcript · cards · dialogs · ANSI surfaces"]:::component
-    store["stores/codingAgent.ts<br/>session · bridge client · projected ThreadView"]:::component
+    store["stores/codingAgent.ts<br/>session · bridge client · projected SessionView"]:::component
     broker["ai-system host/broker<br/>keys · permissions · models · skills · project context · engine_op"]:::component
     ops["platform/engineOpsAdapter<br/>EngineOps over EngineDataService"]:::component
   end
@@ -177,7 +177,7 @@ TRUST the project, which would let a project nobody vouched for have packages wr
 decision lives in the agent dir (`ProjectTrustStore`, so nothing is written into the project to record it) and reaches
 pi through `setProjectTrusted` at construction and on every `/trust` write. The install drawer offers the project
 scope only while that answer is yes, and says why when it is not. **pi owns session persistence** (its own JSONL entry tree); the GUI
-transcript is a projection of the event stream, which is why the app has no thread store of its own on this
+transcript is a projection of the event stream, which is why the app has no session store of its own on this
 path.
 
 `initTheme()` is called for a narrow reason: pi's own components read a module-global theme that *throws*
@@ -354,10 +354,19 @@ adapt — this is a declared narrowing, not a user's "no", so it does not abort 
 suppresses remembered allows so the user sees what an unvouched-for skill asked for. The narrowing lifts on
 `turn_end`.
 
-**Execution targets.** `platform/src/capabilities/{connectionExec,execWorkspaceAccess,executionSelector}.ts`
-still implement the host / remote / container / sandbox backends and are injected into the broker, but nothing
-consumes them since the worker library was deleted; they survive as a capability plus the mock-only
-`__aiOffHostProbe` seam that `webdriver/specs/off-host-exec.e2e.js` drives.
+**Execution targets are containers.** A target is a container — one already running, or a disposable sandbox created
+for the session — and the **connection is how it is reached**, never a target of its own: connections are this app's
+core principle, so a local engine, a machine VM, WSL and an SSH host are all the same choice made once at the top of
+the start form. `core/schemas.ts` is the single origin of the two-member union;
+`platform/src/capabilities/{connectionExec,execWorkspaceAccess,executionSelector}.ts` implement both backends and are
+injected into the broker, and the mock-only `__aiOffHostProbe` seam is what
+`webdriver/specs/off-host-exec.e2e.js` drives. The start form asks for the reference through
+`screens/AI/ExecutionTargetSelect.tsx`, a Suggest over the CHOSEN connection's running containers (or its pulled
+images for a sandbox) that still accepts a name the list has not seen — a container can be started between filling
+the form in and starting the session.
+
+Where a change SET was read is a different question, and has its own type: `WorkspaceChangeOrigin` is `app` (the
+folder as this app sees it, which is what the app's own git status reads) or one of the two container targets.
 
 ## Providers
 
@@ -390,10 +399,25 @@ as its own frames — `auth_prompt`, `auth_prompt_closed`, `auth_event` — and 
 the paste prompt pi races its callback against is what finishes it here (a callback server inside a container is a
 browser on another machine, which is the case pi designed that prompt for).
 
-Only a login whose product is DURABLE is offered: `core/piAuth.ts` names them, and
-`loginCredentialVerdict` is the guard on what actually came back. OpenRouter's flow ends in a permanent
-user-controlled key; every other pi flow returns an access token with a refresh token, and this app hands the
-gateway one static secret — so those are refused with the reason rather than stored to die mid-session.
+**Every flow pi ships is offered**, under pi's own words — the selector label where a flow declares one, otherwise
+pi's name for the auth method ("Anthropic (Claude Pro/Max)"). There is no list of who can be signed into:
+`providerLoginOffer` reads pi's catalogue, and `loginCredentialVerdict` judges what came back. OpenRouter's flow ends
+in a permanent user-controlled key, stored as itself; anthropic, openai-codex, github-copilot, kimi-coding, xai and
+radius end in an access token with a refresh token beside it, stored WHOLE as a one-line tagged envelope
+(`pi-bridge/providerCredential.ts`) in the same vault slot — a key already in a keychain does not change meaning, and
+the gateway reads the access token out of whichever it is handed. The one shape still refused is a token that expires
+with nothing to renew it.
+
+**Renewing a sign-in.** The exchange runs pi's own `OAuthAuth.refresh` in the same one-shot container a sign-in runs
+in (`auth_refresh`), for two reasons: the flow code cannot load in a web view, and the credential cannot either —
+`getKey` refuses in that realm by design, so the container reads it from `CD_CREDENTIAL`, substituted into a private
+env file by the realm that owns the vault (`ai:auth:refresh-env` → `keyStore.writeSecretFile`). The container answers
+with the rotation, or `unchanged` plus the expiry it read, and the app stores a rotation exactly the way it stores a
+sign-in. A session renews **before** its gateway env file freezes the access token, and again on a timer before the
+stored expiry; the renewed token reaches a RUNNING gateway through the agent container
+(`gateway_credential` → `POST /__cd/credential`), because the gateway sits on the pair's `--internal` network with no
+published port and the agent is the only thing that can reach it. A spent refresh token is reported as "sign in
+again" rather than surfacing as a 401 mid-turn.
 
 Keys never live in `user-settings.json`. They are keychain-backed per shell, and the two shells differ in a way
 that is a real security difference:
@@ -566,7 +590,7 @@ AI is **always on** — `Metadata.RequiresAI` is a surfacing tag, never an acces
 Both are reached from the header AI button's menu and cross-link through the AI section tab bar
 (`screens/AI/ScreenHeader.tsx`); build hrefs only with `getAIScreenUrl` (`screens/AI/Navigation.ts`).
 
-**Assistant** is the rich surface: `components/ai/AssistantThread.tsx` renders the transcript (prose, tool
+**Assistant** is the rich surface: `components/ai/AssistantSession.tsx` renders the transcript (prose, tool
 cards, approval cards, ANSI surfaces), the composer with its command palette and history, and the drawers —
 context, diagnostics, skills, project context, workspace changes, branch, compaction, export. The same
 component backs the summonable **quake console** (`AssistantConsole/`, portaled to `<body>`, mod+backtick),
@@ -574,10 +598,10 @@ so work is continuous across surfaces.
 
 There is exactly ONE conversation surface. `AssistantScreen` adds only what a full page can carry — the
 session summary in the header (connection, workspace, container) and the start/stop actions; everything else,
-including the no-session empty state and its Start CTA, lives in `AssistantThread` so the console offers it
+including the no-session empty state and its Start CTA, lives in `AssistantSession` so the console offers it
 too. A session-less surface renders no composer at all: `submit` has no bridge client to reach.
 
-**A turn that produced nothing still says so.** `piThreadView` projects an `assistant_end` carrying no text into a
+**A turn that produced nothing still says so.** `piSessionView` projects an `assistant_end` carrying no text into a
 `notice` timeline item, branching on pi's own stop reason: `stop` becomes `empty-answer` — a small model does exactly
 that, and it read as a turn that never happened — `length` becomes `output-cap`, a cap reached before a single word,
 and every other reason stays silent, because a `toolUse` step's card IS what the model said and an abort or a
@@ -585,7 +609,7 @@ provider error is already on screen as itself. The item carries a CODE, never pr
 renderer translates; both the JSON and the HTML export carry it.
 
 `web-app/stores/useAIStore.ts` derives the assistant's state from the pi session store (one pi session = exactly
-one thread). It declares only what the session can answer for — there is no reject-by-name list any more: what pi
+one session). It declares only what the session can answer for — there is no reject-by-name list any more: what pi
 can do is offered under pi's own command names, and what this architecture cannot honour is refused where the
 command is defined, with the reason, instead of from inside a store three layers after the user was told it was
 available.
@@ -619,7 +643,7 @@ probe with the short name. **An image built for one engine does not exist for th
 
 ## Testing
 
-- **Pure logic, TDD** — the bridge codec, `piThreadView` projection, `piToolCards` rebuilds, `piApprovals`,
+- **Pure logic, TDD** — the bridge codec, `piSessionView` projection, `piToolCards` rebuilds, `piApprovals`,
   `uiRequests` routing, `engineOpDispatch`, `pluginCatalog`, permissions, the command floor, redaction,
   providers, settings, the model probe against each provider's real shape, and the context report with its
   undersized-window arithmetic — hermetic in Vitest, no mocks of what the repo does not own.
@@ -651,14 +675,14 @@ then failed from inside a store.
 
 | Surface | Producer |
 | ------- | -------- |
-| Transcript, tool cards, approvals | the session's bridge events, projected by `piThreadView` |
+| Transcript, tool cards, approvals | the session's bridge events, projected by `piSessionView` |
 | Project Rules + Memory (what the model receives) | the app composes the pack and sends `set_system_context`; the container appends it per turn via `before_agent_start` |
 | Workspace changes, project rules discovery, project skills | host-side workspace access, bound to the RUNNING session's mounted folder (`sessionWorkspace`) |
 | Public web search | the app performs it (address-pinned fetch, user's setting enforced in the broker); the container registers the tool |
 | Context panel · Usage panel | the session's `request_context` and `usage` reports, plus the app's own policy (provider id, permission mode, tool gating, project sources) |
 | A model's window, prices and whether it reasons | the app's own probe of the provider (`ai:model:window`) — the container cannot reach those endpoints |
 | The thinking levels offered for a model | pi, resolved from the registration the app gave it; the app only says what the provider published |
-| A turn that produced no text | `piThreadView`, from pi's own stop reason, as a code the renderer translates |
+| A turn that produced no text | `piSessionView`, from pi's own stop reason, as a code the renderer translates |
 | Slash commands | the app's own catalogue for what the GUI performs; the session's `resources_list` for pi's own commands and its plugins' — under pi's names, with a reason on the ones this architecture cannot honour |
 | Diagnostics | two independent answers: the app's own provider probe, and the session's own through the gateway |
 | Plugins screen | the session's plugin service over the bridge |
@@ -682,7 +706,7 @@ then failed from inside a store.
 | `pi-agent-host/src/toolOutput.ts` | reading back a truncated tool's full output, path-validated against pi's own shape |
 | `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
 | `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |
-| `ai-system/core/{piThreadView,piToolCards,piApprovals,piAIState,uiRequests,engineOpDispatch}.ts` | pure projection, card resolution, policy, routing, dispatch |
+| `ai-system/core/{piSessionView,piToolCards,piApprovals,piAIState,uiRequests,engineOpDispatch}.ts` | pure projection, card resolution, policy, routing, dispatch |
 | `ai-system/core/piContextReport.ts` | the session's reports → the context and usage panels' shapes |
 | `ai-system/adapters/sessionWorkspace.ts` | which folder host-side workspace access acts on: the session's, not Settings' |
 | `ai-system/ui/core/commands/piSessionCommands.ts` | pi's own commands and its plugins' as palette entries, under pi's names |

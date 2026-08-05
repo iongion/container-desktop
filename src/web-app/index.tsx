@@ -78,6 +78,10 @@ async function boot() {
       // `startApplication()` does, after React mounts — so a synchronous read throws and takes the whole boot with it.
       void awaitHostRuntime()
         .then(async (runtime) => {
+          // Only if nothing has started one meanwhile. This resolves AFTER React mounts, so anything that starts a
+          // session in the meantime — a spec's own `start()`, or a user reaching the drawer first — would otherwise be
+          // replaced by this one, and every read that follows the session's folder would answer for the wrong folder.
+          if (useCodingAgentStore.getState().status !== "idle") return;
           await useCodingAgentStore.getState().start({
             connectionId: "mock-connection",
             workspacePath: await runtime.platform.getHomeDir(),
