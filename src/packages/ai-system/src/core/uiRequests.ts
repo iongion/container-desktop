@@ -6,6 +6,7 @@
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 
 import { parseEngineOpRequest } from "./engineOpDispatch";
+import { parseWorkspaceOpRequest } from "./workspaceOpDispatch";
 
 export type HostRequestEvent = Extract<BridgeEvent, { type: "host_request" }>;
 
@@ -60,11 +61,21 @@ export interface PendingWebSearchRequest {
   query: string;
 }
 
+// One workspace file or command operation, to be performed where the SESSION chose. It executes in the app because
+// only that realm holds the connection transports and the local filesystem; the target itself is the session's, so
+// this carries the operation and nothing about where it lands.
+export interface PendingWorkspaceOpRequest {
+  requestId: string;
+  op: string;
+  args: Record<string, unknown>;
+}
+
 export type HostRequestOutcome =
   | { kind: "dialog"; request: PendingUiRequest }
   | { kind: "approval"; request: PendingApprovalRequest }
   | { kind: "engine-op"; request: PendingEngineOpRequest }
   | { kind: "web-search"; request: PendingWebSearchRequest }
+  | { kind: "workspace-op"; request: PendingWorkspaceOpRequest }
   | { kind: "chrome"; patch: ChromePatch }
   | { kind: "ignored" };
 
@@ -117,6 +128,14 @@ export function classifyHostRequest(event: HostRequestEvent): HostRequestOutcome
       const parsed = parseEngineOpRequest(event.payload);
       if (!parsed) return { kind: "ignored" };
       return { kind: "engine-op", request: { requestId: event.requestId, op: parsed.op, args: parsed.args ?? {} } };
+    }
+    case "workspace_op": {
+      const parsed = parseWorkspaceOpRequest(event.payload);
+      if (!parsed) return { kind: "ignored" };
+      return {
+        kind: "workspace-op",
+        request: { requestId: event.requestId, op: parsed.op, args: parsed.args ?? {} },
+      };
     }
     case "web_search": {
       const query = text(event.payload, "query")?.trim();

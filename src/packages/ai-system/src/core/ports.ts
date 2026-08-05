@@ -152,6 +152,9 @@ export interface ResolvedExecution {
 // session and shares the result across everything running on the same target; `dispose` runs when it ends.
 export interface ExecutionSelector {
   select(target: ExecutionTarget): Promise<ResolvedExecution>;
+  // Tear down every backend this selector built, once. The selector already holds them — asking a caller to
+  // remember what it selected is how a sandbox container outlives the run that created it.
+  dispose(): Promise<void>;
 }
 
 // A run-scoped ExecutionSelector factory: the run host builds one selector PER RUN (keyed off the run id) so a

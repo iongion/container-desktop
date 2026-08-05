@@ -12,6 +12,13 @@ declare module "@/resources/prompts/agent-tool-descriptions.md" {
   export default content;
 }
 
+// The workspace toolset's descriptions, inlined the same way and for the same reason — declared per resource, not
+// for `*.md`.
+declare module "@/resources/prompts/workspace-tool-descriptions.md" {
+  const content: string;
+  export default content;
+}
+
 // file-saver ships no types and we only use saveAs; declare it precisely instead of pulling @types.
 declare module "file-saver" {
   export function saveAs(data: Blob | string, filename?: string, options?: { autoBom?: boolean }): void;

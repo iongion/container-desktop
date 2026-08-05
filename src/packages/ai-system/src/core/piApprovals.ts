@@ -10,7 +10,7 @@
 import type { AIPermissionMode, CachedVerdict, PermissionDecisionContext, ToolAction } from "./permissions";
 import { resolveToolAction } from "./permissions";
 import { TOOL_CATALOGUE } from "./toolCatalogue";
-import { WEB_SEARCH_TOOL_NAME } from "./toolNames";
+import { isContainerToolName, WEB_SEARCH_TOOL_NAME } from "./toolNames";
 
 // pi's read-only built-ins, plus the app's own web search. Everything else — the mutating built-ins, plugin tools,
 // MCP tools — is gated, so a tool nobody has classified yet is asked about rather than run silently.
@@ -22,28 +22,26 @@ import { WEB_SEARCH_TOOL_NAME } from "./toolNames";
 // performing one.
 const PI_UNGATED_TOOLS = new Set<string>(["read", "grep", "find", "ls", WEB_SEARCH_TOOL_NAME]);
 
-// The container toolset reaches pi over the bridge, so its calls arrive here as ordinary tool names. Its
-// read/mutation split is taken from the catalogue the worker editor renders rather than restated, so a tool that
-// is re-gated in one place cannot stay ungated in the other.
-const CONTAINER_TOOL_GATING = new Map<string, boolean>(
-  TOOL_CATALOGUE.filter((entry) => entry.group === "container").map((entry) => [entry.name, entry.gated]),
-);
+// The app's own toolsets — container operations and workspace file/command operations — reach pi over the bridge, so
+// their calls arrive here as ordinary tool names. Their read/mutation split is taken from the catalogue the worker
+// editor renders rather than restated, so a tool that is re-gated in one place cannot stay ungated in the other.
+const APP_TOOL_GATING = new Map<string, boolean>(TOOL_CATALOGUE.map((entry) => [entry.name, entry.gated]));
 
 // A summary long enough to judge a command by, short enough for the timeline item's text limit.
 const MAX_SUMMARY_CHARS = 2_000;
 
 export function isPiToolGated(toolName: string): boolean {
-  const container = CONTAINER_TOOL_GATING.get(toolName);
-  if (container !== undefined) return container;
+  const app = APP_TOOL_GATING.get(toolName);
+  if (app !== undefined) return app;
   return !PI_UNGATED_TOOLS.has(toolName);
 }
 
-// Which of the two requests a call arrives as. pi asks for a verdict on EVERY tool call, so a container operation
-// is decided twice: once before pi runs the tool, and once when the app performs the operation itself. Only the
-// second can hold the request and run it on approval, so the first must not ask — asking at both turns one removal
-// into two identical cards, the second appearing after the user already said yes. The pre-call gate could not be
-// the security boundary anyway: an extension can call `engine_op` without registering a tool at all.
-export type PiToolCallBoundary = "tool-call" | "engine-op";
+// Which request a call arrives as. pi asks for a verdict on EVERY tool call, so an operation the APP performs is
+// decided twice: once before pi runs the tool, and once when the app performs it. Only the second can hold the
+// request and run it on approval, so the first must not ask — asking at both turns one removal into two identical
+// cards, the second appearing after the user already said yes. The pre-call gate could not be the security boundary
+// anyway: an extension can call `engine_op` or `workspace_op` without registering a tool at all.
+export type PiToolCallBoundary = "tool-call" | "engine-op" | "workspace-op";
 
 export function decidePiToolCall(input: {
   toolName: string;
@@ -54,7 +52,7 @@ export function decidePiToolCall(input: {
   // remembered allow is not honoured while it is set, so the user sees the call the skill body asked for.
   tainted?: boolean;
 }): ToolAction {
-  if (input.boundary === "tool-call" && CONTAINER_TOOL_GATING.has(input.toolName)) return "run";
+  if (input.boundary === "tool-call" && APP_TOOL_GATING.has(input.toolName)) return "run";
   if (!isPiToolGated(input.toolName)) return "run";
   return resolveToolAction({ mode: input.mode, floorBlocked: false, cached: input.cached, tainted: input.tainted });
 }
@@ -74,7 +72,7 @@ function argText(args: unknown, key: string): string | undefined {
 // TEXT resolves it: the call's arguments stay exactly as the agent sent them, because they are also the identity a
 // remembered decision is keyed on.
 function containerSummary(toolName: string, args: unknown, defaultConnectionId?: string): string | undefined {
-  if (!CONTAINER_TOOL_GATING.has(toolName)) return undefined;
+  if (!isContainerToolName(toolName)) return undefined;
   const entity = argText(args, "id") ?? argText(args, "reference");
   if (!entity) return undefined;
   const connectionId = argText(args, "connectionId") ?? defaultConnectionId;

@@ -13,6 +13,10 @@ const form = (patch?: Partial<CodingAgentStartForm>): CodingAgentStartForm => ({
   providerId: "lmstudio",
   model: "qwen3-coder-30b",
   egress: true,
+  // The default the drawer opens with: the agent keeps its own container's view of the workspace and reaches nowhere
+  // else until the user says so.
+  executionKind: "off",
+  executionRef: "",
   ...patch,
 });
 
@@ -142,5 +146,44 @@ describe("resolveCodingAgentStart", () => {
       keyPresent: false,
     });
     expect(result.problems).toEqual(["no-connection", "no-workspace", "missing-key"]);
+  });
+});
+
+describe("the workspace execution target", () => {
+  const context = { settings: settings(), appVersion: "6.1.0", keyPresent: false };
+
+  it("carries no target by default, so the toolset is not offered", () => {
+    expect(resolveCodingAgentStart(form(), context).options?.executionTarget).toBeUndefined();
+  });
+
+  it("resolves this machine, and the connection's own host", () => {
+    expect(resolveCodingAgentStart(form({ executionKind: "host" }), context).options?.executionTarget).toEqual({
+      kind: "host",
+    });
+    expect(resolveCodingAgentStart(form({ executionKind: "remote" }), context).options?.executionTarget).toEqual({
+      kind: "remote",
+      connectionId: "podman-default",
+    });
+  });
+
+  it("acts through the connection the session runs on, for a container and for a sandbox", () => {
+    expect(
+      resolveCodingAgentStart(form({ executionKind: "container", executionRef: "web-1" }), context).options
+        ?.executionTarget,
+    ).toEqual({ kind: "container", connectionId: "podman-default", containerId: "web-1" });
+    expect(
+      resolveCodingAgentStart(form({ executionKind: "sandbox", executionRef: "alpine:3" }), context).options
+        ?.executionTarget,
+    ).toEqual({ kind: "sandbox", connectionId: "podman-default", image: "alpine:3" });
+  });
+
+  // Neither a container to run in nor an image to build one from has a default worth inventing, so the form says so
+  // rather than starting a session whose every workspace call would fail.
+  it("refuses a container or a sandbox with nothing named", () => {
+    for (const executionKind of ["container", "sandbox"] as const) {
+      const resolved = resolveCodingAgentStart(form({ executionKind, executionRef: "  " }), context);
+      expect(resolved.problems).toContain("no-execution-ref");
+      expect(resolved.options).toBeUndefined();
+    }
   });
 });

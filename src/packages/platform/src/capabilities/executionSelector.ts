@@ -129,5 +129,15 @@ export function createExecutionSelector(options: ExecutionSelectorOptions): Exec
       }
       return existing;
     },
+
+    // Every backend this selector built, torn down once. A build that FAILED has nothing to dispose and must not
+    // stop the others: a run ends either way, and the sandbox is the one thing that must not survive it.
+    async dispose() {
+      const built = [...cache.values()];
+      cache.clear();
+      for (const pending of built) {
+        await pending.then((resolved) => resolved.dispose()).catch(() => undefined);
+      }
+    },
   };
 }

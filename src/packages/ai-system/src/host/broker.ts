@@ -11,15 +11,23 @@ import {
 import type { AIRecordedError } from "@/ai-system/core/diagnostics";
 import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
+import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
 import { composeGatewayEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
-import type { AIKeyStore, ExecutionSelectorFactory, SandboxRunner } from "@/ai-system/core/ports";
+import type {
+  AIKeyStore,
+  ExecutionSelector,
+  ExecutionSelectorFactory,
+  ResolvedExecution,
+  SandboxRunner,
+} from "@/ai-system/core/ports";
 import { type ResolvedProvider, resolveProvider } from "@/ai-system/core/providers";
 import { redactText } from "@/ai-system/core/redact";
 import { validateAIInvokeRequest } from "@/ai-system/core/schemas";
 import { SKILL_LIMITS } from "@/ai-system/core/skills";
 import type { AISettings, DiagnosticsBundle, EngineOps, ListedModel, ProviderTransport } from "@/ai-system/core/types";
 import type { WorkspaceChangesPort } from "@/ai-system/core/workspaceChanges";
+import { dispatchWorkspaceOp } from "@/ai-system/core/workspaceOpDispatch";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
 import { createDiagnosticsHost } from "./diagnosticsHost";
 import { createModelDiscoveryHost } from "./modelDiscoveryHost";
@@ -104,6 +112,28 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
   const requireProjectContext = (): ProjectContextHost => {
     if (!deps.projectContextHost) throw new Error("AI: project context is unavailable");
     return deps.projectContextHost;
+  };
+
+  // One execution selector per RUN, so every workspace call a session makes shares its backend — and its single
+  // sandbox container. Held here rather than in the renderer because the selector owns host-side ports the web view
+  // cannot have, and released explicitly: a sandbox exists for the run and must not outlive it.
+  const selectors = new Map<string, ExecutionSelector>();
+  const resolveExecution = async (runId: string, target: ExecutionTarget): Promise<ResolvedExecution | undefined> => {
+    if (!deps.createExecutionSelector) return undefined;
+    let selector = selectors.get(runId);
+    if (!selector) {
+      selector = deps.createExecutionSelector(runId);
+      selectors.set(runId, selector);
+    }
+    return selector.select(target);
+  };
+  const releaseExecution = async (runId: string): Promise<void> => {
+    const selector = selectors.get(runId);
+    if (!selector) return;
+    selectors.delete(runId);
+    // Reported, never raised: the session is ending either way, and a sandbox left standing is a leak to log rather
+    // than a reason to fail the call that was tidying up.
+    await selector.dispose().catch((error) => reportError("AI: releasing a workspace target failed", runId, error));
   };
   const models = createModelDiscoveryHost<TEvent>({
     senderId: deps.senderId,
@@ -271,6 +301,28 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
           { connectionId: request.defaultConnectionId },
         ),
       ),
+    );
+    // The coding agent's WORKSPACE toolset. The target travels with every call and the selector is memoized per
+    // run, so everything a session does on one target shares one backend — and one sandbox container.
+    onInvoke(AI_CHANNELS.workspaceOp, (event, request) =>
+      guarded(event, async () => {
+        const resolved = await resolveExecution(request.runId, request.target).catch((error) => {
+          // Building a backend can genuinely fail — a sandbox image that will not pull, a remote root that cannot be
+          // made. That is a reason the model can act on, not a rejected invoke for the renderer to translate.
+          reportError("AI: preparing the workspace target failed", request.runId, error);
+          return undefined;
+        });
+        if (!resolved) {
+          return { ok: false as const, error: "The workspace target could not be prepared for this session." };
+        }
+        return dispatchWorkspaceOp(resolved.workspaceAccess, { op: request.op, args: request.args });
+      }),
+    );
+    onInvoke(AI_CHANNELS.workspaceRelease, (event, request) =>
+      guarded(event, async () => {
+        await releaseExecution(request.runId);
+        return { ok: true as const };
+      }),
     );
     // The agent's public-web search. The user's switch is enforced HERE, on every call, rather than by withholding
     // the tool: it can be turned off while a session runs, and "the user turned it off" is a reason the model can

@@ -7,8 +7,15 @@
 // of `session.ts` is what lets the session stay unit-testable.
 
 import descriptionsMarkdown from "@/resources/prompts/agent-tool-descriptions.md";
+import workspaceDescriptionsMarkdown from "@/resources/prompts/workspace-tool-descriptions.md";
 import { parseMarkdownSections } from "@/template/markdownSections";
 
 export function containerToolDescriptions(): Readonly<Record<string, string>> {
   return parseMarkdownSections(descriptionsMarkdown);
+}
+
+// The workspace toolset's own prose, in its own file: it describes operations on a FILESYSTEM, which the container
+// toolset's descriptions say nothing about, and it is only registered when the session was given a target to run on.
+export function workspaceToolDescriptions(): Readonly<Record<string, string>> {
+  return parseMarkdownSections(workspaceDescriptionsMarkdown);
 }

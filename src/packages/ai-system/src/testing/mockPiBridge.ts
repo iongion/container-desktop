@@ -56,6 +56,9 @@ const WEB_SEARCH_RE = /search the web|web search|look .+ up online/;
 interface ScriptedCall {
   op: string;
   args: Record<string, unknown>;
+  // Which of the app's two toolsets performs it. A workspace operation lands on the session's execution target, which
+  // is a different host method and a different backend — so the script has to say which one it meant.
+  method?: "engine_op" | "workspace_op";
 }
 
 // What the model "decides" to do with a prompt. Container operations are named by the app's own tool names,
@@ -76,6 +79,20 @@ function scriptFor(text: string): { calls: ScriptedCall[]; reply: string } {
   }
   if (/restart|stop .*container/.test(prompt)) {
     return { calls: [{ op: "restartContainer", args: { id: "web" } }], reply: mockToolResultResponse.trim() };
+  }
+  // The workspace toolset, which acts on the session's chosen target rather than inside the agent's own container.
+  // One read and one gated write, because those are the two halves that behave differently.
+  if (/read .*\bfile|what is in .*\.(?:ts|md|json|txt)/.test(prompt)) {
+    return {
+      calls: [{ op: "readFile", args: { path: "README.md" }, method: "workspace_op" }],
+      reply: mockToolResultResponse.trim(),
+    };
+  }
+  if (/run .*\bcommand|execute\b/.test(prompt)) {
+    return {
+      calls: [{ op: "execCommand", args: { program: "ls", args: ["-la"] }, method: "workspace_op" }],
+      reply: mockToolResultResponse.trim(),
+    };
   }
   if (/\bimage/.test(prompt)) return { calls: [{ op: "listImages", args: {} }], reply: mockToolResultResponse.trim() };
   if (/\bnetwork/.test(prompt))
@@ -327,13 +344,19 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
     for (const listener of listeners) listener(event);
   };
 
-  // Ask the app to perform one container operation, exactly as the container toolset does. The answer is what
-  // the approval card decides, so a rejection reaches the script as a failed result.
-  const requestEngineOp = (call: ScriptedCall): Promise<EngineOpResult> => {
+  // Ask the app to perform one operation, exactly as the toolset that owns it does — a container operation over
+  // `engine_op`, a file or command one over `workspace_op`. The answer is what the approval card decides, so a
+  // rejection reaches the script as a failed result either way; both envelopes share the `ok` shape.
+  const requestHostOp = (call: ScriptedCall): Promise<EngineOpResult> => {
     const requestId = randomUUID();
     return new Promise<EngineOpResult>((resolve) => {
       pending.set(requestId, resolve);
-      emit({ type: "host_request", requestId, method: "engine_op", payload: { op: call.op, args: call.args } });
+      emit({
+        type: "host_request",
+        requestId,
+        method: call.method ?? "engine_op",
+        payload: { op: call.op, args: call.args },
+      });
     });
   };
 
@@ -460,7 +483,7 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
       if (aborted) break;
       const toolCallId = randomUUID();
       emit({ type: "tool_start", toolCallId, toolName: call.op, args: call.args });
-      const result = await requestEngineOp(call);
+      const result = await requestHostOp(call);
       emit({
         type: "tool_end",
         toolCallId,

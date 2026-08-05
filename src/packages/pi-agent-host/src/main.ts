@@ -3,7 +3,7 @@ import { WebSocketServer } from "ws";
 
 import { createLogger } from "@/logger";
 import { attachLoginConnection } from "@/pi-agent-host/authLogin";
-import { containerToolDescriptions } from "@/pi-agent-host/containerToolDescriptions";
+import { containerToolDescriptions, workspaceToolDescriptions } from "@/pi-agent-host/containerToolDescriptions";
 import { parseUpstreamAuthScheme, startGateway } from "@/pi-agent-host/gateway";
 import { reasoningFromEnv } from "@/pi-agent-host/modelRegistrations";
 import { attachBridgeConnection } from "@/pi-agent-host/server";
@@ -80,6 +80,10 @@ async function runAgent(): Promise<void> {
       reasoning: reasoningFromEnv(process.env),
       emit: (event) => attached?.emit(event),
       containerToolDescriptions: containerToolDescriptions(),
+      // Offered only when the app said it has somewhere to run them. The target itself never comes here: it is the
+      // app that resolves it, and telling the container where its files land would be telling it something it has no
+      // use for and no way to reach.
+      ...(process.env.CD_WORKSPACE_TOOLS === "1" ? { workspaceToolDescriptions: workspaceToolDescriptions() } : {}),
     })
       .then(async (session) => {
         attached = attachBridgeConnection(

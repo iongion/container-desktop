@@ -263,13 +263,13 @@ export function projectPiThreadView(
       // Only the approval gate belongs in the transcript. Dialogs and chrome are session UI the store holds
       // outside the timeline, so a status update never reads as something the model said.
       const outcome = classifyHostRequest(event);
-      // A container operation the app performs itself needs the same card as a tool pi would run: it is a
-      // mutation on the user's real engine either way, and the store only projects the ones it decided to ask
-      // about, so an ungated read never reaches here.
+      // An operation the app performs ITSELF needs the same card as a tool pi would run: a container mutation lands
+      // on the user's real engine and a workspace one on the target they chose — this machine, among them. The store
+      // only projects the ones it decided to ask about, so an ungated read never reaches here.
       const asked =
         outcome.kind === "approval"
           ? outcome.request
-          : outcome.kind === "engine-op"
+          : outcome.kind === "engine-op" || outcome.kind === "workspace-op"
             ? { requestId: outcome.request.requestId, toolName: outcome.request.op, args: outcome.request.args }
             : undefined;
       if (!asked) return next;

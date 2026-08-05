@@ -1,4 +1,5 @@
 import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
+import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import { composeGatewayEnv, gatewayBaseUrl, upstreamModelApi } from "@/ai-system/core/piAgentEnv";
 import { isLoopbackProviderHost, type ProviderKind } from "@/ai-system/core/providers";
 import type { AIAuthSettings } from "@/ai-system/core/types";
@@ -45,6 +46,9 @@ export interface PiAgentSessionSpec {
   // it, and the session then offers no thinking level rather than one the provider would ignore.
   reasoning?: PiModelReasoning;
   egress: boolean;
+  // Where the session's workspace tools run, when the user chose somewhere. Absent means the toolset is not offered
+  // at all — the container is told only THAT it exists, never where, because the app is what resolves the target.
+  executionTarget?: ExecutionTarget;
   // The DNS name that resolves to THIS machine from inside a container on this engine — podman's
   // host.containers.internal, docker's host.docker.internal. A provider running on the host (LM Studio,
   // llama.cpp) is only reachable through it.
@@ -265,6 +269,9 @@ export async function startPiAgentSession(
       ...(spec.reasoning ? ["CD_MODEL_REASONING=1"] : []),
       ...(spec.reasoning?.levels?.length ? [`CD_MODEL_REASONING_LEVELS=${spec.reasoning.levels.join(",")}`] : []),
       ...(spec.reasoning?.mandatory ? ["CD_MODEL_REASONING_MANDATORY=1"] : []),
+      // The FLAG only: the workspace toolset exists for this session. Where its operations land is the app's to
+      // resolve, and a container that knew the target could do nothing with it but leak it.
+      ...(spec.executionTarget ? ["CD_WORKSPACE_TOOLS=1"] : []),
       "CD_WORKSPACE=/workspace",
       `CD_AGENT_DIR=${AGENT_DIR_IN_IMAGE}`,
     ].join("\n"),

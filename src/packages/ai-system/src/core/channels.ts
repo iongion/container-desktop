@@ -45,6 +45,13 @@ export const AI_CHANNELS = {
   // One container-engine operation, performed on the agent's behalf. The coding agent runs inside a container
   // and cannot reach the engine ports, so its container toolset executes here, where engineOps is bound.
   engineOp: "ai:engine:op", // invoke({ op, args?, defaultConnectionId? }) → EngineOpResult
+  // One workspace file or command operation, performed for the agent WHERE the session chose: this machine, a
+  // connection's own host, a container on one, or a disposable sandbox. It executes here because only this realm
+  // holds the connection transports and the local filesystem — the agent container can reach none of them.
+  workspaceOp: "ai:workspace:op", // invoke({ op, args?, target, runId }) → WorkspaceOpResult
+  // Release what a session's targets built — above all the disposable sandbox container, which exists only for
+  // that run and would otherwise outlive the session that asked for it.
+  workspaceRelease: "ai:workspace:release", // invoke({ runId }) → { ok: true }
   // One public-web query, run for the agent. It executes here because the app owns the address-pinned fetch and
   // the user's own web-search switch — which this refuses on while it is off.
   webSearch: "ai:web:search", // invoke({ query }) → { text }

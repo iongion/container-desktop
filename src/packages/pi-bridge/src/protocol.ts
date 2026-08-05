@@ -21,7 +21,7 @@ export type BridgeUiMethod =
 // Everything the container can ask the app for. `approval` is the permission gate; `engine_op` performs one
 // container operation; `web_search` runs one public-web query, which the APP performs because it owns the
 // address-pinned fetch, the user's toggle, and — with egress off — the only network there is.
-export type BridgeHostMethod = BridgeUiMethod | "approval" | "engine_op" | "web_search";
+export type BridgeHostMethod = BridgeUiMethod | "approval" | "engine_op" | "web_search" | "workspace_op";
 
 export interface WebSearchRequest {
   query: string;
@@ -43,6 +43,30 @@ export interface EngineOpRequest {
 // rejecting, so a lost socket has to arrive as an explicit failure. The tool throws on it, which is how pi
 // marks a result `isError`.
 export type EngineOpResult = { ok: true; value?: unknown } | { ok: false; error: string };
+
+// One workspace file or command operation the agent wants performed. Its own method rather than an `engine_op`
+// because it lands somewhere else entirely: an engine operation goes to a container ENGINE, while this goes to a
+// filesystem — the local host, a remote host over SSH, a container, or a disposable sandbox — chosen for the session.
+// The op name is the app's own workspace tool name, so the cards and the gating it already owns keep working.
+export interface WorkspaceOpRequest {
+  op: string;
+  args?: Record<string, unknown>;
+}
+
+// The same value-not-throw shape as `EngineOpResult`, for the same reason: the container is blocked on this answer,
+// and "the target refused" is a reason the model should read rather than a broken response. A separate type because
+// the two travel on separate methods and nothing should be able to route one as the other.
+export type WorkspaceOpResult = { ok: true; value?: unknown } | { ok: false; error: string };
+
+// Where the session's workspace tools run. `host` is this machine; `remote` a connection's own host over its
+// transport; `container` an existing container on a connection; `sandbox` a disposable container created for the
+// session and removed with it. Mirrors `ExecutionTarget` in the app, which is its single origin — the wire carries
+// it so the app can resolve the same backend a worker would.
+export type PiExecutionTarget =
+  | { kind: "host" }
+  | { kind: "remote"; connectionId: string }
+  | { kind: "container"; connectionId: string; containerId: string }
+  | { kind: "sandbox"; connectionId: string; image: string };
 
 // Where a pi component is being rendered. Every slot is single-occupancy: opening a second surface for
 // the same slot replaces the first, so a plugin re-setting its footer never stacks two footers.

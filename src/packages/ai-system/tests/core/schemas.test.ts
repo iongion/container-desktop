@@ -91,6 +91,13 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.modelsCancel]: { requestId: "request-1" },
       [AI_CHANNELS.modelWindow]: { providerId: "lmstudio", model: "qwen3-4b-instruct-2507" },
       [AI_CHANNELS.engineOp]: { op: "listContainers", args: { connectionId: "podman-1" } },
+      [AI_CHANNELS.workspaceOp]: {
+        op: "readFile",
+        args: { path: "src/main.ts" },
+        target: { kind: "sandbox", connectionId: "podman-1", image: "docker.io/library/alpine:3" },
+        runId: "pi-session-8f21ac",
+      },
+      [AI_CHANNELS.workspaceRelease]: { runId: "pi-session-8f21ac" },
       [AI_CHANNELS.webSearch]: { query: "podman rootless" },
       [AI_CHANNELS.permissionsList]: undefined,
       [AI_CHANNELS.permissionsAdd]: {
@@ -223,6 +230,8 @@ describe("AI protocol boundary validation", () => {
       // Both fields optional: a provider that publishes no window answers `{}`, which is rendered as "unknown".
       [AI_CHANNELS.modelWindow]: { contextWindow: 40960 },
       [AI_CHANNELS.engineOp]: { ok: true, value: [{ Id: "c1" }] },
+      [AI_CHANNELS.workspaceOp]: { ok: true, value: "file contents" },
+      [AI_CHANNELS.workspaceRelease]: { ok: true },
       [AI_CHANNELS.webSearch]: { text: "rootless means no daemon" },
       [AI_CHANNELS.permissionsList]: {
         version: "2.0.0",

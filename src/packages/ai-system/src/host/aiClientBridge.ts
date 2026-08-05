@@ -14,12 +14,13 @@ import {
   type AIStatus,
   type ModelsListResult,
 } from "@/ai-system/core/channels";
+import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import type { PermissionRule, PermissionsList, PermissionsSnapshot } from "@/ai-system/core/permissions";
 import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import { validateAIInvokeResponse, validateAIPushPayload } from "@/ai-system/core/schemas";
 import type { ResolveSkillInvocationRequest, SkillHostSnapshot } from "@/ai-system/core/skills";
 import type { WorkspaceChangeSnapshot, WorkspaceDiff } from "@/ai-system/core/workspaceChanges";
-import type { EngineOpResult } from "@/pi-bridge/protocol";
+import type { EngineOpResult, WorkspaceOpResult } from "@/pi-bridge/protocol";
 
 export interface IAI {
   status: () => Promise<AIStatus>;
@@ -60,6 +61,16 @@ export interface IAI {
     args?: Record<string, unknown>;
     defaultConnectionId?: string;
   }) => Promise<EngineOpResult>;
+  // One workspace file or command operation on the agent's behalf, performed WHERE the session chose. Same
+  // value-not-throw contract as an engine operation, and for the same reason: a containerized agent is blocked on it.
+  runWorkspaceOp: (request: {
+    op: string;
+    args?: Record<string, unknown>;
+    target: ExecutionTarget;
+    runId: string;
+  }) => Promise<WorkspaceOpResult>;
+  // Release what a session's workspace targets built — the disposable sandbox above all.
+  releaseWorkspaceTargets: (runId: string) => Promise<{ ok: true }>;
   // One public-web query on the agent's behalf. Throws when the runtime cannot search or the user has web search
   // turned off — the caller turns that into the reason the agent reads.
   runWebSearch: (query: string) => Promise<{ text: string }>;
@@ -118,6 +129,8 @@ export function createAIClient(transport: AIClientTransport) {
     cancelModelList: (requestId) => invoke(AI_CHANNELS.modelsCancel, { requestId }),
     modelWindow: (model, providerId) => invoke(AI_CHANNELS.modelWindow, { model, providerId }),
     runEngineOp: (request) => invoke(AI_CHANNELS.engineOp, request),
+    runWorkspaceOp: (request) => invoke(AI_CHANNELS.workspaceOp, request),
+    releaseWorkspaceTargets: (runId) => invoke(AI_CHANNELS.workspaceRelease, { runId }),
     runWebSearch: (query) => invoke(AI_CHANNELS.webSearch, { query }),
     // The user-managed allow/reject record — managed from Settings → AI permissions.
     listPermissions: () => invoke(AI_CHANNELS.permissionsList),

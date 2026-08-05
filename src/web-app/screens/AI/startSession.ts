@@ -1,6 +1,7 @@
 // Pure resolution of the Coding Agent's start form: which endpoint the gateway container dials, which model
 // the agent asks for, and every reason a start cannot proceed. Kept out of the drawer so the rules are
 // unit-testable without rendering one.
+import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import { resolveProvider } from "@/ai-system/core/providers";
 import type { AISettings } from "@/ai-system/core/types";
 import type { StartCodingAgentOptions } from "@/web-app/stores/codingAgent";
@@ -11,7 +12,16 @@ export interface CodingAgentStartForm {
   providerId: string;
   model: string;
   egress: boolean;
+  // Where the session's workspace tools run. "off" is not a target: it withholds the toolset entirely, which is the
+  // default — the agent's own file tools already see the mounted workspace inside its container, and reaching
+  // anywhere else is a choice the user makes, never one this form makes for them.
+  executionKind: ExecutionTargetKind;
+  // The container the tools run in, or the image a disposable one is created from. Which of the two it is follows
+  // from `executionKind`; one field because exactly one of them is ever asked for.
+  executionRef: string;
 }
+
+export type ExecutionTargetKind = "off" | "host" | "remote" | "container" | "sandbox";
 
 export type CodingAgentStartProblem =
   | "no-connection"
@@ -19,7 +29,8 @@ export type CodingAgentStartProblem =
   | "no-provider"
   | "no-endpoint"
   | "no-model"
-  | "missing-key";
+  | "missing-key"
+  | "no-execution-ref";
 
 export interface CodingAgentStartContext {
   settings: AISettings;
@@ -32,6 +43,23 @@ export interface CodingAgentStartContext {
 export interface ResolvedCodingAgentStart {
   problems: CodingAgentStartProblem[];
   options?: StartCodingAgentOptions;
+}
+
+// The form's own words turned into the target vocabulary `ExecutionTarget` already owns. `remote`, `container` and
+// `sandbox` all act through the connection the session was started on — that is the transport the app holds.
+function executionTargetFor(form: CodingAgentStartForm, executionRef: string): ExecutionTarget | undefined {
+  switch (form.executionKind) {
+    case "off":
+      return undefined;
+    case "host":
+      return { kind: "host" };
+    case "remote":
+      return { kind: "remote", connectionId: form.connectionId };
+    case "container":
+      return { kind: "container", connectionId: form.connectionId, containerId: executionRef };
+    case "sandbox":
+      return { kind: "sandbox", connectionId: form.connectionId, image: executionRef };
+  }
 }
 
 export function resolveCodingAgentStart(
@@ -65,9 +93,16 @@ export function resolveCodingAgentStart(
       problems.push("missing-key");
     }
   }
+  // A container to run in and an image to create one from are both named by the user; neither has a default worth
+  // inventing, and a target missing its reference cannot run a single operation.
+  const executionRef = form.executionRef.trim();
+  if ((form.executionKind === "container" || form.executionKind === "sandbox") && !executionRef) {
+    problems.push("no-execution-ref");
+  }
   if (!resolved || problems.length > 0) {
     return { problems };
   }
+  const target = executionTargetFor(form, executionRef);
   return {
     problems,
     options: {
@@ -84,6 +119,7 @@ export function resolveCodingAgentStart(
       // makes the host compose the gateway's private env file from it.
       appVersion: context.appVersion,
       egress: form.egress,
+      ...(target ? { executionTarget: target } : {}),
     },
   };
 }

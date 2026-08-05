@@ -8,6 +8,7 @@ import {
   Classes,
   DrawerSize,
   FormGroup,
+  HTMLSelect,
   InputGroup,
   Intent,
   ProgressBar,
@@ -29,7 +30,7 @@ import { PROJECT_VERSION } from "@/web-app/Environment";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
-import { type CodingAgentStartProblem, resolveCodingAgentStart } from "./startSession";
+import { type CodingAgentStartProblem, type ExecutionTargetKind, resolveCodingAgentStart } from "./startSession";
 import "./AssistantScreen.css";
 
 const logger = createLogger("web-app.codingAgent.start");
@@ -37,6 +38,10 @@ const logger = createLogger("web-app.codingAgent.start");
 export interface StartSessionDrawerProps {
   onClose: () => void;
 }
+
+// What each choice means, in the drawer's own words. `off` is not a target — it withholds the toolset, which is why
+// it reads as the agent keeping to its own container.
+const EXECUTION_KINDS: readonly ExecutionTargetKind[] = ["off", "host", "remote", "container", "sandbox"];
 
 export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose }: StartSessionDrawerProps) => {
   const { t } = useTranslation();
@@ -82,13 +87,37 @@ export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose 
     if (status === "ready") onClose();
   }, [status, onClose]);
 
+  // Where the session's workspace tools run. "off" by default: the agent's own file tools already see the folder
+  // mounted into its container, and reaching this machine, the engine's host or another container is a decision the
+  // user makes explicitly — never one this form makes for them.
+  const [executionKind, setExecutionKind] = useState<ExecutionTargetKind>("off");
+  const [executionRef, setExecutionRef] = useState("");
+
   const resolved = useMemo(
     () =>
       resolveCodingAgentStart(
-        { connectionId, workspacePath, providerId: selection.providerId, model: selection.model, egress },
+        {
+          connectionId,
+          workspacePath,
+          providerId: selection.providerId,
+          model: selection.model,
+          egress,
+          executionKind,
+          executionRef,
+        },
         { settings: ai, appVersion: PROJECT_VERSION, keyPresent: keyPresent ?? false },
       ),
-    [connectionId, workspacePath, selection.providerId, selection.model, egress, ai, keyPresent],
+    [
+      connectionId,
+      workspacePath,
+      selection.providerId,
+      selection.model,
+      egress,
+      executionKind,
+      executionRef,
+      ai,
+      keyPresent,
+    ],
   );
 
   const browse = useCallback(async () => {
@@ -110,6 +139,23 @@ export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose 
     "no-endpoint": t("This inference source has no endpoint. Set its base URL in Settings → AI."),
     "no-model": t("Pick a model for the agent to use."),
     "missing-key": t("This inference source needs an API key. Add it in Settings → AI."),
+    "no-execution-ref": t("Name the container the tools run in, or the image a disposable one is created from."),
+  };
+  // Where the workspace toolset acts, and what each choice costs. Beside PROBLEM_TEXT because both are translated
+  // prose the form reads; the KINDS list is the vocabulary and lives at module level.
+  const EXECUTION_LABEL: Record<ExecutionTargetKind, string> = {
+    off: t("Not offered"),
+    host: t("This machine"),
+    remote: t("The engine's own host"),
+    container: t("An existing container"),
+    sandbox: t("A disposable container"),
+  };
+  const EXECUTION_HELP: Record<ExecutionTargetKind, string> = {
+    off: t("The agent keeps to its own container, which already has the workspace folder mounted."),
+    host: t("File and command tools act on THIS machine, outside any container. Every write and command asks first."),
+    remote: t("File and command tools act on the engine's own host, over the connection's transport."),
+    container: t("File and command tools act inside a container that is already running on this connection."),
+    sandbox: t("A throwaway container is created for the session from this image, and removed when it ends."),
   };
   // Only what the user can act on: an unanswered key probe is not a complaint.
   const blockers = keyPresent === undefined ? [] : resolved.problems;
@@ -179,6 +225,43 @@ export const StartSessionDrawer: React.FC<StartSessionDrawerProps> = ({ onClose 
                 onChange={(event) => setEgress(event.currentTarget.checked)}
               />
             </FormGroup>
+            <FormGroup
+              disabled={starting}
+              label={t("Workspace tools")}
+              labelFor="agentExecutionKind"
+              helperText={EXECUTION_HELP[executionKind]}
+            >
+              <HTMLSelect
+                fill
+                id="agentExecutionKind"
+                disabled={starting}
+                value={executionKind}
+                onChange={(event) => setExecutionKind(event.currentTarget.value as ExecutionTargetKind)}
+              >
+                {EXECUTION_KINDS.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {EXECUTION_LABEL[kind]}
+                  </option>
+                ))}
+              </HTMLSelect>
+            </FormGroup>
+            {executionKind === "container" || executionKind === "sandbox" ? (
+              <FormGroup
+                disabled={starting}
+                label={executionKind === "container" ? t("Container") : t("Image")}
+                labelFor="agentExecutionRef"
+              >
+                <InputGroup
+                  fill
+                  disabled={starting}
+                  id="agentExecutionRef"
+                  leftIcon={executionKind === "container" ? IconNames.BOX : IconNames.CUBE}
+                  placeholder={executionKind === "container" ? t("Container name or id") : t("Image reference")}
+                  value={executionRef}
+                  onInput={(event) => setExecutionRef(event.currentTarget.value)}
+                />
+              </FormGroup>
+            ) : null}
           </div>
           {blockers.length > 0 ? (
             <Callout intent={Intent.PRIMARY} icon={IconNames.INFO_SIGN} className="AgentStartProblems">

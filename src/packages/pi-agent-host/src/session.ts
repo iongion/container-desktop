@@ -44,6 +44,7 @@ import { createToolSurfaceRenderer, routeToolSurfaces } from "@/pi-agent-host/to
 import { createGuiUiContext, type PiKeybindings } from "@/pi-agent-host/uiContext";
 import { createVirtualTerminal } from "@/pi-agent-host/virtualTerminal";
 import { createWebSearchExtension } from "@/pi-agent-host/webSearchTool";
+import { createWorkspaceToolsExtension } from "@/pi-agent-host/workspaceTools";
 import type {
   AppThemePalette,
   BridgeEvent,
@@ -131,6 +132,10 @@ export interface CreatePiSessionOptions {
   // that reads it is bundler-specific (containerToolDescriptions.ts), and a session that quietly registered no
   // container tools would look like an agent that simply chose not to use them.
   containerToolDescriptions: Readonly<Record<string, string>>;
+  // Model-facing prose for the WORKSPACE toolset, and the flag that decides whether it exists at all. Present only
+  // when the app has a target to run those operations on: a session with no target would otherwise offer the model
+  // nine tools that can only ever answer "there is nowhere to do that".
+  workspaceToolDescriptions?: Readonly<Record<string, string>>;
 }
 
 export async function createPiSession(options: CreatePiSessionOptions): Promise<BridgeSessionHandle> {
@@ -214,6 +219,11 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
           // The container toolset. It registers tools only — each call still passes the permission gate above,
           // because the gate handles every tool_call regardless of who registered the tool.
           createContainerToolsExtension({ rpc, descriptions: options.containerToolDescriptions }),
+          // The workspace toolset, and ONLY when the session was given somewhere to run it. Registered here rather
+          // than always, because a registered tool is a promise to the model that the operation can happen.
+          ...(options.workspaceToolDescriptions
+            ? [createWorkspaceToolsExtension({ rpc, descriptions: options.workspaceToolDescriptions })]
+            : []),
           // Public web search, performed by the app. Registered unconditionally: the setting it depends on can be
           // turned off mid-session, so the app answers with that as the reason rather than the tool vanishing.
           createWebSearchExtension({ rpc, description: options.containerToolDescriptions[WEB_SEARCH_TOOL_NAME] ?? "" }),

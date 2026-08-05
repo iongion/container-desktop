@@ -349,11 +349,28 @@ const engineOpRequest = z
   .strict();
 
 // Answered as a value, not by throwing: a blocked agent is waiting on this, so a failure has to come back as a
-// reason it can act on rather than a rejected invoke the renderer would have to translate.
-const engineOpResult = z.union([
+// reason it can act on rather than a rejected invoke the renderer would have to translate. Shared by every
+// operation the app performs for the agent — an engine one and a workspace one answer the same way.
+const hostOpResult = z.union([
   z.object({ ok: z.literal(true), value: z.unknown().optional() }).strict(),
   z.object({ ok: z.literal(false), error: z.string().max(MAX_ENGINE_OP_ERROR_CHARS) }).strict(),
 ]);
+
+// One workspace file or command operation the agent asked the app to perform. `target` travels with every call
+// rather than being remembered here: the broker stays stateless about which session is which, and a request that
+// names no target cannot be served at all — which is what keeps an unchosen target from defaulting to this machine.
+// `runId` is what scopes an off-host workspace root and labels a sandbox container, so two sessions never collide.
+const workspaceOpRequest = z
+  .object({
+    op: z.string().min(1).max(MAX_TITLE_CHARS),
+    args: z.record(z.string(), z.unknown()).optional(),
+    target: executionTarget,
+    runId: z.string().min(1).max(MAX_ID_CHARS),
+  })
+  .strict();
+
+// Release everything a session's targets built — above all a sandbox container, which exists only for that run.
+const workspaceReleaseRequest = z.object({ runId: z.string().min(1).max(MAX_ID_CHARS) }).strict();
 
 // One public-web query. Bounded because it is model-authored text on its way to a URL; the adapter redacts it
 // before it leaves the device and rejects an empty one.
@@ -427,6 +444,8 @@ export const invokeSchemas = {
     .object({ providerId: optionalProvider, model: z.string().trim().min(1).max(MAX_MODEL_CHARS) })
     .strict(),
   [AI_CHANNELS.engineOp]: engineOpRequest,
+  [AI_CHANNELS.workspaceOp]: workspaceOpRequest,
+  [AI_CHANNELS.workspaceRelease]: workspaceReleaseRequest,
   [AI_CHANNELS.webSearch]: webSearchRequest,
   [AI_CHANNELS.permissionsList]: empty,
   [AI_CHANNELS.permissionsAdd]: z.object({ list: permissionsList, rule: permissionRule }).strict(),
@@ -809,7 +828,9 @@ export const responseSchemas = {
         .optional(),
     })
     .strict(),
-  [AI_CHANNELS.engineOp]: engineOpResult,
+  [AI_CHANNELS.engineOp]: hostOpResult,
+  [AI_CHANNELS.workspaceOp]: hostOpResult,
+  [AI_CHANNELS.workspaceRelease]: ok,
   [AI_CHANNELS.webSearch]: webSearchResult,
   [AI_CHANNELS.permissionsList]: permissionsSnapshot,
   [AI_CHANNELS.permissionsAdd]: permissionsSnapshot,

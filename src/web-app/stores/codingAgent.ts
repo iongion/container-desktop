@@ -20,6 +20,7 @@ import {
   type PiBridgeClient,
 } from "@/ai-system/adapters/piBridgeClient";
 import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
+import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import {
   type AIPermissionMode,
   cachedVerdict,
@@ -37,6 +38,7 @@ import { threadExportHtml, threadHtmlFilename } from "@/ai-system/core/threadExp
 import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
+import { isWorkspaceToolName } from "@/ai-system/core/workspaceToolNames";
 import { isMockMode } from "@/container-client/mock/mode";
 import { t } from "@/i18n";
 import { createLogger } from "@/logger";
@@ -48,6 +50,7 @@ import type {
   PiCommandResult,
   SessionProviderCheck,
   WebSearchAnswer,
+  WorkspaceOpResult,
 } from "@/pi-bridge/protocol";
 import { getHostRuntime } from "@/platform/provider";
 import { randomUUID } from "@/utils/randomUUID";
@@ -172,6 +175,27 @@ async function performEngineOp(
   }
 }
 
+// Perform one workspace operation for the agent, WHERE the session chose. The target and the run id travel with the
+// call: the broker holds one execution backend per run, so everything this session does on one target shares it —
+// including the single sandbox container, which is released when the session stops.
+async function performWorkspaceOp(
+  request: { op: string; args: Record<string, unknown> },
+  target: ExecutionTarget | undefined,
+  runId: string | undefined,
+): Promise<WorkspaceOpResult> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge) return { ok: false, error: "the app's AI bridge is unavailable" };
+  if (!target || !runId) {
+    return { ok: false, error: "this session has no workspace target, so workspace tools cannot run" };
+  }
+  try {
+    return await bridge.runWorkspaceOp({ op: request.op, args: request.args, target, runId });
+  } catch (error) {
+    logger.error("a workspace operation failed", request.op, error);
+    return { ok: false, error: (error as Error).message };
+  }
+}
+
 // Run one public-web query for the agent, through the AI bridge — which is where the address-pinned fetch and the
 // user's own web-search switch live. Never throws: the container is blocked on this answer, and "you have it turned
 // off" is a reason the model should read rather than a broken response.
@@ -287,6 +311,9 @@ export interface StartCodingAgentOptions {
   upstreamAuth?: AIAuthSettings;
   scope?: string;
   egress?: boolean;
+  // Where this session's WORKSPACE tools run. Absent means the toolset is not offered at all: a registered tool is a
+  // promise to the model that the operation can happen, and nowhere to run one is not a place.
+  executionTarget?: ExecutionTarget;
 }
 
 export interface CodingAgentState {
@@ -352,6 +379,9 @@ export interface CodingAgentState {
   // Perform a container operation and answer the container with the result. Public because approving a held
   // operation runs it, and the WebDriver spec drives it the same way the approval card does.
   runEngineOp(requestId: string, request: { op: string; args: Record<string, unknown> }): Promise<void>;
+  // The same, for a workspace file or command operation. Public for the same reason: approving a held operation runs
+  // it, and a spec drives it exactly the way the approval card does.
+  runWorkspaceOp(requestId: string, request: { op: string; args: Record<string, unknown> }): Promise<void>;
   respondToRequest(requestId: string, response: HostResponsePayload): Promise<void>;
   resolveApproval(approvalId: string, decision: "allow" | "reject"): Promise<void>;
   sendSurfaceInput(surfaceId: string, data: string): Promise<void>;
@@ -523,6 +553,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       upstreamAuth: options.upstreamAuth ?? { scheme: "bearer" },
       modelId: options.modelId,
       egress: options.egress ?? true,
+      ...(options.executionTarget ? { executionTarget: options.executionTarget } : {}),
       scope: options.scope,
       // Podman publishes host.containers.internal, docker host.docker.internal. The gateway reaches a provider
       // running on this machine only through that alias — inside the container 127.0.0.1 is the container.
@@ -662,6 +693,13 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   async stop() {
     const { client, spec, connectionId } = get();
     client?.close();
+    // Whatever this session's workspace target built — above all a disposable sandbox container, which exists for
+    // this run and nothing else. Released before the pair goes, and never fatal: the session is ending either way.
+    if (spec?.executionTarget && spec.agentContainerName) {
+      await window.AI?.releaseWorkspaceTargets(spec.agentContainerName).catch((error) =>
+        logger.debug("releasing the session's workspace targets failed", error),
+      );
+    }
     // A mock session has no containers to tear down — its spec carries only the workspace and the model.
     if (spec?.agentContainerName && connectionId) {
       const host = await resolveConnectionHost(connectionId);
@@ -837,6 +875,49 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         set((state) => ({ pendingEngineOps: { ...state.pendingEngineOps, [requestId]: { op, args } } }));
         return;
       }
+      case "workspace-op": {
+        const { requestId, op, args } = outcome.request;
+        const skill = get().activeSkill;
+        if (skill?.allowedTools && !skill.allowedTools.has(op)) {
+          await get().respondToRequest(requestId, {
+            ok: true,
+            value: { ok: false, error: `${op} is not among this skill's allowed tools` } satisfies WorkspaceOpResult,
+          });
+          return;
+        }
+        const mode = permissionMode();
+        const rule = approvalRule(get(), op, args);
+        const cached = mode === "remember" && rule ? await rememberedVerdict(rule) : undefined;
+        // The same decision path as a container operation, at the same kind of boundary: the app performs this, so
+        // the pre-call gate deferred to here — the only place that can hold the request and run it on approval.
+        const action = decidePiToolCall({
+          toolName: op,
+          mode,
+          cached,
+          boundary: "workspace-op",
+          tainted: turnTainted(get()),
+        });
+        if (action === "run") {
+          await get().runWorkspaceOp(requestId, { op, args });
+          return;
+        }
+        set((state) => ({ view: projectPiThreadView(state.view, event, viewSession(state)) }));
+        if (action === "reject") {
+          await get().respondToRequest(requestId, {
+            ok: true,
+            value: { ok: false, error: "blocked by a remembered decision" } satisfies WorkspaceOpResult,
+          });
+          set((state) => ({
+            view: projectPiThreadView(state.view, { type: "approval_settled", requestId, allowed: false }),
+          }));
+          await stopAfterRejection(get().client);
+          return;
+        }
+        // Held in the same map a container operation is: both are operations the APP performs, and one approval card
+        // resolves either — which is why nothing here duplicates the card's own wiring.
+        set((state) => ({ pendingEngineOps: { ...state.pendingEngineOps, [requestId]: { op, args } } }));
+        return;
+      }
       case "web-search": {
         const { requestId, query } = outcome.request;
         const skill = get().activeSkill;
@@ -874,6 +955,18 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     await get().respondToRequest(requestId, { ok: true, value: result });
   },
 
+  async runWorkspaceOp(requestId, request) {
+    const { spec } = get();
+    const result = await performWorkspaceOp(request, spec?.executionTarget, spec?.agentContainerName);
+    set((state) => {
+      if (!state.pendingEngineOps[requestId]) return {};
+      const { [requestId]: _done, ...rest } = state.pendingEngineOps;
+      return { pendingEngineOps: rest };
+    });
+    // The envelope always succeeds — a failed operation is a value the model reads, not a broken response.
+    await get().respondToRequest(requestId, { ok: true, value: result });
+  },
+
   async respondToRequest(requestId, response) {
     const { client, pendingDialog } = get();
     if (pendingDialog?.requestId === requestId) set({ pendingDialog: undefined });
@@ -887,8 +980,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // what the engine said. Answering `{ allow: true }` would leave the agent waiting for a result nobody produces.
     const held = get().pendingEngineOps[approvalId];
     if (held) {
-      if (allow) await get().runEngineOp(approvalId, held);
-      else {
+      // A workspace operation and a container one are both held here; only the op name says which channel runs it.
+      if (allow) {
+        if (isWorkspaceToolName(held.op)) await get().runWorkspaceOp(approvalId, held);
+        else await get().runEngineOp(approvalId, held);
+      } else {
         await get().respondToRequest(approvalId, {
           ok: true,
           value: { ok: false, error: "rejected by the user" } satisfies EngineOpResult,

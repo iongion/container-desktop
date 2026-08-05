@@ -13,6 +13,17 @@ Three worlds, two of them containers:
 | **Gateway container** (`cd-gateway-<id>`) | an authenticating reverse proxy that holds the provider key | holds the credential; plugin code cannot reach it |
 | **Login container** (`cd-login-<id>`) | one provider sign-in — pi's own OAuth flow, which needs a Node realm | one-shot, mounts nothing, removed on every path out |
 
+The agent's own file tools see the container's filesystem. The **workspace toolset** (`readFile`, `listDirectory`,
+`statPath`, `findFiles`, `searchText`, `writeFile`, `editFile`, `removePath`, `execCommand`) is the app's, and it acts
+on the `ExecutionTarget` the session chose — `host`, `remote`, `container` or `sandbox`. It is registered with pi ONLY
+when a target was chosen (`CD_WORKSPACE_TOOLS`), because a registered tool is a promise the operation can happen; the
+container is told THAT it exists and never where it lands. Calls arrive as `workspace_op`, the broker resolves one
+`ExecutionSelector` per run (so a session shares one backend and one sandbox) and `dispatchWorkspaceOp` calls the
+`IWorkspaceAccess` capability, which enforces workspace-root confinement inside its own implementation. Mutations are
+gated at that boundary — the only one that can hold the request and run it on approval — which is why the pre-call
+`tool_call` gate skips every tool the app performs. `workspaceRelease` disposes the run's targets when the session
+stops; a sandbox exists for the run and nothing else.
+
 Tool execution is **consent, not a sandbox** — but the blast radius is a disposable container with one host
 folder bind-mounted, which is why the permission policy here is looser than the app's host-side floor
 (see [The permission model](#the-permission-model)). Once data reaches the configured provider the app cannot
