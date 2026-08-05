@@ -82,6 +82,25 @@ describe("createGuiUiContext dialogs", () => {
     expect(rpc.request).not.toHaveBeenCalled();
   });
 
+  // Three calls in pi, one surface in the app: the word beside the spinner and whether the row is there.
+  it("carries a working message, its visibility, and an empty frame list", () => {
+    const { rpc, ui } = makeContext();
+    ui.setWorkingMessage("Indexing");
+    expect(rpc.notify).toHaveBeenCalledWith("setWorking", { workingMessage: "Indexing" });
+    ui.setWorkingVisible(false);
+    expect(rpc.notify).toHaveBeenCalledWith("setWorking", { workingVisible: false });
+    // pi's own way of saying "hide the indicator entirely"; a GUI has no frames to animate.
+    ui.setWorkingIndicator({ frames: [] });
+    expect(rpc.notify).toHaveBeenCalledWith("setWorking", { workingFrames: [] });
+  });
+
+  // The default is restored by calling with nothing, which must travel rather than be dropped as "no change".
+  it("restores the app's own working word when the message is cleared", () => {
+    const { rpc, ui } = makeContext();
+    ui.setWorkingMessage();
+    expect(rpc.notify).toHaveBeenCalledWith("setWorking", { workingMessage: undefined });
+  });
+
   it("routes an editor paste through setEditorText, as pi's own rpc mode does", () => {
     const { rpc, ui } = makeContext();
     ui.pasteToEditor("pasted");

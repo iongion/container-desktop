@@ -69,6 +69,45 @@ describe("classifyHostRequest", () => {
     });
   });
 
+  // pi's three working-indicator calls land on the app's own indicator: the word beside the spinner, and whether
+  // the row is there at all. A plugin's own animation frames are not adopted — the GUI animates its own spinner —
+  // but an EMPTY frame list is pi's documented way of saying "hide it", which is honoured.
+  it("turns a working message into a chrome patch", () => {
+    expect(classifyHostRequest(request("setWorking", { workingMessage: "Indexing the repo" }))).toEqual({
+      kind: "chrome",
+      patch: { working: { message: "Indexing the repo" } },
+    });
+  });
+
+  it("restores the default word when the message is cleared", () => {
+    expect(classifyHostRequest(request("setWorking", {}))).toEqual({
+      kind: "chrome",
+      patch: { working: { message: undefined } },
+    });
+  });
+
+  it("carries the visibility a plugin asked for", () => {
+    expect(classifyHostRequest(request("setWorking", { workingVisible: false }))).toEqual({
+      kind: "chrome",
+      patch: { working: { message: undefined, visible: false } },
+    });
+    expect(classifyHostRequest(request("setWorking", { workingVisible: true }))).toEqual({
+      kind: "chrome",
+      patch: { working: { message: undefined, visible: true } },
+    });
+  });
+
+  it("reads an empty frame list as hidden, and any other frames as visible", () => {
+    expect(classifyHostRequest(request("setWorking", { workingFrames: [] }))).toEqual({
+      kind: "chrome",
+      patch: { working: { message: undefined, visible: false } },
+    });
+    expect(classifyHostRequest(request("setWorking", { workingFrames: ["*"] }))).toEqual({
+      kind: "chrome",
+      patch: { working: { message: undefined, visible: true } },
+    });
+  });
+
   it("turns setWidget into a chrome patch defaulting to aboveEditor", () => {
     expect(classifyHostRequest(request("setWidget", { widgetKey: "w", widgetLines: ["one"] }))).toEqual({
       kind: "chrome",

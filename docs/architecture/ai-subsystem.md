@@ -251,6 +251,14 @@ a strip above or below the composer, `setTitle` the session title, `setEditorTex
 as `{ text, seq }` so the same text set twice still applies twice. One pending dialog at a time — pi's dialogs
 are modal by nature, and the agent is parked until answered.
 
+pi's three working-indicator calls (`setWorkingMessage` / `setWorkingVisible` / `setWorkingIndicator`) arrive as one
+`setWorking` and land on the indicator the app already shows while a turn streams: the message replaces the app's own
+cycling word, and visibility is honoured — including pi's documented `frames: []` for "hide it entirely". Custom
+animation **frames are not adopted**: the GUI animates its own spinner, and a plugin's glyphs would read as foreign
+beside it. Message and visibility are separate calls in pi, so each leaves the other alone.
+`setHiddenThinkingLabel` is the one member still doing nothing, deliberately — there is no collapsed-thinking row in
+this UI to label, and inventing one is a visual change with no agreed design.
+
 **T2 — structured data to native cards.** A tool result is rendered by a typed card, not raw JSON
 (`web-app/components/ai/cards/registry.tsx`):
 

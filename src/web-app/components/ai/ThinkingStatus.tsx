@@ -24,20 +24,23 @@ const THINKING_WORDS = [
   "Rebuilding assumptions",
 ];
 
-export const ThinkingStatus: React.FC = () => {
+// `message` is a plugin's own working message (pi's `setWorkingMessage`), shown verbatim and without the ellipsis
+// the cycling words carry — it is the plugin's sentence, not one of ours. Absent restores the cycle.
+export const ThinkingStatus: React.FC<{ message?: string }> = ({ message }) => {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
+    if (message) return;
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % THINKING_WORDS.length);
     }, 1800);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [message]);
 
   return (
     <div className="ThinkingStatus">
       <Spinner size={16} />
-      <span className="ThinkingStatusText">{THINKING_WORDS[index]}…</span>
+      <span className="ThinkingStatusText">{message ?? `${THINKING_WORDS[index]}…`}</span>
     </div>
   );
 };

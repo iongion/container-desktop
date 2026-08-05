@@ -249,6 +249,19 @@ describe("useCodingAgentStore host requests", () => {
     expect(useCodingAgentStore.getState().chrome.widgets).toEqual({});
   });
 
+  // pi sets the working message and its visibility through separate calls, so each must leave the other alone —
+  // a plugin that hides the row and then writes a message must not un-hide it by accident.
+  it("keeps a hidden working indicator hidden when only its message changes", async () => {
+    attachFakeClient();
+    const chrome = () => useCodingAgentStore.getState().chrome.working;
+    await useCodingAgentStore.getState().handleHostRequest(hostRequest("setWorking", { workingVisible: false }));
+    expect(chrome()).toEqual({ hidden: true });
+    await useCodingAgentStore.getState().handleHostRequest(hostRequest("setWorking", { workingMessage: "Indexing" }));
+    expect(chrome()).toEqual({ message: "Indexing", hidden: true });
+    await useCodingAgentStore.getState().handleHostRequest(hostRequest("setWorking", { workingVisible: true }));
+    expect(chrome()).toEqual({ message: undefined });
+  });
+
   it("bumps a sequence when an extension sets the composer text, so the same text applies twice", async () => {
     attachFakeClient();
     await useCodingAgentStore.getState().handleHostRequest(hostRequest("setEditorText", { text: "draft" }));

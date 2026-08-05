@@ -13,7 +13,10 @@ export type BridgeUiMethod =
   | "setStatus"
   | "setWidget"
   | "setTitle"
-  | "setEditorText";
+  | "setEditorText"
+  // pi's three working-indicator calls, carried as one: the word beside the spinner and whether the row is shown
+  // are the same piece of state to a GUI, where a terminal has a message, a visibility flag and frame animation.
+  | "setWorking";
 
 // Everything the container can ask the app for. `approval` is the permission gate; `engine_op` performs one
 // container operation; `web_search` runs one public-web query, which the APP performs because it owns the

@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A plugin can say what it is working on: its own message replaces the word beside the spinner while a turn runs, and it can hide the indicator altogether — three calls that used to do nothing at all
 - Change the model a running session answers with, from the composer's chip: the conversation, the containers and the plugins all survive it
 - A model is looked up when you choose it — one level of your source's catalogue at a time, nothing fetched or registered up front
 - `/model` switches straight away when you name one, pi's own way (`/model <provider/model>`), and opens the picker when you do not

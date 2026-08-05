@@ -33,6 +33,9 @@ export interface ChromePatch {
   title?: string;
   editorText?: string;
   notify?: { message: string; notifyType: "info" | "warning" | "error" };
+  // What the working indicator says and whether it is shown. An absent message restores the app's own cycling
+  // words; an absent visibility leaves whatever the last call asked for.
+  working?: { message?: string; visible?: boolean };
 }
 
 export interface PendingApprovalRequest {
@@ -134,6 +137,24 @@ export function classifyHostRequest(event: HostRequestEvent): HostRequestOutcome
       return {
         kind: "chrome",
         patch: { widgets: { [key]: widgetLines ? { lines: widgetLines, placement } : undefined } },
+      };
+    }
+    // pi's setWorkingMessage / setWorkingVisible / setWorkingIndicator, arriving as one. A plugin's own animation
+    // frames are NOT adopted — the GUI animates its own spinner and would render someone's glyphs foreign — but an
+    // EMPTY frame list is pi's documented way of saying "hide the indicator entirely", so that much is honoured.
+    case "setWorking": {
+      const frames = lines(event.payload, "workingFrames");
+      const visible =
+        typeof event.payload.workingVisible === "boolean"
+          ? event.payload.workingVisible
+          : frames
+            ? frames.length > 0
+            : undefined;
+      return {
+        kind: "chrome",
+        patch: {
+          working: { message: text(event.payload, "workingMessage"), ...(visible === undefined ? {} : { visible }) },
+        },
       };
     }
     case "setTitle": {

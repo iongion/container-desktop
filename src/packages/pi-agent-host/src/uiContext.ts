@@ -197,9 +197,24 @@ export function createGuiUiContext(options: GuiUiContextOptions): GuiUiContext {
       return () => terminalInputHandlers.delete(handler);
     },
 
-    setWorkingMessage() {},
-    setWorkingVisible() {},
-    setWorkingIndicator() {},
+    // The app has its own working indicator above the composer, so all three land on it. Sent even when the
+    // argument is absent: calling with nothing is how pi restores the default, which is a change, not a no-op.
+    setWorkingMessage(message) {
+      rpc.notify("setWorking", { workingMessage: message });
+    },
+
+    setWorkingVisible(visible) {
+      rpc.notify("setWorking", { workingVisible: visible });
+    },
+
+    // Frames travel so the renderer can read pi's own "frames: [] means hide it"; it animates its own spinner
+    // rather than painting a plugin's glyphs, which would look foreign next to Blueprint's.
+    setWorkingIndicator(indicatorOptions) {
+      rpc.notify("setWorking", { workingFrames: indicatorOptions?.frames });
+    },
+
+    // Deliberately still nothing: the GUI has no collapsed-thinking row to label. Giving it one is a visual
+    // change with no agreed design, and a label sent nowhere would be worse than an honest silence.
     setHiddenThinkingLabel() {},
 
     setFooter(factory: FooterFactory | undefined) {

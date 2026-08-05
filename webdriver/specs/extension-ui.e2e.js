@@ -73,6 +73,41 @@ describe("pi extension UI", () => {
     await $(".ExtensionStatusStrip").waitForExist({ reverse: true, timeout: 15000, timeoutMsg: "status never cleared" });
   });
 
+  // pi's setWorkingMessage / setWorkingVisible / setWorkingIndicator all land on the app's own indicator, which
+  // only exists while a turn is streaming — so the phase is put there first, the way a turn would.
+  it("lets an extension name the working indicator, and hide it", async () => {
+    await openAssistant();
+    await browser.execute(() => {
+      window.__cdCodingAgentStore.setState({
+        view: { threadId: "pi-session", phase: "model", lastSeq: 0, timeline: [] },
+      });
+    });
+    await $(".ThinkingStatusText").waitForExist({ timeout: 15000, timeoutMsg: "the working indicator never rendered" });
+
+    await hostRequest("setWorking", { workingMessage: "Indexing the repository" });
+    await browser.waitUntil(async () => (await $(".ThinkingStatusText").getText()) === "Indexing the repository", {
+      timeout: 15000,
+      interval: 500,
+      timeoutMsg: "the extension's working message never replaced the app's own word",
+    });
+
+    // pi's own way of saying "hide the indicator entirely".
+    await hostRequest("setWorking", { workingFrames: [] });
+    await $(".ThinkingStatus").waitForExist({
+      reverse: true,
+      timeout: 15000,
+      timeoutMsg: "the working indicator stayed after an empty frame list",
+    });
+
+    // And back: visibility and message are separate calls in pi, so restoring one must not clear the other.
+    await hostRequest("setWorking", { workingVisible: true, workingMessage: "Indexing the repository" });
+    await browser.waitUntil(async () => (await $(".ThinkingStatusText").getText()) === "Indexing the repository", {
+      timeout: 15000,
+      interval: 500,
+      timeoutMsg: "the indicator never came back",
+    });
+  });
+
   it("asks a select dialog and answers it with the chosen option", async () => {
     await openAssistant();
     await hostRequest("select", { title: "Pick one", options: ["alpha", "beta"] });

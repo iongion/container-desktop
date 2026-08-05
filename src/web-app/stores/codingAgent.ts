@@ -73,6 +73,9 @@ export interface CodingAgentChrome {
   // The composer owns its own draft, so a replacement is delivered as a value plus a sequence: the same text
   // set twice must still apply twice.
   editorDraft?: { text: string; seq: number };
+  // What a plugin has asked the working indicator to say, and whether it may show at all. An absent message is
+  // the app's own cycling words; `hidden` is only ever set by a plugin asking for it.
+  working?: { message?: string; hidden?: boolean };
 }
 
 export function emptyCodingAgentChrome(): CodingAgentChrome {
@@ -106,6 +109,12 @@ function mergeChrome(chrome: CodingAgentChrome, patch: ChromePatch): CodingAgent
   if (patch.title !== undefined) next.title = patch.title;
   if (patch.editorText !== undefined) {
     next.editorDraft = { text: patch.editorText, seq: (chrome.editorDraft?.seq ?? 0) + 1 };
+  }
+  // Each of pi's three working calls sets only its own half, so visibility survives a message and vice versa. A
+  // message the plugin cleared restores the app's own words, which is why absent is written rather than skipped.
+  if (patch.working) {
+    const hidden = patch.working.visible === undefined ? chrome.working?.hidden : !patch.working.visible;
+    next.working = { message: patch.working.message, ...(hidden ? { hidden: true } : {}) };
   }
   return next;
 }

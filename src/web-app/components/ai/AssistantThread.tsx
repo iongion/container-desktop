@@ -525,7 +525,11 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
             phase={composerPhase}
             onStop={cancel}
             onSubmit={onSubmit}
-            statusLeading={streaming ? <ThinkingStatus /> : null}
+            statusLeading={
+              streaming && !extensionChrome.working?.hidden ? (
+                <ThinkingStatus message={extensionChrome.working?.message} />
+              ) : null
+            }
             showPermissionMode
             commands={composerCommands}
             draft={extensionChrome.editorDraft}
