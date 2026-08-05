@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   agentRunArgv,
+  defaultSessionFrom,
   defaultSessionNames,
   egressNetworkName,
+  findDefaultSession,
   gatewayRunArgv,
   gatewayUpstreamUrl,
   hostAliasArgv,
@@ -494,9 +496,9 @@ describe("startPiAgentSession port collisions", () => {
 describe("defaultSessionNames", () => {
   it("names the default session after its connection", () => {
     expect(defaultSessionNames("podman-1")).toEqual({
-      agentContainerName: "cd-agent-default-podman-1",
-      gatewayContainerName: "cd-gateway-default-podman-1",
-      networkName: "cd-agent-net-default-podman-1",
+      agentContainerName: "container-desktop-agent-default-podman-1",
+      gatewayContainerName: "container-desktop-gateway-default-podman-1",
+      networkName: "container-desktop-net-default-podman-1",
     });
   });
 
@@ -509,13 +511,145 @@ describe("defaultSessionNames", () => {
   // WITHOUT two different connections ever arriving at one name.
   it("keeps a connection id the engine would refuse out of the name", () => {
     const names = defaultSessionNames("Podman Machine #1");
-    expect(names.agentContainerName).toMatch(/^cd-agent-default-[a-z0-9][a-z0-9_.-]*$/);
+    expect(names.agentContainerName).toMatch(/^container-desktop-agent-default-[a-z0-9][a-z0-9_.-]*$/);
   });
 
   it("still tells apart two ids that would clean up to the same slug", () => {
     expect(defaultSessionNames("Podman 1").agentContainerName).not.toEqual(
       defaultSessionNames("podman 1").agentContainerName,
     );
+  });
+});
+
+describe("labelled run arguments", () => {
+  const identified: PiAgentSessionSpec = { ...spec, connectionId: "podman-1", sessionKind: "default" };
+
+  it("labels the agent it creates", () => {
+    const argv = agentRunArgv(identified, "/home/me/project", "/tmp/env").join(" ");
+    expect(argv).toContain("container-desktop.ai.role=agent");
+    expect(argv).toContain("container-desktop.ai.connection=podman-1");
+  });
+
+  it("labels the gateway it creates", () => {
+    expect(gatewayRunArgv(identified, "/tmp/env").join(" ")).toContain("container-desktop.ai.role=gateway");
+  });
+
+  // A session started before this scheme existed has no labels, and its containers must still be creatable: the
+  // reaper's name matching is what covers those, so the argv simply carries no label.
+  it("labels nothing when the session has no identity to record", () => {
+    expect(agentRunArgv(spec, "/home/me/project", "/tmp/env").join(" ")).not.toContain("container-desktop.ai.");
+  });
+});
+
+// What a boot needs to know before it can decide anything: is this connection's reusable session standing, and is it
+// running? Read off the engine's own listing, because the containers are the only durable record — the app's memory
+// of them died with the process that had it.
+describe("defaultSessionFrom", () => {
+  const rows = (...names: [string, string][]) => names.map(([name, state]) => ({ name, state }));
+
+  it("reports a pair that is standing and running", () => {
+    expect(
+      defaultSessionFrom(
+        "podman-1",
+        rows(
+          ["container-desktop-agent-default-podman-1", "running"],
+          ["container-desktop-gateway-default-podman-1", "running"],
+        ),
+      ),
+    ).toEqual({ connectionId: "podman-1", complete: true, running: true });
+  });
+
+  // Stopped is the case the resume offer exists for: both halves are there, holding the conversation.
+  it("reports a stopped pair as standing but not running", () => {
+    expect(
+      defaultSessionFrom(
+        "podman-1",
+        rows(
+          ["container-desktop-agent-default-podman-1", "exited"],
+          ["container-desktop-gateway-default-podman-1", "exited"],
+        ),
+      ),
+    ).toEqual({ connectionId: "podman-1", complete: true, running: false });
+  });
+
+  // One half running is not a session: the agent cannot reach a model without its gateway.
+  it("reports a pair with one half down as not running", () => {
+    expect(
+      defaultSessionFrom(
+        "podman-1",
+        rows(
+          ["container-desktop-agent-default-podman-1", "running"],
+          ["container-desktop-gateway-default-podman-1", "exited"],
+        ),
+      ),
+    ).toEqual({ connectionId: "podman-1", complete: true, running: false });
+  });
+
+  it("reports a lone half as incomplete", () => {
+    expect(defaultSessionFrom("podman-1", rows(["container-desktop-gateway-default-podman-1", "running"]))).toEqual({
+      connectionId: "podman-1",
+      complete: false,
+      running: false,
+    });
+  });
+
+  // Absent is not the same as broken: it means this connection has nothing to adopt, which is what sends the boot
+  // down the create-or-ask path rather than the resume one.
+  it("says nothing about a connection with no default containers", () => {
+    expect(defaultSessionFrom("podman-1", rows(["cd-agent-1a2b3c4d", "running"], ["web", "running"]))).toBeUndefined();
+  });
+
+  it("does not mistake another connection's default for this one's", () => {
+    expect(
+      defaultSessionFrom(
+        "podman-1",
+        rows(
+          ["container-desktop-agent-default-docker-1", "running"],
+          ["container-desktop-gateway-default-docker-1", "running"],
+        ),
+      ),
+    ).toBeUndefined();
+  });
+
+  // Engines disagree about this field: podman and docker answer `running`/`exited` for {{.State}}, and a dialect that
+  // fills it with a status line says `Up 3 minutes`. Both have to read as running.
+  it("reads a status-style line as running too", () => {
+    expect(
+      defaultSessionFrom(
+        "podman-1",
+        rows(
+          ["container-desktop-agent-default-podman-1", "Up 3 minutes"],
+          ["container-desktop-gateway-default-podman-1", "Up 3 minutes"],
+        ),
+      ),
+    ).toMatchObject({ running: true });
+  });
+});
+
+describe("findDefaultSession", () => {
+  function listingHost(stdout: string) {
+    return fakeHost({
+      runHostCommand: vi.fn(async () => ({ pid: 1, code: 0, success: true, stdout, stderr: "" })),
+    });
+  }
+
+  it("asks the engine for its containers and maps the answer", async () => {
+    const host = listingHost(
+      "container-desktop-agent-default-podman-1\trunning\ncontainer-desktop-gateway-default-podman-1\trunning\n",
+    );
+    expect(await findDefaultSession(host, "podman-1")).toEqual({
+      connectionId: "podman-1",
+      complete: true,
+      running: true,
+    });
+    expect((commandsOf(host)[0][1] as string[]).slice(0, 2)).toEqual(["ps", "--all"]);
+  });
+
+  // Discovery runs at boot against an engine that may be unreachable. Nothing it cannot answer becomes a startup
+  // failure — an engine that refuses simply has no session to adopt.
+  it("reports nothing when the engine refuses", async () => {
+    const host = fakeHost({ runHostCommand: vi.fn(async () => Promise.reject(new Error("no such host"))) });
+    expect(await findDefaultSession(host, "podman-1")).toBeUndefined();
   });
 });
 
@@ -567,8 +701,13 @@ describe("reapOrphanPiAgentSessions", () => {
   // that adopts what is already there. Reaping it would put the prompt back and lose the conversation.
   it("spares a healthy default session while clearing the ephemeral ones", async () => {
     const host = listingHost(
-      ["cd-agent-default-podman-1", "cd-gateway-default-podman-1", "cd-agent-1a2b3c4d", "cd-gateway-1a2b3c4d"],
-      ["cd-agent-net-default-podman-1", "cd-agent-net-1a2b3c4d"],
+      [
+        "container-desktop-agent-default-podman-1",
+        "container-desktop-gateway-default-podman-1",
+        "cd-agent-1a2b3c4d",
+        "cd-gateway-1a2b3c4d",
+      ],
+      ["container-desktop-net-default-podman-1", "cd-agent-net-1a2b3c4d"],
     );
     const reaped = await reapOrphanPiAgentSessions(host);
     expect(reaped).toEqual({
@@ -581,30 +720,37 @@ describe("reapOrphanPiAgentSessions", () => {
   // it. Half a default answers no prompt while still holding a published port, so it is cleared and rebuilt — and
   // its network goes with it, because nothing is left on it.
   it("clears a default session that lost half its pair, and its network with it", async () => {
-    const host = listingHost(["cd-gateway-default-podman-1"], ["cd-agent-net-default-podman-1"]);
+    const host = listingHost(
+      ["container-desktop-gateway-default-podman-1"],
+      ["container-desktop-net-default-podman-1"],
+    );
     const reaped = await reapOrphanPiAgentSessions(host);
     expect(reaped).toEqual({
-      containers: ["cd-gateway-default-podman-1"],
-      networks: ["cd-agent-net-default-podman-1"],
+      containers: ["container-desktop-gateway-default-podman-1"],
+      networks: ["container-desktop-net-default-podman-1"],
     });
   });
 
   it("clears a default agent left without its gateway", async () => {
-    const host = listingHost(["cd-agent-default-docker-1"], []);
+    const host = listingHost(["container-desktop-agent-default-docker-1"], []);
     const reaped = await reapOrphanPiAgentSessions(host);
-    expect(reaped.containers).toEqual(["cd-agent-default-docker-1"]);
+    expect(reaped.containers).toEqual(["container-desktop-agent-default-docker-1"]);
   });
 
   // Two connections each keep their own default, so one being broken must not take the other down with it.
   it("clears only the broken default when another connection's is healthy", async () => {
     const host = listingHost(
-      ["cd-agent-default-podman-1", "cd-gateway-default-podman-1", "cd-gateway-default-docker-1"],
-      ["cd-agent-net-default-podman-1", "cd-agent-net-default-docker-1"],
+      [
+        "container-desktop-agent-default-podman-1",
+        "container-desktop-gateway-default-podman-1",
+        "container-desktop-gateway-default-docker-1",
+      ],
+      ["container-desktop-net-default-podman-1", "container-desktop-net-default-docker-1"],
     );
     const reaped = await reapOrphanPiAgentSessions(host);
     expect(reaped).toEqual({
-      containers: ["cd-gateway-default-docker-1"],
-      networks: ["cd-agent-net-default-docker-1"],
+      containers: ["container-desktop-gateway-default-docker-1"],
+      networks: ["container-desktop-net-default-docker-1"],
     });
   });
 

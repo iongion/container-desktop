@@ -14,6 +14,7 @@ import {
   removePiLoginContainer,
   startPiLoginContainer,
 } from "@/ai-system/adapters/piLoginContainer";
+import { assistantContainerName } from "@/ai-system/adapters/sessionNaming";
 import { loginCredentialVerdict, providerLoginOffer } from "@/ai-system/core/piAuth";
 import { isMockMode } from "@/container-client/mock/mode";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
@@ -128,7 +129,7 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
     const suffix = randomUUID().slice(0, 8);
     const spec: PiLoginContainerSpec = {
       imageTag: agentImageTag(PROJECT_VERSION),
-      containerName: `cd-login-${suffix}`,
+      containerName: assistantContainerName("login", suffix),
       hostPort: pickHostPort(),
       bridgeToken: randomUUID(),
       piProviderId: piProviderIdFor(providerId),
@@ -232,7 +233,7 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
     const suffix = randomUUID().slice(0, 8);
     const spec: PiLoginContainerSpec = {
       imageTag: agentImageTag(PROJECT_VERSION),
-      containerName: `cd-login-${suffix}`,
+      containerName: assistantContainerName("login", suffix),
       hostPort: pickHostPort(),
       bridgeToken: randomUUID(),
       piProviderId: piProviderIdFor(providerId),

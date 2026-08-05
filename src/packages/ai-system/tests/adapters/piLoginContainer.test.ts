@@ -24,6 +24,16 @@ describe("loginRunArgv", () => {
       "cd-login-abcdef12",
       "--publish",
       "127.0.0.1:41234:8787",
+      // Grouped with everything else this app creates, and marked ephemeral: a sign-in container exists for one
+      // exchange, so a boot that finds one has found an orphan.
+      "--label",
+      "com.docker.compose.project=container-desktop",
+      "--label",
+      "com.docker.compose.service=login",
+      "--label",
+      "container-desktop.ai.session=ephemeral",
+      "--label",
+      "container-desktop.ai.role=login",
       "--env-file",
       "/run/secrets/login.env",
       "container-desktop/pi-agent:6.1.0",

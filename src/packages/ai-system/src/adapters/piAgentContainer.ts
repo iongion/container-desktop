@@ -1,4 +1,17 @@
 import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
+import {
+  type AiSessionKind,
+  type AiSessionRole,
+  assistantContainerName,
+  assistantFilterArgv,
+  assistantLabelArgv,
+  assistantNetworkName,
+  defaultScope,
+  egressNetworkOf,
+  LEGACY_ASSISTANT_CONTAINER,
+  LEGACY_ASSISTANT_NETWORK,
+} from "@/ai-system/adapters/sessionNaming";
+import type { DefaultSessionCandidate } from "@/ai-system/core/defaultSession";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import { composeGatewayEnv, gatewayBaseUrl, upstreamModelApi } from "@/ai-system/core/piAgentEnv";
 import { isLoopbackProviderHost, type ProviderKind } from "@/ai-system/core/providers";
@@ -15,8 +28,14 @@ export const GATEWAY_PORT_IN_IMAGE = 8788;
 // The uid/gid of the `agent` user baked into the image. Rootless podman maps the invoking host user to
 // container root, so without a mapping the agent user cannot write to the bind-mounted workspace.
 const AGENT_UID_IN_IMAGE = 1001;
-// What marks the reusable per-connection session in a container name, as opposed to an ephemeral session's hex suffix.
-const DEFAULT_MARKER = "default";
+
+// The labels for one half of a session, when the spec knows which session it belongs to. A spec composed before this
+// scheme existed carries no identity, and its containers are created unlabelled — the reaper's legacy name matching
+// is what still covers those.
+function specLabelArgv(spec: PiAgentSessionSpec, role: AiSessionRole): string[] {
+  if (!spec.connectionId) return [];
+  return assistantLabelArgv({ kind: spec.sessionKind ?? "ephemeral", role, connectionId: spec.connectionId });
+}
 
 export interface PiAgentSessionSpec {
   imageTag: string;
@@ -60,6 +79,11 @@ export interface PiAgentSessionSpec {
   // ownership. Podman rootless uses keep-id; Docker needs an explicit --user, which requires knowing the
   // host uid/gid.
   userMapping: { kind: "keep-id" } | { kind: "user"; uid: number; gid: number } | { kind: "none" };
+  // Which session these containers belong to, recorded as labels so the app can find them again exactly. Absent on a
+  // spec composed before the scheme existed: those containers are created unlabelled, and the reaper's name matching
+  // is what still covers them.
+  connectionId?: string;
+  sessionKind?: AiSessionKind;
 }
 
 // Podman's `:U` chowns the volume's content to the mapped container user. Without it a plugin volume
@@ -117,6 +141,7 @@ export function agentRunArgv(spec: PiAgentSessionSpec, guestWorkspacePath: strin
     `${guestWorkspacePath}:/workspace`,
     "--volume",
     pluginVolumeMount(spec, AGENT_DIR_IN_IMAGE),
+    ...specLabelArgv(spec, "agent"),
     "--env-file",
     envFilePath,
     ...userMappingArgv(spec.userMapping),
@@ -130,54 +155,99 @@ export function agentRunArgv(spec: PiAgentSessionSpec, guestWorkspacePath: strin
 // address, so a container on it resolves and reaches its siblings by name and has no route anywhere else — neither
 // the internet nor this machine. It is a network-create flag: `run` rejects it outright.
 export function networkCreateArgv(spec: PiAgentSessionSpec): string[] {
-  return ["network", "create", ...(spec.egress ? [] : ["--internal"]), spec.networkName];
+  return [
+    "network",
+    "create",
+    ...(spec.egress ? [] : ["--internal"]),
+    // Labelled like the containers it joins, so a network belongs to the same group at the same level.
+    ...specLabelArgv(spec, "agent"),
+    spec.networkName,
+  ];
 }
 
 // The second network, which exists only when egress is off. The gateway still has to reach the provider, so it is
 // given a routable NIC the agent does not have — that asymmetry IS "only the gateway is reachable".
 export function egressNetworkName(spec: PiAgentSessionSpec): string {
-  return `${spec.networkName}-egress`;
+  return egressNetworkOf(spec.networkName);
 }
 
-// FNV-1a, hand-rolled because this module is bundled into the renderer where node:crypto is absent. It is only ever
-// used to tell apart two connection ids whose cleaned-up forms collide, so a 32-bit digest is ample.
-function shortDigest(value: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0").slice(0, 6);
-}
-
-// An engine accepts `[a-zA-Z0-9][a-zA-Z0-9_.-]*` and a connection id is free text, so anything else folds to a dash.
-// The digest is appended only when that folding actually changed something: it keeps the ordinary `podman-1` case
-// readable, while still giving two ids that fold alike two different names.
-function connectionSlug(connectionId: string): string {
-  const folded = connectionId
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/gu, "-")
-    .replace(/^-+|-+$/gu, "")
-    .slice(0, 32);
-  const base = folded || "connection";
-  return folded === connectionId ? base : `${base}-${shortDigest(connectionId)}`;
-}
-
-// The names of the session the app REUSES for a connection, rather than the ephemeral one it used to create per
-// start. Derived from the connection so the next boot arrives at them without being told, and deliberately not
-// eight hex characters — that is the shape `reapOrphanPiAgentSessions` treats as an orphan, and this session is
-// meant to outlive the app that started it.
+// The names of the session the app REUSES for a connection, rather than an ephemeral one created per start. Derived
+// from the connection so the next boot arrives at them without being told, and — being named under the current
+// scheme rather than the legacy one — never mistaken for an orphan by the reaper.
 export function defaultSessionNames(connectionId: string): {
   agentContainerName: string;
   gatewayContainerName: string;
   networkName: string;
 } {
-  const slug = connectionSlug(connectionId);
+  const scope = defaultScope(connectionId);
   return {
-    agentContainerName: `cd-agent-${DEFAULT_MARKER}-${slug}`,
-    gatewayContainerName: `cd-gateway-${DEFAULT_MARKER}-${slug}`,
-    networkName: `cd-agent-net-${DEFAULT_MARKER}-${slug}`,
+    agentContainerName: assistantContainerName("agent", scope),
+    gatewayContainerName: assistantContainerName("gateway", scope),
+    networkName: assistantNetworkName(scope),
   };
+}
+
+// One row of the engine's container listing, as this module asks for it.
+export interface ContainerListingRow {
+  name: string;
+  state: string;
+}
+
+// Engines disagree about the state field: podman and docker answer `running` / `exited` for `{{.State}}`, while a
+// dialect that fills it with a status line answers `Up 3 minutes`. Both mean the same thing.
+function rowIsRunning(state: string): boolean {
+  const value = state.trim().toLowerCase();
+  return value.startsWith("running") || value.startsWith("up");
+}
+
+// What this connection's reusable session looks like right now, read off the engine's listing. Absent means there is
+// nothing to adopt here — which is what sends the boot down the create-or-ask path instead of the resume one. The
+// pair is the unit: one half running is not a session, because the agent cannot reach a model without its gateway.
+export function defaultSessionFrom(
+  connectionId: string,
+  rows: readonly ContainerListingRow[],
+): DefaultSessionCandidate | undefined {
+  const names = defaultSessionNames(connectionId);
+  const agent = rows.find((row) => row.name === names.agentContainerName);
+  const gateway = rows.find((row) => row.name === names.gatewayContainerName);
+  if (!agent && !gateway) return undefined;
+  const complete = !!agent && !!gateway;
+  return {
+    connectionId,
+    complete,
+    running: complete && rowIsRunning(agent.state) && rowIsRunning(gateway.state),
+  };
+}
+
+function listingRows(output: string): ContainerListingRow[] {
+  return lines(output).map((line) => {
+    const [name, ...rest] = line.split("\t");
+    return { name: name.trim(), state: rest.join("\t") };
+  });
+}
+
+// Discovery runs at boot against an engine that may be asleep, unreachable or simply not there. Anything it cannot
+// answer means "no session to adopt" — never a startup failure.
+export async function findDefaultSession(
+  host: HostClientFacade,
+  connectionId: string,
+  scope?: string,
+): Promise<DefaultSessionCandidate | undefined> {
+  // The engine does the selecting, by label: exact identity, and one small answer instead of every container on the
+  // machine. A session created before the labels existed is not adopted — it is an ephemeral one, and the reaper's
+  // legacy patterns are what deal with those.
+  const argv = [
+    "ps",
+    "--all",
+    ...assistantFilterArgv({ kind: "default", connectionId }),
+    "--format",
+    "{{.Names}}\t{{.State}}",
+  ];
+  const listing = await run(host, argv, scope).catch((error) => {
+    logger.debug(`discovering the default session on ${connectionId} failed`, error);
+    return "";
+  });
+  return defaultSessionFrom(connectionId, listingRows(listing));
 }
 
 // Attached after the gateway is running, so it keeps the internal network as its first: the agent addresses the
@@ -221,6 +291,7 @@ export function gatewayRunArgv(spec: PiAgentSessionSpec, envFilePath: string): s
     "--network",
     spec.networkName,
     ...hostAliasArgv(spec),
+    ...specLabelArgv(spec, "gateway"),
     "--env-file",
     envFilePath,
     spec.imageTag,
@@ -338,20 +409,18 @@ export async function startPiAgentSession(
   }
 }
 
-// A session's name is the only evidence a later app run has that a container was ours, so the patterns are strict:
-// the suffix is the first 8 characters of a UUID. `cd-agent-mine` is the user's, and the shared plugin VOLUME is
-// never in scope — it holds what they installed.
-const SESSION_SUFFIX = "[0-9a-f]{8}";
-// `login` is swept the same way: a sign-in container holds a published port and keeps listening until it is removed,
-// so one left behind by a crash is exactly the orphan this reaper exists for.
-const SESSION_CONTAINER = new RegExp(`^cd-(agent|gateway|login)-${SESSION_SUFFIX}$`);
-const SESSION_NETWORK = new RegExp(`^cd-agent-net-${SESSION_SUFFIX}(-egress)?$`);
+// An EPHEMERAL session is swept wholesale, and the name is the only evidence for one created before the labels
+// existed — hence the strict legacy patterns, which are the reason an upgrade does not leak the previous version's
+// orphans. `cd-agent-mine` is the user's, and the shared plugin VOLUME is never in scope: it holds what they
+// installed and every stored conversation.
+const SESSION_CONTAINER = LEGACY_ASSISTANT_CONTAINER;
+const SESSION_NETWORK = LEGACY_ASSISTANT_NETWORK;
 
 // The reusable session's own shapes. It is NOT swept for being old — that is the whole point of it — but half of one
 // is swept for being unusable: the gateway holds the credential and the agent cannot reach a model without it, so a
 // lone half answers no prompt while still holding a published port.
-const DEFAULT_CONTAINER = new RegExp(`^cd-(agent|gateway)-${DEFAULT_MARKER}-(?<slug>.+)$`);
-const DEFAULT_NETWORK = new RegExp(`^cd-agent-net-${DEFAULT_MARKER}-(?<slug>.+?)(-egress)?$`);
+const DEFAULT_CONTAINER = /^container-desktop-(?<role>agent|gateway)-(?<slug>default-.+)$/;
+const DEFAULT_NETWORK = /^container-desktop-net-(?<slug>default-.+?)(-egress)?$/;
 
 function lines(output: string): string[] {
   return output
@@ -365,13 +434,11 @@ function lines(output: string): string[] {
 function servingDefaultSlugs(containerNames: readonly string[]): Set<string> {
   const halves = new Map<string, Set<string>>();
   for (const name of containerNames) {
-    const match = DEFAULT_CONTAINER.exec(name);
-    const slug = match?.groups?.slug;
-    if (!match || !slug) continue;
-    const half = name.startsWith("cd-agent-") ? "agent" : "gateway";
-    const seen = halves.get(slug) ?? new Set<string>();
-    seen.add(half);
-    halves.set(slug, seen);
+    const groups = DEFAULT_CONTAINER.exec(name)?.groups;
+    if (!groups?.slug || !groups.role) continue;
+    const seen = halves.get(groups.slug) ?? new Set<string>();
+    seen.add(groups.role);
+    halves.set(groups.slug, seen);
   }
   return new Set([...halves].filter(([, seen]) => seen.size === 2).map(([slug]) => slug));
 }
@@ -385,9 +452,9 @@ function servingDefaultSlugs(containerNames: readonly string[]): Set<string> {
 // wrong.
 //
 // The DEFAULT session is the opposite case and must survive: it is the one the app reuses, so the user is asked to
-// start a session once and every boot after that adopts what is already there. It is spared by name — its suffix is
-// not the eight hex characters an ephemeral session carries — and only a default that lost half its pair is cleared,
-// because half of one cannot answer a prompt while still holding a port.
+// start a session once and every boot after that adopts what is already there. It is spared because the legacy
+// patterns do not match a name under the current scheme, and only a default that lost half its pair is cleared —
+// half of one cannot answer a prompt while still holding a port.
 //
 // Housekeeping, so an engine that refuses is reported and never raised: the app must still start.
 export async function reapOrphanPiAgentSessions(

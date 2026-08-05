@@ -19,6 +19,11 @@ import {
   type HostResponsePayload,
   type PiBridgeClient,
 } from "@/ai-system/adapters/piBridgeClient";
+import {
+  ASSISTANT_PLUGIN_VOLUME,
+  assistantContainerName,
+  assistantNetworkName,
+} from "@/ai-system/adapters/sessionNaming";
 import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
 import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
@@ -728,10 +733,12 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       workspacePath: options.workspacePath,
       hostPort: pickHostPort(),
       bridgeToken: randomUUID(),
-      networkName: `cd-agent-net-${suffix}`,
-      agentContainerName: `cd-agent-${suffix}`,
-      gatewayContainerName: `cd-gateway-${suffix}`,
-      pluginVolumeName: "cd-agent-plugins",
+      networkName: assistantNetworkName(suffix),
+      agentContainerName: assistantContainerName("agent", suffix),
+      gatewayContainerName: assistantContainerName("gateway", suffix),
+      pluginVolumeName: ASSISTANT_PLUGIN_VOLUME,
+      connectionId: options.connectionId,
+      sessionKind: "ephemeral",
       upstreamBaseUrl: options.upstreamBaseUrl,
       ...modelWindow,
       // An endpoint with no declared provider is treated as an OpenAI-shaped bearer upstream — what every

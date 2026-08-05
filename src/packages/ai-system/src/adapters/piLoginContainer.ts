@@ -9,6 +9,7 @@
 // prompt pi races that callback against. That is pi's own documented path for a browser on another machine, which is
 // exactly what a browser outside the container is.
 
+import { assistantLabelArgv } from "@/ai-system/adapters/sessionNaming";
 import { KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
@@ -51,6 +52,9 @@ export function loginRunArgv(spec: PiLoginContainerSpec, envFilePath: string): s
     spec.containerName,
     "--publish",
     `127.0.0.1:${spec.hostPort}:${BRIDGE_PORT_IN_IMAGE}`,
+    // Grouped with the rest of what this app creates, and marked ephemeral: a sign-in container exists for one
+    // exchange, so a boot that finds one is finding an orphan.
+    ...assistantLabelArgv({ kind: "ephemeral", role: "login" }),
     "--env-file",
     envFilePath,
     spec.imageTag,
