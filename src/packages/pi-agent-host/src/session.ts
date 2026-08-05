@@ -25,7 +25,7 @@ import { createHostRpc } from "@/pi-agent-host/hostRpc";
 import { type ModelRegistrations, piModelConfig, withModelRegistration } from "@/pi-agent-host/modelRegistrations";
 import { createPermissionGateExtension } from "@/pi-agent-host/permissionGate";
 import { runPiCommand } from "@/pi-agent-host/piCommands";
-import { buildPiTheme, normalizeAppThemePalette } from "@/pi-agent-host/piTheme";
+import { buildPiTheme, installGlobalPiTheme, normalizeAppThemePalette } from "@/pi-agent-host/piTheme";
 import { createPluginService } from "@/pi-agent-host/plugins";
 import { checkSessionProvider } from "@/pi-agent-host/providerCheck";
 import { type PiSessionFacts, sessionContextReport, sessionUsageReport } from "@/pi-agent-host/reports";
@@ -253,10 +253,12 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   let replacement: PiSessionReplacement = "new";
 
   // pi's own components (Markdown, SelectList, Editor) read a module-global theme that throws until it is
-  // initialised, so a plugin building one would crash on its first render. There is no public way to make
-  // that global the app's derived theme — `setThemeInstance` is not exported — so it stays pi's built-in
-  // while everything the app hands a plugin carries the app's colours.
+  // initialised, so a plugin building one would crash on its first render. Initialised with pi's own default
+  // first, then replaced by the app's — `installGlobalPiTheme` writes the registry the proxy reads, so pi's
+  // components paint in the same colours as everything else the app hands a plugin.
   initTheme();
+  const appTheme = buildPiTheme(normalizeAppThemePalette(options.themePalette));
+  installGlobalPiTheme(appTheme);
 
   // The GUI owns the size; the terminal exists so pi's components have the interface they expect, not
   // because anything is drawn through it.
@@ -268,7 +270,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     rpc,
     tui,
     surfaces,
-    theme: buildPiTheme(normalizeAppThemePalette(options.themePalette)),
+    theme: appTheme,
     keybindings: getKeybindings() as unknown as PiKeybindings,
   });
 
@@ -548,7 +550,11 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     },
     importSession,
     setThemePalette(palette) {
-      guiUi.applyTheme(buildPiTheme(normalizeAppThemePalette(palette)));
+      const next = buildPiTheme(normalizeAppThemePalette(palette));
+      guiUi.applyTheme(next);
+      // The same theme in both places pi reads one from: what the app hands a plugin factory, and the global its
+      // own components resolve. Updating only the first is what left pi's Markdown on the palette it started with.
+      installGlobalPiTheme(next);
       // Components cache their styled lines, so a new theme only reaches the screen if every open
       // surface is asked again — a stale palette is exactly what makes plugin output look foreign.
       surfaces.invalidateAll();

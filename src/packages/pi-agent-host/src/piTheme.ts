@@ -120,6 +120,25 @@ export function buildPiTheme(palette: AppThemePalette): Theme {
   return new Theme(fg, bg, "truecolor", { name: "container-desktop" });
 }
 
+// Where pi keeps THE theme its own components read. It is an exported Proxy over these globals, resolved on every
+// property access, and the keys are `Symbol.for` registry symbols precisely so separate copies of pi's module —
+// loaded through tsx here and jiti for plugins — share one theme. That registry is the handshake, so writing it is
+// how the app's palette reaches pi's Markdown, SelectList and Editor; `setThemeInstance`, which does exactly this,
+// is in pi's theme module but outside the package's `exports` map, and so is the proxy itself.
+//
+// BOTH keys, as pi's own writer does: a component loaded under the former package identity reads the other one, and
+// writing one would leave half the surfaces on the old palette. If pi ever renames them, plugin components simply
+// paint in pi's built-in theme again — the same place they were before this existed, and nothing throws.
+const PI_THEME_KEYS = [
+  Symbol.for("@earendil-works/pi-coding-agent:theme"),
+  Symbol.for("@mariozechner/pi-coding-agent:theme"),
+];
+
+export function installGlobalPiTheme(theme: Theme): void {
+  const globals = globalThis as Record<symbol, unknown>;
+  for (const key of PI_THEME_KEYS) globals[key] = theme;
+}
+
 // Blends two `#rrggbb` values. A token the renderer could not resolve (a stray `inherit`, a var that
 // never landed) keeps the first colour rather than throwing the whole theme away.
 export function mixHexColors(from: string, to: string, ratio: number): string {

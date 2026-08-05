@@ -1,6 +1,13 @@
+import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
-import { buildPiTheme, buildPiThemeColors, mixHexColors, normalizeAppThemePalette } from "@/pi-agent-host/piTheme";
+import {
+  buildPiTheme,
+  buildPiThemeColors,
+  installGlobalPiTheme,
+  mixHexColors,
+  normalizeAppThemePalette,
+} from "@/pi-agent-host/piTheme";
 import type { AppThemePalette } from "@/pi-bridge/protocol";
 
 const palette: AppThemePalette = {
@@ -121,5 +128,39 @@ describe("buildPiTheme", () => {
   it("survives a palette token the renderer could not resolve to a hex", () => {
     const theme = buildPiTheme({ ...palette, text: "inherit" });
     expect(theme.fg("text", "x")).toContain("x");
+  });
+});
+
+// pi's own components read a module-global theme through an exported Proxy, on every property access. The global
+// lives under a `Symbol.for` registry key precisely so separate copies of the module (tsx, jiti) share one theme,
+// which is what makes it reachable — and what makes installing the app's theme there the difference between a
+// plugin's Markdown painting in pi's built-in dark and painting in the app's own colours.
+describe("installGlobalPiTheme", () => {
+  // Asserted through pi's OWN public markdown theme, whose closures resolve that proxy on every call — so this
+  // is the same route a plugin's Markdown component takes, not a copy of it.
+  it("makes pi's own markdown theme paint in the app's colours", () => {
+    const theme = buildPiTheme(palette);
+    installGlobalPiTheme(theme);
+    expect(getMarkdownTheme().heading("Title")).toBe(theme.fg("mdHeading", "Title"));
+    expect(getMarkdownTheme().listBullet("-")).toBe(theme.fg("mdListBullet", "-"));
+  });
+
+  it("replaces the installed theme when the app changes engine or mode", () => {
+    installGlobalPiTheme(buildPiTheme(palette));
+    const teal = getMarkdownTheme().heading("Title");
+    const blue = buildPiTheme({ ...palette, accent: "#2d72d2" });
+    installGlobalPiTheme(blue);
+    expect(getMarkdownTheme().heading("Title")).toBe(blue.fg("mdHeading", "Title"));
+    expect(getMarkdownTheme().heading("Title")).not.toBe(teal);
+  });
+
+  // pi writes both its current and its former package key, so a component loaded from either module identity
+  // sees the same theme. Writing only one is how half the surfaces would keep the old palette.
+  it("installs under both of the keys pi itself writes", () => {
+    const theme = buildPiTheme(palette);
+    installGlobalPiTheme(theme);
+    const globals = globalThis as Record<symbol, unknown>;
+    expect(globals[Symbol.for("@earendil-works/pi-coding-agent:theme")]).toBe(theme);
+    expect(globals[Symbol.for("@mariozechner/pi-coding-agent:theme")]).toBe(theme);
   });
 });

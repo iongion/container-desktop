@@ -159,7 +159,12 @@ transcript is a projection of the event stream, which is why the app has no thre
 path.
 
 `initTheme()` is called for a narrow reason: pi's own components read a module-global theme that *throws*
-until initialised, so a plugin building a `Markdown` or `SelectList` would crash on first render.
+until initialised, so a plugin building a `Markdown` or `SelectList` would crash on first render. The app's own
+palette then **replaces** it: pi exposes that global as a Proxy over `Symbol.for` registry keys — a deliberate
+handshake so its module loaded through tsx and through jiti share one theme — so `installGlobalPiTheme` writes both
+keys pi's own writer does, at session start and on every `set_theme`. A plugin's un-themed `Markdown` therefore
+paints in the same colours as everything else the app hands it. If pi ever renames those keys, its components fall
+back to pi's built-in theme, which is where they were before, and nothing throws.
 
 **The gateway** (`gateway.ts`) is the same image with `--mode gateway`. It authorizes on
 `Authorization: Bearer <bridge token>`, strips the caller's credentials and every hop-by-hop header, substitutes
