@@ -57,6 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A provider hiccup the assistant retries by itself no longer reads as a failed answer: the working indicator names the attempt and counts the wait down instead of going quiet, and only the attempt it gives up on stays in the transcript
 - A skill's narrowing, and a turn's public-web taint, now last the whole run instead of its first step — a tool-using run ends a turn at every step, and both were being lifted at the first one
 
+- The assistant no longer asks you to fill in a form before it will do anything: the empty state IS the bootstrap. A row per engine, the one this app favours offered first, each saying where it runs and what it may read, write and reach — and a verb that follows its state, so a running session is continued, a stopped one resumed with its conversation intact, and a new one started in a click
+- Sessions you define yourself sit beside the offered default and are remembered, so the assistant is set up once rather than on every launch
+
 ### Added
 
 - A plugin can be installed for THIS PROJECT rather than for the agent everywhere — pi's own second package scope, offered once pi trusts the project and explained when it does not

@@ -80,6 +80,8 @@ export interface AIDefaultSessionConfig {
   providerId?: string;
   modelId?: string;
   egress?: boolean;
+  // What the user called it. Absent means this is the connection's offered default rather than one they named.
+  name?: string;
 }
 
 // Core-owned model-listing DTO used by both the channels contract and runtime implementations.

@@ -7,6 +7,7 @@ import { create } from "zustand";
 import type { ModelWindow } from "@/ai-system/adapters/modelWindow";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
+  findDefaultSession,
   GATEWAY_PORT_IN_IMAGE,
   gatewayUpstreamUrl,
   pickHostPort,
@@ -19,11 +20,14 @@ import {
   type PiBridgeClient,
 } from "@/ai-system/adapters/piBridgeClient";
 import {
+  type AiSessionKind,
   ASSISTANT_PLUGIN_VOLUME,
   assistantContainerName,
   assistantNetworkName,
+  defaultSessionNamesFor,
 } from "@/ai-system/adapters/sessionNaming";
 import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
+import type { DefaultSessionCandidate } from "@/ai-system/core/defaultSession";
 import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import {
@@ -40,8 +44,10 @@ import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import type { ProviderKind } from "@/ai-system/core/providers";
 import type { SessionView } from "@/ai-system/core/sessionEvents";
 import { sessionExportHtml, sessionHtmlFilename } from "@/ai-system/core/sessionExportHtml";
+import { type SessionLauncher, sessionLaunchers } from "@/ai-system/core/sessionLaunchers";
+import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
-import type { AIAuthSettings } from "@/ai-system/core/types";
+import type { AIAuthSettings, AIDefaultSessionConfig } from "@/ai-system/core/types";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
 import { isWorkspaceToolName } from "@/ai-system/core/workspaceToolNames";
 import { isMockMode } from "@/container-client/mock/mode";
@@ -59,12 +65,16 @@ import type {
 } from "@/pi-bridge/protocol";
 import { getHostRuntime } from "@/platform/provider";
 import { randomUUID } from "@/utils/randomUUID";
+import { connectedConnections } from "@/web-app/components/ConnectionSelect.logic";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import { PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
+import { resolveCodingAgentStart } from "@/web-app/screens/AI/startSession";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { applySurfaceEvent, type CodingAgentSurfaces, noSurfaces } from "@/web-app/stores/codingAgentSurfaces";
 import { composeSessionSystemContext, type SessionSystemContext } from "@/web-app/stores/codingAgentSystemContext";
 import { useProviderLoginStore } from "@/web-app/stores/providerLogin";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { readAppPiThemePalette } from "@/web-app/themes/appPiTheme";
 
 const logger = createLogger("web-app.codingAgent");
@@ -377,6 +387,9 @@ export interface StartCodingAgentOptions {
   // Where this session's WORKSPACE tools run. Absent means the toolset is not offered at all: a registered tool is a
   // promise to the model that the operation can happen, and nowhere to run one is not a place.
   executionTarget?: ExecutionTarget;
+  // Which session this is: the connection's REUSABLE one, named after it so the next boot finds it again, or an
+  // ephemeral one named after this run. Absent means ephemeral.
+  sessionKind?: AiSessionKind;
 }
 
 export interface CodingAgentState {
@@ -420,6 +433,20 @@ export interface CodingAgentState {
   // conversation can carry one pi resolved for itself, so the id this session STARTED with is not the answer. The one
   // model fact this store keeps — what a provider serves is the picker's question, asked one level at a time.
   sessionModel?: string;
+  // What the launcher offers: the reusable session on each connected engine, and whether its containers are running,
+  // stopped or not there. Read from the engine — the containers are the record — and merged with what settings say
+  // each was configured with. Empty until `refreshLaunchers` has asked.
+  launchers: SessionLauncher[];
+  // Which connection's session is being brought up, so its row alone shows the wait.
+  launching?: string;
+  refreshLaunchers(): Promise<void>;
+  // Bring up the session a launcher row stands for. Continue, Resume and Start differ only in what the user is told:
+  // all three end at the same reusable containers, and a stopped pair is REBUILT rather than restarted — its
+  // conversation lives in the plugin volume, not in the container, so nothing is lost by it.
+  launchSession(row: SessionLauncher): Promise<void>;
+  // Drop a session's configuration. Its containers are left alone: they are the user's to remove, in the Containers
+  // screen where every other container is removed.
+  forgetSession(connectionId: string): Promise<void>;
   start(options: StartCodingAgentOptions): Promise<void>;
   submit(text: string): Promise<void>;
   submitSkill(input: SkillSubmission): Promise<void>;
@@ -603,6 +630,25 @@ async function writeAgentEnvFile(name: string, contents: string): Promise<string
   return path;
 }
 
+// Why a row could not be launched, in the words the start form already uses for the same problems.
+function launchProblem(problems: readonly string[]): string {
+  if (problems.includes("missing-key")) return t("This inference source needs an API key. Add it in Settings → AI.");
+  if (problems.includes("no-model")) return t("Pick a model for the agent to use.");
+  if (problems.includes("no-endpoint"))
+    return t("This inference source has no endpoint. Set its base URL in Settings → AI.");
+  if (problems.includes("no-provider")) return t("This inference source is not configured. Add it in Settings → AI.");
+  return t("Pick the folder the agent may read and write.");
+}
+
+// Record what a connection's reusable session was launched with, so the row survives the app and reads the same next
+// time. Merged rather than replaced: another connection's session is none of this one's business.
+async function writeDefaultSession(connectionId: string, config: AIDefaultSessionConfig): Promise<void> {
+  const settings = useAppStore.getState().userSettings.ai;
+  await useAppStore.getState().setGlobalUserSettings({
+    ai: { ...settings, defaultSessions: { ...(settings?.defaultSessions ?? {}), [connectionId]: config } },
+  } as never);
+}
+
 export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   status: "idle",
   view: emptyPiSessionView("pi-session"),
@@ -612,6 +658,95 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   resources: noContributedResources(),
   pendingEngineOps: {},
   turnReadPublicWeb: false,
+  launchers: [],
+
+  // What the launcher shows, asked of the engines rather than remembered: the containers are the durable record of
+  // which sessions exist, and settings say what each was configured with. Never fatal — an engine that cannot answer
+  // simply has nothing standing, which the launcher renders as "ready to start".
+  async refreshLaunchers() {
+    const settings = useAppStore.getState().userSettings.ai;
+    // The same source the start form's picker uses, so the launcher offers exactly the engines a session could
+    // actually be brought up on.
+    const reachable = connectedConnections(
+      useAppStore.getState().connections,
+      useResourceStore.getState().activeRuntime,
+    );
+    const connections = reachable.map((connection) => ({
+      id: connection.id,
+      connected: true,
+      engine: connection.engine,
+    }));
+    const discovered = (
+      await Promise.all(
+        connections
+          .filter((connection) => connection.connected)
+          .map(async (connection) => {
+            const host = await resolveConnectionHost(connection.id);
+            return host ? await findDefaultSession(host, connection.id) : undefined;
+          }),
+      )
+    ).filter((candidate): candidate is DefaultSessionCandidate => !!candidate);
+    set({
+      launchers: sessionLaunchers({
+        connections,
+        ...(settings?.defaultSessions ? { configured: settings.defaultSessions } : {}),
+        discovered,
+        ...(settings?.workspaceRoot ? { workspaceRoot: settings.workspaceRoot } : {}),
+      }),
+    });
+  },
+
+  async launchSession(row) {
+    const settings = useAppStore.getState().userSettings.ai;
+    const configured = settings?.defaultSessions?.[row.connectionId];
+    const providerId = configured?.providerId ?? settings?.defaultProvider ?? DEFAULT_AI_SETTINGS.defaultProvider;
+    const bridge = typeof window !== "undefined" ? window.AI : undefined;
+    // The form's own resolver, so the launcher cannot drift from it: one place decides what an endpoint, a model and
+    // a key add up to, and it is the same place that reports what is missing.
+    const resolved = resolveCodingAgentStart(
+      {
+        connectionId: row.connectionId,
+        workspacePath: row.workspacePath,
+        providerId,
+        model: row.modelId ?? configured?.modelId ?? "",
+        egress: row.egress,
+        executionKind: "off",
+        executionRef: "",
+      },
+      {
+        settings: settings ?? DEFAULT_AI_SETTINGS,
+        appVersion: PROJECT_VERSION,
+        keyPresent: (await bridge?.hasKey(providerId).catch(() => false)) ?? false,
+      },
+    );
+    // Nothing is guessed on the user's behalf: an unanswerable row sends them to the form that can say why.
+    if (!resolved.options) {
+      set({ error: launchProblem(resolved.problems) });
+      return;
+    }
+    set({ launching: row.connectionId, error: undefined });
+    try {
+      await get().start({ ...resolved.options, sessionKind: "default" });
+      // Remember what was launched, so the row survives the app and reads the same next time.
+      await writeDefaultSession(row.connectionId, {
+        workspacePath: row.workspacePath,
+        providerId,
+        ...(resolved.options.modelId ? { modelId: resolved.options.modelId } : {}),
+        egress: row.egress,
+        ...(row.isDefault ? {} : { name: row.name }),
+      });
+    } finally {
+      set({ launching: undefined });
+    }
+  },
+
+  async forgetSession(connectionId) {
+    const settings = useAppStore.getState().userSettings.ai;
+    const remaining = { ...(settings?.defaultSessions ?? {}) };
+    delete remaining[connectionId];
+    await useAppStore.getState().setGlobalUserSettings({ ai: { ...settings, defaultSessions: remaining } } as never);
+    await get().refreshLaunchers();
+  },
 
   async start(options) {
     set({
@@ -707,12 +842,16 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       workspacePath: options.workspacePath,
       hostPort: pickHostPort(),
       bridgeToken: randomUUID(),
-      networkName: assistantNetworkName(suffix),
-      agentContainerName: assistantContainerName("agent", suffix),
-      gatewayContainerName: assistantContainerName("gateway", suffix),
+      ...(options.sessionKind === "default"
+        ? defaultSessionNamesFor(options.connectionId)
+        : {
+            networkName: assistantNetworkName(suffix),
+            agentContainerName: assistantContainerName("agent", suffix),
+            gatewayContainerName: assistantContainerName("gateway", suffix),
+          }),
       pluginVolumeName: ASSISTANT_PLUGIN_VOLUME,
       connectionId: options.connectionId,
-      sessionKind: "ephemeral",
+      sessionKind: options.sessionKind ?? "ephemeral",
       upstreamBaseUrl: options.upstreamBaseUrl,
       ...modelWindow,
       // An endpoint with no declared provider is treated as an OpenAI-shaped bearer upstream — what every

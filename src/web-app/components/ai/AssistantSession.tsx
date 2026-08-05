@@ -26,6 +26,7 @@ import { resolveScreenPrompt } from "@/template/screenPrompts";
 import { AIComposer, type ParsedAssistantCommand } from "@/web-app/components/AIComposer";
 import { AssistantContextDrawer, type AssistantContextSection } from "@/web-app/components/ai/AssistantContextDrawer";
 import { AssistantDiagnosticsDrawer } from "@/web-app/components/ai/AssistantDiagnosticsDrawer";
+import { AssistantLauncher } from "@/web-app/components/ai/AssistantLauncher";
 import {
   AssistantSessionTreeDrawer,
   type AssistantSessionTreeView,
@@ -91,6 +92,17 @@ export const AssistantSession: React.FC<AssistantSessionProps> = ({
   // Assistant surface IS the pi session they are read from its store directly rather than widening AIState.
   const extensionChrome = useCodingAgentStore((s) => s.chrome);
   const retrying = useCodingAgentStore((s) => s.retrying);
+  const launchers = useCodingAgentStore((s) => s.launchers);
+  const launching = useCodingAgentStore((s) => s.launching);
+  const refreshLaunchers = useCodingAgentStore((s) => s.refreshLaunchers);
+  const launchSession = useCodingAgentStore((s) => s.launchSession);
+  const forgetSession = useCodingAgentStore((s) => s.forgetSession);
+  // A launcher row says which engine its containers land on, and rows sit side by side on different ones.
+  const connections = useAppStore((s) => s.connections);
+  const engineOfConnection = useCallback(
+    (connectionId: string) => connections.find((connection) => connection.id === connectionId)?.engine,
+    [connections],
+  );
   const pendingDialog = useCodingAgentStore((s) => s.pendingDialog);
   const respondToRequest = useCodingAgentStore((s) => s.respondToRequest);
   // There is exactly ONE session behind every surface, so "is there anything to talk to?" is the session's own
@@ -161,6 +173,12 @@ export const AssistantSession: React.FC<AssistantSessionProps> = ({
     (name: string, args: string) => useCodingAgentStore.getState().runPiCommand(name, args),
     [],
   );
+
+  // The launcher asks the engines what is standing. Only while there is nothing to talk to: a running session has no
+  // launcher on screen, and asking every engine on every render would be a listing per keystroke.
+  useEffect(() => {
+    if (noSession) void refreshLaunchers();
+  }, [noSession, refreshLaunchers]);
 
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -452,30 +470,19 @@ export const AssistantSession: React.FC<AssistantSessionProps> = ({
         <div className="AssistantTranscript" ref={scrollRef} onScroll={onScroll}>
           {recoveryError ? <Callout intent={Intent.DANGER}>{recoveryError}</Callout> : null}
           {noSession ? (
-            // Owned by the SESSION, not by the screen: the console renders this same component, so a session
-            // that can only be started from the screen leaves the console a dead box. Here both surfaces
-            // offer the same way in.
+            // The empty state IS the bootstrap. Owned by the SESSION, not by the screen: the console renders this
+            // same component, so a session that could only be started from the screen would leave the console a dead
+            // box. A connection with nothing configured still gets an offered default, so there is always something
+            // to click rather than a form to complete first.
             <div className="AssistantEmpty AssistantEmpty--noSession">
-              <NonIdealState
-                icon={<Icon icon={IconNames.CHAT} size={40} />}
-                title={t("No assistant session")}
-                description={
-                  <>
-                    <p>{t("Start a session to work on a folder with the assistant.")}</p>
-                    <p>
-                      {t("It runs in a container on the connection you pick, and only that folder is mounted into it.")}
-                    </p>
-                  </>
-                }
-                action={
-                  <Button
-                    intent={Intent.SUCCESS}
-                    icon={IconNames.PLAY}
-                    text={t("Start session")}
-                    loading={sessionStatus === "starting"}
-                    onClick={() => setStartOpen(true)}
-                  />
-                }
+              <AssistantLauncher
+                rows={launchers}
+                engineOf={engineOfConnection}
+                starting={launching}
+                onLaunch={(row) => void launchSession(row)}
+                onConfigure={() => setStartOpen(true)}
+                onForget={(row) => void forgetSession(row.connectionId)}
+                onCreate={() => setStartOpen(true)}
               />
             </div>
           ) : items.length === 0 ? (

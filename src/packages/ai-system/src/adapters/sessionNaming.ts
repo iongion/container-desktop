@@ -74,6 +74,21 @@ export function assistantNetworkName(scope: string): string {
   return `${ASSISTANT_PROJECT}-net-${scope}`;
 }
 
+// Every name of the session a connection REUSES, in one call — so a caller composing a spec cannot name half the pair
+// after the connection and half after a run.
+export function defaultSessionNamesFor(connectionId: string): {
+  agentContainerName: string;
+  gatewayContainerName: string;
+  networkName: string;
+} {
+  const scope = defaultScope(connectionId);
+  return {
+    agentContainerName: assistantContainerName("agent", scope),
+    gatewayContainerName: assistantContainerName("gateway", scope),
+    networkName: assistantNetworkName(scope),
+  };
+}
+
 // The second network, which exists only when egress is off: the gateway still has to reach the provider, so it gets a
 // routable NIC the agent does not have. That asymmetry IS "only the gateway is reachable".
 export function egressNetworkOf(networkName: string): string {
