@@ -50,15 +50,18 @@ export function useAssistantSkills() {
   // registered with pi, and their skills. All of it changes when a plugin is installed, disabled or the session
   // stops, which is why it is read from the store rather than assembled once.
   const resources = useCodingAgentStore((state) => state.resources);
-  const sessionCommands = useMemo(
-    () => [
+  const sessionCommands = useMemo(() => {
+    // TEMPORARY timing. Remove once the cold-arrival cost is attributed.
+    const startedAt = performance.now();
+    const built = [
       // The app's own catalogue already offers the ones the GUI performs, under exactly these names.
       ...piBuiltinCommandDefinitions(resources.builtins, APP_PERFORMED_PI_COMMANDS),
       ...piPluginCommandDefinitions(resources),
       ...pluginSkillCommands(resources),
-    ],
-    [resources],
-  );
+    ];
+    logger.warn(`[timing] session command catalogue built in ${Math.round(performance.now() - startedAt)}ms`);
+    return built;
+  }, [resources]);
 
   useEffect(() => {
     let mounted = true;
@@ -69,13 +72,21 @@ export function useAssistantSkills() {
       setLoading(false);
     };
     const unsubscribe = window.AIBus.subscribe(AI_CHANNELS.skillsChanged, apply);
-    void window.AI.getSkills().then(apply, (cause) => {
-      if (!mounted) return;
-      const message = describeError(cause);
-      logger.error("Skill snapshot failed", { error: message });
-      setError(message);
-      setLoading(false);
-    });
+    // TEMPORARY timing, to find where the Assistant screen's cold arrival spends its seconds. Remove once answered.
+    const askedAt = performance.now();
+    void window.AI.getSkills().then(
+      (next) => {
+        logger.warn(`[timing] getSkills answered in ${Math.round(performance.now() - askedAt)}ms`);
+        apply(next);
+      },
+      (cause) => {
+        if (!mounted) return;
+        const message = describeError(cause);
+        logger.error("Skill snapshot failed", { error: message });
+        setError(message);
+        setLoading(false);
+      },
+    );
     return () => {
       mounted = false;
       unsubscribe();

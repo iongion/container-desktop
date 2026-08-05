@@ -6,6 +6,7 @@ import { type ITheme, Terminal as XTermTerminal } from "@xterm/xterm";
 
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
+import { createLogger } from "@/logger";
 import { keyEventToTerminalData } from "@/web-app/components/ai/surfaceKeys";
 import { readAppPiThemePalette } from "@/web-app/themes/appPiTheme";
 import { getAppThemeEpoch, subscribeAppThemeEpoch } from "@/web-app/themes/appThemeEpoch";
@@ -54,6 +55,12 @@ function resolveSurfaceFont(): string {
   );
 }
 
+// TEMPORARY instrumentation for the paint-latency investigation: every AnsiSurface is a full xterm Terminal with
+// its own addons and canvas, and the transcript renders one PER plugin surface. If a session shows a dozen, the
+// ~360ms render→paint gap has an obvious owner. Remove once the cost is attributed.
+let liveSurfaces = 0;
+const surfaceLogger = createLogger("web-app.assistantTiming");
+
 export const AnsiSurface: React.FC<AnsiSurfaceProps> = ({ surfaceId, lines, focus, ariaLabel, onInput, onResize }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const term = useRef<XTermTerminal | null>(null);
@@ -71,6 +78,9 @@ export const AnsiSurface: React.FC<AnsiSurfaceProps> = ({ surfaceId, lines, focu
 
   useEffect(() => {
     if (!wrapRef.current || term.current) return;
+    // TEMPORARY: how many xterm instances this screen is actually carrying, and what each costs to construct.
+    const builtAt = performance.now();
+    liveSurfaces += 1;
     const terminal = new XTermTerminal({
       theme: latestTheme.current,
       fontFamily: resolveSurfaceFont(),
@@ -109,9 +119,13 @@ export const AnsiSurface: React.FC<AnsiSurfaceProps> = ({ surfaceId, lines, focu
 
     const observer = new ResizeObserver(measure);
     observer.observe(wrapRef.current);
+    surfaceLogger.warn(
+      `[timing] xterm surface ${surfaceId} built in ${Math.round(performance.now() - builtAt)}ms — ${liveSurfaces} live on screen`,
+    );
 
     return () => {
       observer.disconnect();
+      liveSurfaces -= 1;
       terminal.dispose();
       term.current = null;
       fit.current = null;

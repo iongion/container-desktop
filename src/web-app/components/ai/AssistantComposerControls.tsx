@@ -6,6 +6,7 @@ import type { AIPermissionMode } from "@/ai-system/core/permissions";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import { ConfirmMenuItem } from "@/web-app/components/ConfirmMenu";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
 const MODE_ICON = {
   ask: IconNames.HAND,
@@ -82,6 +83,18 @@ export const PermissionModeMenu: React.FC<{ disabled?: boolean }> = ({ disabled 
 
 export function ExecutionTargetMenu({ disabled }: { disabled?: boolean }) {
   const { t } = useTranslation();
+  // The target the RUNNING session was started with. This chip used to say "Host" — hardcoded, in both the button
+  // and its menu item — which is a target kind this app no longer has: execution is a container, either one already
+  // running or a disposable sandbox, and the connection is how it is reached. A chip naming a kind that cannot exist
+  // is worse than no chip, because it answers "where do my tools run?" with something untrue.
+  const target = useCodingAgentStore((state) => state.spec?.executionTarget);
+  // No session, or a session whose tools run in the agent container itself: there is no separate target to name.
+  if (!target) return null;
+  const label = target.kind === "sandbox" ? t("Sandbox") : t("Container");
+  const detail =
+    target.kind === "sandbox"
+      ? t("Disposable sandbox from {{image}}", { image: target.image })
+      : t("Container {{id}}", { id: target.containerId.slice(0, 12) });
   return (
     <PopoverNext
       usePortal
@@ -89,7 +102,7 @@ export function ExecutionTargetMenu({ disabled }: { disabled?: boolean }) {
       disabled={disabled}
       content={
         <Menu className="AIComposerCompactMenu">
-          <MenuItem icon={IconNames.DESKTOP} text={t("Host")} label={t("Current execution target")} active />
+          <MenuItem icon={IconNames.BOX} text={label} label={detail} active />
         </Menu>
       }
     >
@@ -97,8 +110,8 @@ export function ExecutionTargetMenu({ disabled }: { disabled?: boolean }) {
         className="AIComposerTool"
         variant="minimal"
         size="small"
-        icon={IconNames.DESKTOP}
-        text={t("Host")}
+        icon={IconNames.BOX}
+        text={label}
         title={t("Execution target")}
         disabled={disabled}
       />
