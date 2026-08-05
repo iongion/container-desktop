@@ -259,6 +259,34 @@ describe("startPiAgentSession", () => {
     expect(written[1]).toContain("CD_GATEWAY_URL=http://cd-gateway-1:8788/v1");
   });
 
+  // Only the app can ask a provider whether a model reasons, and the container is born on its model before anything
+  // has dialled the bridge — so the answer travels in the agent's env file or not at all.
+  it("tells the agent what the provider published about the model's reasoning", async () => {
+    const written: string[] = [];
+    await startPiAgentSession(
+      fakeHost(),
+      { ...spec, reasoning: { levels: ["low", "high", "xhigh"], mandatory: true } },
+      async (contents) => {
+        written.push(contents);
+        return "/tmp/env";
+      },
+    );
+    expect(written[1]).toContain("CD_MODEL_REASONING=1");
+    expect(written[1]).toContain("CD_MODEL_REASONING_LEVELS=low,high,xhigh");
+    expect(written[1]).toContain("CD_MODEL_REASONING_MANDATORY=1");
+  });
+
+  // Silence is the honest answer for a model nobody published a capability for: pi then registers it with its own
+  // `reasoning: false` and the session offers no thinking level at all.
+  it("says nothing about reasoning when no provider published any", async () => {
+    const written: string[] = [];
+    await startPiAgentSession(fakeHost(), spec, async (contents) => {
+      written.push(contents);
+      return "/tmp/env";
+    });
+    expect(written[1]).not.toContain("CD_MODEL_REASONING");
+  });
+
   it("tells the gateway how the upstream authenticates, not just its key", async () => {
     const written: string[] = [];
     await startPiAgentSession(fakeHost(), { ...spec, providerKind: "anthropic" }, async (contents) => {

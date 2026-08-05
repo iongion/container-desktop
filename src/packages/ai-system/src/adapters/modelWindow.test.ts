@@ -42,6 +42,24 @@ describe("fetchModelWindow", () => {
     await expect(fetchModelWindow(provider(), { fetchImpl })).resolves.toEqual({ contextWindow: 262144 });
   });
 
+  // LM Studio publishes `capabilities`, and reasoning is not among the words it uses: a real listing of 18 models
+  // said `tool_use` and nothing else, including for one whose own name is "thinking". So a local model reasons only
+  // as far as this app is concerned when LM Studio starts saying so — not because its id looks like it might.
+  it("claims no reasoning from LM Studio, which never publishes it", async () => {
+    const fetchImpl = answering({
+      data: [
+        {
+          id: "qwen3-4b-instruct-2507",
+          state: "loaded",
+          max_context_length: 262144,
+          loaded_context_length: 8192,
+          capabilities: ["tool_use"],
+        },
+      ],
+    });
+    await expect(fetchModelWindow(provider(), { fetchImpl })).resolves.toEqual({ contextWindow: 8192 });
+  });
+
   // The rates come from the same listing as the window, in the unit pi's model config wants: OpenRouter publishes
   // dollars per TOKEN and pi divides by a million, so a price passed through unconverted would under-report a real
   // bill by six orders of magnitude. Payload from a real OpenRouter listing.
@@ -98,6 +116,86 @@ describe("fetchModelWindow", () => {
       contextWindow: 262144,
       maxOutputTokens: 8192,
     });
+  });
+
+  // OpenRouter publishes the efforts a reasoning model accepts, in the same vocabulary pi thinks in, and says when
+  // reasoning cannot be turned off. Levels come back in pi's own order, not the provider's. Payload from the real
+  // listing, where `qwen/qwen3.8-max` is mandatory and tops out at xhigh.
+  it("reads the reasoning efforts OpenRouter published", async () => {
+    const fetchImpl = answering({
+      data: [
+        {
+          id: "qwen/qwen3.8-max",
+          context_length: 262144,
+          supported_parameters: ["include_reasoning", "max_tokens", "reasoning", "temperature"],
+          reasoning: {
+            mandatory: true,
+            default_enabled: true,
+            supported_efforts: ["xhigh", "high", "medium", "low", "minimal"],
+            default_effort: "xhigh",
+          },
+        },
+      ],
+    });
+    const resolved = provider({ id: "openrouter", baseURL: "https://openrouter.ai/api/v1", model: "qwen/qwen3.8-max" });
+    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({
+      contextWindow: 262144,
+      reasoning: { levels: ["minimal", "low", "medium", "high", "xhigh"], mandatory: true },
+    });
+  });
+
+  // `none` is OpenRouter's way of saying reasoning can be turned OFF, which is pi's `off` — not a level of its own,
+  // and already what an absent `mandatory` says.
+  it("drops the effort that only means reasoning can be turned off", async () => {
+    const fetchImpl = answering({
+      data: [
+        {
+          id: "z-ai/glm-5",
+          context_length: 200000,
+          supported_parameters: ["reasoning"],
+          reasoning: { mandatory: false, supported_efforts: ["max", "high", "medium", "low", "minimal", "none"] },
+        },
+      ],
+    });
+    const resolved = provider({ id: "openrouter", baseURL: "https://openrouter.ai/api/v1", model: "z-ai/glm-5" });
+    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({
+      contextWindow: 200000,
+      reasoning: { levels: ["minimal", "low", "medium", "high", "max"] },
+    });
+  });
+
+  // 21 of OpenRouter's own entries publish the capability and no efforts at all. pi's default set stands for those,
+  // so there is nothing to carry but the fact — and carrying an invented set is what would hide the real one.
+  it("carries the capability alone when the provider published no efforts", async () => {
+    const fetchImpl = answering({
+      data: [{ id: "some/thinker", context_length: 40960, reasoning: { mandatory: false, default_enabled: true } }],
+    });
+    const resolved = provider({ id: "openrouter", baseURL: "https://openrouter.ai/api/v1", model: "some/thinker" });
+    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({
+      contextWindow: 40960,
+      reasoning: {},
+    });
+  });
+
+  it("says nothing about reasoning for a model that does not reason", async () => {
+    const fetchImpl = answering({
+      data: [{ id: "kwaipilot/kat-coder", context_length: 262144, supported_parameters: ["temperature", "tools"] }],
+    });
+    const resolved = provider({
+      id: "openrouter",
+      baseURL: "https://openrouter.ai/api/v1",
+      model: "kwaipilot/kat-coder",
+    });
+    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({ contextWindow: 262144 });
+  });
+
+  // The one thing the app knows without asking anyone: the prefixes its own provider catalogue declares. OpenAI
+  // serves no endpoint that says a model reasons, and o3 does — so a provider with nothing to probe still answers.
+  it("answers with the reasoning its own catalogue declares for a provider it cannot probe", async () => {
+    const fetchImpl = answering({});
+    const resolved = provider({ id: "openai", kind: "openai", baseURL: "https://api.openai.com/v1", model: "o3-mini" });
+    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({ reasoning: {} });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   // llama.cpp serves ONE model at whatever `-c` it was started with, and publishes it under the default generation

@@ -7,7 +7,14 @@
 // Kept out of `session.ts` because merging an entry and mapping a shape are decisions worth testing without a live
 // session.
 
-import type { PiModelRegistration } from "@/pi-bridge/protocol";
+import type { ThinkingLevelMap } from "@earendil-works/pi-ai";
+
+import {
+  PI_THINKING_LEVELS,
+  type PiModelReasoning,
+  type PiModelRegistration,
+  piThinkingLevels,
+} from "@/pi-bridge/protocol";
 
 // pi's own defaults, mirrored because its ProviderModelConfig requires both numbers even when nobody knows them
 // (provider-composer.js: `definition.contextWindow ?? 128000`). Used ONLY so pi has something to compact against —
@@ -32,14 +39,44 @@ export function withModelRegistration(
   return next;
 }
 
+// The reasoning the app published, as it arrives in the agent's ENVIRONMENT: the model a container is born on is
+// registered before anything has dialled the bridge, so its facts travel as env vars like every other. The flag is
+// the capability and the rest is detail — detail on its own is a half-written env file, and inferring the capability
+// from it would register a reasoner the app never claimed.
+export function reasoningFromEnv(env: Record<string, string | undefined>): PiModelReasoning | undefined {
+  if (env.CD_MODEL_REASONING !== "1") return undefined;
+  const levels = piThinkingLevels((env.CD_MODEL_REASONING_LEVELS ?? "").split(",").map((level) => level.trim()));
+  return {
+    ...(levels.length ? { levels } : {}),
+    ...(env.CD_MODEL_REASONING_MANDATORY === "1" ? { mandatory: true } : {}),
+  };
+}
+
+// What pi is to offer as thinking levels. pi resolves availability FROM this map rather than from a list: a level
+// mapped to `null` is withdrawn, `xhigh` and `max` are offered ONLY when the map names them, and an unnamed level
+// keeps pi's own default availability (pi-ai `getSupportedThinkingLevels`). So a provider that published its efforts
+// gets exactly those, and one that published none keeps pi's set untouched rather than a narrower invented one.
+function thinkingLevelMap(reasoning: PiModelReasoning): ThinkingLevelMap | undefined {
+  // `mandatory` is the model that always reasons: withdrawing `off` is how pi stops offering a mode it has not got.
+  const map: ThinkingLevelMap = reasoning.mandatory ? { off: null } : {};
+  const published = reasoning.levels;
+  if (!published?.length) return reasoning.mandatory ? map : undefined;
+  for (const level of PI_THINKING_LEVELS) map[level] = published.includes(level) ? level : null;
+  return map;
+}
+
 // One registration as pi's provider composer wants it. `name` is the id: the provider listings carry an id and
-// nothing more, and inventing a prettier label would be this app's words in pi's mouth. `reasoning` is false for
-// every model — the app knows it only for a couple of OpenAI prefixes, and claiming it elsewhere would be fiction.
+// nothing more, and inventing a prettier label would be this app's words in pi's mouth.
 export function piModelConfig(model: PiModelRegistration) {
+  const levels = model.reasoning ? thinkingLevelMap(model.reasoning) : undefined;
   return {
     id: model.id,
     name: model.id,
-    reasoning: false,
+    // Only what a provider published, or what the app's own catalogue declares about a provider that publishes
+    // nothing: pi hides the thinking control for everything else, which is the honest answer for a model nobody
+    // called a reasoner.
+    reasoning: !!model.reasoning,
+    ...(levels ? { thinkingLevelMap: levels } : {}),
     input: ["text" as const],
     // pi multiplies these by the token counts to bill a turn, so all-zero is what made every session report $0.00
     // whatever it really cost. Zero stays the honest answer for a free model.

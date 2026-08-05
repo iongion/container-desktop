@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PI_THINKING_LEVELS } from "@/pi-bridge/protocol";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -822,7 +823,7 @@ export const responseSchemas = {
     .object({ models: z.array(z.object({ id: z.string().trim().min(1).max(MAX_MODEL_CHARS) }).strict()).max(10_000) })
     .strict(),
   [AI_CHANNELS.modelsCancel]: ok,
-  // Both absent means the provider did not say — rendered as "unknown", never as a confident number.
+  // Every field absent means the provider did not say — rendered as "unknown", never as a confident number.
   [AI_CHANNELS.modelWindow]: z
     .object({
       contextWindow: z.number().int().positive().optional(),
@@ -834,6 +835,15 @@ export const responseSchemas = {
           output: z.number().nonnegative(),
           cacheRead: z.number().positive().optional(),
           cacheWrite: z.number().positive().optional(),
+        })
+        .strict()
+        .optional(),
+      // Present only when a provider published a reasoning capability for this model. An empty object still says
+      // "it reasons" — the levels are how hard it may be asked to, which not every provider names.
+      reasoning: z
+        .object({
+          levels: z.array(z.enum(PI_THINKING_LEVELS)).max(PI_THINKING_LEVELS.length).optional(),
+          mandatory: z.boolean().optional(),
         })
         .strict()
         .optional(),

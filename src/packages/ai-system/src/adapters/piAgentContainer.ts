@@ -4,6 +4,7 @@ import { isLoopbackProviderHost, type ProviderKind } from "@/ai-system/core/prov
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
+import type { PiModelReasoning } from "@/pi-bridge/protocol";
 
 const logger = createLogger("ai.piAgentContainer");
 
@@ -40,6 +41,9 @@ export interface PiAgentSessionSpec {
   // What the provider charges, per million tokens. Absent for a free or unpriced model — pi already defaults every
   // rate to zero, which is why a session used to report $0.00 whatever it actually cost.
   pricing?: ModelPricing;
+  // Whether the model the session starts on reasons, and how hard it may be asked to. Absent means nobody published
+  // it, and the session then offers no thinking level rather than one the provider would ignore.
+  reasoning?: PiModelReasoning;
   egress: boolean;
   // The DNS name that resolves to THIS machine from inside a container on this engine — podman's
   // host.containers.internal, docker's host.docker.internal. A provider running on the host (LM Studio,
@@ -252,6 +256,11 @@ export async function startPiAgentSession(
       ...(spec.pricing?.output ? [`CD_MODEL_COST_OUTPUT=${spec.pricing.output}`] : []),
       ...(spec.pricing?.cacheRead ? [`CD_MODEL_COST_CACHE_READ=${spec.pricing.cacheRead}`] : []),
       ...(spec.pricing?.cacheWrite ? [`CD_MODEL_COST_CACHE_WRITE=${spec.pricing.cacheWrite}`] : []),
+      // The capability is the flag; the efforts and the model that cannot stop reasoning are detail beside it. All
+      // three are omitted for a model nobody published reasoning for, which is what keeps pi's `false` honest.
+      ...(spec.reasoning ? ["CD_MODEL_REASONING=1"] : []),
+      ...(spec.reasoning?.levels?.length ? [`CD_MODEL_REASONING_LEVELS=${spec.reasoning.levels.join(",")}`] : []),
+      ...(spec.reasoning?.mandatory ? ["CD_MODEL_REASONING_MANDATORY=1"] : []),
       "CD_WORKSPACE=/workspace",
       `CD_AGENT_DIR=${AGENT_DIR_IN_IMAGE}`,
     ].join("\n"),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { piModelConfig, withModelRegistration } from "@/pi-agent-host/modelRegistrations";
+import { piModelConfig, reasoningFromEnv, withModelRegistration } from "@/pi-agent-host/modelRegistrations";
 
 describe("withModelRegistration", () => {
   it("adds a model the session has not been pointed at before", () => {
@@ -67,5 +67,75 @@ describe("piModelConfig", () => {
       maxTokens: 8192,
       cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 0 },
     });
+  });
+
+  // pi reads `reasoning` to decide whether a thinking level can be set at all, so a model nobody published a
+  // capability for keeps its levels hidden rather than being offered one the provider would ignore.
+  it("reports a model no provider called a reasoner as pi's own false", () => {
+    const config = piModelConfig({ id: "canned" });
+    expect(config.reasoning).toBe(false);
+    expect(config.thinkingLevelMap).toBeUndefined();
+  });
+
+  // The capability with no published efforts: pi's own set (off, minimal, low, medium, high) is exactly right, and a
+  // map would only narrow it.
+  it("leaves pi's own levels alone when the provider published the capability alone", () => {
+    const config = piModelConfig({ id: "o3-mini", reasoning: {} });
+    expect(config.reasoning).toBe(true);
+    expect(config.thinkingLevelMap).toBeUndefined();
+  });
+
+  // pi resolves what a model offers FROM this map: a level mapped to null is withdrawn, and xhigh and max are offered
+  // ONLY when the map names them (pi-ai `getSupportedThinkingLevels`).
+  it("withdraws the levels the provider did not publish and names the ones above high", () => {
+    expect(piModelConfig({ id: "m", reasoning: { levels: ["low", "high", "xhigh"] } }).thinkingLevelMap).toEqual({
+      minimal: null,
+      low: "low",
+      medium: null,
+      high: "high",
+      xhigh: "xhigh",
+      max: null,
+    });
+  });
+
+  // OpenRouter's `mandatory` in pi's terms: `off` withdrawn is how pi stops offering "do not think" to a model that
+  // has no such mode.
+  it("takes `off` away from a model that cannot be asked to stop reasoning", () => {
+    expect(piModelConfig({ id: "m", reasoning: { mandatory: true } }).thinkingLevelMap).toEqual({ off: null });
+  });
+});
+
+describe("reasoningFromEnv", () => {
+  // The model the container is BORN on: its registration arrives as environment, because nothing has dialled the
+  // bridge yet. Absent means the app said nothing, which is how a session that cannot reason stays honest.
+  it("says nothing when the app published nothing", () => {
+    expect(reasoningFromEnv({})).toBeUndefined();
+    expect(reasoningFromEnv({ CD_MODEL_REASONING: "0" })).toBeUndefined();
+  });
+
+  it("reads the capability on its own", () => {
+    expect(reasoningFromEnv({ CD_MODEL_REASONING: "1" })).toEqual({});
+  });
+
+  // pi's own level names, in pi's own order whatever order they arrive in — and nothing else, because an env var is a
+  // string from another process.
+  it("keeps pi's level names and drops anything that is not one", () => {
+    expect(reasoningFromEnv({ CD_MODEL_REASONING: "1", CD_MODEL_REASONING_LEVELS: "xhigh,low,nonsense,high" })).toEqual(
+      { levels: ["low", "high", "xhigh"] },
+    );
+  });
+
+  it("carries a model that cannot be asked to stop reasoning", () => {
+    expect(reasoningFromEnv({ CD_MODEL_REASONING: "1", CD_MODEL_REASONING_MANDATORY: "1" })).toEqual({
+      mandatory: true,
+    });
+  });
+
+  // The flag is the capability. Detail without it is a half-written env file, and inferring the capability from the
+  // detail would register a reasoner the app never claimed.
+  it("ignores the detail when the capability was not published", () => {
+    expect(
+      reasoningFromEnv({ CD_MODEL_REASONING_LEVELS: "low,high", CD_MODEL_REASONING_MANDATORY: "1" }),
+    ).toBeUndefined();
   });
 });

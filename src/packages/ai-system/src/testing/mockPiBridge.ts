@@ -14,18 +14,21 @@
 
 import type { HostResponsePayload, PiBridgeClient } from "@/ai-system/adapters/piBridgeClient";
 import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
-import type {
-  AppThemePalette,
-  BridgeEvent,
-  ContributedResources,
-  EngineOpResult,
-  PiModelRegistration,
-  PiProjectTrust,
-  PiScopedModels,
-  PiSessionSettings,
-  PluginListPayload,
-  PluginScope,
-  WebSearchAnswer,
+import {
+  type AppThemePalette,
+  type BridgeEvent,
+  type ContributedResources,
+  type EngineOpResult,
+  PI_THINKING_LEVELS,
+  type PiModelReasoning,
+  type PiModelRegistration,
+  type PiProjectTrust,
+  type PiScopedModels,
+  type PiSessionSettings,
+  type PluginListPayload,
+  type PluginScope,
+  piThinkingLevels,
+  type WebSearchAnswer,
 } from "@/pi-bridge/protocol";
 import mockAssistantResponse from "@/resources/prompts/mock-assistant-response.md?raw";
 import mockToolResultResponse from "@/resources/prompts/mock-tool-result-response.md?raw";
@@ -147,12 +150,13 @@ const MOCK_SESSIONS = [
 // decision is offered rather than reported as moot.
 const MOCK_TRUST: PiProjectTrust = { decision: null, matters: true, path: "/workspace" };
 
-const MOCK_SETTINGS: PiSessionSettings = {
+// `availableThinkingLevels` is NOT here: it belongs to the model that is answering, and a fixture that always
+// offered four levels is exactly the flattery this stand-in exists to avoid.
+const MOCK_SETTINGS: Omit<PiSessionSettings, "availableThinkingLevels"> = {
   autoCompaction: true,
   steeringMode: "all",
   followUpMode: "all",
   thinkingLevel: "medium",
-  availableThinkingLevels: ["minimal", "low", "medium", "high"],
 };
 
 // The gateway's own provider id, as the mock's session reports it. Every model the app registers lands under it: one
@@ -161,6 +165,42 @@ const MOCK_PROVIDER = "container-desktop-mock";
 
 // The model a mock session answers with when the caller named none.
 const DEFAULT_MOCK_MODEL = "mock-assistant";
+
+// What the fictional provider behind this stand-in publishes about its own model — including that it reasons, so the
+// thinking control is a real control in demo mode. A session started on a model the APP named is registered with
+// what the app was told instead, which is nothing about reasoning until it has asked that model's provider.
+const MOCK_MODEL_FACTS: PiModelRegistration = {
+  id: DEFAULT_MOCK_MODEL,
+  contextWindow: 128000,
+  reasoning: { levels: ["minimal", "low", "medium", "high"] },
+};
+
+// What pi offers for a reasoning model whose provider named no efforts: its own set, which stops at high because
+// xhigh and max are offered only when a model's map names them.
+const PI_DEFAULT_MOCK_LEVELS = ["minimal", "low", "medium", "high"] as const;
+
+// pi's own rule, imitated: a model that does not reason offers nothing, one whose provider published its efforts
+// offers those, and `off` is on the list unless the model cannot be asked to stop (pi-ai
+// `getSupportedThinkingLevels`). Derived per model rather than fixed — the real session derives it too.
+function mockThinkingLevels(reasoning: PiModelReasoning | undefined): string[] {
+  if (!reasoning) return [];
+  const levels = reasoning.levels?.length ? piThinkingLevels(reasoning.levels) : PI_DEFAULT_MOCK_LEVELS;
+  return reasoning.mandatory ? [...levels] : ["off", ...levels];
+}
+
+// pi's own clamp, imitated: the nearest level at or above the one held, else the nearest below it (pi-ai
+// `clampThinkingLevel`). Without it a switch leaves the drawer showing a level the model answering has not got.
+function clampMockThinkingLevel(level: string, available: readonly string[]): string {
+  if (!available.length || available.includes(level)) return level;
+  const order = ["off", ...PI_THINKING_LEVELS];
+  const from = Math.max(order.indexOf(level), 0);
+  const upward = order.slice(from).find((candidate) => available.includes(candidate));
+  const downward = order
+    .slice(0, from)
+    .reverse()
+    .find((candidate) => available.includes(candidate));
+  return upward ?? downward ?? available[0];
+}
 
 // Reset per session, like the real container's registration: it starts on the one model it was given and widens once
 // the app has asked the provider what else it serves.
@@ -172,7 +212,7 @@ const MOCK_MODELS: PiScopedModels = {
 // `/settings <key> <value>` and `/scoped-models <ids|all>` in pi's own grammar, applied to the fixtures so the
 // settings drawer can be driven with no container. Answering a write with the state it had before would make every
 // control look inert, which is the bug this mock exists to catch — not to reproduce.
-function writeMockSettings(args: string): string | undefined {
+function writeMockSettings(args: string, available: readonly string[]): string | undefined {
   const [key, ...rest] = args.trim().split(/\s+/).filter(Boolean);
   const value = rest.join(" ");
   if (!key || !value) return undefined;
@@ -186,7 +226,8 @@ function writeMockSettings(args: string): string | undefined {
     return undefined;
   }
   if (key === "thinkingLevel") {
-    if (!MOCK_SETTINGS.availableThinkingLevels.includes(value)) return `this model cannot think at ${value}`;
+    // Checked against what the MODEL answering offers, not a fixture: pi refuses a level its own model has not got.
+    if (!available.includes(value)) return `this model cannot think at ${value}`;
     MOCK_SETTINGS.thinkingLevel = value;
     return undefined;
   }
@@ -263,7 +304,11 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
   // very defect the real session had.
   let liveModel = options?.modelId?.trim() || DEFAULT_MOCK_MODEL;
   // 128000 stands in for what the app would have probed off a real provider; nothing here can ask one.
-  const registered = new Map<string, PiModelRegistration>([[liveModel, { id: liveModel, contextWindow: 128000 }]]);
+  const registered = new Map<string, PiModelRegistration>([
+    [liveModel, liveModel === DEFAULT_MOCK_MODEL ? MOCK_MODEL_FACTS : { id: liveModel, contextWindow: 128000 }],
+  ]);
+  // The levels the model now answering offers, which is what a settings read reports and a write is checked against.
+  const thinkingLevels = () => mockThinkingLevels(registered.get(liveModel)?.reasoning);
   const modelLabel = () => `${MOCK_PROVIDER}/${liveModel}`;
   MOCK_MODELS.available = [{ id: liveModel, name: liveModel, provider: MOCK_PROVIDER }];
   MOCK_MODELS.scoped = [];
@@ -497,6 +542,9 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
         MOCK_MODELS.available = [...MOCK_MODELS.available, { id: model.id, name: model.id, provider: MOCK_PROVIDER }];
       }
       liveModel = model.id;
+      // pi clamps the thinking level to what the model now answering supports, so a switch cannot leave the drawer
+      // showing a level that will be ignored on the next turn.
+      MOCK_SETTINGS.thinkingLevel = clampMockThinkingLevel(MOCK_SETTINGS.thinkingLevel, thinkingLevels());
       // The conversation is untouched — only the model answering it changed — so the reports are republished on the
       // spot, exactly as the container does.
       publishReports();
@@ -524,9 +572,10 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
         return { ok: true as const, data: { trust: { ...MOCK_TRUST } } };
       }
       if (name === "settings") {
-        const refused = writeMockSettings(args);
+        const available = thinkingLevels();
+        const refused = writeMockSettings(args, available);
         if (refused) return { ok: false as const, error: refused };
-        return { ok: true as const, data: { settings: { ...MOCK_SETTINGS } } };
+        return { ok: true as const, data: { settings: { ...MOCK_SETTINGS, availableThinkingLevels: available } } };
       }
       if (name === "scoped-models") {
         const refused = writeMockScopedModels(args);

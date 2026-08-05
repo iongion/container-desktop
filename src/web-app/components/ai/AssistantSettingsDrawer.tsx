@@ -41,12 +41,17 @@ const QUEUE_OPTIONS = [
   { value: "one-at-a-time", label: "One at a time" },
 ] as const;
 
-// pi's own level names, capitalised for a control. Anything pi adds later shows under its own name.
+// pi's own level names, capitalised for a control. Anything pi adds later shows under its own name. `off` is on the
+// list for every model that can be asked not to reason, and the two above high are offered only by a model whose
+// provider published them.
 const LEVEL_LABELS: Record<string, string> = {
+  off: "Off",
   minimal: "Minimal",
   low: "Low",
   medium: "Medium",
   high: "High",
+  xhigh: "Extra high",
+  max: "Maximum",
 };
 
 function ChoiceRow<T extends string>({

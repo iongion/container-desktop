@@ -3,6 +3,7 @@ import { WebSocketServer } from "ws";
 import { createLogger } from "@/logger";
 import { containerToolDescriptions } from "@/pi-agent-host/containerToolDescriptions";
 import { parseUpstreamAuthScheme, startGateway } from "@/pi-agent-host/gateway";
+import { reasoningFromEnv } from "@/pi-agent-host/modelRegistrations";
 import { attachBridgeConnection } from "@/pi-agent-host/server";
 import { createPiSession, parseModelApi } from "@/pi-agent-host/session";
 
@@ -69,6 +70,9 @@ async function runAgent(): Promise<void> {
       ...positiveEnv("CD_MODEL_CONTEXT_WINDOW", "contextWindow"),
       ...positiveEnv("CD_MODEL_MAX_OUTPUT_TOKENS", "maxOutputTokens"),
       pricing: pricingEnv(),
+      // Absent unless a provider published a reasoning capability for this model, which is what decides whether the
+      // session offers a thinking level at all.
+      reasoning: reasoningFromEnv(process.env),
       emit: (event) => attached?.emit(event),
       containerToolDescriptions: containerToolDescriptions(),
     })

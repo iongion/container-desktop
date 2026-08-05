@@ -47,6 +47,7 @@ import { createWebSearchExtension } from "@/pi-agent-host/webSearchTool";
 import type {
   AppThemePalette,
   BridgeEvent,
+  PiModelReasoning,
   PiModelRegistration,
   PiSessionModel,
   PiSessionReplacement,
@@ -111,6 +112,9 @@ export interface CreatePiSessionOptions {
   // The provider's rates in dollars per million tokens, as pi's model config wants them. Absent for a free or
   // unpriced model, where pi's own zeroes are the truth.
   pricing?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number };
+  // Whether this model reasons, and the efforts it accepts. Absent means nobody published it, and pi then offers no
+  // thinking level for the session — which is what the settings drawer says plainly.
+  reasoning?: PiModelReasoning;
   emit: (event: BridgeEvent) => void;
   streamOverride?: PiStreamFn;
   // The app's `--app-*` colours, so plugin components are painted in the theme the rest of the app is.
@@ -140,6 +144,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
         ...(options.contextWindow ? { contextWindow: options.contextWindow } : {}),
         ...(options.maxOutputTokens ? { maxOutputTokens: options.maxOutputTokens } : {}),
         ...(options.pricing ? { pricing: options.pricing } : {}),
+        ...(options.reasoning ? { reasoning: options.reasoning } : {}),
       },
     ],
   ]);

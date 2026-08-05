@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/share` saves the conversation as one standalone HTML file wherever you choose — no gist, no upload, no GitHub account
 - `/trust` records pi's project-trust decision, which is stored with the agent and never in your workspace, and says when the decision gates nothing here
 - `/settings`, `/trust` and `/scoped-models` open one drawer of the session's own setup — auto-compaction, steering, follow-ups, thinking level, project trust and the models Ctrl+P cycles — as controls rather than typed arguments, hiding the thinking level for a model that does not reason and refusing a level it cannot reach
+- A reasoning model gets its thinking level back, with exactly the efforts its source published — the levels above high included, and no off for a model that cannot stop reasoning
 - `/login` and `/logout` manage provider authentication where it actually lives: the app's settings and the OS keychain
 - A resumed or imported session says so when pi had to fall back to this session's model instead of the one its history was written with
 - `/fork` and `/tree` open a picker: your earlier messages to start again from, or the session's branches with the one you are on marked

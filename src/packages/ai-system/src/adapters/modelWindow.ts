@@ -11,15 +11,22 @@
 // Every probe here was driven against a real server, because the shapes are not guessable: llama.cpp keeps its number
 // under `default_generation_settings`, not at the top level of `/props`, where a guess would have looked.
 
-import type { ResolvedProvider } from "@/ai-system/core/providers";
+import { getProviderEntry, type ResolvedProvider } from "@/ai-system/core/providers";
+import { type PiModelReasoning, piThinkingLevels } from "@/pi-bridge/protocol";
+import { isEmpty } from "@/utils";
 
 export interface ModelWindow {
-  contextWindow: number;
+  // Absent when the provider publishes no window for this model — including when it published something else about
+  // it, which is why this is not the one field that has to be there.
+  contextWindow?: number;
   // Only some providers publish a completion cap. Absent means pi's own default stands.
   maxOutputTokens?: number;
   // What the provider charges, in DOLLARS PER MILLION TOKENS — the unit pi's model config takes, which is not the
   // unit any provider publishes. Absent for a free or unpriced model, where pi's own zeroes are already right.
   pricing?: ModelPricing;
+  // Whether this model reasons, and how hard it may be asked to. Absent means nobody said so — the thinking control
+  // then stays hidden rather than offering a level the provider would ignore.
+  reasoning?: PiModelReasoning;
 }
 
 export interface ModelPricing {
@@ -47,6 +54,12 @@ function origin(baseURL: string): string {
   } catch {
     return baseURL.replace(/\/v\d+\/?$/, "").replace(/\/+$/, "");
   }
+}
+
+// A probe answers with what it learned or with nothing at all: an empty object would read as "asked and answered",
+// which is the one thing it must not be confused with.
+function learned(facts: ModelWindow): ModelWindow | undefined {
+  return isEmpty(facts) ? undefined : facts;
 }
 
 function entryFor(payload: unknown, model: string): Record<string, unknown> | undefined {
@@ -107,18 +120,37 @@ function pricingOf(entry: Record<string, unknown> | undefined): ModelPricing | u
   };
 }
 
-// OpenRouter publishes the window, the completion cap and the price in its own listing, so a cloud model is no
-// different in kind.
+// OpenRouter is the one provider that publishes reasoning per model, and it publishes it twice over: the capability
+// in `supported_parameters`, and the detail in an entry of its own — the efforts it accepts, and whether reasoning
+// can be turned off at all. 213 of 338 models carried it when this was written; a model that does not reason carries
+// neither, which is what tells the two apart.
+function openRouterReasoning(entry: Record<string, unknown> | undefined): PiModelReasoning | undefined {
+  const published = entry?.reasoning as { mandatory?: unknown; supported_efforts?: unknown } | undefined;
+  const parameters = Array.isArray(entry?.supported_parameters) ? (entry.supported_parameters as unknown[]) : [];
+  if (!published && !parameters.includes("reasoning")) return undefined;
+  // `none` is OpenRouter's word for not reasoning at all, which is pi's `off` rather than a level of its own.
+  const efforts = Array.isArray(published?.supported_efforts) ? published.supported_efforts.map(String) : [];
+  const levels = piThinkingLevels(efforts);
+  return { ...(levels.length ? { levels } : {}), ...(published?.mandatory === true ? { mandatory: true } : {}) };
+}
+
+// OpenRouter publishes the window, the completion cap, the price and the reasoning in its own listing, so a cloud
+// model is no different in kind.
 async function openRouterWindow(
   resolved: ResolvedProvider,
   opts: { fetchImpl: typeof fetch; signal?: AbortSignal },
 ): Promise<ModelWindow | undefined> {
   const entry = entryFor(await readJSON(`${origin(resolved.baseURL)}/api/v1/models`, opts), resolved.model);
   const window = usable(entry?.context_length);
-  if (!window) return undefined;
   const cap = usable((entry?.top_provider as { max_completion_tokens?: unknown } | undefined)?.max_completion_tokens);
   const pricing = pricingOf(entry);
-  return { contextWindow: window, ...(cap ? { maxOutputTokens: cap } : {}), ...(pricing ? { pricing } : {}) };
+  const reasoning = openRouterReasoning(entry);
+  return learned({
+    ...(window ? { contextWindow: window } : {}),
+    ...(cap ? { maxOutputTokens: cap } : {}),
+    ...(pricing ? { pricing } : {}),
+    ...(reasoning ? { reasoning } : {}),
+  });
 }
 
 // llama.cpp serves ONE model at whatever `-c` it was started with, so the model id plays no part. The number lives
@@ -140,18 +172,34 @@ const PROBES: Record<string, typeof lmStudioWindow> = {
   llamacpp: llamaCppWindow,
 };
 
+// The one fact here that is not read off a provider. OpenAI serves an id-only listing, so the models it reasons with
+// are known by the prefixes `provider-catalog.json` declares — the app's own curated claim, kept as data so widening
+// it to another provider is an entry rather than a code change. Nothing about the levels: the catalogue names which
+// models think, not how hard, and pi's own set is right for the ones it names.
+function declaredReasoning(resolved: ResolvedProvider): PiModelReasoning | undefined {
+  const prefixes = getProviderEntry(resolved.id)?.reasoning?.modelPrefixes;
+  return prefixes?.some((prefix) => resolved.model.startsWith(prefix)) ? {} : undefined;
+}
+
 export async function fetchModelWindow(
   resolved: ResolvedProvider,
   options?: ModelWindowOptions,
 ): Promise<ModelWindow | undefined> {
+  if (!resolved.model.trim()) return undefined;
+  const declared = declaredReasoning(resolved);
+  const known = declared ? { reasoning: declared } : {};
   const probe = PROBES[resolved.id];
-  if (!probe || !resolved.model.trim()) return undefined;
+  if (!probe) return learned(known);
   const fetchImpl = options?.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
   try {
-    return await probe(resolved, { fetchImpl, ...(options?.signal ? { signal: options.signal } : {}) });
+    // The provider's own answer wins over the app's declaration: it is the one that can change without a release.
+    return learned({
+      ...known,
+      ...(await probe(resolved, { fetchImpl, ...(options?.signal ? { signal: options.signal } : {}) })),
+    });
   } catch {
     // A provider that cannot be reached must not stop a session from starting: the window is a nicety, the session
-    // is the point. Unknown is the honest answer.
-    return undefined;
+    // is the point. Unknown is the honest answer — but what the app already knew stands, having cost no request.
+    return learned(known);
   }
 }

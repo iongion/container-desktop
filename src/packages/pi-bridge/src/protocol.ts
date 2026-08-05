@@ -252,6 +252,31 @@ export interface PiModelRegistration {
   // Dollars per million tokens, the unit pi's model catalogue prices in. Absent for a free or unpriced model,
   // where pi's own zeroes are already the truth.
   pricing?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number };
+  // Absent when nobody published a reasoning capability for this model, which is how a model that cannot think
+  // stays free of a thinking control it would ignore.
+  reasoning?: PiModelReasoning;
+}
+
+// How hard a model may be asked to think, in pi's own vocabulary and pi's own order. `off` is not one of them: it is
+// the ABSENCE of thinking, and whether it is available is `mandatory`.
+export const PI_THINKING_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
+
+export type PiThinkingLevel = (typeof PI_THINKING_LEVELS)[number];
+
+// Anything a provider published, kept to the levels pi has a name for and put back into pi's order — a provider
+// lists its efforts in its own words and its own sequence.
+export function piThinkingLevels(values: readonly string[]): PiThinkingLevel[] {
+  return PI_THINKING_LEVELS.filter((level) => values.includes(level));
+}
+
+// What the PROVIDER said about a model's reasoning, which only the app can ask. Its presence is the capability
+// itself; the fields narrow it. An absent field is unknown, never a denial — a provider that publishes the
+// capability and no efforts leaves pi's own set standing.
+export interface PiModelReasoning {
+  // The efforts this model accepts. Empty or absent means the provider named none, not that it accepts none.
+  levels?: PiThinkingLevel[];
+  // The model always reasons and cannot be asked not to (OpenRouter's own `mandatory`), so `off` is not offered.
+  mandatory?: boolean;
 }
 
 // What the session ended up running against, in pi's own terms. Answered by a switch so the app adopts what pi did

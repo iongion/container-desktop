@@ -4,7 +4,7 @@
 import { Intent } from "@blueprintjs/core";
 import { create } from "zustand";
 
-import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
+import type { ModelWindow } from "@/ai-system/adapters/modelWindow";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   GATEWAY_PORT_IN_IMAGE,
@@ -410,12 +410,9 @@ async function writeGatewayEnvFile(providerId: string, fileName: string, spec: P
   return path;
 }
 
-// What the provider says this model's budget is. Never fatal: a provider that will not answer leaves the window
-// unknown, which the panel states plainly, and the session starts either way.
-async function readModelWindow(
-  modelId: string,
-  providerId?: string,
-): Promise<{ contextWindow?: number; maxOutputTokens?: number; pricing?: ModelPricing }> {
+// What the provider says about this model — its budget, its rates, whether it reasons. Never fatal: a provider that
+// will not answer leaves all of it unknown, which the panels state plainly, and the session starts either way.
+async function readModelWindow(modelId: string, providerId?: string): Promise<ModelWindow> {
   const bridge = typeof window !== "undefined" ? window.AI : undefined;
   if (!bridge || !modelId.trim()) return {};
   try {
