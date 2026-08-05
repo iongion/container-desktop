@@ -457,6 +457,14 @@ custom endpoint pointed at one of these hosts is read exactly as the catalogue e
 | OpenRouter | `reasoning: {effort}`, the `developer` role only for the `openai/` and `anthropic/` models that take one, and Anthropic-style cache markers for `anthropic/` |
 | anything else | nothing — pi's reading of that host is already what it gives our gateway, and a guess would be worse |
 
+Anthropic upstreams are told nothing at all: pi's Anthropic client takes no dialect from a URL (its only special case
+is `github-copilot`) and its compat has three unrelated fields, so the registration withholds the OpenAI set when the
+session speaks `anthropic-messages`. **One URL-keyed behaviour is beyond `compat`'s reach**, and it is the only one:
+`prompt_cache_key` is sent when the base URL literally contains `api.openai.com`, outside `detectCompat` and so not
+overridable. A real OpenAI upstream therefore loses that cache-routing hint behind the gateway — a cost and latency
+matter, not a correctness one. The only lever pi offers is `PI_CACHE_RETENTION=long`, which also asks OpenAI for 24h
+retention, so it is a decision about billing rather than a fix.
+
 ## Screens and navigation
 
 AI is **always on** — `Metadata.RequiresAI` is a surfacing tag, never an access gate.

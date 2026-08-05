@@ -107,7 +107,8 @@ describe("piModelConfig", () => {
   // Our gateway is what pi sees, so its own detection reads every upstream as plain OpenAI. Naming the upstream is
   // how a thinking level, a completion cap and the system prompt's role reach the server in the shape it wants.
   it("tells pi what the upstream behind the gateway wants", () => {
-    expect(piModelConfig({ id: "glm-4.6", reasoning: {} }, "https://open.bigmodel.cn/api/paas/v4").compat).toEqual({
+    const upstream = { baseUrl: "https://open.bigmodel.cn/api/paas/v4" };
+    expect(piModelConfig({ id: "glm-4.6", reasoning: {} }, upstream).compat).toEqual({
       supportsStore: false,
       supportsDeveloperRole: false,
       supportsReasoningEffort: false,
@@ -119,8 +120,21 @@ describe("piModelConfig", () => {
   // An upstream pi reads the same way it reads our gateway gets no override at all: an empty object would claim a
   // decision nobody made, and pi merges field by field.
   it("says nothing about an upstream that needs nothing said", () => {
-    expect(piModelConfig({ id: "gpt-5" }, "https://api.openai.com/v1").compat).toBeUndefined();
+    expect(piModelConfig({ id: "gpt-5" }, { baseUrl: "https://api.openai.com/v1" }).compat).toBeUndefined();
     expect(piModelConfig({ id: "gpt-5" }).compat).toBeUndefined();
+  });
+
+  // These fields are pi's OpenAI-completions dialect. Its Anthropic client reads a compat of its own with three
+  // unrelated fields, and takes no dialect from a URL at all — so an Anthropic-shaped upstream is told nothing,
+  // even when its endpoint is one of the hosts the OpenAI rules name.
+  it("keeps the OpenAI dialect off an Anthropic-shaped upstream", () => {
+    const upstream = { baseUrl: "https://openrouter.ai/api/v1" };
+    expect(
+      piModelConfig({ id: "anthropic/claude-sonnet-4.5" }, { ...upstream, api: "anthropic-messages" }).compat,
+    ).toBeUndefined();
+    expect(
+      piModelConfig({ id: "anthropic/claude-sonnet-4.5" }, { ...upstream, api: "openai-completions" }).compat,
+    ).toBeDefined();
   });
 });
 

@@ -167,7 +167,9 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     api: options.modelApi ?? "openai-completions",
     ...(streamOverride ? { streamSimple: streamOverride as never } : {}),
     // Named, not passed by reference: `map` would hand `piModelConfig` the array index as its second argument.
-    models: [...registered.values()].map((model) => piModelConfig(model, options.upstreamBaseUrl)),
+    models: [...registered.values()].map((model) =>
+      piModelConfig(model, { baseUrl: options.upstreamBaseUrl, api: options.modelApi }),
+    ),
   });
 
   // The inline extension registers the gateway provider. Its registration is queued by the extension

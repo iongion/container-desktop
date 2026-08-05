@@ -65,12 +65,14 @@ function thinkingLevelMap(reasoning: PiModelReasoning): ThinkingLevelMap | undef
 // One registration as pi's provider composer wants it. `name` is the id: the provider listings carry an id and
 // nothing more, and inventing a prettier label would be this app's words in pi's mouth.
 //
-// `upstreamBaseUrl` is what pi's own detection would have looked at if the gateway were not in the way — see
+// `upstream` is what pi's own detection would have looked at if the gateway were not in the way — see
 // `piUpstreamCompat`. Absent leaves pi's reading of our gateway untouched, which is right for every upstream it
-// would have read the same way.
-export function piModelConfig(model: PiModelRegistration, upstreamBaseUrl?: string) {
+// would have read the same way. The wire shape matters as well as the URL: those fields are pi's
+// OpenAI-completions dialect, and its Anthropic client has a compat of its own that no URL feeds.
+export function piModelConfig(model: PiModelRegistration, upstream?: { baseUrl?: string; api?: string }) {
   const levels = model.reasoning ? thinkingLevelMap(model.reasoning) : undefined;
-  const compat = piUpstreamCompat(upstreamBaseUrl, model.id);
+  const speaksOpenAI = !upstream?.api || upstream.api === "openai-completions";
+  const compat = speaksOpenAI ? piUpstreamCompat(upstream?.baseUrl, model.id) : undefined;
   return {
     id: model.id,
     name: model.id,
