@@ -1,8 +1,14 @@
 import type { Model } from "@earendil-works/pi-ai";
 import { getBuiltinModels } from "@earendil-works/pi-ai/providers/all";
+import { ANTHROPIC_MODELS } from "@earendil-works/pi-ai/providers/anthropic.models";
 import { describe, expect, it } from "vitest";
 
-import { PI_BASELINE_PROVIDERS, piModelBaseline, piModelBaselineFacts } from "@/pi-bridge/modelBaseline";
+import {
+  PI_BASELINE_PROVIDERS,
+  piModelBaseline,
+  piModelBaselineFacts,
+  piProviderModelIds,
+} from "@/pi-bridge/modelBaseline";
 
 // A pi catalogue entry, as its generated data really shapes one. Only the fields a baseline reads are meaningful
 // here; the wire fields are present precisely so the tests can prove they never travel.
@@ -122,5 +128,23 @@ describe("piModelBaseline", () => {
   // The two local providers pi does not carry, and the one whose own listing is better than any snapshot.
   it.each(["lmstudio", "llamacpp", "openrouter"])("has no baseline for %s", (providerId) => {
     expect(piModelBaseline(providerId, "any-model")).toBeUndefined();
+  });
+});
+
+describe("piProviderModelIds", () => {
+  // The list that makes a provider you have not keyed browsable instead of a dead end.
+  it("lists what pi publishes for a mapped provider", () => {
+    const ids = piProviderModelIds("anthropic");
+
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids).toEqual(Object.keys(ANTHROPIC_MODELS));
+    for (const id of ids) {
+      expect(piModelBaseline("anthropic", id)).toBeDefined();
+    }
+  });
+
+  it("has nothing to list for a provider pi does not carry", () => {
+    expect(piProviderModelIds("lmstudio")).toEqual([]);
+    expect(piProviderModelIds("openrouter")).toEqual([]);
   });
 });

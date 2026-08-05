@@ -115,6 +115,14 @@ export function piModelBaselineFacts(model: Model<Api>): PiModelBaseline | undef
   return Object.keys(facts).length ? facts : undefined;
 }
 
+// The models pi publishes for one of our providers, in pi's own order. A provider with no key configured can be
+// browsed from this instead of being the dead end it used to be — and a provider pi does not carry answers with
+// nothing, which is what keeps the picker's own "couldn't reach it" state meaningful.
+export function piProviderModelIds(providerId: string): string[] {
+  const catalogue = PI_BASELINE_CATALOGUES[providerId];
+  return catalogue ? Object.keys(catalogue) : [];
+}
+
 export function piModelBaseline(providerId: string, modelId: string): PiModelBaseline | undefined {
   if (!modelId.trim()) return undefined;
   const model = PI_BASELINE_CATALOGUES[providerId]?.[modelId];

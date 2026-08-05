@@ -38,6 +38,8 @@ import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import type { SubmitThreadRequest } from "@/ai-system/core/threadEvents";
 import type { AISettings } from "@/ai-system/core/types";
 import { buildModelTree, type ModelLeaf, type SourceModelNotice } from "@/ai-system/ui/core/modelCatalog";
+import { formatModelFacts } from "@/ai-system/ui/core/modelFacts";
+import { piProviderModelIds } from "@/pi-bridge/modelBaseline";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 
@@ -113,14 +115,45 @@ function NotConfigured({ icon, title, description }: { icon: IconName; title: st
   );
 }
 
+// The second line of a model row: what somebody published about it. Absent facts render nothing at all, so a row
+// stays a single line rather than showing a shrug.
+function ModelRowText({ leaf, thinksLabel }: { leaf: ModelLeaf; thinksLabel: string }) {
+  const summary = formatModelFacts(leaf.facts);
+  if (summary.parts.length === 0 && summary.thinks === undefined) {
+    return <>{leaf.label}</>;
+  }
+  return (
+    <span className="ModelRow">
+      <span className="ModelRowId">{leaf.label}</span>
+      <span className="ModelRowFacts">
+        {summary.parts.map((part, index) => (
+          <span key={part}>
+            {index > 0 ? <span className="ModelRowSep">·</span> : null}
+            {part}
+          </span>
+        ))}
+        {summary.thinks !== undefined ? (
+          <span className="ModelRowThinks">{summary.thinks ? `${thinksLabel} · ${summary.thinks}` : thinksLabel}</span>
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
 // Model leaves as MenuItems (listoption → `selected` shows a tick). llama.cpp's single served model is a
 // disabled entry tagged with the native `label` slot. Plain helper (no hooks).
-function modelItems(sourceId: string, leaves: ModelLeaf[], ctx: PickerContextValue, served: string) {
+function modelItems(
+  sourceId: string,
+  leaves: ModelLeaf[],
+  ctx: PickerContextValue,
+  served: string,
+  thinksLabel: string,
+) {
   return leaves.map((leaf) => (
     <MenuItem
       key={leaf.model}
       roleStructure="listoption"
-      text={leaf.label}
+      text={<ModelRowText leaf={leaf} thinksLabel={thinksLabel} />}
       selected={leaf.readOnly ? undefined : leaf.selected}
       disabled={leaf.readOnly}
       shouldDismissPopover={false}
@@ -173,6 +206,32 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
   }
   const error = ctx.errorBySource[sourceId];
   if (error === NO_KEY) {
+    // pi published this provider's models, so the catalogue is readable before a key exists — browsing costs
+    // nothing and the key is what USING one needs. This used to be a dead end for every cloud provider.
+    const published = piProviderModelIds(sourceId);
+    if (published.length > 0) {
+      const leaves = buildModelTree({ entry, models: published, savedModel: "" }).groups[0]?.models ?? [];
+      const shown = leaves.filter((m) => matchesFilter(m, ctx.filter));
+      return (
+        <>
+          <div className="ModelNavigatorUnkeyed">
+            <Icon icon={IconNames.KEY} />
+            <span>
+              {t("No API key yet — these are the models {{name}} publishes. Add a key to use one.", {
+                name: t(entry.labelKey),
+              })}
+            </span>
+          </div>
+          <Menu size="small">
+            {shown.length === 0 ? (
+              <MenuItem disabled text={t("No matching models.")} />
+            ) : (
+              modelItems(sourceId, shown, ctx, t("served"), t("thinks"))
+            )}
+          </Menu>
+        </>
+      );
+    }
     // Popover: a clean NonIdealState pointing at settings. Embedded: a one-liner — the key field is
     // right below the navigator (so the user is never stuck on the chicken-and-egg).
     return ctx.showNotConfigured ? (
@@ -245,7 +304,7 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
       {leaves.length === 0 ? (
         <MenuItem disabled text={t("No matching models.")} />
       ) : (
-        modelItems(sourceId, leaves, ctx, t("served"))
+        modelItems(sourceId, leaves, ctx, t("served"), t("thinks"))
       )}
     </Menu>
   );
@@ -298,7 +357,7 @@ function ProviderModelsPanel({ sourceId, providerKey }: PanelProps<{ sourceId: s
         {leaves.length === 0 ? (
           <MenuItem disabled text={t("No matching models.")} />
         ) : (
-          modelItems(sourceId, leaves, ctx, t("served"))
+          modelItems(sourceId, leaves, ctx, t("served"), t("thinks"))
         )}
       </Menu>
     </div>
