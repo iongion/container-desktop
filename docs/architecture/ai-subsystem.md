@@ -549,6 +549,9 @@ probe with the short name. **An image built for one engine does not exist for th
   which is the only way to see what pi actually sends through the gateway.
 - **Real model, real engine** — `yarn test:e2e:tauri --spec webdriver/specs/pi-container-live.e2e.js` drives a non-mock app and a real
   OpenRouter model through the container toolset, creating and removing its own throwaway container.
+  `pi-lmstudio-live.e2e.js` is the **keyless** one: a real pair against the LM Studio server on the machine, which is
+  the only spec that drives an empty credential, the host alias route to a local server, and the probed window
+  agreeing with what that server loaded.
 
 See [`../testing.md`](../testing.md) for how to run each of these.
 

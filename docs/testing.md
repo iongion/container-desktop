@@ -181,9 +181,25 @@ OpenAI-shaped body pi infers from our own gateway is on the record beside the co
 
 ### Real model, real engine
 
-Run by hand, **never in CI**, needs `OPENROUTER_API_KEY` and a NON-mock app. These use the main worktree's
-prebuilt debug binary via `CONTAINER_DESKTOP_E2E_APP` and need Vite serving the renderer from the worktree
-under test.
+Run by hand, **never in CI**, on a NON-mock app. All of these need Vite serving the renderer from the worktree under
+test, and use its debug binary (or one named by `CONTAINER_DESKTOP_E2E_APP`).
+
+**Keyless, offline, and the one to reach for first** — a real container pair against the LM Studio server on this
+machine. It needs no account and no network, and it is the only spec that drives the keyless half: a vault with
+nothing stored substituting an empty key, the gateway forwarding to a host-local server through the container's host
+alias, and the window the app probed matching what the server actually loaded.
+
+```bash
+lms load qwen3-4b-instruct-2507 --context-length 16384 --yes   # tool-capable, and room for the session's own prompt
+CONTAINER_DESKTOP_MOCK= yarn test:e2e:tauri --spec webdriver/specs/pi-lmstudio-live.e2e.js
+```
+
+A model loaded at less than about 12k cannot answer at all — pi's system prompt plus the tool definitions come to
+roughly 9k tokens before the first word — so the spec asserts the loaded length up front rather than letting a turn
+fail with the server's own `n_keep >= n_ctx` and reading like an app fault. Overrides: `CD_LIVE_LMSTUDIO_MODEL`,
+`CD_LIVE_LMSTUDIO_URL`, `CD_LIVE_WORKSPACE`, `CD_LIVE_ENGINE`.
+
+The rest need `OPENROUTER_API_KEY`, because they drive a model's judgement rather than the route to it.
 
 ```bash
 CD_LIVE_ENGINE=docker \
