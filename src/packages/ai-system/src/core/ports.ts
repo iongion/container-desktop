@@ -4,8 +4,8 @@
 
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
 import type { FloorScope } from "./commandFloor";
+import type { ExecutionTarget } from "./executionTargets";
 import type { EngineOps } from "./types";
-import type { WorkerExecutionTarget } from "./workers";
 import type { WorkspaceChangesPort } from "./workspaceChanges";
 
 // Provider key store = the AI subsystem's view of the generic host Keychain port. Provider keys ARE the
@@ -149,9 +149,9 @@ export interface ResolvedExecution {
 }
 
 // Builds the backend for a worker's execution target. The run host calls this once per DISTINCT target within a
-// run and shares the result across workers on the same target; `dispose` runs at run end.
+// session and shares the result across everything running on the same target; `dispose` runs when it ends.
 export interface ExecutionSelector {
-  select(target: WorkerExecutionTarget): Promise<ResolvedExecution>;
+  select(target: ExecutionTarget): Promise<ResolvedExecution>;
 }
 
 // A run-scoped ExecutionSelector factory: the run host builds one selector PER RUN (keyed off the run id) so a

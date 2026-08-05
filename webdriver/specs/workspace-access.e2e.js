@@ -1,7 +1,7 @@
 // Workspace-access end-to-end over W3C WebDriver (Tauri / WebKitGTK). This is the ONE seam the hermetic suite
 // cannot cover: platform/tauri/capabilities/workspaceAccess.ts → `invoke` (camelCase→snake_case arg mapping) →
-// the native workspace_* commands in src-tauri/src/host.rs. Everything above it (OMA runner, workspace toolset,
-// specs, cards) is shared and already verified in the hermetic suite.
+// the native workspace_* commands in src-tauri/src/host.rs. Everything above it (the workspace toolset, its
+// specs and its cards) is shared and already verified in the hermetic suite.
 //
 // Runs against the mock app (CONTAINER_DESKTOP_MOCK=1, set by wdio.conf). The fixture workspace + ai.workspaceRoot
 // are seeded into an ISOLATED CONTAINER_DESKTOP_USER_DATA_DIR by wdio.conf onPrepare (before the app launches, so

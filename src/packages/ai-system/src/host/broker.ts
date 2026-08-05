@@ -136,8 +136,8 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     if (!deps.isAllowedSender(event)) throw new Error("AI: unauthorized sender");
     return task();
   };
-  // A shell that offers no workers library must fail the channel loudly. Answering with an empty list would look
-  // to the editor like "you have no workers", and its next save would appear to succeed while persisting nothing.
+  // A shell that offers no skills library must fail the channel loudly. Answering with an empty list would look
+  // like "you have no skills", and the next save would appear to succeed while persisting nothing.
   const requireSkills = (): SkillHost => {
     if (!deps.skillHost) throw new Error("AI: the skills library is unavailable on this runtime");
     return deps.skillHost;

@@ -46,12 +46,12 @@ interface ScreenHeaderProps {
   titleText?: string;
   rightContent?: React.ReactNode;
   centerContent?: React.ReactNode;
-  // The execution screens (Assistant, a single Run) have nothing to search. The list
-  // screens (Runs, Workers) do, so search is opt-in rather than suppressed for the whole family.
+  // The Assistant has nothing to search; a list screen does, so search is opt-in rather than suppressed for the
+  // whole family.
   searchTerm?: string;
   onSearch?: React.ChangeEventHandler<HTMLInputElement>;
-  // A detail sub-screen (a single Run) opts into the canonical ScreenHeader back affordance — the
-  // left chevron + optional jump-to-list icon — instead of hand-rolling a labelled button in rightContent.
+  // A detail sub-screen opts into the canonical ScreenHeader back affordance — the left chevron + optional
+  // jump-to-list icon — instead of hand-rolling a labelled button in rightContent.
   withBack?: boolean;
   listRoutePath?: string;
   listRouteIcon?: IconName;

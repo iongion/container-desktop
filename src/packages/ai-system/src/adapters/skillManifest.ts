@@ -7,7 +7,7 @@ import {
   type SkillManifest,
   type SkillManifestParseResult,
 } from "@/ai-system/core/skills";
-import { isWorkerToolName } from "@/ai-system/core/workerTools";
+import { isCataloguedToolName } from "@/ai-system/core/toolCatalogue";
 
 const SUPPORTED_FIELDS = new Set(["name", "description", "argument-hint", "allowed-tools", "paths", "version"]);
 const FRONTMATTER = /^(?:\uFEFF)?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/u;
@@ -91,7 +91,7 @@ function validateLists(
 ): Pick<SkillManifest, "allowedTools" | "paths"> {
   const allowedTools = stringList(raw["allowed-tools"], "allowed-tools", SKILL_LIMITS.toolCount, diagnostics);
   for (const tool of allowedTools ?? []) {
-    if (!isWorkerToolName(tool)) diagnostics.push({ code: "tool-unknown", field: "allowed-tools" });
+    if (!isCataloguedToolName(tool)) diagnostics.push({ code: "tool-unknown", field: "allowed-tools" });
   }
   const paths = stringList(raw.paths, "paths", SKILL_LIMITS.pathCount, diagnostics);
   for (const path of paths ?? []) {

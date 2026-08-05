@@ -71,9 +71,6 @@ it carries no extension UI, and extension UI plus render frames is most of what 
 which is what keeps any agent library out of `core`'s graph. There are **no barrels or pass-through
 re-exports** anywhere; every type has one origin. This is a review rule, not a Vitest test.
 
-The old `runtime/` layer (the OMA agent-session and team-run engines, the plan validator, the tool bridge and
-the webview shims) was deleted with the OMA engine and has no successor inside the package.
-
 ## The bridge protocol
 
 One version constant (`PI_BRIDGE_PROTOCOL_VERSION = 1`) and three directions.

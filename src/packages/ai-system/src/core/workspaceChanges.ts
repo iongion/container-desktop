@@ -1,6 +1,6 @@
+import type { ExecutionTarget } from "./executionTargets";
+import { executionTargetKey } from "./executionTargets";
 import { redactText } from "./redact";
-import type { WorkerExecutionTarget } from "./workers";
-import { executionTargetKey } from "./workers";
 
 export type WorkspaceChangeState =
   | "unchanged"
@@ -21,7 +21,7 @@ export interface WorkspaceChangeEntry {
 }
 
 interface WorkspaceChangeLocation {
-  target: WorkerExecutionTarget;
+  target: ExecutionTarget;
   workspaceRoot: string;
 }
 
@@ -84,7 +84,7 @@ export type WorkspaceChangesExec = (
 ) => Promise<WorkspaceChangesExecResult>;
 
 export interface WorkspaceChangesPortOptions {
-  target: WorkerExecutionTarget;
+  target: ExecutionTarget;
   workspaceRoot: () => Promise<string>;
   exec: WorkspaceChangesExec;
   fingerprint: (text: string) => Promise<string>;

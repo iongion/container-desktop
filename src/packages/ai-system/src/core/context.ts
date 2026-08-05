@@ -1,6 +1,6 @@
 import type { Money } from "./cost";
 import type { AIPermissionMode } from "./permissions";
-import type { WorkerToolGroup } from "./workerTools";
+import type { ToolGroup } from "./toolCatalogue";
 
 export type EffectiveContextSectionKind = "system" | "history" | "turn" | "tools";
 export type EffectiveContextSourceKind =
@@ -33,7 +33,7 @@ export interface EffectiveToolView {
   name: string;
   title: string;
   description?: string;
-  group: WorkerToolGroup | "other";
+  group: ToolGroup | "other";
   gated: boolean;
 }
 

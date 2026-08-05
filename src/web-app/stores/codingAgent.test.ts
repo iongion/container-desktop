@@ -407,8 +407,8 @@ describe("useCodingAgentStore project context", () => {
     expect(client.setSystemContext).toHaveBeenCalledTimes(2);
   });
 
-  // INJECTION RESISTANCE: the rules are content the app did not author. The OMA path tainted a turn that carried
-  // them, and this path must too — otherwise enabling project rules quietly widens what a remembered allow covers.
+  // INJECTION RESISTANCE: the rules are content the app did not author, so a turn that carries them is tainted —
+  // otherwise enabling project rules quietly widens what a remembered allow covers.
   it("does not honour a remembered allow while the turn carries the project's own prose", async () => {
     setPermissionMode("remember");
     const allowed = toolRule(piPermissionContext({ workspacePath: "/work", connectionId: "podman-1" }), "bash", {

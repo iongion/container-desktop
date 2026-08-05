@@ -15,13 +15,8 @@ export const MAX_MODEL_DISCOVERY_PAGES = 20;
 
 // A worker record's static wire backstops. No library edits these any more, but the record still types an
 // off-host execution target and the tool policy the permission layer reads.
-export const MAX_WORKERS = 256;
-export const MAX_WORKER_FILE_BYTES = 4 * 1024 * 1024;
-export const MAX_WORKER_NAME_CHARS = 120;
-export const MAX_WORKER_SPECIALTY_CHARS = 280;
-export const MAX_WORKER_PROMPT_CHARS = 32_000;
 // Ceiling for a granular allowlist. Comfortably above the ~30 built-in tool ids, with room for future toolsets.
-export const MAX_WORKER_ALLOWED_TOOLS = 256;
+export const MAX_ALLOWED_TOOLS = 256;
 
 export const MAX_RETAINED_THREADS = 100;
 export const MAX_THREAD_FILE_BYTES = 32 * 1024 * 1024;

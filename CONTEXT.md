@@ -5,40 +5,16 @@ workspaces.
 
 ## Language
 
-**Run**:
-A bounded execution tracked from start through completion, cancellation, or failure.
-_Avoid_: Goal Run, job
-
-**Team Run**:
-A Run in which a coordinator plans a Goal and a Team of Workers executes the resulting Tasks.
-_Avoid_: Goal Run, orchestrator run
-
-**Goal**:
-The user-authored objective a Run is intended to accomplish.
-_Avoid_: Run, prompt
-
-**Team**:
-The coordinator and Workers assembled to execute one Team Run.
-_Avoid_: roster, agent group
-
-**Worker**:
-A reusable specialist available for assignment to Tasks in a Team Run.
-_Avoid_: bot, role
-
-**Task**:
-A planned unit of work assigned to one Worker within a Team Run.
-_Avoid_: step, job
-
 **Thread**:
 A durable, resumable, and branchable conversation record between the user and the Assistant.
 _Avoid_: Chat, Conversation, Agent Session, chat run
 
 **Agent Session**:
 The live agent runtime processing work for one Thread.
-_Avoid_: Thread, Chat, Conversation, Team Run
+_Avoid_: Thread, Chat, Conversation
 
 **Execution Target**:
-The concrete environment where a Thread or Worker runs tools and owns workspace state.
+The concrete environment where a Thread runs tools and owns workspace state.
 _Avoid_: connection, workspace, host
 
 **Access Profile**:
@@ -53,7 +29,7 @@ _Avoid_: Access Profile, permission scope
 
 **Permission Decision**:
 A host-owned allow or reject verdict scoped to a concrete workspace, Execution Target, operation, arguments, and
-content-trust epoch, with Worker or external-server identity when relevant.
+content-trust epoch, with external-server identity when relevant.
 _Avoid_: permission mode, blanket approval
 
 **Content Trust**:
@@ -91,4 +67,8 @@ _Avoid_: Command, prompt, tool command
 
 **Skill**:
 A reusable prompt-backed workflow explicitly invoked within a Thread.
-_Avoid_: Slash Command, Worker, plugin
+_Avoid_: Slash Command, plugin
+
+**Plugin**:
+A pi package the Agent Session loads: extensions, commands, skills and prompts it contributes.
+_Avoid_: extension, add-on, tool

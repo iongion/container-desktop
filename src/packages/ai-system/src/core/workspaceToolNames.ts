@@ -1,4 +1,4 @@
-// The workspace tool id union + guard. Dependency-free (core): no OMA, ai, react, node, tauri. The
+// The workspace tool id union + guard. Dependency-free (core): no react, node, tauri. The
 // renderer card registry uses `isWorkspaceToolName` to route workspace tool results to the workspace operation cards (container
 // tool names route to the container cards; everything else falls back to the generic JSON card).
 

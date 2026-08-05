@@ -9,8 +9,8 @@ sections:
   - { id: assistant-what, label: "What it is" }
   - { id: assistant-model, label: "Choose your model" }
   - { id: assistant-do, label: "What it can do" }
-  - { id: assistant-runs, label: "Runs & workers" }
-  - { id: assistant-runson, label: "Where a worker runs" }
+  - { id: assistant-runs, label: "Where it runs" }
+  - { id: assistant-plugins, label: "Plugins & commands" }
   - { id: assistant-privacy, label: "Privacy & permissions" }
 ---
 
@@ -49,34 +49,33 @@ The assistant doesn't just chat — it calls **typed tools** and renders the res
 
 - **Look:** list and inspect **containers, images, networks and volumes**, read a container's **logs**, and check its **stats** — shown as sortable tables, a log viewer, and state badges. These read-only actions run freely.
 - **Act:** **start / stop / restart / pause / remove** a container, **pull** or **remove** an image, **remove** a network or volume. Every state-changing action **asks for your approval first** (see below).
-- **Files:** read, write and edit files, list a directory, search text, and run a command in a confined **workspace** — the same tools the chat and Team Run workers share.
+- **Files:** read, write and edit files, list a directory, search text, and run commands in the **workspace folder** you pick for the session.
 - **Escape hatch:** for anything the typed tools don't cover, it can run a host command in a **sandbox** (no shell, scrubbed environment, output capped) — also gated by your approval.
 
 </section>
 
 <section class="guide-sec" id="assistant-runs">
 
-### Runs & workers
+### Where it runs
 
-Beyond one-off chat, you can start a **Run** with a **Goal** — *"triage every stopped container and tell me why each one exited"* — and a coordinator plans the work before a Team of specialized **Workers** carries it out. Reach both from the **AI menu** in the header.
+The assistant runs **inside a container** on one of your engine connections, not in the app. You start a session by picking that connection and a **workspace folder** from your machine, which is mounted into the container as the one folder its file and command tools can reach.
 
-- **Workers** are reusable agents you define once: a **name**, a **specialty** (what it's good at), an optional **avatar**, its own **model**, and a **toolset** you can narrow. A Team Run draws its roster from this library.
-- A **Team Run** turns its Goal into a **Plan** — a set of Tasks with dependencies — that you **approve** before anything runs. Independent Tasks run in parallel; each is assigned to the best-fit Worker; results are synthesized into one answer. You stay in control: approve the Plan, approve state-changing tool calls, and stop the Run at any time.
+- **Your key never enters it.** Inference goes through a second, separate container that holds the provider credential; the agent container has no key, no access to your keychain and no route to your provider except through that proxy.
+- **Network access is yours to give.** Leave it on so package managers work, or turn it off for a session and only the inference proxy stays reachable.
+- **The container is disposable, the folder is not.** Stopping a session removes the pair; your workspace is a normal folder on your machine and whatever the assistant wrote is simply there. **Workspace changes** shows you exactly what it touched, as a Git status and diff.
+- **Change the model mid-conversation** from the chip in the message box: the session, the containers and everything installed in them survive it, and a reasoning model's **thinking level** is offered when its provider says it has one.
 
 </section>
 
-<section class="guide-sec" id="assistant-runson">
+<section class="guide-sec" id="assistant-plugins">
 
-### Where a worker runs
+### Plugins &amp; commands
 
-Each worker chooses **where its file and command tools execute** — its *"Runs on"* target — so you can sandbox risky work away from your host, using the app's own connections and containers:
+The assistant is a GUI for the [pi](https://github.com/earendil-works/pi) coding agent, so pi's own ecosystem works here.
 
-- **Host** — directly on this machine (the default).
-- **A remote host** — over one of your **SSH** connections.
-- **A container** — inside an existing container on any connection.
-- **A sandbox** — a throwaway container the app creates for the run from an image you pick, and **removes when the run ends**.
-
-Container operations (list, inspect, start/stop, …) already follow the worker's connection; the *"Runs on"* target additionally decides where its files live and its commands run. Pick the connection with the same **connection selector** you use everywhere else in the app.
+- **Plugins** install from **npm or a Git URL** on the **Plugins** screen — reachable from the **AI menu** — and stay installed across sessions. What a plugin contributes (extra commands, skills and prompts) appears in the message box's slash-command palette, and anything it asks you is shown as a native dialog rather than terminal text.
+- **Slash commands** cover the session itself: start a new conversation, resume or duplicate an earlier one, compact the context, review project trust, or save the whole conversation as a single standalone **HTML file**.
+- **Skills** are reusable prompt-backed workflows you invoke by name; the app checks a skill's fingerprint and your project's trust before it runs one.
 
 </section>
 

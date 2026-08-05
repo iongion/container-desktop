@@ -1,6 +1,6 @@
 // Projects pi bridge events into the app's existing ThreadView. This is the seam that lets the whole
 // assistant UI — markdown, tool cards, approvals, thinking — render pi output with no component changes:
-// the vocabulary stays the app's, only the producer changes from the OMA engine to the pi bridge.
+// the vocabulary stays the app's and the producer is the pi bridge.
 
 import type { EffectiveContextSource } from "@/ai-system/core/context";
 import type { AIPermissionMode } from "@/ai-system/core/permissions";

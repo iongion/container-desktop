@@ -55,8 +55,8 @@ export interface AISystemDeps<TEvent = unknown> {
   engineOps?: EngineOps;
   // The confined workspace the assistant's file tools act on. Absent ⇒ no workspace tools are offered.
   workspaceAccess?: IWorkspaceAccess;
-  // Run-scoped factory that builds a worker's execution backend from its target (host/remote/container/sandbox).
-  // Absent ⇒ every team-run worker falls back to the run-level engineOps/workspaceAccess (host), the pre-Runs-on behaviour.
+  // Builds an execution backend from a target (host/remote/container/sandbox). Absent ⇒ everything falls back to
+  // the injected engineOps/workspaceAccess, which is the host.
   createExecutionSelector?: ExecutionSelectorFactory;
   // CONTAINER_DESKTOP_MOCK — swap real streamers/stores for scripted mocks.
   mock?: boolean;
@@ -153,8 +153,8 @@ export async function createAISystem<TEvent = unknown>(
     workspaceAccess: deps.workspaceAccess,
     workspaceChanges,
     // Honor the shell's selector factory in every mode. In mock the shell builds it over the in-memory
-    // VirtualEngineHost (not a real engine), so mock team-run workers resolve and run on their target hermetically
-    // instead of the host-only fallback. Shells with no off-host execution pass undefined.
+    // VirtualEngineHost (not a real engine), so an off-host target resolves and runs hermetically instead of
+    // falling back to the host. Shells with no off-host execution pass undefined.
     createExecutionSelector: deps.createExecutionSelector,
     permissionsStore,
     skillHost,

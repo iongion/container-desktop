@@ -79,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The assistant runs inside a container, streamed into the app over a token-authenticated bridge
 - `yarn cli agent-image` builds the local pi agent image from the shipped Dockerfile
 - Provider credentials stay in a separate gateway container; the agent container never receives a key
-- The assistant runs on the containerized pi session instead of the in-app OMA engine
+- The assistant runs on a containerized pi session instead of an in-app agent engine
 - pi extensions can ask you things through native dialogs, and show status entries and widgets around the composer
 - Every tool the assistant runs passes your permission settings first; a rejection blocks the call inside pi
 - The assistant's tool calls read as cards: shell output, file contents, a real diff of every edit, and directory or search results

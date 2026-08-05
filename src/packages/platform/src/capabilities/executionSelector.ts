@@ -1,11 +1,11 @@
 // ExecutionSelector (MAIN). Turns a worker's execution target into the concrete backend it runs against. The host
 // keeps the fast local node:fs workspace; every other target is driven through the captured ConnectionExecHost and
-// the exec-routed workspace. Distinct targets are memoized so N workers on one target share a backend (and one
+// the exec-routed workspace. Distinct targets are memoized so everything on one target shares a backend (and one
 // sandbox lifecycle). A sandbox target lazily creates a disposable container; dispose (idempotent) removes it.
 
+import { type ExecutionTarget, executionTargetKey, floorScopeFor } from "@/ai-system/core/executionTargets";
 import type { ConnectionExecHost, ExecutionSelector, ResolvedExecution } from "@/ai-system/core/ports";
 import type { EngineOps } from "@/ai-system/core/types";
-import { executionTargetKey, floorScopeFor, type WorkerExecutionTarget } from "@/ai-system/core/workers";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
 
 import { createExecWorkspaceAccess, type TargetExec } from "./execWorkspaceAccess";
@@ -51,7 +51,7 @@ export function createExecutionSelector(options: ExecutionSelectorOptions): Exec
   const { runId, connectionExec } = options;
   const cache = new Map<string, Promise<ResolvedExecution>>();
 
-  async function build(target: WorkerExecutionTarget): Promise<ResolvedExecution> {
+  async function build(target: ExecutionTarget): Promise<ResolvedExecution> {
     const floorScope = floorScopeFor(target);
     if (target.kind === "host") {
       return {

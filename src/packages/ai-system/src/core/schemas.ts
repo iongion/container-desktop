@@ -9,15 +9,7 @@ import {
   type AIPushPayload,
 } from "./channels";
 import type { EffectiveContextSectionKind, EffectiveContextSourceKind } from "./context";
-import {
-  MAX_DIAGNOSTICS_BUNDLE_CHARS,
-  MAX_THREAD_TIMELINE_ITEMS,
-  MAX_WORKER_ALLOWED_TOOLS,
-  MAX_WORKER_NAME_CHARS,
-  MAX_WORKER_PROMPT_CHARS,
-  MAX_WORKER_SPECIALTY_CHARS,
-  MAX_WORKERS,
-} from "./limits";
+import { MAX_ALLOWED_TOOLS, MAX_DIAGNOSTICS_BUNDLE_CHARS, MAX_THREAD_TIMELINE_ITEMS } from "./limits";
 import { PROJECT_CONTEXT_LIMITS } from "./projectContext";
 import { SKILL_DIAGNOSTIC_CODES, SKILL_LIMITS } from "./skills";
 import { MAX_AI_TEXT_CHARS, MAX_INITIAL_THREAD_HISTORY_MESSAGES } from "./threadEvents";
@@ -98,7 +90,6 @@ export const permissionRule = z
     targetId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
     subject: z.discriminatedUnion("kind", [
       z.object({ kind: z.literal("access-profile"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
-      z.object({ kind: z.literal("worker"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
       z.object({ kind: z.literal("server"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
     ]),
     operation: z
@@ -114,15 +105,12 @@ export const permissionRule = z
   })
   .strict();
 
-// A worker's stored shape. The library that edited these is gone, but the record still types the execution
-// target an off-host workspace is resolved from, and the tool-policy vocabulary the permission policy reads.
-export const workerToolPolicyMode = z.enum(["all", "ask", "granular"]);
-
-// Where a worker's tools execute. The union grows by adding members; a stored {kind:"host"} record is unaffected.
+// Where the assistant's tools execute. The union grows by adding members; a stored {kind:"host"} record is
+// unaffected.
 // A container/sandbox whose connection is an SSH (*_REMOTE) connection IS the remote-container case — the
 // transport wraps argv in `ssh … --`, so no separate remote-container kind is needed.
 const executionRef = z.string().trim().min(1).max(MAX_TITLE_CHARS);
-export const workerExecutionTarget = z.discriminatedUnion("kind", [
+export const executionTarget = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("host") }).strict(),
   z.object({ kind: z.literal("remote"), connectionId: id }).strict(),
   z.object({ kind: z.literal("container"), connectionId: id, containerId: executionRef }).strict(),
@@ -159,7 +147,7 @@ const workspaceChangeEntrySchema = z
   .strict();
 
 const workspaceChangeLocationSchema = {
-  target: workerExecutionTarget,
+  target: executionTarget,
   workspaceRoot: z.string().min(1).max(8_192),
 };
 
@@ -219,37 +207,6 @@ export const workspaceDiffSchema = z.discriminatedUnion("state", [
     })
     .strict(),
 ]);
-
-export const workerDefinition = z
-  .object({
-    id,
-    name: z.string().trim().min(1, "AI: a worker needs a name").max(MAX_WORKER_NAME_CHARS),
-    // An opaque avatar reference — a shipped preset id or a custom library id. NEVER a preset/image copy, and it
-    // MUST NOT be projected into the coordinator roster (see rosterBlock): the model never sees avatar bytes.
-    avatarId: id.optional(),
-    // One line describing what this worker is good at. Goes into the coordinator's roster, so it is what the
-    // model actually reads when deciding which worker a task belongs to.
-    specialty: z.string().trim().max(MAX_WORKER_SPECIALTY_CHARS),
-    systemPrompt: z.string().max(MAX_WORKER_PROMPT_CHARS),
-    providerId: optionalProvider,
-    model,
-    toolPolicy: z
-      .object({
-        mode: workerToolPolicyMode,
-        // Tool ids, consulted only when mode is "granular". Bounded opaque strings: validating them against the
-        // real tool unions belongs in the editor UI, which can enumerate both toolsets.
-        allowed: z.array(z.string().trim().min(1).max(MAX_TITLE_CHARS)).max(MAX_WORKER_ALLOWED_TOOLS),
-      })
-      .strict(),
-    execution: workerExecutionTarget,
-    createdAt: z.number().int().nonnegative(),
-    updatedAt: z.number().int().nonnegative(),
-  })
-  .strict();
-
-export const workerFileSchema = z
-  .object({ version: z.literal(1), workers: z.array(workerDefinition).max(MAX_WORKERS) })
-  .strict();
 
 const skillFingerprint = z.string().regex(/^[a-f0-9]{64}$/u);
 const skillSource = z.discriminatedUnion("kind", [
@@ -734,7 +691,7 @@ export const skillInvocationResult = z
       })
       .strict(),
     // The skill's declared `allowed-tools`, absent when it declared none.
-    allowedTools: z.array(z.string().trim().min(1).max(MAX_TITLE_CHARS)).max(MAX_WORKER_ALLOWED_TOOLS).optional(),
+    allowedTools: z.array(z.string().trim().min(1).max(MAX_TITLE_CHARS)).max(MAX_ALLOWED_TOOLS).optional(),
     // The source is not one the user has vouched for, so its instructions are untrusted for the turn.
     initialTaint: z.boolean().optional(),
   })

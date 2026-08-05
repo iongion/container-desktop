@@ -1,5 +1,5 @@
 import { sha256Text } from "@/ai-system/adapters/sha256";
-import type { WorkerExecutionTarget } from "@/ai-system/core/workers";
+import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import { createWorkspaceChangesPort, type WorkspaceChangesPort } from "@/ai-system/core/workspaceChanges";
 import type { ExecuteIsolated, HostEnv } from "@/host-contract/capabilities";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
@@ -23,7 +23,7 @@ const ENV_ALLOWLIST = [
 interface GitWorkspaceChangesOptions {
   exec: ExecuteIsolated;
   workspace: IWorkspaceAccess;
-  target: WorkerExecutionTarget;
+  target: ExecutionTarget;
   baseEnv?: HostEnv;
 }
 

@@ -4,7 +4,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { describeError } from "@/ai-system/core/errors";
-import type { WorkerExecutionTarget } from "@/ai-system/core/workers";
+import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import type {
   WorkspaceChangeEntry,
   WorkspaceChangeSnapshot,
@@ -31,7 +31,7 @@ interface WorkspaceChangesCardProps {
   onOpen: () => void;
 }
 
-function targetLabel(target: WorkerExecutionTarget, t: (key: string) => string): string {
+function targetLabel(target: ExecutionTarget, t: (key: string) => string): string {
   switch (target.kind) {
     case "host":
       return t("This computer");

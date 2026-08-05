@@ -22,7 +22,6 @@ export type AIPermissionMode = "ask" | "remember" | "allow";
 //                otherwise never gated in any mode.
 //   "granular" — the worker's toolset is narrowed to its allowlist (see filterToolset); whatever survives is
 //                then decided by the app's global mode exactly as today.
-export type WorkerToolPolicyMode = "all" | "ask" | "granular";
 
 export type ToolAction = "run" | "ask" | "reject";
 
@@ -32,7 +31,7 @@ export type CachedVerdict = "allow" | "block" | undefined;
 export interface PermissionDecisionContext {
   workspaceId: string;
   targetId: string;
-  subject: { kind: "access-profile"; id: string } | { kind: "worker"; id: string } | { kind: "server"; id: string };
+  subject: { kind: "access-profile"; id: string } | { kind: "server"; id: string };
   contentTrustEpoch: string;
 }
 
@@ -110,45 +109,6 @@ export function resolveToolAction(opts: {
     return "reject";
   }
   return "ask";
-}
-
-// Decide one tool call made by a task bound to a WORKER from the library. The worker's policy is authoritative
-// over the app's global mode — both are user-authored settings at the same trust level, and a roster that could
-// only tighten would make "all allowed" appear broken under the default global "ask". Two things it may never do:
-// bypass the catastrophic floor, or overturn an explicit remembered block.
-export function resolveWorkerToolAction(opts: {
-  policy: WorkerToolPolicyMode;
-  // The app-global mode, still the authority for a "granular" worker's surviving tools.
-  runMode: AIPermissionMode;
-  floorBlocked: boolean;
-  cached?: CachedVerdict;
-  tainted?: boolean;
-}): ToolAction {
-  // Unlike the global "allow" mode — which predates workers and is the user's explicit max-trust switch for
-  // commands they typed themselves — a worker definition is reusable and may be authored once and forgotten.
-  if (opts.floorBlocked) {
-    return "reject";
-  }
-  // A remembered block is the user's standing "never" for this exact call; a policy widens what runs unattended,
-  // it does not repeal a deny.
-  if (opts.cached === "block") {
-    return "reject";
-  }
-  if (opts.policy === "all") {
-    return "run";
-  }
-  // Gate everything the worker holds. A remembered allow must not satisfy this: the user asked to see each call.
-  if (opts.policy === "ask") {
-    return "ask";
-  }
-  // Granular: the toolset was already narrowed to the allowlist, so what reaches here is decided exactly as any
-  // ordinary call is — including the injection-taint rule on a remembered allow.
-  return resolveToolAction({
-    mode: opts.runMode,
-    floorBlocked: false,
-    cached: opts.cached,
-    tainted: opts.tainted,
-  });
 }
 
 // Permission cache (the user-managed allow/reject record). Storage is application-owned, but every decision is

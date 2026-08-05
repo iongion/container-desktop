@@ -9,8 +9,8 @@
 
 import type { AIPermissionMode, CachedVerdict, PermissionDecisionContext, ToolAction } from "./permissions";
 import { resolveToolAction } from "./permissions";
+import { TOOL_CATALOGUE } from "./toolCatalogue";
 import { WEB_SEARCH_TOOL_NAME } from "./toolNames";
-import { WORKER_TOOL_CATALOGUE } from "./workerTools";
 
 // pi's read-only built-ins, plus the app's own web search. Everything else — the mutating built-ins, plugin tools,
 // MCP tools — is gated, so a tool nobody has classified yet is asked about rather than run silently.
@@ -26,7 +26,7 @@ const PI_UNGATED_TOOLS = new Set<string>(["read", "grep", "find", "ls", WEB_SEAR
 // read/mutation split is taken from the catalogue the worker editor renders rather than restated, so a tool that
 // is re-gated in one place cannot stay ungated in the other.
 const CONTAINER_TOOL_GATING = new Map<string, boolean>(
-  WORKER_TOOL_CATALOGUE.filter((entry) => entry.group === "container").map((entry) => [entry.name, entry.gated]),
+  TOOL_CATALOGUE.filter((entry) => entry.group === "container").map((entry) => [entry.name, entry.gated]),
 );
 
 // A summary long enough to judge a command by, short enough for the timeline item's text limit.

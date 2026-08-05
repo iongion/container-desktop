@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { AI_CHANNELS, type AIInvokeChannel } from "@/ai-system/core/channels";
 import {
+  executionTarget,
   validateAIInvokeRequest,
   validateAIInvokeResponse,
   validateAIPushPayload,
-  workerExecutionTarget,
 } from "@/ai-system/core/schemas";
 
 const readyProjectContext = {
@@ -28,24 +28,20 @@ const readyProjectContext = {
   },
 };
 
-describe("workerExecutionTarget", () => {
+describe("executionTarget", () => {
   it("accepts the four supported target kinds", () => {
-    expect(workerExecutionTarget.safeParse({ kind: "host" }).success).toBe(true);
-    expect(workerExecutionTarget.safeParse({ kind: "remote", connectionId: "c1" }).success).toBe(true);
-    expect(workerExecutionTarget.safeParse({ kind: "container", connectionId: "c1", containerId: "abc" }).success).toBe(
-      true,
-    );
-    expect(workerExecutionTarget.safeParse({ kind: "sandbox", connectionId: "c1", image: "alpine:3" }).success).toBe(
-      true,
-    );
+    expect(executionTarget.safeParse({ kind: "host" }).success).toBe(true);
+    expect(executionTarget.safeParse({ kind: "remote", connectionId: "c1" }).success).toBe(true);
+    expect(executionTarget.safeParse({ kind: "container", connectionId: "c1", containerId: "abc" }).success).toBe(true);
+    expect(executionTarget.safeParse({ kind: "sandbox", connectionId: "c1", image: "alpine:3" }).success).toBe(true);
   });
 
   it("rejects missing ids, unknown kinds, and extra keys", () => {
-    expect(workerExecutionTarget.safeParse({ kind: "container", connectionId: "c1" }).success).toBe(false);
-    expect(workerExecutionTarget.safeParse({ kind: "sandbox", connectionId: "c1" }).success).toBe(false);
-    expect(workerExecutionTarget.safeParse({ kind: "remote" }).success).toBe(false);
-    expect(workerExecutionTarget.safeParse({ kind: "bogus" }).success).toBe(false);
-    expect(workerExecutionTarget.safeParse({ kind: "host", extra: true }).success).toBe(false);
+    expect(executionTarget.safeParse({ kind: "container", connectionId: "c1" }).success).toBe(false);
+    expect(executionTarget.safeParse({ kind: "sandbox", connectionId: "c1" }).success).toBe(false);
+    expect(executionTarget.safeParse({ kind: "remote" }).success).toBe(false);
+    expect(executionTarget.safeParse({ kind: "bogus" }).success).toBe(false);
+    expect(executionTarget.safeParse({ kind: "host", extra: true }).success).toBe(false);
   });
 });
 
