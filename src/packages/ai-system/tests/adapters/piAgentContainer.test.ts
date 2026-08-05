@@ -259,6 +259,22 @@ describe("startPiAgentSession", () => {
     expect(written[1]).toContain("CD_GATEWAY_URL=http://cd-gateway-1:8788/v1");
   });
 
+  // pi's compat detection reads the model's base URL, which is our gateway — so every upstream looks like plain
+  // OpenAI to it. The agent is told where the bytes really go, and it is NOT told the key that opens it.
+  it("tells the agent which upstream is behind the gateway, and still no credential", async () => {
+    const written: string[] = [];
+    await startPiAgentSession(
+      fakeHost(),
+      { ...spec, upstreamBaseUrl: "https://api.deepseek.com/v1" },
+      async (contents) => {
+        written.push(contents);
+        return "/tmp/env";
+      },
+    );
+    expect(written[1]).toContain("CD_UPSTREAM_BASE_URL=https://api.deepseek.com/v1");
+    expect(written[1]).not.toContain("CD_UPSTREAM_API_KEY");
+  });
+
   // Only the app can ask a provider whether a model reasons, and the container is born on its model before anything
   // has dialled the bridge — so the answer travels in the agent's env file or not at all.
   it("tells the agent what the provider published about the model's reasoning", async () => {

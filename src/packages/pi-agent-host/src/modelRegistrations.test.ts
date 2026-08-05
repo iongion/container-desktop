@@ -103,6 +103,25 @@ describe("piModelConfig", () => {
   it("takes `off` away from a model that cannot be asked to stop reasoning", () => {
     expect(piModelConfig({ id: "m", reasoning: { mandatory: true } }).thinkingLevelMap).toEqual({ off: null });
   });
+
+  // Our gateway is what pi sees, so its own detection reads every upstream as plain OpenAI. Naming the upstream is
+  // how a thinking level, a completion cap and the system prompt's role reach the server in the shape it wants.
+  it("tells pi what the upstream behind the gateway wants", () => {
+    expect(piModelConfig({ id: "glm-4.6", reasoning: {} }, "https://open.bigmodel.cn/api/paas/v4").compat).toEqual({
+      supportsStore: false,
+      supportsDeveloperRole: false,
+      supportsReasoningEffort: false,
+      maxTokensField: "max_tokens",
+      thinkingFormat: "zai",
+    });
+  });
+
+  // An upstream pi reads the same way it reads our gateway gets no override at all: an empty object would claim a
+  // decision nobody made, and pi merges field by field.
+  it("says nothing about an upstream that needs nothing said", () => {
+    expect(piModelConfig({ id: "gpt-5" }, "https://api.openai.com/v1").compat).toBeUndefined();
+    expect(piModelConfig({ id: "gpt-5" }).compat).toBeUndefined();
+  });
 });
 
 describe("reasoningFromEnv", () => {

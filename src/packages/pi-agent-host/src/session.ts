@@ -105,6 +105,10 @@ export interface CreatePiSessionOptions {
   // Which wire shape the upstream behind the gateway speaks. The app derives it from the provider's kind and
   // sends it in the agent's env file; `gatewayUrl` is already the base that shape's client expects.
   modelApi?: PiModelApi;
+  // WHERE that shape is spoken — the upstream's own base URL, which pi's compat detection would have read if the
+  // gateway were not standing in front of it (`piUpstreamCompat`). Not a credential: the URL is catalogue data, and
+  // nothing in this container can use it without the key the gateway holds.
+  upstreamBaseUrl?: string;
   // What the PROVIDER said about this model's budget, when it publishes one. Absent means unknown — and unknown is
   // then REPORTED as unknown, rather than as the invented 128000/4096 every model used to be registered with.
   contextWindow?: number;
@@ -162,7 +166,8 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     apiKey: gatewayToken,
     api: options.modelApi ?? "openai-completions",
     ...(streamOverride ? { streamSimple: streamOverride as never } : {}),
-    models: [...registered.values()].map(piModelConfig),
+    // Named, not passed by reference: `map` would hand `piModelConfig` the array index as its second argument.
+    models: [...registered.values()].map((model) => piModelConfig(model, options.upstreamBaseUrl)),
   });
 
   // The inline extension registers the gateway provider. Its registration is queued by the extension

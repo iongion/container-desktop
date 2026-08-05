@@ -65,6 +65,9 @@ async function runAgent(): Promise<void> {
       gatewayToken: token,
       modelId: required("CD_MODEL_ID"),
       modelApi: parseModelApi(process.env.CD_MODEL_API),
+      // Absent for a session started before the app sent it: pi then reads our gateway as it always did, which is
+      // the right answer for every upstream it would not have treated specially anyway.
+      upstreamBaseUrl: process.env.CD_UPSTREAM_BASE_URL,
       // Absent when the provider did not publish one. Passing nothing is how the session says "unknown" rather than
       // registering a window a server would refuse.
       ...positiveEnv("CD_MODEL_CONTEXT_WINDOW", "contextWindow"),

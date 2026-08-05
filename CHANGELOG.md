@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A thinking level now reaches DeepSeek, GLM and OpenRouter in the shape each one actually wants, instead of OpenAI's — the session's own gateway made every provider look like OpenAI, which also sent those servers a system prompt under a role they do not have and an answer cap under a field they do not read
 - The assistant now actually receives your Project Rules and Memory — it used to confirm them in the UI and send the model nothing
 - Everything the app does on the agent's behalf acts on the folder the session mounted, not the one named in Settings: workspace changes, project rules and memory, and project skills
 - Public web search works for the assistant, or says why not — the setting used to promise something the session could not do

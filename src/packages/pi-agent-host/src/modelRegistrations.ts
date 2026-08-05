@@ -17,6 +17,7 @@ import {
   type PiModelRegistration,
   piThinkingLevels,
 } from "@/pi-bridge/protocol";
+import { piUpstreamCompat } from "@/pi-bridge/upstreamCompat";
 
 export type ModelRegistrations = ReadonlyMap<string, PiModelRegistration>;
 
@@ -63,11 +64,17 @@ function thinkingLevelMap(reasoning: PiModelReasoning): ThinkingLevelMap | undef
 
 // One registration as pi's provider composer wants it. `name` is the id: the provider listings carry an id and
 // nothing more, and inventing a prettier label would be this app's words in pi's mouth.
-export function piModelConfig(model: PiModelRegistration) {
+//
+// `upstreamBaseUrl` is what pi's own detection would have looked at if the gateway were not in the way — see
+// `piUpstreamCompat`. Absent leaves pi's reading of our gateway untouched, which is right for every upstream it
+// would have read the same way.
+export function piModelConfig(model: PiModelRegistration, upstreamBaseUrl?: string) {
   const levels = model.reasoning ? thinkingLevelMap(model.reasoning) : undefined;
+  const compat = piUpstreamCompat(upstreamBaseUrl, model.id);
   return {
     id: model.id,
     name: model.id,
+    ...(compat ? { compat } : {}),
     // Only what a provider published, or what the app's own catalogue declares about a provider that publishes
     // nothing: pi hides the thinking control for everything else, which is the honest answer for a model nobody
     // called a reasoner.

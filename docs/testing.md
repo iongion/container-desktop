@@ -170,7 +170,14 @@ The image itself is verified without the GUI — build it, then run a probe agai
 yarn cli agent-image --engine podman   # or --engine docker; per-engine, not shared
 node support/pi-plugins-probe.mjs      # plugin management in a real container
 node support/pi-bridge-probe.mjs       # the bridge + data path in a real container
+node support/pi-upstream-shape-probe.mjs   # what pi puts on the wire per upstream
 ```
+
+The **upstream-shape probe** is the only place the gateway's far side is observable: it runs the built image once per
+upstream against a stub that records the request body, and fails if a declared upstream did not get its own dialect —
+DeepSeek's `thinking` object, GLM's `max_tokens`, OpenRouter's nested `reasoning`, and the `developer` role only where
+it belongs. It needs no provider, no key and no network. The first leg deliberately declares nothing, so the
+OpenAI-shaped body pi infers from our own gateway is on the record beside the corrected ones.
 
 ### Real model, real engine
 
@@ -223,5 +230,5 @@ yarn test:run      # includes support/cli/**/*.test.ts
 | Vitest config                  | [`vitest.config.mts`](../vitest.config.mts)                                   |
 | AI UI specs (pi bridge)        | [`webdriver/specs/`](../webdriver/specs) — `extension-ui`, `pi-tool-cards`, `pi-surfaces`, `pi-plugins`, `pi-container-tools`, `pi-model-chip`, `pi-model-reasoning`, `pi-turn-facts`, `pi-session-points`, `assistant-*` |
 | Live AI (real model + engine)  | [`webdriver/specs/pi-container-live.e2e.js`](../webdriver/specs/pi-container-live.e2e.js) |
-| Real-container probes          | [`support/pi-plugins-probe.mjs`](../support/pi-plugins-probe.mjs) · [`support/pi-bridge-probe.mjs`](../support/pi-bridge-probe.mjs) |
+| Real-container probes          | [`support/pi-plugins-probe.mjs`](../support/pi-plugins-probe.mjs) · [`support/pi-bridge-probe.mjs`](../support/pi-bridge-probe.mjs) · [`support/pi-upstream-shape-probe.mjs`](../support/pi-upstream-shape-probe.mjs) |
 | AI mock fixtures               | [`src/packages/ai-system/src/testing/aiMocks.ts`](../src/packages/ai-system/src/testing/aiMocks.ts) |

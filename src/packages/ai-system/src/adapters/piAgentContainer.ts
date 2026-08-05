@@ -246,6 +246,10 @@ export async function startPiAgentSession(
       `CD_BRIDGE_PORT=${BRIDGE_PORT_IN_IMAGE}`,
       `CD_GATEWAY_URL=${gatewayBaseUrl(`http://${spec.gatewayContainerName}:${GATEWAY_PORT_IN_IMAGE}`, modelApi)}`,
       `CD_MODEL_API=${modelApi}`,
+      // The upstream's own base URL, so pi speaks to it in the shape it wants rather than the shape it infers from
+      // our gateway (`piUpstreamCompat`). NOT a credential — catalogue data, useless without the key the gateway
+      // holds — and the same var name the gateway's own env file uses for the same value.
+      `CD_UPSTREAM_BASE_URL=${spec.upstreamBaseUrl}`,
       `CD_MODEL_ID=${spec.modelId}`,
       // Omitted entirely when the provider did not say, so the container can tell "unknown" from "zero".
       ...(spec.contextWindow ? [`CD_MODEL_CONTEXT_WINDOW=${spec.contextWindow}`] : []),

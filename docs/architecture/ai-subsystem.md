@@ -437,10 +437,25 @@ which is the half the user sees (`detail` reaches only the Notification Center).
 shown after it, naming the model the session now has. A session's very FIRST pick cannot be warned about at all —
 nothing has reported a prompt yet, and inventing a number to compare would be the fiction this avoids.
 
-**What goes on the wire is pi's inference, not the upstream's own.** pi's `detectCompat` keys off the model's
-provider and base URL, which are `container-desktop-gateway` and the container-internal gateway, so a level travels
-as OpenAI's `reasoning_effort` rather than OpenRouter's `reasoning: {effort}`. OpenRouter accepts both; a
-`compat.thinkingFormat` on the registration is the seam if an upstream ever wants its own shape.
+**The gateway hides the upstream from pi, so the app names it.** pi decides the wire dialect per model from
+`model.provider` and `model.baseUrl` (`detectCompat`) — ours are `container-desktop-gateway` and a container-internal
+URL, so **every** upstream reads to pi as plain OpenAI: the system prompt goes as role `developer`, `store: false` is
+sent, `max_completion_tokens` is used where the server wants `max_tokens`, and a thinking level travels as
+`reasoning_effort` where the server wants an object of its own. The developer role and the thinking shape are both
+gated on `model.reasoning`, so none of it bit until a model reasoned.
+
+`piUpstreamCompat` (`pi-bridge/upstreamCompat.ts`) answers what the real upstream wants, and the registration carries
+it as pi's own `compat` — the slot pi merges **field by field** over its own detection, so naming only what differs
+leaves every other rule pi's. It is matched on the upstream's **base URL**, the same input pi would have used, so a
+custom endpoint pointed at one of these hosts is read exactly as the catalogue entry is; the URL reaches the agent as
+`CD_UPSTREAM_BASE_URL`, which is catalogue data and not a credential.
+
+| Upstream | What it is told instead |
+| -------- | ---------------------- |
+| DeepSeek | `thinking: {type}` + `reasoning_effort`, no `store`, no `developer` role, and a reasoning field on every replayed assistant message |
+| GLM (z.ai / bigmodel) | `thinking: {type}` alone, `max_tokens` for the cap, no `store`, no `developer` role |
+| OpenRouter | `reasoning: {effort}`, the `developer` role only for the `openai/` and `anthropic/` models that take one, and Anthropic-style cache markers for `anthropic/` |
+| anything else | nothing — pi's reading of that host is already what it gives our gateway, and a guess would be worse |
 
 ## Screens and navigation
 
@@ -522,7 +537,8 @@ probe with the short name. **An image built for one engine does not exist for th
   own provider listing** from a loopback stub in OpenRouter's shape, so the shipped probe runs for real with no
   network and no key.
 - **Real containers, no app** — `support/pi-plugins-probe.mjs` and `support/pi-bridge-probe.mjs` run the built
-  image directly.
+  image directly; `support/pi-upstream-shape-probe.mjs` runs it once per upstream against a body-recording stub,
+  which is the only way to see what pi actually sends through the gateway.
 - **Real model, real engine** — `yarn test:e2e:tauri --spec webdriver/specs/pi-container-live.e2e.js` drives a non-mock app and a real
   OpenRouter model through the container toolset, creating and removing its own throwaway container.
 
@@ -553,6 +569,7 @@ then failed from inside a store.
 | ---- | ---- |
 | `pi-bridge/src/protocol.ts` | the wire contract — commands, events, host methods, surface slots, theme palette |
 | `pi-bridge/src/{codec,image}.ts` | frame encode/decode; the agent image tag |
+| `pi-bridge/src/upstreamCompat.ts` | what the real upstream wants on the wire, which the gateway hides from pi's own detection |
 | `pi-agent-host/src/{main,server}.ts` | the container entry (agent or gateway) and the bridge connection |
 | `pi-agent-host/src/session.ts` | the pi session — provider, extensions, TUI, surfaces, resources |
 | `pi-agent-host/src/{permissionGate,containerTools,containerToolCatalogue}.ts` | the inline extensions' substance |
