@@ -115,10 +115,11 @@ Both halves are ordinary Vitest and run in `yarn test:run`:
 
 - **Renderer side** — the bridge codec, the transcript projection (`piThreadView`), card resolution
   (`piToolCards`), the permission policy (`piApprovals`, `permissions`, `commandFloor`), host-request routing
-  (`uiRequests`), `engineOpDispatch`, `pluginCatalog`, providers, redaction, the stores.
+  (`uiRequests`), `engineOpDispatch`, `pluginCatalog`, providers, the model probe (`modelWindow`) against each
+  provider's real listing shape, the context report (`piContextReport`), redaction, the stores.
 - **Container side** — every `pi-agent-host` module: session, host RPC, permission gate, container tools and
-  their catalogue, surfaces, tool surfaces, virtual terminal, UI context, plugins, resources, gateway, events,
-  theme.
+  their catalogue, model registrations, surfaces, tool surfaces, virtual terminal, UI context, plugins,
+  resources, gateway, events, theme.
 
 ### UI specs — the mock app over WebDriver
 
@@ -135,8 +136,20 @@ yarn test:e2e:tauri --spec webdriver/specs/pi-surfaces.e2e.js         # T3 — p
 yarn test:e2e:tauri --spec webdriver/specs/pi-plugins.e2e.js          # plugin install / enable / update / remove  (8)
 yarn test:e2e:tauri --spec webdriver/specs/pi-container-tools.e2e.js  # the container toolset over a driven bridge (9)
 yarn test:e2e:tauri --spec webdriver/specs/pi-start-drawer.e2e.js     # the session-start drawer                   (6)
+yarn test:e2e:tauri --spec webdriver/specs/pi-model-chip.e2e.js       # the model a session answers with           (6)
+yarn test:e2e:tauri --spec webdriver/specs/pi-model-reasoning.e2e.js  # the thinking levels a provider published   (4)
+yarn test:e2e:tauri --spec webdriver/specs/pi-turn-facts.e2e.js       # an empty turn; a window with no room       (3)
+yarn test:e2e:tauri --spec webdriver/specs/pi-session-points.e2e.js   # the fork and branch points pi answers with (6)
+yarn test:e2e:tauri --spec webdriver/specs/assistant-screen.e2e.js    # the screen, its bar and its theme          (4)
+yarn test:e2e:tauri --spec webdriver/specs/assistant-soundness.e2e.js # what it says about its own session         (7)
+yarn test:e2e:tauri --spec webdriver/specs/assistant-on-pi.e2e.js     # the surface mounts on a pi session         (1)
 yarn test:e2e:tauri --spec webdriver/specs/ai-flows.e2e.js            # the assistant flows, scripted session
 ```
+
+The two **model** specs serve their own provider listing from a loopback `node:http` stub in OpenRouter's shape and
+re-point the app's default provider at it, so the shipped probe runs for real with no network and no key: the probe is
+selected by provider **id**, never by URL. `user-settings.json` is re-read on every `getAISettings()`, which is what
+lets a spec's Node half change that answer mid-run.
 
 The **AI flows** ([`support/e2e/ai/flows.mjs`](../support/e2e/ai/flows.mjs)) drive the running app through a
 backend-agnostic `AiE2eDriver` and assert both branches of each gate — chat echo and reply, Enter-to-send, the
@@ -208,7 +221,7 @@ yarn test:run      # includes support/cli/**/*.test.ts
 | Headless globals / live opt-in | [`src/__tests__/setup/headless.ts`](../src/__tests__/setup/headless.ts)       |
 | Recording `Command` fake       | [`src/__tests__/setup/fakeCommand.ts`](../src/__tests__/setup/fakeCommand.ts) |
 | Vitest config                  | [`vitest.config.mts`](../vitest.config.mts)                                   |
-| AI UI specs (pi bridge)        | [`webdriver/specs/`](../webdriver/specs) — `extension-ui`, `pi-tool-cards`, `pi-surfaces`, `pi-plugins`, `pi-container-tools` |
+| AI UI specs (pi bridge)        | [`webdriver/specs/`](../webdriver/specs) — `extension-ui`, `pi-tool-cards`, `pi-surfaces`, `pi-plugins`, `pi-container-tools`, `pi-model-chip`, `pi-model-reasoning`, `pi-turn-facts`, `pi-session-points`, `assistant-*` |
 | Live AI (real model + engine)  | [`webdriver/specs/pi-container-live.e2e.js`](../webdriver/specs/pi-container-live.e2e.js) |
 | Real-container probes          | [`support/pi-plugins-probe.mjs`](../support/pi-plugins-probe.mjs) · [`support/pi-bridge-probe.mjs`](../support/pi-bridge-probe.mjs) |
 | AI mock fixtures               | [`src/packages/ai-system/src/testing/aiMocks.ts`](../src/packages/ai-system/src/testing/aiMocks.ts) |

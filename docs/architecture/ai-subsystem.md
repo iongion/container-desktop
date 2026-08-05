@@ -210,8 +210,8 @@ One decision function for both boundaries, and a global mode the user picks
 `decidePiToolCall` (`core/piApprovals.ts`) classifies the tool, then defers to the same `resolveToolAction`
 the rest of the app uses. pi's read-only built-ins (`read`, `grep`, `find`, `ls`) run unattended; everything
 else — the mutating built-ins, plugin tools, MCP tools — is gated, so a tool nobody has classified is *asked*
-about rather than run. The container tools take their read/mutation split from `WORKER_TOOL_CATALOGUE`, so a
-tool re-gated in one place cannot stay ungated in the other.
+about rather than run. The container tools take their read/mutation split from `TOOL_CATALOGUE`
+(`core/toolCatalogue.ts`), so a tool re-gated in one place cannot stay ungated in the other.
 
 **Two boundaries, one card.** pi asks for a verdict on *every* tool call, so a container mutation arrives
 twice: once as the pre-call `approval`, once as the `engine_op` the app performs itself. Only the second can
@@ -300,13 +300,15 @@ request validated against the Zod schema in `core/schemas.ts`, and its response 
 | ----- | -------- | ----- |
 | status / diagnostics | `ai:status`, `ai:diagnostics` | live |
 | provider keys | `ai:key:{has,set,clear}` | live |
+| the agent pair's private env files | `ai:agent:{gateway-env,env-file}` | live — the key is substituted natively, never in this realm |
 | model discovery | `ai:models:{list,cancel}` | live |
+| one model's facts | `ai:model:window` | live — the provider probe ([below](#what-the-app-knows-about-a-model)) |
+| web search, run for the agent | `ai:web:search` | live — refused while the user's own switch is off |
 | the permission record | `ai:permissions:{list,add,remove}` | live |
 | container operations | `ai:engine:op` | live — the agent's `engine_op` lands here |
 | skills | `ai:skills:*` | live |
 | project context | `ai:project-context:*` | live |
 | workspace changes | `ai:changes:{status,diff}` | live |
-| threads | `ai:thread:*`, `ai:tool-artifact:get` | **orphaned** — no shell injects `createAgentSession`, so `submit` answers "the assistant is not available", and nothing writes a tool artifact on the pi path |
 
 **Invoking a skill spans both worlds.** `ai:skills:invoke` **resolves and renders**, it does not submit: the
 host does the fingerprint match, the project-trust check, the prompt render and the size cap, then answers with
@@ -374,6 +376,72 @@ secret-looking env assignments from what is displayed and stored. Web search, wh
 destination, is SSRF-guarded (reserved/private/loopback/link-local IPs blocked, redirects re-checked, the fetch
 restricted to its fixed origin).
 
+## What the app knows about a model
+
+**Only the app can ask.** The gateway forwards the completions API and nothing else, so LM Studio's
+`/api/v0/models` and llama.cpp's `/props` are unreachable from inside the container — and the OpenAI-shaped
+`/models` listing every provider serves carries an id and nothing more. A number a server would reject is worse
+than no number, so a fact nobody published stays absent and the panels say "unknown".
+
+**One model, on demand.** `ai:model:window` → `fetchModelWindow` (`adapters/modelWindow.ts`) asks about the model
+in use, and only a provider with a documented endpoint is asked:
+
+| Provider | Endpoint | What it yields |
+| -------- | -------- | -------------- |
+| LM Studio | `/api/v0/models` | `loaded_context_length` — what the running instance will accept, commonly a fraction of the model's own `max_context_length`, which stands in when nothing is loaded |
+| llama.cpp | `/props` | `default_generation_settings.n_ctx`, not the top level; the model id plays no part, since it serves one model at the `-c` it was started with |
+| OpenRouter | `/api/v1/models` | the window, `top_provider.max_completion_tokens`, the prices, and the reasoning capability |
+
+A probe answers with what it learned **or with nothing at all** — an empty object would read as "asked and
+answered". Prices are converted to **dollars per million tokens**, the unit pi's catalogue prices in (it divides by
+1e6 before billing a turn), so passing a per-token rate straight through would under-report a bill by a factor of a
+million.
+
+**Whether a model reasons has three sources and one route.** OpenRouter publishes it twice over — the word
+`reasoning` in `supported_parameters`, and a `reasoning` entry of its own carrying `supported_efforts` and
+`mandatory`; a model that does not reason carries neither, which is what tells the two apart. For a provider that
+serves an id-only listing — OpenAI, whose `o1`/`o3`/`o4`/`gpt-5` are the only entries today —
+`provider-catalog.json`'s `reasoning.modelPrefixes` is the answer and costs no request at all: the catalogue declares
+**which** models think, never how hard, so a declared reasoner gets pi's own set. Everything else publishes nothing
+and keeps pi's `false` — LM Studio's `capabilities` never mentions reasoning, and guessing from an id or an `arch`
+would be fiction.
+
+**The facts travel two ways, both as a `PiModelRegistration`.** The model a container is born on is registered
+before anything has dialled the bridge, so its facts go in the agent's env file (`CD_MODEL_CONTEXT_WINDOW`,
+`…_MAX_OUTPUT_TOKENS`, `…_COST_*`, `CD_MODEL_REASONING` + `…_LEVELS` / `…_MANDATORY`), each var **omitted when
+unknown** so the container can tell unknown from zero, and the flag alone is the capability. Every later pick
+arrives as a `model_select` command. `withModelRegistration` merges rather than replaces: the set grows by USE —
+nothing pre-registers a provider's catalogue, because the picker is a drill-down precisely so a catalogue is read
+one level at a time — a model keeps its position so the list does not reshuffle under the user, and what the app
+once learned survives a switch back that carried only an id.
+
+**`piModelConfig` turns that into pi's own vocabulary.** Presence of the facts is pi's `reasoning`; the levels
+become a `thinkingLevelMap`, because pi resolves availability FROM the map and not from a list — a level mapped to
+`null` is withdrawn, `xhigh` and `max` are offered ONLY when named, and `mandatory` withdraws `off`, which is how a
+model that always reasons stops offering a mode it has not got. A provider that published no efforts leaves pi's own
+set standing rather than a narrower invented one. pi's `ProviderModelConfig` requires both numbers, so
+`PI_FALLBACK_CONTEXT_WINDOW` / `PI_FALLBACK_MAX_OUTPUT_TOKENS` (128000 / 4096, shared by both sides because both
+must agree on the cap in force) stand in — and are never reported to the user as a model's budget.
+
+**What the user is offered comes back from pi**, not from the app's own list: `availableThinkingLevels`
+(`sessionControls.ts`) is `getAvailableThinkingLevels()` when the session `supportsThinking()` and empty otherwise,
+so the settings drawer hides the control instead of offering a level the provider would ignore. The level is written
+through `/settings thinkingLevel <level>`, which refuses one that is not in that same answer — writing a level the
+model cannot reach would show the change in the drawer and be silently clamped on the next turn.
+
+**A pick that cannot fit the session warns, and does not refuse.** `undersizedWindow` (`core/piContextReport.ts`)
+adds the session's own reported prompt — system context plus tool definitions — to the answer room that model will
+reserve, and compares the total with the published window. It is an estimate at four characters per token, so
+refusing on it could lock the user out of a model that would have worked; both numbers go in the toast's **message**,
+which is the half the user sees (`detail` reaches only the Notification Center). It is measured before the switch and
+shown after it, naming the model the session now has. A session's very FIRST pick cannot be warned about at all —
+nothing has reported a prompt yet, and inventing a number to compare would be the fiction this avoids.
+
+**What goes on the wire is pi's inference, not the upstream's own.** pi's `detectCompat` keys off the model's
+provider and base URL, which are `container-desktop-gateway` and the container-internal gateway, so a level travels
+as OpenAI's `reasoning_effort` rather than OpenRouter's `reasoning: {effort}`. OpenRouter accepts both; a
+`compat.thinkingFormat` on the registration is the seam if an upstream ever wants its own shape.
+
 ## Screens and navigation
 
 AI is **always on** — `Metadata.RequiresAI` is a surfacing tag, never an access gate.
@@ -396,6 +464,13 @@ There is exactly ONE conversation surface. `AssistantScreen` adds only what a fu
 session summary in the header (connection, workspace, container) and the start/stop actions; everything else,
 including the no-session empty state and its Start CTA, lives in `AssistantThread` so the console offers it
 too. A session-less surface renders no composer at all: `submit` has no bridge client to reach.
+
+**A turn that produced nothing still says so.** `piThreadView` projects an `assistant_end` carrying no text into a
+`notice` timeline item, branching on pi's own stop reason: `stop` becomes `empty-answer` — a small model does exactly
+that, and it read as a turn that never happened — `length` becomes `output-cap`, a cap reached before a single word,
+and every other reason stays silent, because a `toolUse` step's card IS what the model said and an abort or a
+provider error is already on screen as itself. The item carries a CODE, never prose (`core/` has no i18n), which the
+renderer translates; both the JSON and the HTML export carry it.
 
 `web-app/stores/useAIStore.ts` derives the assistant's state from the pi session store (one pi session = exactly
 one thread). It declares only what the session can answer for — there is no reject-by-name list any more: what pi
@@ -434,13 +509,18 @@ probe with the short name. **An image built for one engine does not exist for th
 
 - **Pure logic, TDD** — the bridge codec, `piThreadView` projection, `piToolCards` rebuilds, `piApprovals`,
   `uiRequests` routing, `engineOpDispatch`, `pluginCatalog`, permissions, the command floor, redaction,
-  providers, settings — hermetic in Vitest, no mocks of what the repo does not own.
+  providers, settings, the model probe against each provider's real shape, and the context report with its
+  undersized-window arithmetic — hermetic in Vitest, no mocks of what the repo does not own.
 - **Container-side, TDD** — every `pi-agent-host` module has a spec: session, host RPC, permission gate,
-  container tools + catalogue, surfaces, tool surfaces, virtual terminal, UI context, plugins, resources,
-  gateway, events, theme.
+  container tools + catalogue, model registrations, surfaces, tool surfaces, virtual terminal, UI context,
+  plugins, resources, gateway, events, theme.
 - **Never component tests** for React screens — UI is verified live.
 - **UI over WebDriver** (`webdriver/specs/`, mock app): `extension-ui` (T1) · `pi-tool-cards` (T2) ·
-  `pi-surfaces` (T3) · `pi-plugins` (management) · `pi-container-tools` (the toolset over a driven bridge).
+  `pi-surfaces` (T3) · `pi-plugins` (management) · `pi-container-tools` (the toolset over a driven bridge) ·
+  `pi-model-chip` and `pi-model-reasoning` (the model a session answers with, and the levels its provider
+  published) · `pi-turn-facts` (an empty turn, and a window that cannot fit). The two model specs **serve their
+  own provider listing** from a loopback stub in OpenRouter's shape, so the shipped probe runs for real with no
+  network and no key.
 - **Real containers, no app** — `support/pi-plugins-probe.mjs` and `support/pi-bridge-probe.mjs` run the built
   image directly.
 - **Real model, real engine** — `yarn test:e2e:tauri --spec webdriver/specs/pi-container-live.e2e.js` drives a non-mock app and a real
@@ -460,6 +540,9 @@ then failed from inside a store.
 | Workspace changes, project rules discovery, project skills | host-side workspace access, bound to the RUNNING session's mounted folder (`sessionWorkspace`) |
 | Public web search | the app performs it (address-pinned fetch, user's setting enforced in the broker); the container registers the tool |
 | Context panel · Usage panel | the session's `request_context` and `usage` reports, plus the app's own policy (provider id, permission mode, tool gating, project sources) |
+| A model's window, prices and whether it reasons | the app's own probe of the provider (`ai:model:window`) — the container cannot reach those endpoints |
+| The thinking levels offered for a model | pi, resolved from the registration the app gave it; the app only says what the provider published |
+| A turn that produced no text | `piThreadView`, from pi's own stop reason, as a code the renderer translates |
 | Slash commands | the app's own catalogue for what the GUI performs; the session's `resources_list` for pi's own commands and its plugins' — under pi's names, with a reason on the ones this architecture cannot honour |
 | Diagnostics | two independent answers: the app's own provider probe, and the session's own through the gateway |
 | Plugins screen | the session's plugin service over the bridge |
@@ -475,6 +558,7 @@ then failed from inside a store.
 | `pi-agent-host/src/{permissionGate,containerTools,containerToolCatalogue}.ts` | the inline extensions' substance |
 | `pi-agent-host/src/{systemContext,webSearchTool}.ts` | the app's project prose as system prompt; the app-performed web search |
 | `pi-agent-host/src/{piCommands,reports,providerCheck}.ts` | pi's own commands; the usage/context reports; the through-the-gateway probe |
+| `pi-agent-host/src/{modelRegistrations,sessionControls}.ts` | the models this gateway is registered with and the app's view of one as pi's config; the session's settings and its thinking levels |
 | `pi-agent-host/src/{hostRpc,events}.ts` | reverse-call correlation with fallbacks; pi event → bridge event |
 | `pi-agent-host/src/{guiTui,virtualTerminal,surfaces,toolSurfaces,uiContext,piTheme}.ts` | T1 + T3: the extension UI context and ANSI rendering |
 | `pi-agent-host/src/{plugins,resources,gateway}.ts` | package management, contributed resources, the credential proxy |
@@ -489,12 +573,13 @@ then failed from inside a store.
 | `ai-system/core/{channels,schemas}.ts` | the typed invoke/push map and its authoritative Zod schemas |
 | `ai-system/core/{providers,redact,limits,settings,toolNames}.ts` | provider resolution, redaction, ceilings, settings, tool-name unions |
 | `ai-system/adapters/{localModels,providerFetch}.ts` | bounded discovery; credential-stripping transport |
+| `ai-system/adapters/modelWindow.ts` | what a provider says about ONE model — window, completion cap, prices, reasoning |
 | `ai-system/adapters/{projectContextFileStore,skillTrustFileStore}.ts`, `permissionsStoreCore.ts` | private temp-file / atomic-rename stores |
 | `ai-system/host/{createAISystem,broker,aiClientBridge}.ts` | composition root, router, the one `window.AI` client |
 | `ai-system/host/{skillHost,projectContextHost,modelDiscoveryHost,diagnosticsHost}.ts` | the live sub-hosts |
 | `web-app/stores/{codingAgent,codingAgentSurfaces,pluginStore}.ts` | the session, its ANSI surfaces, the plugin table |
 | `web-app/stores/{useAIStore,codingAgentSystemContext}.ts` | pi session → the Assistant UI's state; the project prose the session is given |
-| `web-app/screens/AI/{AssistantScreen,AssistantActionsMenu,ScreenHeader,Navigation}.tsx` | the surface, its actions and the tab bar |
+| `web-app/screens/AI/{AssistantScreen,AssistantActionsMenu,ScreenHeader,StartSessionDrawer}.tsx`, `Navigation.ts` | the surface, its actions, the start drawer and the tab bar |
 | `web-app/screens/AI/Plugins/` | the Plugins sub-screen |
 | `web-app/components/ai/` | transcript, composer chrome, dialogs, ANSI surfaces, drawers, the card registry |
 | `web-app/themes/appPiTheme.ts` | `--app-*` tokens → the palette the container derives a pi theme from |
