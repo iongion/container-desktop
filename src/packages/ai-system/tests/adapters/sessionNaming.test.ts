@@ -10,8 +10,6 @@ import {
   assistantNetworkName,
   defaultScope,
   egressNetworkOf,
-  LEGACY_ASSISTANT_CONTAINER,
-  LEGACY_ASSISTANT_NETWORK,
 } from "@/ai-system/adapters/sessionNaming";
 
 describe("assistant resource names", () => {
@@ -96,29 +94,5 @@ describe("assistant resource labels", () => {
       "--filter",
       `label=${AI_SESSION_LABEL.session}=ephemeral`,
     ]);
-  });
-});
-
-// Containers created before the labels existed can only be recognised by name, and the reaper still has to clear
-// them. These patterns are what makes an upgrade not leak the previous version's orphans.
-describe("legacy resource names", () => {
-  it("recognises what earlier versions created", () => {
-    expect(LEGACY_ASSISTANT_CONTAINER.test("cd-agent-1a2b3c4d")).toBe(true);
-    expect(LEGACY_ASSISTANT_CONTAINER.test("cd-gateway-1a2b3c4d")).toBe(true);
-    expect(LEGACY_ASSISTANT_CONTAINER.test("cd-login-1a2b3c4d")).toBe(true);
-    expect(LEGACY_ASSISTANT_NETWORK.test("cd-agent-net-1a2b3c4d")).toBe(true);
-    expect(LEGACY_ASSISTANT_NETWORK.test("cd-agent-net-1a2b3c4d-egress")).toBe(true);
-  });
-
-  it("leaves the user's own containers alone", () => {
-    expect(LEGACY_ASSISTANT_CONTAINER.test("cd-agent-mine")).toBe(false);
-    expect(LEGACY_ASSISTANT_CONTAINER.test("my-cd-agent-1a2b3c4d")).toBe(false);
-    expect(LEGACY_ASSISTANT_NETWORK.test("cd-agent-net")).toBe(false);
-  });
-
-  // The reusable session is not legacy and must never be swept for looking old.
-  it("does not match anything named under the current scheme", () => {
-    expect(LEGACY_ASSISTANT_CONTAINER.test(assistantContainerName("agent", defaultScope("podman-1")))).toBe(false);
-    expect(LEGACY_ASSISTANT_NETWORK.test(assistantNetworkName(defaultScope("podman-1")))).toBe(false);
   });
 });

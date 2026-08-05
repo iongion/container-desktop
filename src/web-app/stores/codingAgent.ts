@@ -10,7 +10,6 @@ import {
   GATEWAY_PORT_IN_IMAGE,
   gatewayUpstreamUrl,
   pickHostPort,
-  reapOrphanPiAgentSessions,
   startPiAgentSession,
   stopPiAgentSession,
 } from "@/ai-system/adapters/piAgentContainer";
@@ -60,14 +59,12 @@ import type {
 } from "@/pi-bridge/protocol";
 import { getHostRuntime } from "@/platform/provider";
 import { randomUUID } from "@/utils/randomUUID";
-import { connectedConnections } from "@/web-app/components/ConnectionSelect.logic";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { applySurfaceEvent, type CodingAgentSurfaces, noSurfaces } from "@/web-app/stores/codingAgentSurfaces";
 import { composeSessionSystemContext, type SessionSystemContext } from "@/web-app/stores/codingAgentSystemContext";
 import { useProviderLoginStore } from "@/web-app/stores/providerLogin";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { readAppPiThemePalette } from "@/web-app/themes/appPiTheme";
 
 const logger = createLogger("web-app.codingAgent");
@@ -558,29 +555,6 @@ function contributedResourcesFrom(answer: Partial<ContributedResources> | undefi
     prompts: answer?.prompts ?? empty.prompts,
     builtins: answer?.builtins ?? empty.builtins,
   };
-}
-
-// Remove the container pairs and networks a previous run left behind — the app is the only thing that would have,
-// and enough leaked networks make the engine refuse to create another one for anybody.
-//
-// Every running connection is swept, because a session could have been started on any of them. Safe only while the
-// app is single-instance: a pi session lives as long as the app holds its bridge client, so at boot anything still
-// standing is an orphan. The E2E harness deliberately turns single-instance OFF to run beside a dev app, and its
-// second instance must not reap the first one's live session — so the flag that gates the guard gates this too.
-export async function reapOrphanedAgentSessions(): Promise<void> {
-  const e2e = (globalThis as unknown as { CONTAINER_DESKTOP_E2E?: string }).CONTAINER_DESKTOP_E2E;
-  if (isMockMode() || e2e) return;
-  // The same source the start drawer's connection picker uses, so the sweep covers exactly the engines a session
-  // could have been started on. No scope: sessions are started unscoped, so their leftovers are unscoped too.
-  const connections = connectedConnections(
-    useAppStore.getState().connections,
-    useResourceStore.getState().activeRuntime,
-  );
-  for (const connection of connections) {
-    const host = await resolveConnectionHost(connection.id);
-    if (!host) continue;
-    await reapOrphanPiAgentSessions(host).catch((error) => logger.debug(`reaping ${connection.id} failed`, error));
-  }
 }
 
 // The gateway's env file carries the provider key, so the HOST composes and writes it: it reads the key from

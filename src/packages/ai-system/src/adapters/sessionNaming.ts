@@ -109,8 +109,3 @@ export function assistantFilterArgv(selector: { kind: AiSessionKind; connectionI
     ...(selector.connectionId ? ["--filter", `label=${AI_SESSION_LABEL.connection}=${selector.connectionId}`] : []),
   ];
 }
-
-// What earlier versions called these resources. Containers created before the labels existed can only be recognised
-// by name, and the reaper still has to clear them — so this stays until it is safe to assume nobody is upgrading.
-export const LEGACY_ASSISTANT_CONTAINER = /^cd-(agent|gateway|login)-[0-9a-f]{8}$/;
-export const LEGACY_ASSISTANT_NETWORK = /^cd-agent-net-[0-9a-f]{8}(-egress)?$/;

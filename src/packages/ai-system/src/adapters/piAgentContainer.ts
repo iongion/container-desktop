@@ -8,8 +8,6 @@ import {
   assistantNetworkName,
   defaultScope,
   egressNetworkOf,
-  LEGACY_ASSISTANT_CONTAINER,
-  LEGACY_ASSISTANT_NETWORK,
 } from "@/ai-system/adapters/sessionNaming";
 import type { DefaultSessionCandidate } from "@/ai-system/core/defaultSession";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
@@ -220,10 +218,14 @@ export function defaultSessionFrom(
 }
 
 function listingRows(output: string): ContainerListingRow[] {
-  return lines(output).map((line) => {
-    const [name, ...rest] = line.split("\t");
-    return { name: name.trim(), state: rest.join("\t") };
-  });
+  return output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [name, ...rest] = line.split("\t");
+      return { name: name.trim(), state: rest.join("\t") };
+    });
 }
 
 // Discovery runs at boot against an engine that may be asleep, unreachable or simply not there. Anything it cannot
@@ -407,99 +409,6 @@ export async function startPiAgentSession(
       hostPort = pickHostPort();
     }
   }
-}
-
-// An EPHEMERAL session is swept wholesale, and the name is the only evidence for one created before the labels
-// existed — hence the strict legacy patterns, which are the reason an upgrade does not leak the previous version's
-// orphans. `cd-agent-mine` is the user's, and the shared plugin VOLUME is never in scope: it holds what they
-// installed and every stored conversation.
-const SESSION_CONTAINER = LEGACY_ASSISTANT_CONTAINER;
-const SESSION_NETWORK = LEGACY_ASSISTANT_NETWORK;
-
-// The reusable session's own shapes. It is NOT swept for being old — that is the whole point of it — but half of one
-// is swept for being unusable: the gateway holds the credential and the agent cannot reach a model without it, so a
-// lone half answers no prompt while still holding a published port.
-const DEFAULT_CONTAINER = /^container-desktop-(?<role>agent|gateway)-(?<slug>default-.+)$/;
-const DEFAULT_NETWORK = /^container-desktop-net-(?<slug>default-.+?)(-egress)?$/;
-
-function lines(output: string): string[] {
-  return output
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
-// Which connections have a default session that can actually serve — both halves standing. Everything else under the
-// default name is a remnant: a pair that lost one half, or a network whose pair is gone.
-function servingDefaultSlugs(containerNames: readonly string[]): Set<string> {
-  const halves = new Map<string, Set<string>>();
-  for (const name of containerNames) {
-    const groups = DEFAULT_CONTAINER.exec(name)?.groups;
-    if (!groups?.slug || !groups.role) continue;
-    const seen = halves.get(groups.slug) ?? new Set<string>();
-    seen.add(groups.role);
-    halves.set(groups.slug, seen);
-  }
-  return new Set([...halves].filter(([, seen]) => seen.size === 2).map(([slug]) => slug));
-}
-
-// Remove every session container and network on this engine that cannot serve a session.
-//
-// Called at startup. For an EPHEMERAL session the question answers itself: one lives only as long as the app holds its
-// bridge client, so anything still standing when the app boots was orphaned by a crash or a force-quit. Each orphan
-// holds a published port, and each network a /24 out of the engine's pool — around sixteen of them and podman refuses
-// to create another, which surfaces as "IPAM error: failed to get ips for container" on a session that did nothing
-// wrong.
-//
-// The DEFAULT session is the opposite case and must survive: it is the one the app reuses, so the user is asked to
-// start a session once and every boot after that adopts what is already there. It is spared because the legacy
-// patterns do not match a name under the current scheme, and only a default that lost half its pair is cleared —
-// half of one cannot answer a prompt while still holding a port.
-//
-// Housekeeping, so an engine that refuses is reported and never raised: the app must still start.
-export async function reapOrphanPiAgentSessions(
-  host: HostClientFacade,
-  scope?: string,
-): Promise<{ containers: string[]; networks: string[] }> {
-  const reaped: { containers: string[]; networks: string[] } = { containers: [], networks: [] };
-  const containers = await run(host, ["ps", "--all", "--format", "{{.Names}}"], scope).catch(() => "");
-  const present = lines(containers);
-  const serving = servingDefaultSlugs(present);
-  const brokenDefault = (name: string) => {
-    const slug = DEFAULT_CONTAINER.exec(name)?.groups?.slug;
-    return !!slug && !serving.has(slug);
-  };
-  // One pass in listing order, so the two rules never remove the same name twice.
-  for (const name of present.filter((name) => SESSION_CONTAINER.test(name) || brokenDefault(name))) {
-    const removed = await run(host, ["rm", "--force", name], scope).then(
-      () => true,
-      (error) => {
-        logger.debug(`reaping ${name} failed`, error);
-        return false;
-      },
-    );
-    if (removed) reaped.containers.push(name);
-  }
-  // After the containers: a network still in use cannot be removed. A default's network goes only when its pair did.
-  const networks = await run(host, ["network", "ls", "--format", "{{.Name}}"], scope).catch(() => "");
-  const strandedDefaultNetwork = (name: string) => {
-    const slug = DEFAULT_NETWORK.exec(name)?.groups?.slug;
-    return !!slug && !serving.has(slug);
-  };
-  for (const name of lines(networks).filter((name) => SESSION_NETWORK.test(name) || strandedDefaultNetwork(name))) {
-    const removed = await run(host, ["network", "rm", name], scope).then(
-      () => true,
-      (error) => {
-        logger.debug(`reaping network ${name} failed`, error);
-        return false;
-      },
-    );
-    if (removed) reaped.networks.push(name);
-  }
-  if (reaped.containers.length || reaped.networks.length) {
-    logger.info(`reaped ${reaped.containers.length} orphaned session containers, ${reaped.networks.length} networks`);
-  }
-  return reaped;
 }
 
 export async function stopPiAgentSession(host: HostClientFacade, spec: PiAgentSessionSpec): Promise<void> {

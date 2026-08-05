@@ -32,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The agent's bridge token is protected like the provider key beside it: both env files now live in the one directory the web view cannot read back, instead of the token sitting in a second unguarded one
 - Starting a session with network access turned off works at all: the agent's own network is created internal and the gateway is given a routable one of its own, instead of handing the engine a flag `run` does not have
 - A session no longer fails because something else already holds the port it picked — the agent's bridge port is re-picked and tried again when the engine says it is in use
-- Assistant sessions a crash or a force-quit left behind are removed at startup, together with the networks they were holding: enough of those and the engine refuses to create another for anything
 - The Context panel says whether the budget reserved for the answer is the provider's published cap or the app's own default, instead of presenting one as the other
 - Estimated cost is a real number: the provider's published rates now reach the session, so a priced model reports what it charged instead of nothing
 - A turn that cost a fraction of a cent reports what it charged instead of rounding to zero, which read exactly like a free local model

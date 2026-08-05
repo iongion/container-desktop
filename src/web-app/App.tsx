@@ -74,7 +74,6 @@ import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectS
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 import { Screen as MountsScreen } from "@/web-app/screens/Volume/mounts/MountsScreen";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { reapOrphanedAgentSessions } from "@/web-app/stores/codingAgent";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { useUIStore } from "@/web-app/stores/uiStore";
 
@@ -398,13 +397,9 @@ export function AppMainScreen() {
       return;
     }
     startRef.current = true;
-    // Housekeeping after the engines are up: an assistant session that outlived its app — a crash, a force-quit —
-    // left a container pair behind and a network holding a /24, and only this app would ever remove them. Never
-    // awaited and never fatal; nothing about startup depends on it.
     initialize()
       .then(() => startApplication())
-      .then(() => reapOrphanedAgentSessions())
-      .catch((error) => logger.debug("startup housekeeping failed", error));
+      .catch((error) => logger.debug("startup failed", error));
   }, [initialize, startApplication]);
 
   useEffect(() => {
