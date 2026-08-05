@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A cloud model's real budget, answer cap and rates now show up even when its provider serves nothing to ask: Anthropic, OpenAI, DeepSeek and GLM models are read from pi's own published catalogue, and a running server's answer still wins wherever one can be asked
+- Claude models offer a thinking level, taken from what pi publishes about each one rather than a claim of the app's own — including that some of them cannot stop thinking
 - A plugin can say what it is working on: its own message replaces the word beside the spinner while a turn runs, and it can hide the indicator altogether — three calls that used to do nothing at all
 - Plugin components take the app's colours, including the ones a plugin renders without asking for a theme: they used to paint in the agent's own dark palette whatever engine and mode you were in, and they now follow both
 - Change the model a running session answers with, from the composer's chip: the conversation, the containers and the plugins all survive it

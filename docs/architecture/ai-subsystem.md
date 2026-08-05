@@ -410,14 +410,29 @@ answered". Prices are converted to **dollars per million tokens**, the unit pi's
 1e6 before billing a turn), so passing a per-token rate straight through would under-report a bill by a factor of a
 million.
 
-**Whether a model reasons has three sources and one route.** OpenRouter publishes it twice over — the word
+**Under the probe sits pi's own catalogue** (`pi-bridge/modelBaseline.ts`), so a provider with no endpoint to ask is
+no longer a blank: pi ships generated per-model data — window, completion cap, rates, `reasoning` and
+`thinkingLevelMap` — for Anthropic, OpenAI, DeepSeek and GLM (our `glm` is pi's `zai`, whose catalogue carries the
+same ids). A model pi never published finds no baseline and falls back to what it always did, which makes a wrong
+mapping answer nothing rather than wrongly. Deliberately absent: LM Studio and llama.cpp, which pi does not carry,
+and OpenRouter, whose own listing is live where a generated snapshot could only be staler.
+
+**Only the FACTS come from it.** pi's minimax entry speaks `anthropic-messages` while our own minimax provider is
+OpenAI-shaped, so `api`, `baseUrl` and `compat` are never inherited — the wire is the upstream's and
+`piUpstreamCompat`'s business. A window, a price and a reasoning capability are properties of the MODEL, which is why
+they carry across a different endpoint serving it. The five catalogues are imported one module each rather than
+through `providers/all`, whose `MODELS` would pull all 37 generated data files into the renderer bundle.
+
+**Whether a model reasons has four sources and one route.** OpenRouter publishes it twice over — the word
 `reasoning` in `supported_parameters`, and a `reasoning` entry of its own carrying `supported_efforts` and
-`mandatory`; a model that does not reason carries neither, which is what tells the two apart. For a provider that
-serves an id-only listing — OpenAI, whose `o1`/`o3`/`o4`/`gpt-5` are the only entries today —
-`provider-catalog.json`'s `reasoning.modelPrefixes` is the answer and costs no request at all: the catalogue declares
-**which** models think, never how hard, so a declared reasoner gets pi's own set. Everything else publishes nothing
-and keeps pi's `false` — LM Studio's `capabilities` never mentions reasoning, and guessing from an id or an `arch`
-would be fiction.
+`mandatory`; a model that does not reason carries neither, which is what tells the two apart. pi's catalogue
+publishes it per model for the providers it covers, levels included, which is why a Claude session has a thinking
+level at all and why `o3-mini` offers low/medium/high and no `off` rather than pi's whole vocabulary. For a model pi
+has never heard of under a provider serving an id-only listing, `provider-catalog.json`'s `reasoning.modelPrefixes`
+is the answer and costs no request at all: the catalogue declares **which** models think, never how hard, so it
+never displaces published levels — a bare capability over `{levels, mandatory}` would lose the detail pi had.
+Everything else publishes nothing and keeps pi's `false` — LM Studio's `capabilities` never mentions reasoning, and
+guessing from an id or an `arch` would be fiction.
 
 **The facts travel two ways, both as a `PiModelRegistration`.** The model a container is born on is registered
 before anything has dialled the bridge, so its facts go in the agent's env file (`CD_MODEL_CONTEXT_WINDOW`,
@@ -434,7 +449,8 @@ become a `thinkingLevelMap`, because pi resolves availability FROM the map and n
 model that always reasons stops offering a mode it has not got. A provider that published no efforts leaves pi's own
 set standing rather than a narrower invented one. pi's `ProviderModelConfig` requires both numbers, so
 `PI_FALLBACK_CONTEXT_WINDOW` / `PI_FALLBACK_MAX_OUTPUT_TOKENS` (128000 / 4096, shared by both sides because both
-must agree on the cap in force) stand in — and are never reported to the user as a model's budget.
+must agree on the cap in force) stand in — and are never reported to the user as a model's budget. With the baseline
+underneath, they are now reached only for a model neither pi nor a probe could answer about.
 
 **What the user is offered comes back from pi**, not from the app's own list: `availableThinkingLevels`
 (`sessionControls.ts`) is `getAvailableThinkingLevels()` when the session `supportsThinking()` and empty otherwise,

@@ -7,12 +7,16 @@ import { fileURLToPath } from "node:url";
 // The thinking level, per model, on the WebKitGTK shell: it is offered only for a model somebody actually published a
 // reasoning capability for, and it offers exactly the efforts that were published — not pi's whole vocabulary.
 //
-// Three sources, all real code, driven the way a user drives it (`/model <id>` typed into the composer, `/settings`
+// Four sources, all real code, driven the way a user drives it (`/model <id>` typed into the composer, `/settings`
 // to read the session back):
 //
 //   the stand-in's own model  — its fictional provider publishes the capability, so demo mode has a real control
-//   `provider-catalog.json`   — the prefixes the app declares for a provider that serves no endpoint to ask (o3)
+//   pi's own catalogue        — the levels pi ships per model, for a provider with no endpoint to ask (o3-mini)
+//   `provider-catalog.json`   — the app's prefix claim, which is all anyone knows about a model pi never published
 //   the provider's listing    — OpenRouter's own `reasoning` entry, with the efforts and `mandatory`
+//
+// pi's catalogue arriving at all is the half that could break in the shell rather than in a unit test: its generated
+// data is JSON imported with an import attribute, and it has to survive the renderer bundle into WebKitGTK.
 //
 // The listing is served by a stub on loopback in OpenRouter's own shape, copied from the live listing, so the probe
 // that reads it is the shipped one and the run needs no network and no key. The one thing this cannot prove is that
@@ -23,9 +27,11 @@ import { fileURLToPath } from "node:url";
 const SCREEN = '[data-screen="ai.assistant"]';
 const DRAWER = ".AssistantSettingsDrawer";
 const BOOT_MODEL = "mock-assistant";
-// OpenAI serves an id-only listing, so these two differ only in what the app's own catalogue declares about them.
+// OpenAI serves an id-only listing, so these differ only in what somebody published about them: nothing for gpt-4o,
+// real levels in pi's catalogue for o3-mini, and — for a model pi has never heard of — the app's own prefix claim.
 const PLAIN_MODEL = "gpt-4o";
 const DECLARED_MODEL = "o3-mini";
+const UNPUBLISHED_MODEL = "gpt-5-unreleased-preview";
 // Mandatory reasoning, five published efforts topping out at xhigh — `qwen/qwen3.8-max` as the live listing has it.
 const PUBLISHED_MODEL = "qwen/qwen3.8-max";
 const PUBLISHED_ENTRY = {
@@ -77,6 +83,7 @@ const startStub = () =>
 let booted = {};
 let plain = {};
 let declared = {};
+let unpublished = {};
 let publishedLevels = {};
 
 describe("assistant thinking level", () => {
@@ -162,6 +169,7 @@ describe("assistant thinking level", () => {
     pointAppAt("openai");
     plain = await switchTo(PLAIN_MODEL);
     declared = await switchTo(DECLARED_MODEL);
+    unpublished = await switchTo(UNPUBLISHED_MODEL);
 
     // The provider's own listing, served on loopback in OpenRouter's shape. The id stays `openrouter` because that is
     // what selects the probe; only where it looks is this spec's.
@@ -193,12 +201,22 @@ describe("assistant thinking level", () => {
     );
   });
 
-  // The app's own declaration, with no request made at all: OpenAI has no endpoint that answers this.
-  it("offers pi's own levels for a model the app's catalogue declares", () => {
+  // pi's own catalogue, with no request made at all: OpenAI has no endpoint that answers this, and pi ships the
+  // model's published levels. o3-mini takes low, medium or high and cannot be asked to stop, so those are the levels
+  // offered and there is no Off — where the app's own prefix claim could only have said "it reasons".
+  it("offers the levels pi published for a model no endpoint can be asked about", () => {
     assert.equal(declared.model, DECLARED_MODEL);
-    assert.ok(declared.present, `${DECLARED_MODEL} is declared a reasoner by provider-catalog.json`);
-    assert.deepEqual(declared.levels, ["Off", "Minimal", "Low", "Medium", "High"]);
+    assert.ok(declared.present, `${DECLARED_MODEL} is published as a reasoner by pi's own catalogue`);
+    assert.deepEqual(declared.levels, ["Low", "Medium", "High"]);
     assert.equal(declared.selected, "Medium", "the level survives a switch that still supports it");
+  });
+
+  // pi's data is a generated snapshot, so a model newer than it falls back to the app's own prefix claim — which
+  // names WHICH models think and nothing more, leaving pi's own set standing.
+  it("falls back to the app's own claim for a model pi never published", () => {
+    assert.equal(unpublished.model, UNPUBLISHED_MODEL);
+    assert.ok(unpublished.present, `${UNPUBLISHED_MODEL} matches a prefix provider-catalog.json declares`);
+    assert.deepEqual(unpublished.levels, ["Off", "Minimal", "Low", "Medium", "High"]);
   });
 
   it("offers exactly what the provider published, including above high and without off", () => {

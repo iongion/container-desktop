@@ -44,7 +44,6 @@
     "defaultAuthScheme": "bearer",
     "authSchemes": ["bearer"],
     "reasoning": {
-      "kind": "effort",
       "modelPrefixes": ["o1", "o3", "o4", "gpt-5"]
     }
   },

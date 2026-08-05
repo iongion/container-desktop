@@ -1,0 +1,126 @@
+import type { Model } from "@earendil-works/pi-ai";
+import { getBuiltinModels } from "@earendil-works/pi-ai/providers/all";
+import { describe, expect, it } from "vitest";
+
+import { PI_BASELINE_PROVIDERS, piModelBaseline, piModelBaselineFacts } from "@/pi-bridge/modelBaseline";
+
+// A pi catalogue entry, as its generated data really shapes one. Only the fields a baseline reads are meaningful
+// here; the wire fields are present precisely so the tests can prove they never travel.
+function catalogueModel(overrides: Partial<Model<"openai-completions">> = {}): Model<"openai-completions"> {
+  return {
+    id: "glm-4.7",
+    name: "GLM 4.7",
+    api: "openai-completions",
+    provider: "zai",
+    baseUrl: "https://api.z.ai/api/coding/paas/v4",
+    reasoning: false,
+    input: ["text"],
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 200000,
+    maxTokens: 32000,
+    ...overrides,
+  } as Model<"openai-completions">;
+}
+
+describe("piModelBaselineFacts", () => {
+  it("carries the window, the completion cap and the rates pi published", () => {
+    const facts = piModelBaselineFacts(
+      catalogueModel({
+        contextWindow: 1000000,
+        maxTokens: 128000,
+        cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
+      }),
+    );
+
+    expect(facts).toEqual({
+      contextWindow: 1000000,
+      maxOutputTokens: 128000,
+      pricing: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
+    });
+  });
+
+  // The wire shape is the one thing a baseline must never contribute: pi's minimax entry is `anthropic-messages`
+  // while our own minimax provider is OpenAI-shaped, so inheriting `api` would hand an Anthropic field to an
+  // OpenAI upstream. The URL is the gateway's business and the compat is `piUpstreamCompat`'s.
+  it("never contributes the wire shape", () => {
+    const facts = piModelBaselineFacts(catalogueModel({ reasoning: true })) ?? {};
+
+    for (const leaked of ["api", "baseUrl", "provider", "compat", "headers", "id", "name", "input"]) {
+      expect(facts).not.toHaveProperty(leaked);
+    }
+  });
+
+  // pi's own rule, reused rather than restated: a level mapped to null is withdrawn, so a model whose `off` is
+  // withdrawn is one that always reasons — which is exactly what `mandatory` says.
+  it("reads a withdrawn off as a model that always reasons", () => {
+    const facts = piModelBaselineFacts(
+      catalogueModel({ reasoning: true, thinkingLevelMap: { off: null, xhigh: "xhigh", max: "max" } }),
+    );
+
+    expect(facts?.reasoning).toEqual({
+      levels: ["minimal", "low", "medium", "high", "xhigh", "max"],
+      mandatory: true,
+    });
+  });
+
+  // An unnamed level keeps pi's default availability, and `xhigh`/`max` are offered ONLY when the map names them.
+  it("keeps pi's default set for a reasoner that maps nothing", () => {
+    const facts = piModelBaselineFacts(catalogueModel({ reasoning: true }));
+
+    expect(facts?.reasoning).toEqual({ levels: ["minimal", "low", "medium", "high"] });
+  });
+
+  it("says nothing about reasoning for a model pi does not call a reasoner", () => {
+    expect(piModelBaselineFacts(catalogueModel({ reasoning: false }))?.reasoning).toBeUndefined();
+  });
+
+  // pi already defaults every rate to zero, so an all-zero cost is no fact at all — the same reading
+  // `modelWindow`'s own `pricingOf` takes.
+  it("treats an all-zero cost as no published price", () => {
+    expect(piModelBaselineFacts(catalogueModel())?.pricing).toBeUndefined();
+  });
+
+  it("answers nothing at all for an entry that published no usable number", () => {
+    expect(piModelBaselineFacts(catalogueModel({ contextWindow: 0, maxTokens: 0 }))).toBeUndefined();
+  });
+});
+
+describe("piModelBaseline", () => {
+  // The mapping earns its keep only if it reaches pi's real data. Asserted across the WHOLE published catalogue for
+  // each mapped provider rather than against pinned ids, so a pi data refresh cannot make this a false failure.
+  // Also the guard on the two records drifting apart: the catalogue module imported for each of our ids has to be
+  // the one pi's own accessor serves for the pi id we claim it is. Importing zai's entries under `minimax` would
+  // otherwise be invisible.
+  it("answers for every model pi publishes under a mapped provider", () => {
+    for (const ours of Object.keys(PI_BASELINE_PROVIDERS)) {
+      const theirs = PI_BASELINE_PROVIDERS[ours];
+      const published = getBuiltinModels(theirs);
+      expect(published.length, `pi publishes no models for ${theirs}`).toBeGreaterThan(0);
+
+      for (const model of published) {
+        const facts = piModelBaseline(ours, model.id);
+        expect(facts, `${ours}/${model.id} found no baseline`).toBeDefined();
+        expect(facts, `${ours}/${model.id} is not the entry pi serves`).toEqual(piModelBaselineFacts(model));
+        expect(facts?.contextWindow, `${ours}/${model.id}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  // Ours is `glm` and pi's is `zai`; the ids under it are the same GLM models, which is what makes the mapping a
+  // reading of pi's data rather than a claim of our own.
+  it("resolves our provider id onto pi's", () => {
+    const glm = getBuiltinModels("zai")[0];
+
+    expect(piModelBaseline("glm", glm.id)).toEqual(piModelBaselineFacts(glm));
+    expect(piModelBaseline("glm", glm.id)?.contextWindow).toBe(glm.contextWindow);
+  });
+
+  it("has nothing for a model pi never published", () => {
+    expect(piModelBaseline("deepseek", "deepseek-chat")).toBeUndefined();
+  });
+
+  // The two local providers pi does not carry, and the one whose own listing is better than any snapshot.
+  it.each(["lmstudio", "llamacpp", "openrouter"])("has no baseline for %s", (providerId) => {
+    expect(piModelBaseline(providerId, "any-model")).toBeUndefined();
+  });
+});

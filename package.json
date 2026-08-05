@@ -99,6 +99,7 @@
     "@blueprintjs/icons": "6.13.0",
     "@blueprintjs/select": "6.3.3",
     "@csstools/normalize.css": "12.1.1",
+    "@earendil-works/pi-ai": "0.83.0",
     "@mdi/js": "7.4.47",
     "@mdi/react": "1.6.1",
     "@monaco-editor/react": "4.7.0",

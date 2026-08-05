@@ -8,10 +8,15 @@
 // Only providers with a documented endpoint are asked, and only for the model in use. Everything else answers
 // `undefined`, which the panel renders as "unknown" rather than as a confident fiction.
 //
+// Under that answer sits what pi's own catalogue published for the model (`pi-bridge/modelBaseline`), so a provider
+// with no endpoint to ask — Anthropic, OpenAI, DeepSeek, GLM — is no longer a blank: pi's generated data carries the
+// window, the cap, the rates and the thinking levels, and a probe overrides it wherever a server can be asked.
+//
 // Every probe here was driven against a real server, because the shapes are not guessable: llama.cpp keeps its number
 // under `default_generation_settings`, not at the top level of `/props`, where a guess would have looked.
 
 import { getProviderEntry, type ResolvedProvider } from "@/ai-system/core/providers";
+import { piModelBaseline } from "@/pi-bridge/modelBaseline";
 import { type PiModelReasoning, piThinkingLevels } from "@/pi-bridge/protocol";
 import { isEmpty } from "@/utils";
 
@@ -186,8 +191,12 @@ export async function fetchModelWindow(
   options?: ModelWindowOptions,
 ): Promise<ModelWindow | undefined> {
   if (!resolved.model.trim()) return undefined;
-  const declared = declaredReasoning(resolved);
-  const known = declared ? { reasoning: declared } : {};
+  // Three sources, weakest first: what pi's catalogue published about this model, then the app's own curated claim,
+  // then what the provider itself answers. The curated claim names WHICH models think and nothing more, so it must
+  // not displace published levels — a bare `{}` over `{levels, mandatory}` would lose the detail pi had.
+  const baseline = piModelBaseline(resolved.id, resolved.model) ?? {};
+  const declared = baseline.reasoning ? undefined : declaredReasoning(resolved);
+  const known: ModelWindow = { ...baseline, ...(declared ? { reasoning: declared } : {}) };
   const probe = PROBES[resolved.id];
   if (!probe) return learned(known);
   const fetchImpl = options?.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));

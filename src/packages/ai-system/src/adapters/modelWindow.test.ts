@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { fetchModelWindow } from "@/ai-system/adapters/modelWindow";
 import type { ResolvedProvider } from "@/ai-system/core/providers";
+import { piModelBaseline } from "@/pi-bridge/modelBaseline";
 
 function provider(overrides: Partial<ResolvedProvider> = {}): ResolvedProvider {
   return {
@@ -189,13 +190,47 @@ describe("fetchModelWindow", () => {
     await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({ contextWindow: 262144 });
   });
 
-  // The one thing the app knows without asking anyone: the prefixes its own provider catalogue declares. OpenAI
-  // serves no endpoint that says a model reasons, and o3 does — so a provider with nothing to probe still answers.
-  it("answers with the reasoning its own catalogue declares for a provider it cannot probe", async () => {
+  // A provider with no endpoint to ask is no longer a blank: pi's own catalogue published this model's window, cap,
+  // rates and levels, so that is the answer. Compared against the baseline itself rather than pinned numbers — pi
+  // regenerates that data, and a refresh must not read as a failure here.
+  it("answers with what pi published for a provider it cannot probe", async () => {
     const fetchImpl = answering({});
     const resolved = provider({ id: "openai", kind: "openai", baseURL: "https://api.openai.com/v1", model: "o3-mini" });
-    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual({ reasoning: {} });
+
+    await expect(fetchModelWindow(resolved, { fetchImpl })).resolves.toEqual(piModelBaseline("openai", "o3-mini"));
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  // The app's own catalogue declares WHICH models think and nothing more. Where pi published the detail, that detail
+  // has to survive — a bare capability over `{levels, mandatory}` would throw away what the app had.
+  it("keeps pi's published levels rather than its own coarser claim", async () => {
+    const resolved = provider({ id: "openai", kind: "openai", baseURL: "https://api.openai.com/v1", model: "o3-mini" });
+
+    const answer = await fetchModelWindow(resolved, { fetchImpl: answering({}) });
+
+    expect(answer?.reasoning?.levels?.length).toBeGreaterThan(0);
+    expect(answer?.reasoning).not.toEqual({});
+  });
+
+  // pi's data is a generated snapshot, so a model newer than it finds no baseline. The curated prefix claim is then
+  // the only thing anyone knows, and it still answers.
+  it("falls back to its own claim for a model pi never published", async () => {
+    const resolved = provider({
+      id: "openai",
+      kind: "openai",
+      baseURL: "https://api.openai.com/v1",
+      model: "gpt-5-unreleased-preview",
+    });
+
+    await expect(fetchModelWindow(resolved, { fetchImpl: answering({}) })).resolves.toEqual({ reasoning: {} });
+  });
+
+  // LM Studio and llama.cpp are not in pi's catalogue at all, so nothing sits under the probe and the loaded window
+  // remains the only answer — the case the whole probe exists for.
+  it("leaves a provider pi does not carry to its probe alone", async () => {
+    const fetchImpl = answering({ data: [{ id: "qwen3-4b-instruct-2507", loaded_context_length: 8192 }] });
+
+    await expect(fetchModelWindow(provider(), { fetchImpl })).resolves.toEqual({ contextWindow: 8192 });
   });
 
   // llama.cpp serves ONE model at whatever `-c` it was started with, and publishes it under the default generation

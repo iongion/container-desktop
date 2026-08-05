@@ -29,9 +29,11 @@ const providerCatalogEntry = z
     defaultBaseURL: z.url().optional(),
     defaultAuthScheme: z.enum(["none", "bearer", "basic", "header"]),
     authSchemes: z.array(z.enum(["none", "bearer", "basic", "header"])).min(1),
+    // Which of a provider's models think, for a provider that serves an id-only listing and publishes nothing else.
+    // The floor under this is pi's own catalogue, which publishes the levels per model as well — so this is only
+    // consulted for a model pi's generated data has never heard of (see adapters/modelWindow).
     reasoning: z
       .object({
-        kind: z.literal("effort"),
         modelPrefixes: z.array(z.string().min(1)).min(1),
       })
       .strict()
