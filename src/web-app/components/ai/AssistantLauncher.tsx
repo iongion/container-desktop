@@ -9,6 +9,9 @@ import { useTranslation } from "react-i18next";
 import type { SessionLauncher } from "@/ai-system/core/sessionLaunchers";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 
+// The engine this app favours, in the one place the launcher decides what to highlight.
+const FAVOURED_ENGINE = "podman";
+
 import "./AssistantLauncher.css";
 
 export interface AssistantLauncherProps {
@@ -55,9 +58,12 @@ export const AssistantLauncher: React.FC<AssistantLauncherProps> = ({
   onCreate,
 }) => {
   const { t } = useTranslation();
-  // Exactly one row reads as "the answer": the first default this app offers, which is ordered so that podman comes
-  // first when it is running. The app does have a preference, so it states one rather than leaving a page of equals.
-  const primary = rows.find((row) => row.isDefault && row.state === "absent")?.connectionId;
+  // Exactly one row reads as "the answer", and which one is asked EXPLICITLY rather than taken from the order: a
+  // session already configured on another engine sorts ahead of the offered ones, so relying on position handed the
+  // highlight to docker on a machine that has both. This app favours podman.
+  const startable = rows.filter((row) => row.isDefault && row.state === "absent");
+  const primary = (startable.find((row) => engineOf(row.connectionId) === FAVOURED_ENGINE) ?? startable[0])
+    ?.connectionId;
 
   return (
     <div className="AssistantLauncher">
