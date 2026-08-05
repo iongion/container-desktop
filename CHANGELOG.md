@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Every provider pi ships is offered in the model picker — 37 of them, with names and model counts read from pi itself — behind their own heading, under the sources you already use
+- A provider the app was never set up for can be browsed and then added in one click: its endpoint comes from what pi publishes, and only the key is left to paste
 - Every model row in the picker says what it costs, how much room it has and whether it thinks, instead of an id alone
 - A cloud provider you have not added a key for can be browsed instead of being a dead end — the models it publishes are listed, and the key is what using one needs
 - A cloud model's real budget, answer cap and rates now show up even when its provider serves nothing to ask: Anthropic, OpenAI, DeepSeek and GLM models are read from pi's own published catalogue, and a running server's answer still wins wherever one can be asked

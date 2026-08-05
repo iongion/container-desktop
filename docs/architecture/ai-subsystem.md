@@ -420,8 +420,32 @@ and OpenRouter, whose own listing is live where a generated snapshot could only 
 **Only the FACTS come from it.** pi's minimax entry speaks `anthropic-messages` while our own minimax provider is
 OpenAI-shaped, so `api`, `baseUrl` and `compat` are never inherited — the wire is the upstream's and
 `piUpstreamCompat`'s business. A window, a price and a reasoning capability are properties of the MODEL, which is why
-they carry across a different endpoint serving it. The five catalogues are imported one module each rather than
-through `providers/all`, whose `MODELS` would pull all 37 generated data files into the renderer bundle.
+they carry across a different endpoint serving it.
+
+**An AGGREGATOR never gets a baseline.** Its terms are per route — the same model is served at different windows,
+caps and prices, and several are free where the vendor charges — and its own listing publishes all of it live, so a
+snapshot underneath could only contradict it. Detected the way pi's ids show it: an aggregator's carry a vendor
+prefix. Its catalogue is still LISTED, because browsing it offline is useful; it just never becomes a floor.
+
+## Where the picker's sources come from
+
+`ui/core/providerSources` puts the two lists together. `provider-catalog.json` owns what the app can CONNECT to —
+endpoint, auth schemes, whether discovery is a listing or a single served model — and it owns LM Studio and llama.cpp,
+which pi has never heard of. pi's catalogue owns BREADTH: **37 providers**, names and per-model data included, none of
+it written down here (`piProviderCatalogue` reads `builtinProviders()`, so the list cannot drift from pi's).
+
+The root panel keeps the app's own **Local** and **Cloud** groups first, in their existing order, and adds one group
+below for everything pi ships that the app has no entry for; each of those rows says how many models pi publishes.
+Drilling into one lists them **with no key, no network and no settings entry** — a generated catalogue asks nobody —
+above a strip explaining that browsing is free and a key is what using one needs. Nothing there wears a tick: the
+tree resolves a choice, which is right when picking and wrong when browsing.
+
+**Adopting** one writes the connection facts pi already published (its endpoint, and that it takes a bearer token)
+into `ai.providers`, which is what makes it a source a session can start on. It then appears among the Cloud sources
+on both surfaces — the picker and Settings — because a provider whose key can never be edited is a dead end. The KEY
+itself is never touched by that write. A pi-only provider resolves through `sourceCatalogEntry`, so the panels, the
+tree builder and the settings form all see the same `ProviderCatalogEntry` shape they always have; its `kind`,
+`discovery` and aggregator flag are read off the api its models declare and whether their ids carry a slash.
 
 **Whether a model reasons has four sources and one route.** OpenRouter publishes it twice over — the word
 `reasoning` in `supported_parameters`, and a `reasoning` entry of its own carrying `supported_efforts` and

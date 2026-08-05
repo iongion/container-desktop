@@ -1,14 +1,9 @@
 import type { Model } from "@earendil-works/pi-ai";
 import { getBuiltinModels } from "@earendil-works/pi-ai/providers/all";
-import { ANTHROPIC_MODELS } from "@earendil-works/pi-ai/providers/anthropic.models";
 import { describe, expect, it } from "vitest";
 
-import {
-  PI_BASELINE_PROVIDERS,
-  piModelBaseline,
-  piModelBaselineFacts,
-  piProviderModelIds,
-} from "@/pi-bridge/modelBaseline";
+import { piModelBaseline, piModelBaselineFacts, piProviderIdFor, piProviderModelIds } from "@/pi-bridge/modelBaseline";
+import { piBrowsableProviders, piProvider } from "@/pi-bridge/piProviderCatalogue";
 
 // A pi catalogue entry, as its generated data really shapes one. Only the fields a baseline reads are meaningful
 // here; the wire fields are present precisely so the tests can prove they never travel.
@@ -92,29 +87,26 @@ describe("piModelBaselineFacts", () => {
 });
 
 describe("piModelBaseline", () => {
-  // The mapping earns its keep only if it reaches pi's real data. Asserted across the WHOLE published catalogue for
-  // each mapped provider rather than against pinned ids, so a pi data refresh cannot make this a false failure.
-  // Also the guard on the two records drifting apart: the catalogue module imported for each of our ids has to be
-  // the one pi's own accessor serves for the pi id we claim it is. Importing zai's entries under `minimax` would
-  // otherwise be invisible.
-  it("answers for every model pi publishes under a mapped provider", () => {
-    for (const ours of Object.keys(PI_BASELINE_PROVIDERS)) {
-      const theirs = PI_BASELINE_PROVIDERS[ours];
-      const published = getBuiltinModels(theirs);
-      expect(published.length, `pi publishes no models for ${theirs}`).toBeGreaterThan(0);
-
-      for (const model of published) {
-        const facts = piModelBaseline(ours, model.id);
-        expect(facts, `${ours}/${model.id} found no baseline`).toBeDefined();
-        expect(facts, `${ours}/${model.id} is not the entry pi serves`).toEqual(piModelBaselineFacts(model));
-        expect(facts?.contextWindow, `${ours}/${model.id}`).toBeGreaterThan(0);
+  // Asserted across the WHOLE published catalogue rather than against pinned ids, so a pi data refresh cannot make
+  // this a false failure — and over every provider pi ships, not a chosen few.
+  it("answers for every model pi publishes", () => {
+    for (const provider of piBrowsableProviders()) {
+      // Aggregators are excluded by design — see the aggregator test below.
+      if (provider.models.some((model) => model.id.includes("/"))) continue;
+      for (const model of provider.models) {
+        const facts = piModelBaseline(provider.id, model.id);
+        expect(facts, `${provider.id}/${model.id} found no baseline`).toBeDefined();
+        expect(facts, `${provider.id}/${model.id} is not the entry pi serves`).toEqual(piModelBaselineFacts(model));
       }
     }
   });
 
-  // Ours is `glm` and pi's is `zai`; the ids under it are the same GLM models, which is what makes the mapping a
+  // Ours is `glm` and pi's is `zai`; the ids under it are the same GLM models, which is what makes the alias a
   // reading of pi's data rather than a claim of our own.
   it("resolves our provider id onto pi's", () => {
+    expect(piProviderIdFor("glm")).toBe("zai");
+    expect(piProviderIdFor("anthropic")).toBe("anthropic");
+
     const glm = getBuiltinModels("zai")[0];
 
     expect(piModelBaseline("glm", glm.id)).toEqual(piModelBaselineFacts(glm));
@@ -125,26 +117,35 @@ describe("piModelBaseline", () => {
     expect(piModelBaseline("deepseek", "deepseek-chat")).toBeUndefined();
   });
 
-  // The two local providers pi does not carry, and the one whose own listing is better than any snapshot.
-  it.each(["lmstudio", "llamacpp", "openrouter"])("has no baseline for %s", (providerId) => {
+  // The two local servers pi does not carry: only a running server knows what it loaded.
+  it.each(["lmstudio", "llamacpp"])("has no baseline for %s", (providerId) => {
     expect(piModelBaseline(providerId, "any-model")).toBeUndefined();
+    expect(piProvider(providerId)).toBeUndefined();
   });
 });
 
 describe("piProviderModelIds", () => {
   // The list that makes a provider you have not keyed browsable instead of a dead end.
-  it("lists what pi publishes for a mapped provider", () => {
+  it("lists what pi publishes for a provider it carries", () => {
     const ids = piProviderModelIds("anthropic");
 
     expect(ids.length).toBeGreaterThan(0);
-    expect(ids).toEqual(Object.keys(ANTHROPIC_MODELS));
+    expect(ids).toEqual(getBuiltinModels("anthropic").map((model) => model.id));
     for (const id of ids) {
       expect(piModelBaseline("anthropic", id)).toBeDefined();
     }
   });
 
+  // An aggregator's catalogue is still LISTED — browsing it offline is useful — but it never becomes a baseline:
+  // its terms are per route, and its own listing publishes them live.
+  it("lists an aggregator's models but gives them no baseline", () => {
+    const ids = piProviderModelIds("openrouter");
+
+    expect(ids.length).toBeGreaterThan(0);
+    expect(piModelBaseline("openrouter", ids[0])).toBeUndefined();
+  });
+
   it("has nothing to list for a provider pi does not carry", () => {
     expect(piProviderModelIds("lmstudio")).toEqual([]);
-    expect(piProviderModelIds("openrouter")).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 // What pi's OWN catalogue already knows about a model, so a registration stops inventing one.
 //
 // pi ships generated per-model data for 37 providers — the window, the completion cap, the rates, and whether the
-// model reasons and how hard (`pi-ai/providers/data/*.json`, read through `getBuiltinModel`). Until now none of it
+// model reasons and how hard (`providers/data/*.json`, reached through `piProviderCatalogue`). Until now none of it
 // reached us: `piModelConfig` registers under a synthetic gateway id, so pi's composer finds no base layer and every
 // number the app had not probed fell back to `PI_FALLBACK_CONTEXT_WINDOW` and a zero price.
 //
@@ -16,13 +16,8 @@
 
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
-import type { BuiltinProvider } from "@earendil-works/pi-ai/providers/all";
-import { ANTHROPIC_MODELS } from "@earendil-works/pi-ai/providers/anthropic.models";
-import { DEEPSEEK_MODELS } from "@earendil-works/pi-ai/providers/deepseek.models";
-import { MINIMAX_MODELS } from "@earendil-works/pi-ai/providers/minimax.models";
-import { OPENAI_MODELS } from "@earendil-works/pi-ai/providers/openai.models";
-import { ZAI_MODELS } from "@earendil-works/pi-ai/providers/zai.models";
 
+import { piProvider } from "@/pi-bridge/piProviderCatalogue";
 import { type PiModelReasoning, piThinkingLevels } from "@/pi-bridge/protocol";
 
 // The registration fields a baseline can fill, in `PiModelRegistration`'s own names so they flow into a model window
@@ -35,33 +30,30 @@ export interface PiModelBaseline {
   reasoning?: PiModelReasoning;
 }
 
-// Our provider ids onto pi's. Four are the same word; `glm` is pi's `zai`, whose catalogue carries the same GLM ids,
-// which is what makes this a reading of pi's data rather than a claim of our own.
-//
-// Absent on purpose: `lmstudio` and `llamacpp`, which pi does not carry at all, and `openrouter`, whose own listing
-// publishes the window, the cap, the price AND the reasoning efforts live — a generated snapshot could only be
-// staler, and its data alone is 120K.
-//
-// Kept beside the catalogues below as the record of WHICH pi provider each one is, and cross-checked against pi's own
-// accessor in the test: importing one provider's catalogue under another's name is the mistake this catches.
-export const PI_BASELINE_PROVIDERS: Record<string, BuiltinProvider> = {
-  anthropic: "anthropic",
-  openai: "openai",
-  deepseek: "deepseek",
-  glm: "zai",
-  minimax: "minimax",
-};
+// Where our provider id is not pi's word for the same thing. Ours is `glm`; pi's is `zai`, whose catalogue carries
+// the same GLM ids — which is what makes this a reading of pi's data rather than a claim of our own. Every other id
+// we ship either matches pi's or has no pi entry at all (`lmstudio`, `llamacpp`), and an unmapped id simply finds
+// nothing, so a wrong guess answers nothing rather than wrongly.
+const PI_PROVIDER_ALIASES: Record<string, string> = { glm: "zai" };
 
-// The five catalogues themselves, imported one module each. `providers/all` would have been the obvious read, but its
-// `MODELS` pulls every one of the 37 generated data files into the graph — 552K of JSON in the renderer bundle to
-// answer about five providers. These are the same entries, without the other 32.
-const PI_BASELINE_CATALOGUES: Record<string, Record<string, Model<Api>>> = {
-  anthropic: ANTHROPIC_MODELS,
-  openai: OPENAI_MODELS,
-  deepseek: DEEPSEEK_MODELS,
-  glm: ZAI_MODELS,
-  minimax: MINIMAX_MODELS,
-};
+export function piProviderIdFor(providerId: string): string {
+  return PI_PROVIDER_ALIASES[providerId] ?? providerId;
+}
+
+// An AGGREGATOR's terms are the aggregator's, not the underlying model's: the same model is served at different
+// windows, caps and prices per route, and several are free where the vendor charges. Its own listing publishes all
+// of that live, so a snapshot underneath could only contradict it — a price reported for a route that serves the
+// model free is exactly the fiction the probe exists to avoid. Detected the way pi's own ids show it: an
+// aggregator's model ids carry the vendor prefix.
+function isAggregator(pi: { models: readonly Model<Api>[] }): boolean {
+  return pi.models.some((model) => model.id.includes("/"));
+}
+
+function catalogueModel(providerId: string, modelId: string): Model<Api> | undefined {
+  const pi = piProvider(piProviderIdFor(providerId));
+  if (!pi || isAggregator(pi)) return undefined;
+  return pi.models.find((model) => model.id === modelId);
+}
 
 function usable(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : undefined;
@@ -115,16 +107,15 @@ export function piModelBaselineFacts(model: Model<Api>): PiModelBaseline | undef
   return Object.keys(facts).length ? facts : undefined;
 }
 
-// The models pi publishes for one of our providers, in pi's own order. A provider with no key configured can be
-// browsed from this instead of being the dead end it used to be — and a provider pi does not carry answers with
-// nothing, which is what keeps the picker's own "couldn't reach it" state meaningful.
+// The models pi publishes for one of our providers, in pi's own order. A provider with no key configured is browsed
+// from this instead of being the dead end it used to be, and a provider pi does not carry answers with nothing —
+// which is what keeps the picker's own "couldn't reach it" state meaningful.
 export function piProviderModelIds(providerId: string): string[] {
-  const catalogue = PI_BASELINE_CATALOGUES[providerId];
-  return catalogue ? Object.keys(catalogue) : [];
+  return (piProvider(piProviderIdFor(providerId))?.models ?? []).map((model) => model.id);
 }
 
 export function piModelBaseline(providerId: string, modelId: string): PiModelBaseline | undefined {
   if (!modelId.trim()) return undefined;
-  const model = PI_BASELINE_CATALOGUES[providerId]?.[modelId];
+  const model = catalogueModel(providerId, modelId);
   return model ? piModelBaselineFacts(model) : undefined;
 }

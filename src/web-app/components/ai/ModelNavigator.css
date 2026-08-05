@@ -144,3 +144,9 @@
   margin-top: 1px;
   color: var(--app-intent-warning-text);
 }
+/* The action keeps to one line: it names a provider, and "Add Mistral" broken across two reads as two words. */
+.ModelNavigatorUnkeyed .bp6-button {
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
+}
