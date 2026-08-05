@@ -15,6 +15,7 @@
 // Every probe here was driven against a real server, because the shapes are not guessable: llama.cpp keeps its number
 // under `default_generation_settings`, not at the top level of `/props`, where a guess would have looked.
 
+import { describeError } from "@/ai-system/core/errors";
 import { getProviderEntry, type ResolvedProvider } from "@/ai-system/core/providers";
 import { piModelBaseline } from "@/pi-bridge/modelBaseline";
 import { type PiModelReasoning, piThinkingLevels } from "@/pi-bridge/protocol";
@@ -87,6 +88,47 @@ async function readJSON(
   const response = await opts.fetchImpl(url, init);
   if (!response.ok) return undefined;
   return await response.json();
+}
+
+// Whether the server has this model IN MEMORY. Its OpenAI-compatible `/v1/models` lists everything DOWNLOADED, so a
+// model can be offered, picked and started with while nothing is loaded at all — and the first prompt is where that
+// turns up, as a load failure the user never asked for. `/api/v0/models` carries the state, so the app can know.
+export async function lmStudioModelState(
+  resolved: ResolvedProvider,
+  options?: ModelWindowOptions,
+): Promise<"loaded" | "not-loaded" | undefined> {
+  const fetchImpl = options?.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
+  const opts = { fetchImpl, ...(options?.signal ? { signal: options.signal } : {}) };
+  const entry = entryFor(await readJSON(`${origin(resolved.baseURL)}/api/v0/models`, opts), resolved.model);
+  const state = entry?.state;
+  return state === "loaded" || state === "not-loaded" ? state : undefined;
+}
+
+// Ask the server to load it. LM Studio exposes this over REST, so an app that tells its user to go and run a CLI
+// command is choosing to be less capable than the server it is talking to. The context length travels because the
+// session needs room for pi's own prompt, and a JIT load would otherwise pick the model's default.
+export async function loadLmStudioModel(
+  resolved: ResolvedProvider,
+  options?: ModelWindowOptions & { contextLength?: number },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const fetchImpl = options?.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
+  try {
+    const response = await fetchImpl(`${origin(resolved.baseURL)}/api/v1/models/load`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: resolved.model,
+        ...(options?.contextLength ? { context_length: options.contextLength } : {}),
+      }),
+      ...(options?.signal ? { signal: options.signal } : {}),
+    });
+    if (response.ok) return { ok: true };
+    // The server's own words about why it could not: a model whose runtime this machine cannot run says so here,
+    // and no amount of retrying or rephrasing by the app would change it.
+    return { ok: false, error: describeError(await response.text()) };
+  } catch (error) {
+    return { ok: false, error: describeError(error) };
+  }
 }
 
 // LM Studio's own REST surface. `loaded_context_length` is what the running instance will actually accept and is

@@ -459,6 +459,15 @@ export const invokeSchemas = {
   [AI_CHANNELS.modelWindow]: z
     .object({ providerId: optionalProvider, model: z.string().trim().min(1).max(MAX_MODEL_CHARS) })
     .strict(),
+  // Loading a model is the same question plus how much room to give it: a JIT load would take the model's own
+  // default, which is routinely too small for the session's own prompt.
+  [AI_CHANNELS.modelLoad]: z
+    .object({
+      providerId: optionalProvider,
+      model: z.string().trim().min(1).max(MAX_MODEL_CHARS),
+      contextLength: z.number().int().positive().optional(),
+    })
+    .strict(),
   [AI_CHANNELS.engineOp]: engineOpRequest,
   [AI_CHANNELS.workspaceOp]: workspaceOpRequest,
   [AI_CHANNELS.workspaceRelease]: workspaceReleaseRequest,
@@ -820,6 +829,8 @@ export const responseSchemas = {
     .strict(),
   [AI_CHANNELS.modelsCancel]: ok,
   // Every field absent means the provider did not say — rendered as "unknown", never as a confident number.
+  // Whether the server took it, and its own words when it did not.
+  [AI_CHANNELS.modelLoad]: z.object({ ok: z.boolean(), error: z.string().optional() }).strict(),
   [AI_CHANNELS.modelWindow]: z
     .object({
       contextWindow: z.number().int().positive().optional(),

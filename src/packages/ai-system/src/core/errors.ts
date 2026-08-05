@@ -37,9 +37,26 @@ function messageFromBody(body: unknown): string | undefined {
   return undefined;
 }
 
+// A provider failure often arrives as TEXT, not an object: the status and the raw body, verbatim, as one string —
+// `400: {"message":"Failed to load model \"x\"…","type":"invalid_request_error"}`. The only sentence worth reading
+// is buried in that blob, so the status is kept and the blob is opened.
+function messageFromStatusText(text: string): string | undefined {
+  const brace = text.indexOf("{");
+  if (brace < 0) return undefined;
+  const message = messageFromBody(text.slice(brace));
+  if (!message) return undefined;
+  const status = text
+    .slice(0, brace)
+    .replace(/[\s:]+$/, "")
+    .trim();
+  return status ? `${status}: ${message}` : message;
+}
+
 export function describeError(error: unknown, depth = 0): string {
   if (error == null) return "Unknown error";
-  if (typeof error === "string") return cleanString(error) ?? "Unknown error";
+  if (typeof error === "string") {
+    return messageFromStatusText(error) ?? cleanString(error) ?? "Unknown error";
+  }
   if (typeof error !== "object") return String(error);
 
   const record = error as {

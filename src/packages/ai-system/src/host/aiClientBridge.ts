@@ -61,6 +61,8 @@ export interface IAI {
   // What the provider says about the chosen model — its window, its rates, whether it reasons. `{}` when it
   // publishes none of it.
   modelWindow: (model: string, providerId?: string) => Promise<ModelWindow>;
+  // Load a model into a local server. Answers the server's own reason when it cannot.
+  modelLoad: (model: string, providerId?: string, contextLength?: number) => Promise<{ ok: boolean; error?: string }>;
   cancelModelList: (requestId: string) => Promise<{ ok: true }>;
   // One container-engine operation on the coding agent's behalf. Answers with a result rather than throwing:
   // the caller is settling a request a containerized agent is blocked on.
@@ -137,6 +139,8 @@ export function createAIClient(transport: AIClientTransport) {
       invoke(AI_CHANNELS.modelsList, { providerId, requestId }),
     cancelModelList: (requestId) => invoke(AI_CHANNELS.modelsCancel, { requestId }),
     modelWindow: (model, providerId) => invoke(AI_CHANNELS.modelWindow, { model, providerId }),
+    modelLoad: (model, providerId, contextLength) =>
+      invoke(AI_CHANNELS.modelLoad, { model, providerId, contextLength }),
     runEngineOp: (request) => invoke(AI_CHANNELS.engineOp, request),
     runWorkspaceOp: (request) => invoke(AI_CHANNELS.workspaceOp, request),
     releaseWorkspaceTargets: (runId) => invoke(AI_CHANNELS.workspaceRelease, { runId }),

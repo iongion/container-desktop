@@ -20,6 +20,7 @@ import {
   type PiBridgeClient,
 } from "@/ai-system/adapters/piBridgeClient";
 import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
+import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import {
   type AIPermissionMode,
@@ -65,6 +66,10 @@ import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { readAppPiThemePalette } from "@/web-app/themes/appPiTheme";
 
 const logger = createLogger("web-app.codingAgent");
+
+// The one provider whose server exposes loading over REST. llama.cpp serves the model it was started with and has
+// nothing to load into; every cloud provider loads nothing at all.
+const LOCAL_LOADABLE_PROVIDER = "lmstudio";
 
 // A session outlives an expiring sign-in, and the gateway signs with the access token it was started with. So the app
 // renews the credential just BEFORE it lapses and hands the new one to the gateway through the agent container — the
@@ -456,8 +461,87 @@ export interface CodingAgentState {
   readToolOutput(path: string): Promise<{ text: string; truncated: boolean }>;
 }
 
+// The agent image is built from this repo, so an image built before a command existed answers "unknown command
+// type: <name>" — the container's own words, meaningless to the person reading them. It is not a broken app and
+// not a broken command: the image is behind the app, and the only thing to do about it is rebuild it. So that is
+// what it says, naming the engine whose image is stale, because an image built for one engine is not the other's.
+export function staleImageAware(name: string, result: PiCommandResult, engine?: string): PiCommandResult {
+  if (result.ok || !/unknown command type/i.test(result.error ?? "")) return result;
+  const target = engine ? ` --engine ${engine}` : "";
+  return {
+    ok: false,
+    error: t(
+      "This assistant image is older than the app and does not know /{{name}} — rebuild it with `yarn cli agent-image{{target}}`",
+      {
+        name,
+        target,
+      },
+    ),
+  };
+}
+
+// What a failed turn should say. The upstream text is unwrapped from whatever JSON body it came in, and where the
+// failure is one this app can explain, the explanation is added — never replacing the server's words, because a
+// guess that overwrote the real reason would be worse than the raw blob.
+export function explainTurnFailure(message: string, modelId?: string): string {
+  const described = describeError(message);
+  // The server tried to load it and could not, and the app has already tried too (loadSessionModel, at start). What
+  // is left is the server's own reason — a runtime this machine cannot run, or a model too big for its memory — and
+  // the one thing the app can still say: another model, one it can actually load, will work.
+  if (/failed to load model/i.test(described)) {
+    return t("{{reason}} — the local server could not load {{model}}. Choose another model.", {
+      reason: described,
+      model: modelId ?? t("this model"),
+    });
+  }
+  return described;
+}
+
+// Make sure the local server actually HAS the model in memory before a turn depends on it. Its OpenAI-shaped
+// `/v1/models` lists everything downloaded, so the picker can offer a model nothing has loaded — and the load then
+// happens on the first prompt, where a failure reads as the conversation breaking. The server exposes loading over
+// REST, so the app does it here rather than printing a command for someone to run.
+// What to ask a load for — NOT the model's maximum. For a model nothing has loaded, the window probe answers
+// `max_context_length`, which is 262144 for a 9B: asking a server to allocate that is asking it to fail for want of
+// memory. This is the room a session actually needs (pi's prompt and tool definitions come to roughly 9k before the
+// first word), and the model's own maximum still caps it.
+const LOAD_CONTEXT_TOKENS = 16384;
+
+export function loadContextFor(contextWindow?: number): number {
+  return contextWindow ? Math.min(contextWindow, LOAD_CONTEXT_TOKENS) : LOAD_CONTEXT_TOKENS;
+}
+
+async function loadSessionModel(
+  modelId: string,
+  providerId: string,
+  contextWindow?: number,
+): Promise<string | undefined> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge?.modelLoad) return undefined;
+  const outcome = await bridge.modelLoad(modelId, providerId, loadContextFor(contextWindow)).catch((error) => ({
+    ok: false,
+    error: describeError(error),
+  }));
+  return outcome.ok ? undefined : outcome.error;
+}
+
 export function noContributedResources(): ContributedResources {
   return { extensions: [], commands: [], skills: [], prompts: [], builtins: [] };
+}
+
+// A container answers with whatever ITS pi and ITS image know about, so an image built before a field this app has
+// since added simply omits it. That answer used to be stored verbatim, which put `undefined` where an array belongs
+// and took the whole Assistant screen into the error boundary the moment the palette called .filter() on it. The one
+// place the container's answer enters the store is the one place to make it whole.
+function contributedResourcesFrom(answer: Partial<ContributedResources> | undefined): ContributedResources {
+  const empty = noContributedResources();
+  return {
+    extensions: answer?.extensions ?? empty.extensions,
+    commands: answer?.commands ?? empty.commands,
+    skills: answer?.skills ?? empty.skills,
+    prompts: answer?.prompts ?? empty.prompts,
+    builtins: answer?.builtins ?? empty.builtins,
+  };
 }
 
 // Remove the container pairs and networks a previous run left behind — the app is the only thing that would have,
@@ -607,6 +691,26 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // which is routinely a fraction of what the model could do. Unknown is fine and reported as unknown; what is not
     // fine is the invented number this replaces.
     const modelWindow = await readModelWindow(options.modelId, options.providerId);
+    // A local server answers prompts only for what it has LOADED, while listing everything it has DOWNLOADED — so a
+    // model can be picked here that nothing has in memory. It is loaded NOW, in the drawer, under the progress bar
+    // the user is already watching, instead of at the first prompt where the failure reads as the conversation
+    // breaking. The window just probed travels with it: a load left to its own default routinely has no room for
+    // pi's own prompt.
+    if (options.providerId === LOCAL_LOADABLE_PROVIDER) {
+      set((state) => ({ startLog: [...state.startLog, `loading ${options.modelId} into the local server`] }));
+      const refused = await loadSessionModel(options.modelId, options.providerId, modelWindow.contextWindow);
+      if (refused) {
+        // Starting the pair anyway would spend containers on a session whose very first turn cannot be answered.
+        set({
+          status: "error",
+          error: t("The local server could not load {{model}}: {{reason}}", {
+            model: options.modelId,
+            reason: refused,
+          }),
+        });
+        return;
+      }
+    }
     const spec: PiAgentSessionSpec = {
       imageTag: agentImageTag(options.appVersion),
       workspacePath: options.workspacePath,
@@ -797,6 +901,13 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   // Every bridge event lands here, whether the socket delivered it or a WebDriver spec pushed it, so the
   // transcript a test sees is projected by exactly the code the session uses.
   applyBridgeEvent(event) {
+    // An upstream failure arrives as the server's own words, and a local inference server's words assume you know
+    // how it works: LM Studio answers a prompt for a model it has not loaded with "Failed to load model. Error:
+    // Failed to load model." — true, circular, and useless. The transcript gets the reason unwrapped from its JSON
+    // body plus the one thing only this app can add: what to do about it.
+    if (event.type === "error") {
+      event = { ...event, message: explainTurnFailure(event.message, get().sessionModel ?? get().spec?.modelId) };
+    }
     // The container is running a different conversation than the one on screen — /new, /resume, /clone or /import.
     // Everything held here belongs to the session that is gone, including the dialogs and container operations it
     // was waiting on, so it goes; the entries of the session that replaced it arrive next as ordinary events.
@@ -851,7 +962,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     const { client } = get();
     if (!client) return;
     try {
-      set({ resources: await client.listResources() });
+      set({ resources: contributedResourcesFrom(await client.listResources()) });
     } catch (error) {
       // An empty palette is a lesser failure than a broken session, so this stays a warning.
       logger.warn("unable to read the plugin resources", error);
@@ -1120,11 +1231,18 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     const { client } = get();
     if (!client) return { ok: false, error: "there is no session to run a pi command in" };
     try {
-      return await client.runCommand(name, args);
+      // Which engine's image to rebuild: the pair's host alias is set from the engine at start, and podman is the
+      // only one given `host.containers.internal`. An image built for one engine does not exist for the other, so a
+      // rebuild command without the engine sends half the readers to the wrong one.
+      const engine = get().spec?.hostAlias === "host.containers.internal" ? "podman" : "docker";
+      return staleImageAware(name, await client.runCommand(name, args), engine);
     } catch (error) {
-      // A lost socket or a container that predates the command: both are reasons, not crashes.
+      // A lost socket or a container that predates the command: both are reasons, not crashes. `.message` was read
+      // straight off the thrown value, and a socket failure throws an EVENT — no message at all — so the composer
+      // showed an empty reason while the log held the only copy of what happened. describeError digs out the
+      // richest text any thrown shape carries, and the command is named because "it failed" is not a reason.
       logger.error("a pi command failed", name, error);
-      return { ok: false, error: (error as Error).message };
+      return { ok: false, error: `/${name} failed: ${describeError(error)}` };
     }
   },
 

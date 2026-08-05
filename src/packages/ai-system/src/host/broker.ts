@@ -1,4 +1,4 @@
-import { fetchModelWindow } from "@/ai-system/adapters/modelWindow";
+import { fetchModelWindow, lmStudioModelState, loadLmStudioModel } from "@/ai-system/adapters/modelWindow";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -305,6 +305,21 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
       guarded(event, async () => {
         const resolved = resolveProvider(await deps.getAISettings(), request.providerId);
         return (await fetchModelWindow({ ...resolved, model: request.model })) ?? {};
+      }),
+    );
+    // Load a model into a local server, over the server's REST surface. Host-side for the same reason the window
+    // probe is: only this realm can reach the provider's own endpoint. A server that refuses answers with its own
+    // reason, which is the only thing worth telling the user — the app cannot make a runtime this machine lacks work.
+    onInvoke(AI_CHANNELS.modelLoad, (event, request) =>
+      guarded(event, async () => {
+        const resolved = { ...resolveProvider(await deps.getAISettings(), request.providerId), model: request.model };
+        // Already in memory is already done — asking a server to load what it is running invites a refusal that
+        // would read as a failure to start.
+        if ((await lmStudioModelState(resolved)) === "loaded") return { ok: true };
+        return await loadLmStudioModel(
+          resolved,
+          request.contextLength ? { contextLength: request.contextLength } : undefined,
+        );
       }),
     );
     // The coding agent's container toolset lands here. dispatchEngineOp answers with a reason instead of

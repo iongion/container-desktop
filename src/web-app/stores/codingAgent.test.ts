@@ -11,7 +11,12 @@ import type { ProjectContextPack, ProjectContextSnapshot } from "@/ai-system/cor
 import type { HostRequestEvent } from "@/ai-system/core/uiRequests";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { emptyCodingAgentChrome, useCodingAgentStore } from "@/web-app/stores/codingAgent";
+import {
+  emptyCodingAgentChrome,
+  explainTurnFailure,
+  noContributedResources,
+  useCodingAgentStore,
+} from "@/web-app/stores/codingAgent";
 
 // The real one builds a Blueprint toaster, which renders React against a window these tests install and remove
 // themselves — the render then lands after the window is gone. Mocked so a warning can be asserted instead.
@@ -856,5 +861,70 @@ describe("useCodingAgentStore session replacement", () => {
 
     await expect(useCodingAgentStore.getState().newConversation()).rejects.toThrow(/cancelled/);
     expect(useCodingAgentStore.getState().view.timeline).toHaveLength(1);
+  });
+});
+
+describe("useCodingAgentStore contributed resources", () => {
+  afterEach(() => {
+    useCodingAgentStore.setState({ client: undefined, resources: noContributedResources() });
+    (globalThis as { window?: unknown }).window = undefined;
+  });
+
+  it("fills in what a container's answer left out", async () => {
+    const client = {
+      // What an agent image older than a field this app has since added replies with. Taken verbatim it put
+      // `undefined` where an array belongs, and the first consumer to call .filter() on it — the command palette
+      // building pi's builtins — took the whole Assistant screen into the error boundary.
+      listResources: vi.fn(async () => ({ extensions: [], commands: [], skills: [] })),
+    } as unknown as PiBridgeClient;
+    useCodingAgentStore.setState({ client });
+
+    await useCodingAgentStore.getState().refreshResources();
+
+    const resources = useCodingAgentStore.getState().resources;
+    expect(resources.builtins).toEqual([]);
+    expect(resources.prompts).toEqual([]);
+  });
+
+  it("keeps what the container did answer with", async () => {
+    const builtins = [{ name: "scoped-models", description: "Enable/disable models", runsIn: "session" }];
+    const client = {
+      listResources: vi.fn(async () => ({ extensions: [], commands: [], skills: [], prompts: [], builtins })),
+    } as unknown as PiBridgeClient;
+    useCodingAgentStore.setState({ client });
+
+    await useCodingAgentStore.getState().refreshResources();
+
+    expect(useCodingAgentStore.getState().resources.builtins).toEqual(builtins);
+  });
+});
+
+describe("explainTurnFailure", () => {
+  // Verbatim what LM Studio answered when a downloaded-but-unloaded model was prompted.
+  const LM_STUDIO_400 =
+    '400: {"message":"Failed to load model \\"qwen3.5-9b-mtp\\". Error: Failed to load model.","type":"invalid_request_error","param":"model","code":null}';
+
+  it("opens the JSON blob an upstream error arrives in", () => {
+    const said = explainTurnFailure(LM_STUDIO_400, "qwen3.5-9b-mtp");
+    expect(said).toContain("400");
+    expect(said).toContain('Failed to load model "qwen3.5-9b-mtp"');
+    // The blob itself must not survive into the transcript.
+    expect(said).not.toContain('"type":"invalid_request_error"');
+  });
+
+  it("never tells the user to run a shell command", () => {
+    const said = explainTurnFailure(LM_STUDIO_400, "qwen3.5-9b-mtp");
+    // The server exposes loading over REST and the app already tried it at session start, so printing `lms load`
+    // would be a desktop app asking its user to do what it can do itself. What is left to say is which model failed
+    // and that another one is the way out.
+    expect(said).not.toContain("lms ");
+    expect(said).toContain("qwen3.5-9b-mtp");
+    expect(said).toContain("Choose another model");
+  });
+
+  it("leaves an unrelated failure exactly as the server said it", () => {
+    expect(explainTurnFailure("upstream refused the request: quota exceeded")).toBe(
+      "upstream refused the request: quota exceeded",
+    );
   });
 });

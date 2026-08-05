@@ -36,6 +36,9 @@ export const AI_CHANNELS = {
   // invoke({ providerId?, model }) → { contextWindow?, maxOutputTokens? }. Asked of the PROVIDER, because the
   // OpenAI-shaped listing carries no window and a made-up one promises room a server will refuse.
   modelWindow: "ai:model:window",
+  // Ask a local server to LOAD a model. It is the server's own REST surface, so the app can do this itself instead
+  // of printing a command for the user to run.
+  modelLoad: "ai:model:load",
   // The user-managed allow/reject record (a dedicated versioned file; broker-owned writes).
   permissionsList: "ai:permissions:list", // invoke() → PermissionsSnapshot
   permissionsAdd: "ai:permissions:add", // invoke({ list, rule }) → PermissionsSnapshot

@@ -99,6 +99,7 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.modelsList]: { providerId: "openai", requestId: "request-1" },
       [AI_CHANNELS.modelsCancel]: { requestId: "request-1" },
       [AI_CHANNELS.modelWindow]: { providerId: "lmstudio", model: "qwen3-4b-instruct-2507" },
+      [AI_CHANNELS.modelLoad]: { providerId: "lmstudio", model: "qwen3-4b-instruct-2507", contextLength: 16384 },
       [AI_CHANNELS.engineOp]: { op: "listContainers", args: { connectionId: "podman-1" } },
       [AI_CHANNELS.workspaceOp]: {
         op: "readFile",
@@ -239,6 +240,7 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.modelsCancel]: { ok: true },
       // Both fields optional: a provider that publishes no window answers `{}`, which is rendered as "unknown".
       [AI_CHANNELS.modelWindow]: { contextWindow: 40960 },
+      [AI_CHANNELS.modelLoad]: { ok: true },
       [AI_CHANNELS.engineOp]: { ok: true, value: [{ Id: "c1" }] },
       [AI_CHANNELS.workspaceOp]: { ok: true, value: "file contents" },
       [AI_CHANNELS.workspaceRelease]: { ok: true },
