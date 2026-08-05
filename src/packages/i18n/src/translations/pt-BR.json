@@ -1654,5 +1654,9 @@
   "Start the session": "Iniciar a sessão",
   "Complete the form to start a session": "Preencha o formulário para iniciar uma sessão",
   "Image {{tag}} — builds on first use.": "Imagem {{tag}} — construída no primeiro uso.",
-  "The assistant did not receive this project's rules and memories": "O assistente não recebeu as regras e as memórias deste projeto"
+  "The assistant did not receive this project's rules and memories": "O assistente não recebeu as regras e as memórias deste projeto",
+  "Open the sign-in page": "Open the sign-in page",
+  "Enter this code at {{url}}": "Enter this code at {{url}}",
+  "Skip this step": "Skip this step",
+  "Signed in. The key is stored in the OS keychain.": "Signed in. The key is stored in the OS keychain."
 }

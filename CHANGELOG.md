@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Sign in to OpenRouter instead of pasting a key: pi's own login flow runs in a one-shot container, the browser does the signing in, and the permanent key it hands back goes to the OS keychain like any other
+- A sign-in whose credential expires is refused with the reason rather than stored — this app hands the gateway one static secret and cannot refresh a token
 - Every provider pi ships is offered in the model picker — 37 of them, with names and model counts read from pi itself — behind their own heading, under the sources you already use
 - A provider the app was never set up for can be browsed and then added in one click: its endpoint comes from what pi publishes, and only the key is left to paste
 - Every model row in the picker says what it costs, how much room it has and whether it thinks, instead of an id alone

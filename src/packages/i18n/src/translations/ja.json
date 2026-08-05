@@ -1654,5 +1654,9 @@
   "Start the session": "セッションを開始する",
   "Complete the form to start a session": "セッションを開始するにはフォームを入力してください",
   "Image {{tag}} — builds on first use.": "イメージ {{tag}} — 初回使用時にビルドされます。",
-  "The assistant did not receive this project's rules and memories": "アシスタントはこのプロジェクトのルールとメモリを受け取りませんでした"
+  "The assistant did not receive this project's rules and memories": "アシスタントはこのプロジェクトのルールとメモリを受け取りませんでした",
+  "Open the sign-in page": "Open the sign-in page",
+  "Enter this code at {{url}}": "Enter this code at {{url}}",
+  "Skip this step": "Skip this step",
+  "Signed in. The key is stored in the OS keychain.": "Signed in. The key is stored in the OS keychain."
 }

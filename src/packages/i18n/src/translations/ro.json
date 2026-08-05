@@ -1654,5 +1654,9 @@
   "Start the session": "Pornește sesiunea",
   "Complete the form to start a session": "Completează formularul pentru a porni o sesiune",
   "Image {{tag}} — builds on first use.": "Imaginea {{tag}} — se construiește la prima utilizare.",
-  "The assistant did not receive this project's rules and memories": "Asistentul nu a primit regulile și memoriile acestui proiect"
+  "The assistant did not receive this project's rules and memories": "Asistentul nu a primit regulile și memoriile acestui proiect",
+  "Open the sign-in page": "Open the sign-in page",
+  "Enter this code at {{url}}": "Enter this code at {{url}}",
+  "Skip this step": "Skip this step",
+  "Signed in. The key is stored in the OS keychain.": "Signed in. The key is stored in the OS keychain."
 }

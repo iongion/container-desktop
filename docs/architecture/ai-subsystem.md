@@ -11,6 +11,7 @@ Three worlds, two of them containers:
 | **Renderer** (webview) | the transcript, cards, dialogs, ANSI surfaces, the composer; the AI broker; the engine ports | explicitly trusted — there is no process boundary inside it |
 | **Agent container** (`cd-agent-<id>`) | the pi session, its plugins and their code, the app's `pi-agent-host` entry | untrusted enough that the provider key never enters it |
 | **Gateway container** (`cd-gateway-<id>`) | an authenticating reverse proxy that holds the provider key | holds the credential; plugin code cannot reach it |
+| **Login container** (`cd-login-<id>`) | one provider sign-in — pi's own OAuth flow, which needs a Node realm | one-shot, mounts nothing, removed on every path out |
 
 Tool execution is **consent, not a sandbox** — but the blast radius is a disposable container with one host
 folder bind-mounted, which is why the permission policy here is looser than the app's host-side floor
@@ -358,6 +359,20 @@ OpenAI-compatible endpoints with `after`, uses Anthropic's `anthropic-version` +
 explicitly saved model for a single-model server, and performs no request at all for a manual provider. The
 renderer cache is TanStack Query, keyed by provider id + normalized endpoint + auth metadata + a non-secret
 credential revision.
+
+**Signing in instead of pasting.** A provider pi carries a login flow for is offered pi's own label
+("Sign in with OpenRouter") beside the credential actions in Settings → AI. pi loads each flow through a
+bundler-opaque specifier so its `node:http` callback server and `node:crypto` PKCE never reach a bundle, so the
+flow cannot run in the web view at all: it runs in a **one-shot login container** (`cd-login-<id>`, `--mode login`),
+which mounts nothing, joins no session network and publishes only its bridge to loopback. `AuthInteraction` travels
+as its own frames — `auth_prompt`, `auth_prompt_closed`, `auth_event` — and the browser completes the sign-in, so
+the paste prompt pi races its callback against is what finishes it here (a callback server inside a container is a
+browser on another machine, which is the case pi designed that prompt for).
+
+Only a login whose product is DURABLE is offered: `core/piAuth.ts` names them, and
+`loginCredentialVerdict` is the guard on what actually came back. OpenRouter's flow ends in a permanent
+user-controlled key; every other pi flow returns an access token with a refresh token, and this app hands the
+gateway one static secret — so those are refused with the reason rather than stored to die mid-session.
 
 Keys never live in `user-settings.json`. They are keychain-backed per shell, and the two shells differ in a way
 that is a real security difference:

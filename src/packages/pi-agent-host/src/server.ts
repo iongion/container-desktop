@@ -1,11 +1,14 @@
+import {
+  type AttachedBridgeConnection,
+  attachBridgeChannel,
+  type BridgeConnection,
+} from "@/pi-agent-host/bridgeChannel";
 import type { HostResponse } from "@/pi-agent-host/hostRpc";
 import type { PluginService } from "@/pi-agent-host/plugins";
 import { readToolOutput } from "@/pi-agent-host/toolOutput";
-import { decodeCommand, encodeEvent } from "@/pi-bridge/codec";
 import {
   type AppThemePalette,
   type BridgeCommand,
-  type BridgeEvent,
   type ContributedResources,
   PI_BRIDGE_PROTOCOL_VERSION,
   type PiCommandResult,
@@ -13,11 +16,6 @@ import {
   type PiSessionModel,
   type SessionProviderCheck,
 } from "@/pi-bridge/protocol";
-
-export interface BridgeConnection {
-  send(frame: string): void;
-  close(code: number, reason: string): void;
-}
 
 export interface BridgeSessionHandle {
   sessionId: string;
@@ -48,64 +46,11 @@ export interface BridgeSessionHandle {
   reload(): Promise<void>;
 }
 
-export interface AttachedBridgeConnection {
-  handleFrame(raw: string): Promise<void>;
-  emit(event: BridgeEvent): void;
-}
-
-// The correlation id of a frame the codec refused. Read leniently and on purpose: the frame is already known to be
-// unusable, and the only question left is whether someone is waiting on an answer to it.
-function pendingId(raw: string): string | undefined {
-  try {
-    const id = (JSON.parse(raw) as { id?: unknown }).id;
-    return typeof id === "string" && id.length > 0 ? id : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 export function attachBridgeConnection(
   connection: BridgeConnection,
   options: { token: string; session: BridgeSessionHandle },
 ): AttachedBridgeConnection {
   const { token, session } = options;
-  let greeted = false;
-
-  // Before the handshake only protocol-level frames may leave: agent output must not reach an
-  // unauthenticated peer.
-  const emit = (event: BridgeEvent) => {
-    if (!greeted && event.type !== "error" && event.type !== "response") return;
-    connection.send(encodeEvent(event));
-  };
-  const respond = (id: string, success: boolean, error?: string, result?: unknown) => {
-    if (error) {
-      connection.send(encodeEvent({ type: "response", id, success, error }));
-      return;
-    }
-    connection.send(
-      encodeEvent(result === undefined ? { type: "response", id, success } : { type: "response", id, success, result }),
-    );
-  };
-
-  const handshake = (command: Extract<BridgeCommand, { type: "hello" }>) => {
-    if (command.token !== token) {
-      connection.close(4401, "unauthorized");
-      return;
-    }
-    if (command.protocolVersion !== PI_BRIDGE_PROTOCOL_VERSION) {
-      connection.close(4426, "protocol version mismatch");
-      return;
-    }
-    greeted = true;
-    respond(command.id, true);
-    emit({
-      type: "ready",
-      protocolVersion: PI_BRIDGE_PROTOCOL_VERSION,
-      sessionId: session.sessionId,
-      cwd: session.cwd,
-      model: session.model,
-    });
-  };
 
   // A command that answers with data returns it; the rest return undefined and the response carries no result.
   const dispatch = async (command: BridgeCommand): Promise<unknown> => {
@@ -172,35 +117,15 @@ export function attachBridgeConnection(
     }
   };
 
-  return {
-    emit,
-    async handleFrame(raw: string): Promise<void> {
-      let command: BridgeCommand;
-      try {
-        command = decodeCommand(raw);
-      } catch (error) {
-        const message = (error as Error).message;
-        connection.send(encodeEvent({ type: "error", message }));
-        // A command this host does not know — an app newer than its container image — must not leave the caller's
-        // request pending until its timeout, which reads as a hung session rather than a version mismatch.
-        const id = pendingId(raw);
-        if (id) respond(id, false, message);
-        return;
-      }
-      if (command.type === "hello") {
-        handshake(command);
-        return;
-      }
-      if (!greeted) {
-        respond(command.id, false, "handshake required");
-        return;
-      }
-      try {
-        const result = await dispatch(command);
-        respond(command.id, true, undefined, result);
-      } catch (error) {
-        respond(command.id, false, (error as Error).message);
-      }
-    },
-  };
+  return attachBridgeChannel(connection, {
+    token,
+    dispatch,
+    greeting: () => ({
+      type: "ready",
+      protocolVersion: PI_BRIDGE_PROTOCOL_VERSION,
+      sessionId: session.sessionId,
+      cwd: session.cwd,
+      model: session.model,
+    }),
+  });
 }

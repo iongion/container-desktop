@@ -1,0 +1,10 @@
+.ProviderLoginDrawer .ProviderLoginInstructions {
+  margin: 6px 0 0;
+  color: var(--app-text-muted);
+}
+
+.ProviderLoginDrawer .ProviderLoginLog {
+  font-size: 11px;
+  color: var(--app-text-muted);
+  word-break: break-all;
+}

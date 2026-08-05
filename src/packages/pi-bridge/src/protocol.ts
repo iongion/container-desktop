@@ -357,7 +357,49 @@ export type BridgeCommand =
   // ONE model, as the user picked it. There is deliberately no command for "here is the provider's whole catalogue":
   // the picker is a drill-down so that a catalogue is read one level at a time, on demand, and pre-registering
   // hundreds of models the user never asked for would undo exactly that.
-  | { id: string; type: "model_select"; model: PiModelRegistration };
+  | { id: string; type: "model_select"; model: PiModelRegistration }
+  // Run pi's own login flow for one provider. Answered by the LOGIN container, which exists for exactly this and
+  // nothing else: pi loads its OAuth flows through a variable specifier so a bundler cannot follow them into
+  // `node:http` callback servers and `node:crypto`, which is why the flow cannot run in the web view.
+  | { id: string; type: "auth_login"; provider: string }
+  // Answer a prompt the flow raised. `ok: false` is a cancel, which pi's own flows treat as abandoning the login.
+  | { id: string; type: "auth_prompt_answer"; promptId: string; ok: boolean; value?: string }
+  | { id: string; type: "auth_cancel" };
+
+// What a provider login asks the user, in pi's own vocabulary (`AuthPrompt` minus its AbortSignal, which cannot
+// cross a socket — a withdrawn prompt travels as `auth_prompt_closed` instead). `secret` masks what is typed;
+// `manual_code` is the paste path pi races its loopback callback against, and the only one that works when the
+// browser cannot reach a server running inside a container.
+export type PiAuthPrompt =
+  | { type: "text"; message: string; placeholder?: string }
+  | { type: "secret"; message: string; placeholder?: string }
+  | { type: "select"; message: string; options: Array<{ id: string; label: string; description?: string }> }
+  | { type: "manual_code"; message: string; placeholder?: string };
+
+// What a login tells the user while it runs — pi's own `AuthEvent`. `auth_url` is the one the app acts on rather
+// than prints: it opens in the user's browser, which is where a login has to happen.
+export type PiAuthEvent =
+  | { type: "info"; message: string; links?: Array<{ url: string; label?: string }> }
+  | { type: "auth_url"; url: string; instructions?: string }
+  | {
+      type: "device_code";
+      userCode: string;
+      verificationUri: string;
+      intervalSeconds?: number;
+      expiresInSeconds?: number;
+    }
+  | { type: "progress"; message: string };
+
+// The three fields of pi's `OAuthCredential` this app can honour. pi's own shape carries provider extras through an
+// index signature; they are deliberately dropped, because one static secret per provider is all the gateway is
+// handed and pretending otherwise would store half a credential.
+export interface PiOAuthCredential {
+  access: string;
+  refresh: string;
+  expires: number;
+}
+
+export type PiAuthLoginOutcome = { ok: true; credential: PiOAuthCredential } | { ok: false; error: string };
 
 // pi's ProgressEvent, split the way it reads: `action` is what is being done, `phase` how far along it is.
 export type PluginProgressAction = "install" | "remove" | "update" | "clone" | "pull";
@@ -421,7 +463,14 @@ export type BridgeEvent =
       method: BridgeHostMethod;
       payload: Record<string, unknown>;
       timeoutMs?: number;
-    };
+    }
+  // A login flow is asking the user something. Its own event rather than a `host_request`: a login has no session,
+  // no tool call and no chrome to patch, and it runs against a container that holds none of those.
+  | { type: "auth_prompt"; promptId: string; prompt: PiAuthPrompt }
+  // The flow withdrew that prompt — pi aborts its manual-paste prompt the moment the loopback callback wins the
+  // race. Without this the app would keep asking for a code the login no longer needs.
+  | { type: "auth_prompt_closed"; promptId: string }
+  | { type: "auth_event"; event: PiAuthEvent };
 
 export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "hello",
@@ -445,6 +494,9 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "read_tool_output",
   "session_import",
   "model_select",
+  "auth_login",
+  "auth_prompt_answer",
+  "auth_cancel",
 ]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
@@ -469,6 +521,9 @@ export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "surface_closed",
   "plugin_progress",
   "plugins_changed",
+  "auth_prompt",
+  "auth_prompt_closed",
+  "auth_event",
 ]);
 
 export class BridgeProtocolError extends Error {

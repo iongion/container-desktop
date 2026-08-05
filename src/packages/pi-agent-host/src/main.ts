@@ -1,6 +1,8 @@
+import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
 import { WebSocketServer } from "ws";
 
 import { createLogger } from "@/logger";
+import { attachLoginConnection } from "@/pi-agent-host/authLogin";
 import { containerToolDescriptions } from "@/pi-agent-host/containerToolDescriptions";
 import { parseUpstreamAuthScheme, startGateway } from "@/pi-agent-host/gateway";
 import { reasoningFromEnv } from "@/pi-agent-host/modelRegistrations";
@@ -110,5 +112,26 @@ async function runGateway(): Promise<void> {
   );
 }
 
+// The third mode, and the shortest-lived: one provider sign-in, then the container is removed. It exists because
+// pi's login flows run a loopback callback server and derive PKCE with `node:crypto` — Node-only code the renderer
+// cannot load at all, by pi's own design.
+async function runLogin(): Promise<void> {
+  const token = required("CD_BRIDGE_TOKEN");
+  const port = Number(process.env.CD_BRIDGE_PORT ?? "8787");
+  const server = new WebSocketServer({ host: "0.0.0.0", port });
+  logger.info(`login bridge listening on ${port}`);
+  // Constructed once per connection request rather than held: a provider is a plain object over already-imported
+  // data, and reading pi's own list is what keeps the app from carrying a table of who can be signed into.
+  const findProvider = (providerId: string) => builtinProviders().find((provider) => provider.id === providerId);
+
+  server.on("connection", (socket) => {
+    const attached = attachLoginConnection(
+      { send: (frame) => socket.send(frame), close: (code, reason) => socket.close(code, reason) },
+      { token, findProvider },
+    );
+    socket.on("message", (data) => void attached.handleFrame(data.toString()));
+  });
+}
+
 const mode = argValue("--mode") ?? "agent";
-await (mode === "gateway" ? runGateway() : runAgent());
+await (mode === "gateway" ? runGateway() : mode === "login" ? runLogin() : runAgent());

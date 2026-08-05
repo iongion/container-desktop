@@ -64,6 +64,10 @@ async function boot() {
     // without an engine. The real app has no session until one is started deliberately; this stands in for that.
     const { isMockMode } = await import("@/container-client/mock/mode");
     if (isMockMode()) {
+      // MOCK-only: window.__cdMockKeyWrites, so a spec can prove WHICH secret a sign-in stored. The mock vault
+      // answers `hasKey` true for every provider by design, so presence can never be the evidence.
+      const { mockKeyWrites } = await import("@/ai-system/testing/aiMocks");
+      (globalThis as { __cdMockKeyWrites?: typeof mockKeyWrites }).__cdMockKeyWrites = mockKeyWrites;
       const { useCodingAgentStore } = await import("@/web-app/stores/codingAgent");
       const { awaitHostRuntime } = await import("@/platform/provider");
       // The workspace has to be a HOST path, not the container's `/workspace`: the session header opens this folder

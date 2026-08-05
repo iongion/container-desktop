@@ -292,7 +292,9 @@ export async function startPiAgentSession(
 // the suffix is the first 8 characters of a UUID. `cd-agent-mine` is the user's, and the shared plugin VOLUME is
 // never in scope — it holds what they installed.
 const SESSION_SUFFIX = "[0-9a-f]{8}";
-const SESSION_CONTAINER = new RegExp(`^cd-(agent|gateway)-${SESSION_SUFFIX}$`);
+// `login` is swept the same way: a sign-in container holds a published port and keeps listening until it is removed,
+// so one left behind by a crash is exactly the orphan this reaper exists for.
+const SESSION_CONTAINER = new RegExp(`^cd-(agent|gateway|login)-${SESSION_SUFFIX}$`);
 const SESSION_NETWORK = new RegExp(`^cd-agent-net-${SESSION_SUFFIX}(-egress)?$`);
 
 function matching(output: string, pattern: RegExp): string[] {

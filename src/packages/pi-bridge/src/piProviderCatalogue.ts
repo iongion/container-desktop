@@ -18,10 +18,14 @@ export interface PiProvider {
   // The endpoint pi points this provider at, when it names one. Ours goes through the gateway either way; this is
   // what a settings entry starts from when a provider is adopted.
   baseUrl?: string;
-  // What pi's provider definition accepts. `oauth` here means pi carries a flow for it — running that flow needs a
-  // Node realm, so the app cannot offer it from the web view (see the OAuth deferral).
+  // What pi's provider definition accepts. `oauth` means pi carries a login flow for it; the flow itself only runs in
+  // a Node realm, which is why signing in happens in a one-shot login container rather than in the web view.
   apiKey: boolean;
   oauth: boolean;
+  // pi's own words for the sign-in — "Sign in with OpenRouter". Readable WITHOUT loading the flow, because
+  // `lazyOAuth` keeps the name and the label on the wrapper and defers only the Node-only implementation. So the
+  // button wears pi's label and this app invents no copy for someone else's login.
+  oauthLabel?: string;
   models: readonly Model<Api>[];
 }
 
@@ -33,6 +37,7 @@ const PI_PROVIDERS: readonly PiProvider[] = builtinProviders()
     ...(provider.baseUrl ? { baseUrl: provider.baseUrl } : {}),
     apiKey: !!provider.auth?.apiKey,
     oauth: !!provider.auth?.oauth,
+    ...(provider.auth?.oauth?.loginLabel ? { oauthLabel: provider.auth.oauth.loginLabel } : {}),
     models: safeModels(provider),
   }))
   .sort((a, b) => a.name.localeCompare(b.name));

@@ -86,13 +86,26 @@ export function createMockModelLister() {
 // Provider key store
 // Mock mode: every provider reports a stored secret (so cloud catalogs like OpenRouter's vendor-prefixed
 // list are browsable + connection-testable WITHOUT a real key) and writes are no-ops (nothing persisted).
+// What was WRITTEN, in memory. `hasKey` still answers true for everyone — that is what keeps a cloud catalogue
+// browsable without a real key — so it can never say whether a write happened. A recorded write can, which is the
+// only way a spec can prove the secret the app stored is the one a sign-in flow returned.
+const MOCK_KEY_WRITES = new Map<string, string>();
+
+export function mockKeyWrites(): Record<string, string> {
+  return Object.fromEntries(MOCK_KEY_WRITES);
+}
+
 export function createMockKeyStore(): AIKeyStore {
   return {
     getEncryptionStatus: () => ({ available: true, backend: "mock", degraded: false }),
     hasKey: async () => true,
     getKey: async () => "mock-key",
-    setKey: async () => {},
-    clearKey: async () => {},
+    setKey: async (provider, plaintext) => {
+      MOCK_KEY_WRITES.set(provider, plaintext);
+    },
+    clearKey: async (provider) => {
+      MOCK_KEY_WRITES.delete(provider);
+    },
     writeSecretFile: async (_provider, fileName) => `/mock/agent/${fileName}`,
     // The same directory as the secret file's, which is the point of the merge.
     writeAgentEnvFile: async (fileName) => `/mock/agent/${fileName}`,

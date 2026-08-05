@@ -8,6 +8,7 @@
     "@container-desktop/logger": "*",
     "@container-desktop/pi-bridge": "*",
     "@container-desktop/utils": "*",
+    "@earendil-works/pi-ai": "0.83.0",
     "@earendil-works/pi-coding-agent": "0.83.0",
     "@earendil-works/pi-tui": "0.83.0",
     "typebox": "1.3.7",

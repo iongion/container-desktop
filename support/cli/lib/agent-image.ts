@@ -28,7 +28,16 @@ export async function bundleAgentHost(options: { root: string; outDir: string })
     platform: "node",
     target: "node24",
     format: "esm",
-    external: ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai", "@earendil-works/pi-tui", "jiti", "ws"],
+    // The subpath is named as well as the package: the login mode imports `pi-ai/providers/all`, and only an
+    // explicit entry guarantees esbuild leaves it alone instead of following it into the generated catalogue.
+    external: [
+      "@earendil-works/pi-coding-agent",
+      "@earendil-works/pi-ai",
+      "@earendil-works/pi-ai/providers/all",
+      "@earendil-works/pi-tui",
+      "jiti",
+      "ws",
+    ],
     // The container tools' descriptions are model-facing prose kept in markdown; esbuild inlines it as a string,
     // which is this bundler's equivalent of the renderer's `?raw` suffix.
     loader: { ".md": "text" },

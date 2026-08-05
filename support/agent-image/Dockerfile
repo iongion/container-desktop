@@ -9,6 +9,7 @@ WORKDIR /opt/cd-agent
 # pi's own dependency tree under pi-coding-agent/node_modules, so a package that is only pi's dependency is
 # invisible to host.mjs and fails at startup with ERR_MODULE_NOT_FOUND — pi-tui did, once it was imported.
 RUN npm install --omit=dev --ignore-scripts \
+  @earendil-works/pi-ai@0.83.0 \
   @earendil-works/pi-coding-agent@0.83.0 \
   @earendil-works/pi-tui@0.83.0 \
   ws@8.18.3
