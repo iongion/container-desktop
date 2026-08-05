@@ -199,6 +199,12 @@ roughly 9k tokens before the first word — so the spec asserts the loaded lengt
 fail with the server's own `n_keep >= n_ctx` and reading like an app fault. Overrides: `CD_LIVE_LMSTUDIO_MODEL`,
 `CD_LIVE_LMSTUDIO_URL`, `CD_LIVE_WORKSPACE`, `CD_LIVE_ENGINE`.
 
+`pi-plugin-theme-live.e2e.js` runs on the same keyless session and is the only proof that a plugin's OWN component
+paints in the app's colours: it seeds an extension into the `cd-agent-plugins` volume that builds pi's `Markdown` from
+`getMarkdownTheme()` — the route that reads pi's module-global theme — and asserts the surface frame's truecolor SGR
+carries the accent the app is painted in at that moment. It removes the extension again; leaving one behind would
+change every later session.
+
 The rest need `OPENROUTER_API_KEY`, because they drive a model's judgement rather than the route to it.
 
 ```bash
