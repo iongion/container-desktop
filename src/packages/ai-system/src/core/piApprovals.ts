@@ -20,7 +20,9 @@ import { isContainerToolName, WEB_SEARCH_TOOL_NAME } from "./toolNames";
 // every call. A card per query would ask a second time what that switch answered once — while the real protection,
 // that a turn which has read the public web can no longer ride a remembered allow, is the taint the app sets after
 // performing one.
-const PI_UNGATED_TOOLS = new Set<string>(["read", "grep", "find", "ls", WEB_SEARCH_TOOL_NAME]);
+// `searchKnowledge` reads curated entries shipped inside the agent image — no engine, no network, no filesystem of
+// the user's — so there is nothing for a card to protect. It is a lookup, not an action.
+const PI_UNGATED_TOOLS = new Set<string>(["read", "grep", "find", "ls", WEB_SEARCH_TOOL_NAME, "searchKnowledge"]);
 
 // The app's own toolsets — container operations and workspace file/command operations — reach pi over the bridge, so
 // their calls arrive here as ordinary tool names. Their read/mutation split is taken from the catalogue the worker

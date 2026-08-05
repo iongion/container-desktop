@@ -16,12 +16,14 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { getKeybindings } from "@earendil-works/pi-tui";
 
+import type { KnowledgeEntry } from "@/ai-system/core/ports";
 import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import { createLogger } from "@/logger";
 import { createContainerToolsExtension } from "@/pi-agent-host/containerTools";
 import { mapAgentEvent, type PiAgentEvent } from "@/pi-agent-host/events";
 import { GuiTui } from "@/pi-agent-host/guiTui";
 import { createHostRpc } from "@/pi-agent-host/hostRpc";
+import { createKnowledgeToolExtension, KNOWLEDGE_TOOL_NAME } from "@/pi-agent-host/knowledgeTool";
 import { type ModelRegistrations, piModelConfig, withModelRegistration } from "@/pi-agent-host/modelRegistrations";
 import { createPermissionGateExtension } from "@/pi-agent-host/permissionGate";
 import { runPiCommand } from "@/pi-agent-host/piCommands";
@@ -136,6 +138,9 @@ export interface CreatePiSessionOptions {
   // when the app has a target to run those operations on: a session with no target would otherwise offer the model
   // nine tools that can only ever answer "there is nowhere to do that".
   workspaceToolDescriptions?: Readonly<Record<string, string>>;
+  // The built-in troubleshooting entries, searched rather than prompted. Absent leaves the tool unregistered, which
+  // is what a session with no bank should look like — the whole point is that the model asks for these on purpose.
+  knowledgeEntries?: readonly KnowledgeEntry[];
 }
 
 export async function createPiSession(options: CreatePiSessionOptions): Promise<BridgeSessionHandle> {
@@ -223,6 +228,17 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
           // than always, because a registered tool is a promise to the model that the operation can happen.
           ...(options.workspaceToolDescriptions
             ? [createWorkspaceToolsExtension({ rpc, descriptions: options.workspaceToolDescriptions })]
+            : []),
+          // The built-in troubleshooting knowledge, answered inside this container: the entries ship in the image, so
+          // this needs neither the app nor a network. Registered as a SEARCH, because the whole bank in every system
+          // prompt is context every unrelated turn would pay for and never read.
+          ...(options.knowledgeEntries?.length
+            ? [
+                createKnowledgeToolExtension({
+                  entries: options.knowledgeEntries,
+                  description: options.containerToolDescriptions[KNOWLEDGE_TOOL_NAME] ?? "",
+                }),
+              ]
             : []),
           // Public web search, performed by the app. Registered unconditionally: the setting it depends on can be
           // turned off mid-session, so the app answers with that as the reason rather than the tool vanishing.

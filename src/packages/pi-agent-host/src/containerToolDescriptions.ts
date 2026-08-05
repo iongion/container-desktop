@@ -6,7 +6,10 @@
 // container entry imports this — vite and vitest resolve `.md` with the `?raw` suffix instead, so keeping it out
 // of `session.ts` is what lets the session stay unit-testable.
 
+import { parseKnowledgeBank } from "@/ai-system/core/knowledgeBank";
+import type { KnowledgeEntry } from "@/ai-system/core/ports";
 import descriptionsMarkdown from "@/resources/prompts/agent-tool-descriptions.md";
+import knowledgeMarkdown from "@/resources/prompts/knowledge-bank.md";
 import workspaceDescriptionsMarkdown from "@/resources/prompts/workspace-tool-descriptions.md";
 import { parseMarkdownSections } from "@/template/markdownSections";
 
@@ -18,4 +21,10 @@ export function containerToolDescriptions(): Readonly<Record<string, string>> {
 // toolset's descriptions say nothing about, and it is only registered when the session was given a target to run on.
 export function workspaceToolDescriptions(): Readonly<Record<string, string>> {
   return parseMarkdownSections(workspaceDescriptionsMarkdown);
+}
+
+// The built-in troubleshooting entries, parsed once at startup. Read here for the same reason the descriptions are:
+// the loader that knows how a markdown resource arrives is bundler-specific, and the session stays testable without one.
+export function knowledgeBankEntries(): KnowledgeEntry[] {
+  return parseKnowledgeBank(parseMarkdownSections(knowledgeMarkdown));
 }

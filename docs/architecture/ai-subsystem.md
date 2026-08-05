@@ -24,6 +24,13 @@ gated at that boundary — the only one that can hold the request and run it on 
 `tool_call` gate skips every tool the app performs. `workspaceRelease` disposes the run's targets when the session
 stops; a sandbox exists for the run and nothing else.
 
+**The built-in knowledge** (`src/resources/prompts/knowledge-bank.md`) is curated symptom / solution / commands entries
+for real podman, docker, WSL and SSH failures. It is offered as `searchKnowledge` and answered INSIDE the agent
+container — the entries ship in the image, so the tool asks the app for nothing. Searched rather than prompted: the
+whole bank is context every unrelated turn would pay for and never read, while a tool costs nothing until the model
+asks. `core/knowledgeBank.ts` parses and ranks (symptom first, then title, then the curator's id and tags), capped per
+search so a vague query cannot return the whole bank. Ungated — it reads shipped data and touches nothing.
+
 Tool execution is **consent, not a sandbox** — but the blast radius is a disposable container with one host
 folder bind-mounted, which is why the permission policy here is looser than the app's host-side floor
 (see [The permission model](#the-permission-model)). Once data reaches the configured provider the app cannot

@@ -49,6 +49,14 @@ const PROJECT_CONTEXT_RE = /project (?:context|rules)|\bmemor(?:y|ies)\b/;
 
 const NO_PROJECT_CONTEXT = "No project rules or memories were sent to this session.";
 
+// One entry, in the shape the real tool answers with: what the symptom is, what fixes it, and the commands that do.
+const MOCK_KNOWLEDGE_ANSWER = [
+  "## Rootless Podman API socket not available (podman-rootless-socket, podman)",
+  "Symptom: Cannot connect to the Podman socket; unix:///run/user/<uid>/podman/podman.sock reports no such file.",
+  "Solution: Enable the user API service so the rootless socket exists, then point clients at it through DOCKER_HOST.",
+  "Commands:\n  systemctl --user enable --now podman.socket",
+].join("\n");
+
 // Asking for a search. The app performs it — and refuses while the user has web search turned off — so this is
 // also how the mock exercises that switch.
 const WEB_SEARCH_RE = /search the web|web search|look .+ up online/;
@@ -58,7 +66,7 @@ interface ScriptedCall {
   args: Record<string, unknown>;
   // Which of the app's two toolsets performs it. A workspace operation lands on the session's execution target, which
   // is a different host method and a different backend — so the script has to say which one it meant.
-  method?: "engine_op" | "workspace_op";
+  method?: "engine_op" | "workspace_op" | "self";
 }
 
 // What the model "decides" to do with a prompt. Container operations are named by the app's own tool names,
@@ -79,6 +87,14 @@ function scriptFor(text: string): { calls: ScriptedCall[]; reply: string } {
   }
   if (/restart|stop .*container/.test(prompt)) {
     return { calls: [{ op: "restartContainer", args: { id: "web" } }], reply: mockToolResultResponse.trim() };
+  }
+  // The built-in troubleshooting knowledge, answered inside the container in a real session — so the mock answers it
+  // too, with no host request, which is exactly what makes it look different from every other tool here.
+  if (/why (?:can|could) ?n[o']t .*connect|socket|permission denied|troubleshoot/.test(prompt)) {
+    return {
+      calls: [{ op: "searchKnowledge", args: { query: text }, method: "self" }],
+      reply: mockToolResultResponse.trim(),
+    };
   }
   // The workspace toolset, which acts on the session's chosen target rather than inside the agent's own container.
   // One read and one gated write, because those are the two halves that behave differently.
@@ -348,13 +364,20 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
   // `engine_op`, a file or command one over `workspace_op`. The answer is what the approval card decides, so a
   // rejection reaches the script as a failed result either way; both envelopes share the `ok` shape.
   const requestHostOp = (call: ScriptedCall): Promise<EngineOpResult> => {
+    // A tool the SESSION performs asks the app for nothing — the knowledge bank ships in the image.
+    if (call.method === "self") {
+      return Promise.resolve({
+        ok: true,
+        value: MOCK_KNOWLEDGE_ANSWER,
+      });
+    }
     const requestId = randomUUID();
     return new Promise<EngineOpResult>((resolve) => {
       pending.set(requestId, resolve);
       emit({
         type: "host_request",
         requestId,
-        method: call.method ?? "engine_op",
+        method: call.method === "workspace_op" ? "workspace_op" : "engine_op",
         payload: { op: call.op, args: call.args },
       });
     });

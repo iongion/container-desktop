@@ -171,6 +171,78 @@ describe("the workspace toolset", () => {
     );
   });
 
+  // The knowledge search asks the app for NOTHING — its entries ship inside the agent image — so what proves it in
+  // the renderer is the card: a tool the session answered itself, titled and rendered like any other.
+  it("renders a knowledge search the session answered itself", async () => {
+    await browser.execute(() => {
+      window.location.hash = "#/screens/ai/assistant";
+    });
+    await $('[data-screen="ai.assistant"]').waitForExist({
+      timeout: 45000,
+      timeoutMsg: "the Assistant screen never mounted",
+    });
+    await browser.execute(() => {
+      window.__cdCodingAgentStore.setState({
+        status: "ready",
+        view: { threadId: "pi-session", phase: "idle", lastSeq: 0, timeline: [] },
+      });
+      const store = window.__cdCodingAgentStore.getState();
+      store.applyBridgeEvent({
+        type: "tool_start",
+        toolCallId: "knowledge-1",
+        toolName: "searchKnowledge",
+        args: { query: "cannot connect to podman socket" },
+      });
+      store.applyBridgeEvent({
+        type: "tool_end",
+        toolCallId: "knowledge-1",
+        toolName: "searchKnowledge",
+        isError: false,
+        text: "## Rootless Podman API socket not available (podman-rootless-socket, podman)\nSolution: Enable the user API service.",
+        // The shape the real tool answers with: a count and the entries, which is what the card has to render.
+        details: {
+          matches: 1,
+          entries: [
+            {
+              id: "podman-rootless-socket",
+              domain: "podman",
+              title: "Rootless Podman API socket not available",
+              symptom: "Cannot connect to the Podman socket",
+              solution: "Enable the user API service",
+              commands: ["systemctl --user enable --now podman.socket"],
+            },
+          ],
+        },
+      });
+      store.applyBridgeEvent({ type: "idle" });
+    });
+    // A tool card opens closed, so what the user sees first is the title. Read that, then open it the way they would.
+    const closed = await browser.execute(() => {
+      const card = document.querySelector(".AICard");
+      return {
+        count: document.querySelectorAll(".AICard").length,
+        title: card?.querySelector(".AICardTitle")?.textContent ?? "",
+        expanded: card?.querySelector(".AICardHead")?.getAttribute("aria-expanded") ?? "",
+      };
+    });
+    assert.equal(closed.count, 1, "the knowledge search rendered nothing at all");
+    assert.equal(closed.title, "Search knowledge", "the card did not carry the app's own title for the tool");
+    assert.equal(closed.expanded, "false");
+
+    await browser.execute(() => {
+      document.querySelector(".AICard .AICardHead")?.click();
+    });
+    await browser.waitUntil(
+      async () =>
+        browser.execute(() =>
+          (document.querySelector(".AICard .bp6-collapse-body")?.textContent ?? "").includes(
+            "Rootless Podman API socket",
+          ),
+        ),
+      { timeout: 10000, timeoutMsg: "the entry the tool found was never rendered in the opened card" },
+    );
+  });
+
   it("holds a workspace mutation for approval instead of performing it", async () => {
     await browser.execute(() => {
       window.location.hash = "#/screens/ai/assistant";

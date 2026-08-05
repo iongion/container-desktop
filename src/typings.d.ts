@@ -19,6 +19,12 @@ declare module "@/resources/prompts/workspace-tool-descriptions.md" {
   export default content;
 }
 
+// The built-in troubleshooting knowledge, inlined the same way — declared per resource, not for `*.md`.
+declare module "@/resources/prompts/knowledge-bank.md" {
+  const content: string;
+  export default content;
+}
+
 // file-saver ships no types and we only use saveAs; declare it precisely instead of pulling @types.
 declare module "file-saver" {
   export function saveAs(data: Blob | string, filename?: string, options?: { autoBom?: boolean }): void;

@@ -55,7 +55,8 @@ export const AI_CHANNELS = {
   // One public-web query, run for the agent. It executes here because the app owns the address-pinned fetch and
   // the user's own web-search switch — which this refuses on while it is off.
   webSearch: "ai:web:search", // invoke({ query }) → { text }
-  // The knowledge bank has no renderer surface — the agent searches it main-side (see tools.ts).
+  // The knowledge bank has no channel: its entries ship inside the agent image, so the session's own
+  // `searchKnowledge` tool answers from there without asking the app for anything.
 } as const;
 
 export interface AIStatus {

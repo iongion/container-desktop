@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The assistant can look up the app's own built-in troubleshooting knowledge — curated podman, docker, WSL and SSH connection failures with the fix and the commands — as a search it makes when it needs one, not as prose in every prompt
 - The assistant can act on files and run commands OUTSIDE its own container, where you choose: this machine, the engine's own host, a container already running, or a disposable one created for the session and removed with it. Chosen on the start form, off until you choose it, and every write or command asks first
 - Sign in to OpenRouter instead of pasting a key: pi's own login flow runs in a one-shot container, the browser does the signing in, and the permanent key it hands back goes to the OS keychain like any other
 - A sign-in whose credential expires is refused with the reason rather than stored — this app hands the gateway one static secret and cannot refresh a token

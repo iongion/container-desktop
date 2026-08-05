@@ -5,6 +5,7 @@ import type { ExtensionContext, InlineExtension } from "@earendil-works/pi-codin
 import { describe, expect, it } from "vitest";
 
 import { CONTAINER_TOOL_NAMES, WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
+import { WORKSPACE_TOOL_NAMES } from "@/ai-system/core/workspaceToolNames";
 import { createPiSession, parseModelApi, sanitizeSessionFileName } from "@/pi-agent-host/session";
 import type { BridgeEvent, PiScopedModels, PiSessionSummary } from "@/pi-bridge/protocol";
 
@@ -14,7 +15,10 @@ const CONTAINER_TOOL_DESCRIPTIONS = {
   ...Object.fromEntries(CONTAINER_TOOL_NAMES.map((name) => [name, `does ${name}`])),
   // The app performs this one, so it travels in the same descriptions record as the container toolset.
   [WEB_SEARCH_TOOL_NAME]: "searches the public web",
+  searchKnowledge: "searches the built-in troubleshooting knowledge",
 };
+
+const WORKSPACE_TOOL_DESCRIPTIONS = Object.fromEntries(WORKSPACE_TOOL_NAMES.map((name) => [name, `does ${name}`]));
 
 // The smallest real extension: one session_start handler, which is where a plugin first gets a ui context.
 const onSessionStart = (name: string, run: (ctx: ExtensionContext) => void): InlineExtension => ({
@@ -498,5 +502,53 @@ describe("parseModelApi", () => {
   // A typo would otherwise reach pi as an unknown api and fail deep inside its provider composer.
   it("refuses a shape this host cannot register", () => {
     expect(() => parseModelApi("openai-responses")).toThrow(/CD_MODEL_API/);
+  });
+});
+
+// What the model was ACTUALLY offered, read off the session's own context report rather than off the registration
+// call — pi assembles the active tool set per turn, so this is the only place that answers for the model.
+async function toolsOffered(extra: Record<string, unknown>): Promise<string[]> {
+  const events: BridgeEvent[] = [];
+  const session = await createPiSession({
+    cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+    agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
+    gatewayUrl: "http://gateway.invalid:8788/v1",
+    containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
+    gatewayToken: "tok",
+    modelId: "canned",
+    emit: (event) => events.push(event),
+    streamOverride: cannedStream as never,
+    ...extra,
+  });
+  await session.prompt("say hello");
+  const report = events.find((event) => event.type === "request_context");
+  return (
+    (report as { context?: { tools?: Array<{ name: string }> } } | undefined)?.context?.tools?.map(
+      (tool) => tool.name,
+    ) ?? []
+  );
+}
+
+describe("the toolsets a session offers", () => {
+  // A registered tool is a promise to the model that the operation can happen. With no target chosen there is
+  // nowhere for a workspace operation to land, so the model must not be offered one at all.
+  it("offers no workspace tool until the app says it has somewhere to run them", async () => {
+    const offered = await toolsOffered({});
+    for (const name of WORKSPACE_TOOL_NAMES) expect(offered, name).not.toContain(name);
+    // The container toolset is unconditional — it acts through the app, which always has its engine ports.
+    expect(offered).toContain("listContainers");
+  });
+
+  it("offers the whole workspace toolset once a target exists", async () => {
+    const offered = await toolsOffered({ workspaceToolDescriptions: WORKSPACE_TOOL_DESCRIPTIONS });
+    for (const name of WORKSPACE_TOOL_NAMES) expect(offered, name).toContain(name);
+  });
+
+  it("offers the knowledge search only when the bank was loaded", async () => {
+    expect(await toolsOffered({})).not.toContain("searchKnowledge");
+    const offered = await toolsOffered({
+      knowledgeEntries: [{ id: "podman-rootless-socket", domain: "podman", title: "T", symptom: "S", solution: "F" }],
+    });
+    expect(offered).toContain("searchKnowledge");
   });
 });
