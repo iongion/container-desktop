@@ -102,7 +102,7 @@ the plugin verbs (`plugins_list` / `_install` / `_remove` / `_update` / `_check_
 
 **Container → renderer** (`BridgeEvent`): `ready`, `response` (settles a command), the turn stream
 (`assistant_delta` / `assistant_end` / `tool_start` / `tool_update` / `tool_end` / `turn_end` / `idle` /
-`error`), plugin data (`entry` from `appendEntry`, `custom_message` from `sendMessage`), rendering
+`error` / `retry_start` / `retry_end`), plugin data (`entry` from `appendEntry`, `custom_message` from `sendMessage`), rendering
 (`surface_frame` / `surface_closed`), plugin management (`plugin_progress`, `plugins_changed`), and
 `host_request`.
 
@@ -352,8 +352,9 @@ host does the fingerprint match, the project-trust check, the prompt render and 
 `useCodingAgentStore.submitSkill`, which shows the command in the transcript, sends the body to the model, and
 holds the skill's narrowing for the turn: a tool outside `allowedTools` is refused with a reason (the model can
 adapt — this is a declared narrowing, not a user's "no", so it does not abort the turn), and `initialTaint`
-suppresses remembered allows so the user sees what an unvouched-for skill asked for. The narrowing lifts on
-`turn_end`.
+suppresses remembered allows so the user sees what an unvouched-for skill asked for. The narrowing lifts on `idle`
+— pi's `agent_settled`, the one event that means no retry, compaction or queued continuation follows. `turn_end`
+fires per turn and a tool-using run has many, so lifting it there would drop the narrowing after the first step.
 
 **Execution targets are containers.** A target is a container — one already running, or a disposable sandbox created
 for the session — and the **connection is how it is reached**, never a target of its own: connections are this app's

@@ -3,6 +3,8 @@
   "- n/a -": "- 해당사항 없음 -",
   "-- select --": "-- 선택하다 --",
   "-- Select --": "-- 선택하다 --",
+  "Retrying ({{attempt}}/{{maxAttempts}}) in {{seconds}}s…": "재시도 ({{attempt}}/{{maxAttempts}}) — {{seconds}}초 후…",
+  "Retrying ({{attempt}}/{{maxAttempts}})…": "재시도 ({{attempt}}/{{maxAttempts}})…",
   "— timeout": "— 시간 초과",
   ":{{containerPort}} in {{container}}": ":{{container}}의 {{containerPort}}",
   ":{{hostPort}} on remote": ":{{hostPort}}(원격)",

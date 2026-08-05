@@ -90,6 +90,7 @@ export const AssistantSession: React.FC<AssistantSessionProps> = ({
   // Extension chrome and dialogs are pi-session state with no place in the neutral SessionView, and since the
   // Assistant surface IS the pi session they are read from its store directly rather than widening AIState.
   const extensionChrome = useCodingAgentStore((s) => s.chrome);
+  const retrying = useCodingAgentStore((s) => s.retrying);
   const pendingDialog = useCodingAgentStore((s) => s.pendingDialog);
   const respondToRequest = useCodingAgentStore((s) => s.respondToRequest);
   // There is exactly ONE session behind every surface, so "is there anything to talk to?" is the session's own
@@ -132,6 +133,9 @@ export const AssistantSession: React.FC<AssistantSessionProps> = ({
   const composerPhase = pendingApproval ? "awaiting-approval" : phase;
   const streaming =
     !pendingApproval && (phase === "model" || phase === "tool" || phase === "interrupting" || phase === "stopping");
+  // A retry shows even where a plugin hid the working indicator: the alternative is a session that sits silent
+  // through pi's whole backoff with nothing on screen, which is the one thing this indicator exists to prevent.
+  const showWorking = streaming && (!!retrying || !extensionChrome.working?.hidden);
 
   // Auto-follow ("magnetized") keeps the view pinned to the latest output. Scrolling up demagnetizes it
   // so the user can read past output while the model keeps streaming below; returning to the bottom (or
@@ -526,9 +530,7 @@ export const AssistantSession: React.FC<AssistantSessionProps> = ({
             onStop={cancel}
             onSubmit={onSubmit}
             statusLeading={
-              streaming && !extensionChrome.working?.hidden ? (
-                <ThinkingStatus message={extensionChrome.working?.message} />
-              ) : null
+              showWorking ? <ThinkingStatus message={extensionChrome.working?.message} retry={retrying} /> : null
             }
             showPermissionMode
             commands={composerCommands}

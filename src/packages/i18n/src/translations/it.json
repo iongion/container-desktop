@@ -3,6 +3,8 @@
   "- n/a -": "- n/d -",
   "-- select --": "-- seleziona --",
   "-- Select --": "-- Seleziona --",
+  "Retrying ({{attempt}}/{{maxAttempts}}) in {{seconds}}s…": "Nuovo tentativo ({{attempt}}/{{maxAttempts}}) tra {{seconds}} s…",
+  "Retrying ({{attempt}}/{{maxAttempts}})…": "Nuovo tentativo ({{attempt}}/{{maxAttempts}})…",
   "— timeout": "- tempo scaduto",
   ":{{containerPort}} in {{container}}": ":{{containerPort}} in {{container}}",
   ":{{hostPort}} on remote": ":{{hostPort}} sul remoto",

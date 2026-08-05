@@ -3,6 +3,8 @@
   "- n/a -": "- n / A -",
   "-- select --": "-- wählen --",
   "-- Select --": "-- Wählen --",
+  "Retrying ({{attempt}}/{{maxAttempts}}) in {{seconds}}s…": "Neuer Versuch ({{attempt}}/{{maxAttempts}}) in {{seconds}} s…",
+  "Retrying ({{attempt}}/{{maxAttempts}})…": "Neuer Versuch ({{attempt}}/{{maxAttempts}})…",
   "— timeout": "– Auszeit",
   ":{{containerPort}} in {{container}}": ":{{containerPort}} in {{container}}",
   ":{{hostPort}} on remote": ":{{hostPort}} auf der Fernbedienung",

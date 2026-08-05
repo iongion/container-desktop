@@ -138,6 +138,14 @@ export function emptyCodingAgentChrome(): CodingAgentChrome {
   return { statuses: {}, widgets: {} };
 }
 
+// The retry the session is waiting out, as everything that renders it needs to know it: which attempt this is, of
+// how many, and how long pi's backoff will hold before the attempt actually runs.
+export interface SessionRetry {
+  attempt: number;
+  maxAttempts: number;
+  delayMs: number;
+}
+
 const NOTIFY_INTENT = {
   info: Intent.PRIMARY,
   warning: Intent.WARNING,
@@ -391,11 +399,14 @@ export interface CodingAgentState {
   // What the loaded plugins contribute, for the composer's slash-command palette. Read once the session is
   // ready and again whenever the installed set changes.
   resources: ContributedResources;
-  // The narrowing the running skill asked for, cleared when its turn ends.
+  // The narrowing the running skill asked for, cleared when its run settles.
   activeSkill?: ActiveSkillScope;
   // This turn has read a page off the public web, so it is carrying content anyone could have published. Cleared
-  // with the skill scope when the turn ends.
+  // with the skill scope when the run settles.
   turnReadPublicWeb: boolean;
+  // The retry pi is currently backing off before. Session chrome rather than transcript content — nothing is
+  // appended, the working indicator just says which attempt the silence belongs to.
+  retrying?: SessionRetry;
   // What this session was last told about the project's rules and memories. Held because the container cannot be
   // asked what it has, because the taint has to outlive the turn that delivered it, and because an unchanged
   // context is not worth re-sending.
@@ -635,6 +646,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       pendingEngineOps: {},
       activeSkill: undefined,
       turnReadPublicWeb: false,
+      retrying: undefined,
       systemContext: undefined,
       error: undefined,
       lastStart: options,
@@ -893,6 +905,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       pendingEngineOps: {},
       activeSkill: undefined,
       turnReadPublicWeb: false,
+      retrying: undefined,
       systemContext: undefined,
       sessionModel: undefined,
     });
@@ -921,6 +934,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         pendingEngineOps: {},
         activeSkill: undefined,
         turnReadPublicWeb: false,
+        retrying: undefined,
         // A resumed or imported conversation can name a different model, and pi says which in the same frame.
         ...(modelIdOf(event.model) ? { sessionModel: modelIdOf(event.model) } : {}),
       });
@@ -946,10 +960,18 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     }
     if (event.type === "plugin_progress") return;
     set((state) => ({ view: projectPiSessionView(state.view, event, viewSession(state)) }));
-    // A skill narrows only the turn it started. Lifting it here rather than on the next submit keeps a
+    // Which attempt the wait belongs to, for as long as pi's backoff lasts. `retry_end` is pi's own answer either
+    // way — the retry ran, or it was the last one — so the indicator stops claiming an attempt that is over.
+    if (event.type === "retry_start") {
+      set({ retrying: { attempt: event.attempt, maxAttempts: event.maxAttempts, delayMs: event.delayMs } });
+    }
+    if (event.type === "retry_end") set({ retrying: undefined });
+    // A skill narrows only the RUN it started, and `idle` is the one event that means the run is over: pi fires
+    // turn_end per turn, and a tool-using run has as many turns as the model takes steps, so lifting the narrowing
+    // there would drop it after the first one. Lifting it here rather than on the next submit still keeps a
     // follow-up prompt from inheriting a restriction the user never asked for.
-    if (event.type === "turn_end" || event.type === "idle") {
-      set({ activeSkill: undefined, turnReadPublicWeb: false });
+    if (event.type === "idle") {
+      set({ activeSkill: undefined, turnReadPublicWeb: false, retrying: undefined });
     }
     if (event.type === "ready") {
       // The model the container is actually on — which is pi's answer, not the id the start form asked for.

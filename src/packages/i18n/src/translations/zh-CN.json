@@ -3,6 +3,8 @@
   "- n/a -": "- 不适用 -",
   "-- select --": "-  选择  -",
   "-- Select --": "-  选择  -",
+  "Retrying ({{attempt}}/{{maxAttempts}}) in {{seconds}}s…": "重试 ({{attempt}}/{{maxAttempts}})，{{seconds}} 秒后…",
+  "Retrying ({{attempt}}/{{maxAttempts}})…": "重试 ({{attempt}}/{{maxAttempts}})…",
   "— timeout": "- 暂停",
   ":{{containerPort}} in {{container}}": ":{{containerPort}} 在 {{container}} 中",
   ":{{hostPort}} on remote": ":{{hostPort}} 在远程",

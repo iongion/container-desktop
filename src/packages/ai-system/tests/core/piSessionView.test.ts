@@ -110,6 +110,60 @@ describe("projectPiSessionView", () => {
     expect(view.timeline).toEqual([]);
   });
 
+  // A turn is not over at `turn_end`: pi fires that per turn and one agent run has as many turns as the model takes
+  // tool-using steps. Only `agent_settled` — carried here as `idle` — means no retry, compaction or queued
+  // continuation will follow. Ending the working phase on turn end is the session going quiet mid-answer.
+  it("stays in flight across the turn boundaries of one run", () => {
+    const view = project([
+      { type: "user_message", text: "q" } as never,
+      { type: "tool_start", toolCallId: "c1", toolName: "bash", args: {} },
+      { type: "tool_end", toolCallId: "c1", toolName: "bash", isError: false, text: "ok" },
+      { type: "turn_end" },
+    ]);
+    expect(view.phase).toBe("tool");
+  });
+
+  // pi emits the failed attempt as a finished assistant message with stopReason "error" BEFORE deciding whether to
+  // retry, so at that point the app cannot know the turn is over. `retry_start` is that decision arriving: the
+  // failure it names is being redone, so it is withdrawn from the transcript and the turn is in flight again.
+  it("withdraws a failure pi is retrying and keeps the turn in flight", () => {
+    const view = project([
+      { type: "user_message", text: "q" } as never,
+      { type: "error", message: "429: rate limited" },
+      { type: "assistant_end", text: "", stopReason: "error" },
+      { type: "retry_start", attempt: 1, maxAttempts: 3, delayMs: 2000, message: "429: rate limited" },
+    ]);
+    expect(view.timeline.map((item) => item.kind)).toEqual(["message"]);
+    expect(view.phase).toBe("model");
+  });
+
+  // The error callout is not always the last item: a failure that arrives after partial output is followed by the
+  // message carrying that output, so the withdrawal has to find the callout rather than pop the tail.
+  it("withdraws that failure even when partial output followed it", () => {
+    const view = project([
+      { type: "assistant_delta", text: "thinking" },
+      { type: "error", message: "502: upstream gone" },
+      { type: "assistant_end", text: "thinking", stopReason: "error" },
+      { type: "retry_start", attempt: 1, maxAttempts: 3, delayMs: 1000, message: "502: upstream gone" },
+    ]);
+    expect(view.timeline.some((item) => item.kind === "error")).toBe(false);
+    expect(view.phase).toBe("model");
+  });
+
+  // The one pi gave up on is the turn's outcome and stays. Only the attempts it superseded are withdrawn, so the
+  // transcript shows one failure rather than one per attempt.
+  it("keeps the failure pi gave up on", () => {
+    const view = project([
+      { type: "user_message", text: "q" } as never,
+      { type: "error", message: "429: rate limited" },
+      { type: "retry_start", attempt: 1, maxAttempts: 1, delayMs: 1000, message: "429: rate limited" },
+      { type: "error", message: "429: rate limited again" },
+      { type: "retry_end", attempt: 1, success: false, error: "429: rate limited again" },
+    ]);
+    expect(view.timeline.filter((item) => item.kind === "error")).toHaveLength(1);
+    expect(view.phase).toBe("error");
+  });
+
   // Seen against a real 4B model: asked a repeated one-word prompt, it emitted a stop token immediately and the
   // server's own log said `eval time 0.00 ms / 1 tokens`. The turn ran, cost tokens and produced nothing — and the
   // transcript was indistinguishable from a turn that never started.

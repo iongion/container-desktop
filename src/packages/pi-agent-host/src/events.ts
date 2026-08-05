@@ -30,6 +30,14 @@ export interface PiAgentEvent {
   toolName?: string;
   args?: unknown;
   isError?: boolean;
+  // What pi's auto-retry events carry. `errorMessage` is the failure being retried and sits at the top level here,
+  // where a message's own `errorMessage` is nested under `message`.
+  attempt?: number;
+  maxAttempts?: number;
+  delayMs?: number;
+  errorMessage?: string;
+  success?: boolean;
+  finalError?: string;
   partialResult?: { content?: PiContentBlock[] };
   result?: { content?: PiContentBlock[]; details?: unknown };
 }
@@ -122,6 +130,28 @@ export function mapAgentEvent(event: PiAgentEvent): BridgeEvent[] {
       return [{ type: "turn_end" }];
     case "agent_settled":
       return [{ type: "idle" }];
+
+    // pi decides a failure is retryable only AFTER the attempt has ended, so the app has already been told the
+    // model errored by the time this arrives. Carried so it can take that back: the run is still going.
+    case "auto_retry_start":
+      return [
+        {
+          type: "retry_start",
+          attempt: event.attempt ?? 1,
+          maxAttempts: event.maxAttempts ?? 1,
+          delayMs: event.delayMs ?? 0,
+          message: event.errorMessage ?? "",
+        },
+      ];
+    case "auto_retry_end":
+      return [
+        {
+          type: "retry_end",
+          attempt: event.attempt ?? 1,
+          success: event.success === true,
+          ...(event.finalError ? { error: event.finalError } : {}),
+        },
+      ];
     default:
       return [];
   }

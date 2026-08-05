@@ -467,6 +467,13 @@ export type BridgeEvent =
   | { type: "turn_end" }
   | { type: "idle" }
   | { type: "error"; message: string }
+  // pi retries a transient upstream failure by itself, and it decides that only AFTER the failed attempt has
+  // already gone out as an `error`. So the retry needs its own signal: it is the one thing that says the run did
+  // not end there. `delayMs` is pi's exponential backoff — how long the session sits saying nothing.
+  | { type: "retry_start"; attempt: number; maxAttempts: number; delayMs: number; message: string }
+  // How that retry turned out. A success is followed by the real answer; a failure leaves the last attempt's error
+  // standing as the turn's outcome, which is what pi's own `finalError` names.
+  | { type: "retry_end"; attempt: number; success: boolean; error?: string }
   // Sent when the session starts and after every turn. Two events rather than one because they answer different
   // questions — what this has cost, and what the model is being sent — and the app renders them in different places.
   | { type: "usage"; usage: SessionUsageReport }
@@ -556,6 +563,8 @@ export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "turn_end",
   "idle",
   "error",
+  "retry_start",
+  "retry_end",
   "usage",
   "request_context",
   "host_request",

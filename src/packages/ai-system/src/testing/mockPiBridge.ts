@@ -43,6 +43,14 @@ const FORCE_ERROR_RE = /simulate (?:a )?(?:model )?error|force error|fail now/;
 // turn that never ran until the transcript started saying so.
 const EMPTY_ANSWER_RE = /simulate (?:an )?empty (?:answer|reply)|answer nothing/;
 
+// A transient upstream failure pi retries by itself. Scripted because provoking a real 429 means finding a provider
+// having a bad day: this is a fixture that CAN answer badly, which is the only way the recovery path gets driven.
+const RETRY_RE = /simulate (?:a )?retry|retry now/;
+
+// Short enough that a spec is not sitting through pi's real exponential backoff, long enough that the countdown in
+// the working indicator is legible to someone watching.
+const MOCK_RETRY_DELAY_MS = 3_000;
+
 // Asking the session what it was told about the project. A real model can only answer this if the prose actually
 // reached its system prompt, so the mock answers the same way: from what the app published, or not at all.
 const PROJECT_CONTEXT_RE = /project (?:context|rules)|\bmemor(?:y|ies)\b/;
@@ -471,6 +479,22 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
     transcript.push({ type: "user_message", text });
     if (FORCE_ERROR_RE.test(text.toLowerCase())) {
       emit({ type: "error", message: "Mock agent failure (simulated)" });
+      emit({ type: "turn_end" });
+      emit({ type: "idle" });
+      return;
+    }
+    // pi's own recovery, in pi's own order: the failed attempt goes out as an `error` FIRST, because pi decides a
+    // failure is retryable only after the attempt has ended. Then the retry is announced, the backoff is waited out
+    // with nothing arriving, and the answer lands. The turn must read as in flight throughout.
+    if (RETRY_RE.test(text.toLowerCase())) {
+      const reason = "429: rate limited by the upstream provider";
+      emit({ type: "error", message: reason });
+      emit({ type: "assistant_end", text: "", stopReason: "error" });
+      emit({ type: "retry_start", attempt: 1, maxAttempts: 3, delayMs: MOCK_RETRY_DELAY_MS, message: reason });
+      await sleep(MOCK_RETRY_DELAY_MS);
+      if (!aborted) await streamText("That one needed a second attempt, and the retry went through.");
+      emit({ type: "retry_end", attempt: 1, success: true });
+      publishReports();
       emit({ type: "turn_end" });
       emit({ type: "idle" });
       return;

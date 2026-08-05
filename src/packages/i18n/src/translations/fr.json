@@ -3,6 +3,8 @@
   "- n/a -": "- n / A -",
   "-- select --": "-- sélectionner --",
   "-- Select --": "-- Sélectionner --",
+  "Retrying ({{attempt}}/{{maxAttempts}}) in {{seconds}}s…": "Nouvelle tentative ({{attempt}}/{{maxAttempts}}) dans {{seconds}} s…",
+  "Retrying ({{attempt}}/{{maxAttempts}})…": "Nouvelle tentative ({{attempt}}/{{maxAttempts}})…",
   "— timeout": "- temps mort",
   ":{{containerPort}} in {{container}}": ":{{containerPort}} dans {{container}}",
   ":{{hostPort}} on remote": ":{{hostPort}} sur la télécommande",

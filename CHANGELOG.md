@@ -55,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An SSH connection that fails now says why: ssh writes a post-quantum advisory to stderr before the real error, and the diagnostic reported that advisory as the reason — so "start Docker Desktop" read as a key-exchange warning
 - The smoke specs that took several screenshots in one session no longer wedge the session they are measuring — the frames are budgeted, and the container-logs one now asserts that xterm actually painted instead of only logging what it saw
 - Ending an assistant session ends its sign-in renewals too: one stopped while a renewal was still running went on renewing for the rest of the app's life, starting a throwaway login container every time
+- A provider hiccup the assistant retries by itself no longer reads as a failed answer: the working indicator names the attempt and counts the wait down instead of going quiet, and only the attempt it gives up on stays in the transcript
+- A skill's narrowing, and a turn's public-web taint, now last the whole run instead of its first step — a tool-using run ends a turn at every step, and both were being lifted at the first one
 
 ### Added
 

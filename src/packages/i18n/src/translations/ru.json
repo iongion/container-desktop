@@ -3,6 +3,8 @@
   "- n/a -": "- н/д -",
   "-- select --": "-- выбирать --",
   "-- Select --": "-- Выбирать --",
+  "Retrying ({{attempt}}/{{maxAttempts}}) in {{seconds}}s…": "Повтор ({{attempt}}/{{maxAttempts}}) через {{seconds}} с…",
+  "Retrying ({{attempt}}/{{maxAttempts}})…": "Повтор ({{attempt}}/{{maxAttempts}})…",
   "— timeout": "— тайм-аут",
   ":{{containerPort}} in {{container}}": ":{{containerPort}} в {{container}}",
   ":{{hostPort}} on remote": ":{{hostPort}} на удаленном компьютере",

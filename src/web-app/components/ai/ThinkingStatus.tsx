@@ -3,6 +3,9 @@
 // composer input while the model is producing output. First pass for review before weighing react-spinners.
 import { Spinner } from "@blueprintjs/core";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import type { SessionRetry } from "@/web-app/stores/codingAgent";
 
 import "./ThinkingStatus.css";
 
@@ -25,22 +28,46 @@ const THINKING_WORDS = [
 ];
 
 // `message` is a plugin's own working message (pi's `setWorkingMessage`), shown verbatim and without the ellipsis
-// the cycling words carry — it is the plugin's sentence, not one of ours. Absent restores the cycle.
-export const ThinkingStatus: React.FC<{ message?: string }> = ({ message }) => {
+// the cycling words carry — it is the plugin's sentence, not one of ours. Absent restores the cycle. `retry`
+// outranks both: it is the session explaining its own silence, and a retry waits out the whole of an exponential
+// backoff, so the wait is counted down rather than merely named — a still spinner beside a fixed sentence is what
+// a hang looks like.
+export const ThinkingStatus: React.FC<{ message?: string; retry?: SessionRetry }> = ({ message, retry }) => {
+  const { t } = useTranslation();
   const [index, setIndex] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(0);
 
   useEffect(() => {
-    if (message) return;
+    if (message || retry) return;
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % THINKING_WORDS.length);
     }, 1800);
     return () => window.clearInterval(timer);
-  }, [message]);
+  }, [message, retry]);
+
+  useEffect(() => {
+    if (!retry) return;
+    setSecondsLeft(Math.ceil(retry.delayMs / 1_000));
+    const timer = window.setInterval(() => {
+      setSecondsLeft((current) => Math.max(0, current - 1));
+    }, 1_000);
+    return () => window.clearInterval(timer);
+  }, [retry]);
+
+  const retryText = retry
+    ? secondsLeft > 0
+      ? t("Retrying ({{attempt}}/{{maxAttempts}}) in {{seconds}}s…", {
+          attempt: retry.attempt,
+          maxAttempts: retry.maxAttempts,
+          seconds: secondsLeft,
+        })
+      : t("Retrying ({{attempt}}/{{maxAttempts}})…", { attempt: retry.attempt, maxAttempts: retry.maxAttempts })
+    : undefined;
 
   return (
     <div className="ThinkingStatus">
       <Spinner size={16} />
-      <span className="ThinkingStatusText">{message ?? `${THINKING_WORDS[index]}…`}</span>
+      <span className="ThinkingStatusText">{retryText ?? message ?? `${THINKING_WORDS[index]}…`}</span>
     </div>
   );
 };

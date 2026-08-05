@@ -112,6 +112,31 @@ describe("mapAgentEvent", () => {
     expect(mapAgentEvent({ type: "turn_end" })).toEqual([{ type: "turn_end" }]);
   });
 
+  // pi retries a transient upstream failure itself (`_prepareRetry`), and the attempt that failed has ALREADY gone
+  // out as an `error` by then — pi decides to retry only after the assistant message ends. So the retry is its own
+  // signal: without it the app sees the failure, calls the turn over, and reports something pi went on to recover
+  // from. `delayMs` is pi's exponential backoff, which is how long the session sits there saying nothing.
+  it("maps pi's own retry of a transient failure to the bridge's retry signals", () => {
+    expect(
+      mapAgentEvent({
+        type: "auto_retry_start",
+        attempt: 1,
+        maxAttempts: 3,
+        delayMs: 2000,
+        errorMessage: "429: rate limited",
+      }),
+    ).toEqual([{ type: "retry_start", attempt: 1, maxAttempts: 3, delayMs: 2000, message: "429: rate limited" }]);
+    expect(mapAgentEvent({ type: "auto_retry_end", success: true, attempt: 2 })).toEqual([
+      { type: "retry_end", attempt: 2, success: true },
+    ]);
+  });
+
+  it("carries the reason pi gave up, on the retry that ran out of attempts", () => {
+    expect(
+      mapAgentEvent({ type: "auto_retry_end", success: false, attempt: 3, finalError: "502: upstream gone" }),
+    ).toEqual([{ type: "retry_end", attempt: 3, success: false, error: "502: upstream gone" }]);
+  });
+
   it("returns no events for anything unmapped", () => {
     expect(mapAgentEvent({ type: "queue_update" })).toEqual([]);
   });

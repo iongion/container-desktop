@@ -3,6 +3,8 @@
   "- n/a -": "- N / A -",
   "-- select --": "-- selectează --",
   "-- Select --": "-- Selectează --",
+  "Retrying ({{attempt}}/{{maxAttempts}}) in {{seconds}}s…": "Reîncercare ({{attempt}}/{{maxAttempts}}) în {{seconds}} s…",
+  "Retrying ({{attempt}}/{{maxAttempts}})…": "Reîncercare ({{attempt}}/{{maxAttempts}})…",
   "— timeout": "- pauză",
   ":{{containerPort}} in {{container}}": ":{{containerPort}} în {{container}}",
   ":{{hostPort}} on remote": ":{{hostPort}} la distanță",

@@ -536,12 +536,17 @@ describe("useCodingAgentStore web search", () => {
     expect(useCodingAgentStore.getState().view.timeline.at(-1)).toMatchObject({ kind: "approval", status: "pending" });
   });
 
-  it("forgets that taint when the turn ends", async () => {
+  // pi fires turn_end per turn and one agent run has as many as the model takes steps, so dropping the taint there
+  // re-asks the user mid-run about something they already answered. Only `agent_settled` — carried as `idle` —
+  // means the run is over.
+  it("holds that taint across the turns of the run and forgets it when the agent settles", async () => {
     withWebSearch(async () => ({ text: "anything" }));
     attachFakeClient();
     await useCodingAgentStore.getState().handleHostRequest(webSearch("anything"));
     expect(useCodingAgentStore.getState().turnReadPublicWeb).toBe(true);
     useCodingAgentStore.getState().applyBridgeEvent({ type: "turn_end" });
+    expect(useCodingAgentStore.getState().turnReadPublicWeb).toBe(true);
+    useCodingAgentStore.getState().applyBridgeEvent({ type: "idle" });
     expect(useCodingAgentStore.getState().turnReadPublicWeb).toBe(false);
   });
 
@@ -736,12 +741,26 @@ describe("useCodingAgentStore skill invocation", () => {
     expect(responses[0].response).toEqual({ ok: true, value: { allow: true } });
   });
 
-  it("lifts the skill's restrictions once the turn ends", async () => {
+  // A narrowing that lifts at turn_end lasts exactly one step of a run that has many: from the second step on, the
+  // skill's own restriction is gone and tools it never allowed run unchallenged. It must survive to `idle`.
+  it("holds the skill's restrictions across the turns of the run", async () => {
     const { responses } = attachFakeClient();
     await useCodingAgentStore
       .getState()
       .submitSkill({ prompt: "body", displayContent: "/review", allowedTools: ["read"] });
     useCodingAgentStore.getState().applyBridgeEvent({ type: "turn_end" });
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "bash", args: { command: "ls" } }));
+    expect(responses[0].response).toMatchObject({ ok: true, value: { allow: false } });
+  });
+
+  it("lifts the skill's restrictions once the agent settles", async () => {
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .submitSkill({ prompt: "body", displayContent: "/review", allowedTools: ["read"] });
+    useCodingAgentStore.getState().applyBridgeEvent({ type: "idle" });
     expect(useCodingAgentStore.getState().activeSkill).toBeUndefined();
     await useCodingAgentStore
       .getState()
@@ -896,6 +915,39 @@ describe("useCodingAgentStore contributed resources", () => {
     await useCodingAgentStore.getState().refreshResources();
 
     expect(useCodingAgentStore.getState().resources.builtins).toEqual(builtins);
+  });
+});
+
+describe("useCodingAgentStore retries", () => {
+  beforeEach(() => {
+    useCodingAgentStore.setState({ view: emptyPiSessionView("pi-session"), retrying: undefined });
+  });
+
+  // pi's backoff is exponential and silent: the session sits there for seconds with nothing arriving. The working
+  // indicator has to say which attempt this is, or the wait is indistinguishable from a hang.
+  it("names the attempt while pi backs off", () => {
+    useCodingAgentStore
+      .getState()
+      .applyBridgeEvent({ type: "retry_start", attempt: 2, maxAttempts: 3, delayMs: 4000, message: "429" });
+    expect(useCodingAgentStore.getState().retrying).toEqual({ attempt: 2, maxAttempts: 3, delayMs: 4000 });
+  });
+
+  it("stops naming it once the retry has run", () => {
+    useCodingAgentStore
+      .getState()
+      .applyBridgeEvent({ type: "retry_start", attempt: 1, maxAttempts: 3, delayMs: 1000, message: "429" });
+    useCodingAgentStore.getState().applyBridgeEvent({ type: "retry_end", attempt: 1, success: true });
+    expect(useCodingAgentStore.getState().retrying).toBeUndefined();
+  });
+
+  // A retry that never reports its end — the socket dies, the container is killed — would otherwise leave the
+  // indicator claiming an attempt that is not running.
+  it("stops naming it when the agent settles", () => {
+    useCodingAgentStore
+      .getState()
+      .applyBridgeEvent({ type: "retry_start", attempt: 1, maxAttempts: 3, delayMs: 1000, message: "429" });
+    useCodingAgentStore.getState().applyBridgeEvent({ type: "idle" });
+    expect(useCodingAgentStore.getState().retrying).toBeUndefined();
   });
 });
 

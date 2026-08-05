@@ -32,6 +32,18 @@ function settleStreaming(view: SessionView, status: "complete" | "error"): Timel
   );
 }
 
+// Drops the callout for an attempt pi is about to redo. It searches back rather than popping the tail because a
+// failure that arrived after partial output is followed by the message carrying that output.
+function withoutLastModelError(timeline: readonly TimelineItem[]): TimelineItem[] {
+  for (let index = timeline.length - 1; index >= 0; index--) {
+    const item = timeline[index];
+    if (item.kind === "error" && item.scope === "model") {
+      return [...timeline.slice(0, index), ...timeline.slice(index + 1)];
+    }
+  }
+  return [...timeline];
+}
+
 type NoticeItem = Extract<TimelineItem, { kind: "notice" }>;
 
 // What a finished step with no text is worth saying. pi's own stop reasons (pi-ai `StopReason`): `toolUse` means the
@@ -234,6 +246,11 @@ export function projectPiSessionView(
         ],
         streamingAssistant: undefined,
       };
+
+    // pi is retrying, so the failure it names is not this turn's outcome: it comes back off the transcript and the
+    // turn is in flight again for as long as the backoff takes. Only the attempt pi gives up on is left standing.
+    case "retry_start":
+      return { ...next, phase: "model", timeline: withoutLastModelError(view.timeline) };
 
     case "idle":
       return { ...next, phase: "idle", streamingAssistant: undefined };

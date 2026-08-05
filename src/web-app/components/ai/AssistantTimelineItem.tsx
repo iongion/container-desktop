@@ -110,7 +110,11 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
         </Card>
       );
     case "error":
-      return <Callout intent={Intent.DANGER}>{item.message}</Callout>;
+      return (
+        <Callout className="AssistantError" intent={Intent.DANGER}>
+          {item.message}
+        </Callout>
+      );
     case "notice":
       // Not an error: the turn ran and the model chose to say nothing, or its cap was reached before it could. The
       // words live here because the projector is pure and cannot translate.
