@@ -111,6 +111,16 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
       );
     case "error":
       return <Callout intent={Intent.DANGER}>{item.message}</Callout>;
+    case "notice":
+      // Not an error: the turn ran and the model chose to say nothing, or its cap was reached before it could. The
+      // words live here because the projector is pure and cannot translate.
+      return (
+        <Callout className="AssistantTurnNotice" intent={Intent.WARNING} icon={IconNames.INFO_SIGN}>
+          {item.notice === "output-cap"
+            ? t("The model reached its answer limit before writing anything.")
+            : t("The model answered with nothing.")}
+        </Callout>
+      );
     case "workspace-changes":
       return <WorkspaceChangesCard summary={item} onOpen={context.onOpenWorkspaceChanges} />;
     case "data":

@@ -10,17 +10,13 @@
 import type { ThinkingLevelMap } from "@earendil-works/pi-ai";
 
 import {
+  PI_FALLBACK_CONTEXT_WINDOW,
+  PI_FALLBACK_MAX_OUTPUT_TOKENS,
   PI_THINKING_LEVELS,
   type PiModelReasoning,
   type PiModelRegistration,
   piThinkingLevels,
 } from "@/pi-bridge/protocol";
-
-// pi's own defaults, mirrored because its ProviderModelConfig requires both numbers even when nobody knows them
-// (provider-composer.js: `definition.contextWindow ?? 128000`). Used ONLY so pi has something to compact against —
-// never reported to the user as this model's budget.
-const PI_FALLBACK_CONTEXT_WINDOW = 128000;
-const PI_FALLBACK_MAX_OUTPUT_TOKENS = 4096;
 
 export type ModelRegistrations = ReadonlyMap<string, PiModelRegistration>;
 

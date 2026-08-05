@@ -39,6 +39,10 @@ const TOKEN_DELAY_MS = 12;
 
 const FORCE_ERROR_RE = /simulate (?:a )?(?:model )?error|force error|fail now/;
 
+// A finished turn with no output at all — the one a real 4B model produced twice, indistinguishable in the UI from a
+// turn that never ran until the transcript started saying so.
+const EMPTY_ANSWER_RE = /simulate (?:an )?empty (?:answer|reply)|answer nothing/;
+
 // Asking the session what it was told about the project. A real model can only answer this if the prose actually
 // reached its system prompt, so the mock answers the same way: from what the app published, or not at all.
 const PROJECT_CONTEXT_RE = /project (?:context|rules)|\bmemor(?:y|ies)\b/;
@@ -414,6 +418,15 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
     transcript.push({ type: "user_message", text });
     if (FORCE_ERROR_RE.test(text.toLowerCase())) {
       emit({ type: "error", message: "Mock agent failure (simulated)" });
+      emit({ type: "turn_end" });
+      emit({ type: "idle" });
+      return;
+    }
+    // What a real small model does when it emits a stop token immediately: the turn runs and says nothing, with no
+    // error anywhere. Scripted because it took a 4B model and a server log to tell it from a turn that never ran.
+    if (EMPTY_ANSWER_RE.test(text.toLowerCase())) {
+      emit({ type: "assistant_end", text: "", stopReason: "stop" });
+      publishReports();
       emit({ type: "turn_end" });
       emit({ type: "idle" });
       return;

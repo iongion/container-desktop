@@ -657,6 +657,9 @@ const timelineItem = z.discriminatedUnion("kind", [
   z
     .object({ kind: z.literal("error"), id, scope: threadErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) })
     .strict(),
+  // Something the TURN did that the transcript would otherwise have nothing to show for. A code, not prose: the
+  // projector is pure and cannot translate, so the renderer owns the words.
+  z.object({ kind: z.literal("notice"), id, notice: z.enum(["empty-answer", "output-cap"]) }).strict(),
   z
     .object({
       kind: z.literal("workspace-changes"),

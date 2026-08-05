@@ -111,6 +111,20 @@ describe("threadExportHtml", () => {
     expect(html).toContain("the model returned an error");
   });
 
+  // A turn the model answered with nothing is part of the conversation. Without this a shared transcript shows a
+  // question, no answer, and no reason for either — which is exactly the confusion the transcript notice removed.
+  it("keeps a turn that produced no answer", () => {
+    const html = threadExportHtml("x", "m", "2026-08-04T10:00:00.000Z", {
+      ...view([
+        { kind: "message", id: "1", role: "user", content: "say alpha", delivery: "applied", status: "complete" },
+        { kind: "notice", id: "2", notice: "empty-answer" },
+      ]),
+    });
+
+    expect(html).toContain('data-kind="notice"');
+    expect(html).toContain("answered with nothing");
+  });
+
   it("names the file after the conversation, not after the clock alone", () => {
     expect(threadHtmlFilename("Release triage")).toBe("release-triage.html");
     expect(threadHtmlFilename("  ")).toBe("assistant-session.html");

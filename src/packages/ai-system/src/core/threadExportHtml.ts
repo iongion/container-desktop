@@ -71,6 +71,13 @@ function itemHtml(item: TimelineItem): string {
     case "error":
       return section('data-kind="error" data-failed', "Error", [`<p>${escapeHtml(item.message)}</p>`]);
 
+    // A turn with no content of its own. This document is English, like the rest of it, and the transcript's own
+    // wording lives in the renderer.
+    case "notice":
+      return section('data-kind="notice"', "Assistant", [
+        `<p>${item.notice === "output-cap" ? "The model reached its answer limit before writing anything." : "The model answered with nothing."}</p>`,
+      ]);
+
     default:
       return "";
   }

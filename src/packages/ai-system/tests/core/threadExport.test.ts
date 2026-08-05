@@ -93,6 +93,17 @@ describe("sanitized Thread export", () => {
     ).toBe(undefined);
   });
 
+  // A turn that produced nothing is part of what happened. An export that dropped it would show a question with no
+  // answer and no reason for either — the same defect the transcript notice exists to close, one layer out.
+  it("carries a turn notice through the export", () => {
+    const withNotice: ThreadView = {
+      ...view,
+      timeline: [...view.timeline, { kind: "notice", id: "notice-secret-id", notice: "empty-answer" }],
+    };
+    const exported = createSanitizedThreadExport(summary, withNotice, 1000);
+    expect(exported.entries.at(-1)).toEqual({ kind: "notice", notice: "empty-answer" });
+  });
+
   it("creates a bounded cross-platform JSON filename", () => {
     expect(threadExportFilename(summary.title)).toBe("production-audit.json");
     expect(threadExportFilename("***")).toBe("thread-export.json");

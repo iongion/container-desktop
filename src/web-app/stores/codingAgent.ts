@@ -28,6 +28,7 @@ import {
   toolRule,
 } from "@/ai-system/core/permissions";
 import { decidePiToolCall, piPermissionContext } from "@/ai-system/core/piApprovals";
+import { undersizedWindow } from "@/ai-system/core/piContextReport";
 import { emptyPiThreadView, type PiThreadViewSession, projectPiThreadView } from "@/ai-system/core/piThreadView";
 import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import type { ProviderKind } from "@/ai-system/core/providers";
@@ -967,9 +968,28 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // Asked of the provider now, for this model alone. Nothing is pre-fetched and nothing is held: the picker read one
     // level of the catalogue to offer this id, and this is the one request that turns it into a session's model.
     const window = await readModelWindow(target, lastStart?.providerId);
+    // Measured BEFORE the switch, against the session as it stands: what its own prompt and tools cost is the same
+    // whichever model answers, and after the switch the report describes the new one.
+    const undersized = undersizedWindow(get().view.context, window);
     const chosen = await client.selectModel({ id: target, ...window });
     // What pi answered, not what was asked for: the session is the authority on which model is now answering.
     set({ sessionModel: chosen.id });
+    // The switch stands: this is an estimate at four characters per token, and refusing on it could lock the user out
+    // of a model that would have worked. Both numbers go in the MESSAGE — the toast is what the user sees, and the
+    // alternative is the next turn failing with the inference server's own words and nothing to explain them.
+    if (undersized) {
+      Notification.show({
+        message: t("{{model}} reports room for {{window}} tokens, and this session needs about {{required}}", {
+          model: chosen.id,
+          window: undersized.contextWindow,
+          required: undersized.requiredTokens,
+        }),
+        detail: t(
+          "The prompt, the tool definitions and the room reserved for an answer come to that before your first word. Load the model with a longer context, or pick another one.",
+        ),
+        intent: Intent.WARNING,
+      });
+    }
   },
 
   async publishSystemContext() {

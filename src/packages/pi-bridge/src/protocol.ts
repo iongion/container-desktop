@@ -279,6 +279,13 @@ export interface PiModelReasoning {
   mandatory?: boolean;
 }
 
+// pi's own defaults, which its ProviderModelConfig requires even when nobody knows the real numbers
+// (provider-composer: `definition.contextWindow ?? 128000`). Shared because BOTH sides need them and must agree: the
+// container registers a model with them, and the app has to reason about the cap that will then be in force. Never
+// reported to the user as a model's budget — the reports carry only what a provider published.
+export const PI_FALLBACK_CONTEXT_WINDOW = 128000;
+export const PI_FALLBACK_MAX_OUTPUT_TOKENS = 4096;
+
 // What the session ended up running against, in pi's own terms. Answered by a switch so the app adopts what pi did
 // rather than assuming its request landed.
 export interface PiSessionModel {

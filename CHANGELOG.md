@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The composer's model chip shows the model the running session is answering with, instead of a saved default it had no way to apply
 - Changing the model no longer costs you the session: the conversation continues on the new one instead of the pair being torn down and built again
 - The Context panel follows a model change instead of going on describing the model the session was started with
+- A turn the model answered with nothing says so, in the transcript and in an exported one — it used to look exactly like a turn that never ran
+- Choosing a model with no room for the session says so at the moment you choose it, naming both numbers, instead of letting the next turn fail with the inference server's own message
 - The provider key has only one route to the gateway container: the app reads it from the OS keychain and writes the file itself, and there is no longer any field it could travel in from the web view
 - The agent's bridge token is protected like the provider key beside it: both env files now live in the one directory the web view cannot read back, instead of the token sitting in a second unguarded one
 - Starting a session with network access turned off works at all: the agent's own network is created internal and the gateway is given a routable one of its own, instead of handing the engine a flag `run` does not have

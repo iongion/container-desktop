@@ -2,7 +2,11 @@
 // states facts about itself; everything here is either arithmetic on those facts or the app's own policy — which
 // tool is gated, which provider this is, what permission mode is in force — because pi has no opinion on any of it.
 
-import type { SessionContextReport, SessionUsageReport } from "@/pi-bridge/protocol";
+import {
+  PI_FALLBACK_MAX_OUTPUT_TOKENS,
+  type SessionContextReport,
+  type SessionUsageReport,
+} from "@/pi-bridge/protocol";
 
 import type {
   EffectiveContextSection,
@@ -76,6 +80,36 @@ export interface PiContextAppFacts {
   // What the app put into the system prompt itself: the project's rules and memories, with their trust. The session
   // cannot report these — it only ever saw the composed prose.
   sources?: readonly EffectiveContextSource[];
+}
+
+// What a model cannot be asked to hold less than: this session's own system prompt and tool definitions, plus the
+// room reserved for the answer. A model whose window is under that fails the NEXT TURN in the server's own words —
+// gemma loaded at 4096 against pi's ~4.6k-token prompt answered `n_keep: 4639 >= n_ctx: 4096` — and both numbers are
+// known at the moment of the pick: the prompt from the session's last report, the window from the provider.
+//
+// An ESTIMATE, at four characters per token, so this warns and never refuses: a real tokenizer may fit what this
+// arithmetic says will not, and locking the user out of a model on those grounds would be worse than the failed turn.
+export interface UndersizedWindow {
+  contextWindow: number;
+  requiredTokens: number;
+}
+
+export function undersizedWindow(
+  context: EffectiveContextSnapshot | undefined,
+  published: { contextWindow?: number; maxOutputTokens?: number },
+): UndersizedWindow | undefined {
+  const contextWindow = published.contextWindow;
+  // Nothing to compare: an unknown window is not a small one, and a session that has not reported yet has no prompt
+  // to measure.
+  if (!contextWindow || !context) return undefined;
+  const prompt = context.sections
+    .filter((section) => section.kind === "system" || section.kind === "tools")
+    .reduce((total, section) => total + section.estimatedTokens, 0);
+  if (!prompt) return undefined;
+  // The cap that will be in force for THAT model once it is registered — what the provider published, or the fallback
+  // the container registers in its place.
+  const requiredTokens = prompt + (published.maxOutputTokens ?? PI_FALLBACK_MAX_OUTPUT_TOKENS);
+  return requiredTokens > contextWindow ? { contextWindow, requiredTokens } : undefined;
 }
 
 export function toEffectiveContext(

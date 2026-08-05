@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toEffectiveContext, toThreadUsage } from "@/ai-system/core/piContextReport";
+import { toEffectiveContext, toThreadUsage, undersizedWindow } from "@/ai-system/core/piContextReport";
 import type { SessionContextReport } from "@/pi-bridge/protocol";
 
 const report = (patch: Partial<SessionContextReport> = {}): SessionContextReport => ({
@@ -120,6 +120,41 @@ describe("toEffectiveContext", () => {
     expect(toEffectiveContext(report({ compacted: true }), facts, 1000).truncation).toEqual({
       applied: true,
       omittedMessages: 0,
+    });
+  });
+});
+
+// Driven for real: gemma loaded at 4096 against pi's own ~4.6k-token system prompt failed the TURN with llama.cpp's
+// words, `n_keep: 4639 >= n_ctx: 4096`. Both numbers were known before the switch.
+describe("undersizedWindow", () => {
+  // 20000 characters of system prompt is 5000 tokens at the panel's own four-per-token, and the tools add more.
+  const session = toEffectiveContext(report({ systemPromptChars: 20_000 }), facts, 1000);
+
+  it("says nothing when the provider published no window, because there is nothing to compare", () => {
+    expect(undersizedWindow(session, {})).toBeUndefined();
+  });
+
+  it("says nothing when there is no report to compare against yet", () => {
+    expect(undersizedWindow(undefined, { contextWindow: 1024 })).toBeUndefined();
+  });
+
+  it("answers with both numbers when the window cannot hold the session's own prompt", () => {
+    expect(undersizedWindow(session, { contextWindow: 4096 })).toEqual({
+      contextWindow: 4096,
+      requiredTokens: 9107,
+    });
+  });
+
+  it("counts the room reserved for the answer, which the model cannot spend on the prompt", () => {
+    // 5000 system + 107 tools fits in 8192 on its own; it is the 4096 reserved for an answer that does not.
+    expect(undersizedWindow(session, { contextWindow: 8192 })).toMatchObject({ requiredTokens: 9107 });
+    expect(undersizedWindow(session, { contextWindow: 16_384 })).toBeUndefined();
+  });
+
+  it("uses the cap the provider published for THAT model rather than pi's fallback", () => {
+    expect(undersizedWindow(session, { contextWindow: 8192, maxOutputTokens: 1024 })).toBeUndefined();
+    expect(undersizedWindow(session, { contextWindow: 8192, maxOutputTokens: 4096 })).toMatchObject({
+      requiredTokens: 9107,
     });
   });
 });

@@ -110,6 +110,48 @@ describe("projectPiThreadView", () => {
     expect(view.timeline).toEqual([]);
   });
 
+  // Seen against a real 4B model: asked a repeated one-word prompt, it emitted a stop token immediately and the
+  // server's own log said `eval time 0.00 ms / 1 tokens`. The turn ran, cost tokens and produced nothing — and the
+  // transcript was indistinguishable from a turn that never started.
+  it("says the model returned nothing when a finished turn produced no text", () => {
+    const view = project([
+      { type: "user_message", text: "say alpha" } as never,
+      { type: "assistant_end", text: "", stopReason: "stop" },
+    ]);
+    expect(view.timeline).toHaveLength(2);
+    expect(view.timeline[1]).toMatchObject({ kind: "notice", notice: "empty-answer" });
+    expect(() => threadViewSchema.parse(view)).not.toThrow();
+  });
+
+  // A cap reached with nothing to show is its own fact: the answer is not missing, it was cut off before it began.
+  it("distinguishes a turn that stopped at its output cap", () => {
+    const view = project([{ type: "assistant_end", text: "", stopReason: "length" }]);
+    expect(view.timeline[0]).toMatchObject({ kind: "notice", notice: "output-cap" });
+  });
+
+  // A model that calls a tool without prose is the normal shape of a turn, not an empty answer: the tool card is
+  // what it said. A notice here would sit above every single tool call.
+  it("stays silent when a step ended only to call a tool", () => {
+    const view = project([{ type: "assistant_end", text: "", stopReason: "toolUse" }]);
+    expect(view.timeline).toEqual([]);
+  });
+
+  // The user's own Stop, and a provider failure that already reported itself as an error entry. Neither is the model
+  // answering with nothing.
+  it("stays silent for an aborted turn and for one that already reported an error", () => {
+    expect(project([{ type: "assistant_end", text: "", stopReason: "aborted" }]).timeline).toEqual([]);
+    expect(project([{ type: "assistant_end", text: "", stopReason: "error" }]).timeline).toEqual([]);
+  });
+
+  it("says nothing extra when the turn did produce text", () => {
+    const view = project([
+      { type: "assistant_delta", text: "alpha" },
+      { type: "assistant_end", text: "alpha", stopReason: "stop" },
+    ]);
+    expect(view.timeline).toHaveLength(1);
+    expect(view.timeline[0]).toMatchObject({ kind: "message", content: "alpha" });
+  });
+
   it("keeps an empty view schema-valid", () => {
     expect(() => threadViewSchema.parse(emptyPiThreadView("t1"))).not.toThrow();
   });

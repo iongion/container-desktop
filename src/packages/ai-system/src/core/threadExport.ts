@@ -83,6 +83,10 @@ const exportData = z
   })
   .strict();
 
+// What the turn did that has no content of its own. Exported as the code, like the transcript holds it: an export
+// that dropped it would show a conversation with a question and no answer and no reason for either.
+const exportNotice = z.object({ kind: z.literal("notice"), notice: z.string() }).strict();
+
 export const threadExportSchema = z
   .object({
     version: z.literal(THREAD_EXPORT_VERSION),
@@ -106,6 +110,7 @@ export const threadExportSchema = z
           exportError,
           exportWorkspaceChanges,
           exportData,
+          exportNotice,
         ]),
       )
       .max(MAX_THREAD_TIMELINE_ITEMS),
@@ -174,6 +179,8 @@ function sanitizeEntry(view: ThreadView, item: ThreadTimelineItem, index: number
         ...(item.data === undefined ? {} : { data: item.data }),
         ...(item.text === undefined ? {} : { text: item.text }),
       });
+    case "notice":
+      return redactPayload({ kind: item.kind, notice: item.notice });
   }
 }
 

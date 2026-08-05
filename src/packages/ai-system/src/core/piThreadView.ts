@@ -32,6 +32,16 @@ function settleStreaming(view: ThreadView, status: "complete" | "error"): Timeli
   );
 }
 
+type NoticeItem = Extract<TimelineItem, { kind: "notice" }>;
+
+// What a finished step with no text is worth saying. pi's own stop reasons (pi-ai `StopReason`): `toolUse` means the
+// tool card is the answer, `aborted` and `error` are already on screen as themselves, and `length` is a cap reached
+// before a single word — which is not the same thing as a model that simply said nothing.
+function turnNotice(stopReason: string): NoticeItem["notice"] | undefined {
+  if (stopReason === "length") return "output-cap";
+  return stopReason === "stop" ? "empty-answer" : undefined;
+}
+
 type ToolItem = Extract<TimelineItem, { kind: "tool" }>;
 
 function withTool(view: ThreadView, toolCallId: string, patch: (item: ToolItem) => ToolItem): TimelineItem[] {
@@ -114,9 +124,19 @@ export function projectPiThreadView(
           : ("complete" as const);
       const streaming = view.streamingAssistant;
       if (!streaming) {
-        // Nothing was said and nothing is streaming — an empty bubble is noise, which is exactly what an
-        // aborted turn with no output produces.
-        if (!event.text) return { ...next, ...(aborted ? { phase: "idle" as const } : {}) };
+        // Nothing was said and nothing is streaming. An empty bubble is noise — but silence is only right when the
+        // step had nothing to say for a reason the transcript already shows: the user's own Stop, an error that
+        // reported itself as its own entry, or a tool call, whose card IS what the model said. A turn that simply
+        // finished empty gets a notice, because a real 4B model does exactly that and it looked like a turn that
+        // never ran.
+        if (!event.text) {
+          const notice = turnNotice(event.stopReason);
+          return {
+            ...next,
+            ...(aborted ? { phase: "idle" as const } : {}),
+            ...(notice ? { timeline: [...view.timeline, { kind: "notice" as const, id: randomUUID(), notice }] } : {}),
+          };
+        }
         return {
           ...next,
           ...(aborted ? { phase: "idle" as const } : {}),
