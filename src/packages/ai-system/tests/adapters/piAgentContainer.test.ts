@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   agentRunArgv,
+  defaultSessionNames,
   egressNetworkName,
   gatewayRunArgv,
   gatewayUpstreamUrl,
@@ -487,6 +488,37 @@ describe("startPiAgentSession port collisions", () => {
   });
 });
 
+// The default session is the one the app reuses forever, so it cannot be named after a random suffix the next boot
+// has no way to recognise. Its name IS its identity: derived from the connection, stable across restarts, and — by
+// not being eight hex characters — invisible to the reaper that clears ephemeral sessions.
+describe("defaultSessionNames", () => {
+  it("names the default session after its connection", () => {
+    expect(defaultSessionNames("podman-1")).toEqual({
+      agentContainerName: "cd-agent-default-podman-1",
+      gatewayContainerName: "cd-gateway-default-podman-1",
+      networkName: "cd-agent-net-default-podman-1",
+    });
+  });
+
+  // The whole point: the next boot has to arrive at the same names without being told them.
+  it("answers the same names every time", () => {
+    expect(defaultSessionNames("docker-2")).toEqual(defaultSessionNames("docker-2"));
+  });
+
+  // A connection id is free text; a container name is not. Anything the engine would refuse has to be folded out
+  // WITHOUT two different connections ever arriving at one name.
+  it("keeps a connection id the engine would refuse out of the name", () => {
+    const names = defaultSessionNames("Podman Machine #1");
+    expect(names.agentContainerName).toMatch(/^cd-agent-default-[a-z0-9][a-z0-9_.-]*$/);
+  });
+
+  it("still tells apart two ids that would clean up to the same slug", () => {
+    expect(defaultSessionNames("Podman 1").agentContainerName).not.toEqual(
+      defaultSessionNames("podman 1").agentContainerName,
+    );
+  });
+});
+
 // A crash or a force-quit leaves the pair and its networks behind — the app is the only thing that would have
 // removed them, and enough leaked /24s make the engine refuse to create another network at all.
 describe("reapOrphanPiAgentSessions", () => {
@@ -529,6 +561,51 @@ describe("reapOrphanPiAgentSessions", () => {
     expect(commandsOf(host).map((call) => (call[1] as string[]).join(" "))).toEqual(
       ["ps --all", "network ls"].map((argv) => expect.stringContaining(argv)),
     );
+  });
+
+  // The default session is meant to outlive the app: the user is asked to start a session once, and every boot after
+  // that adopts what is already there. Reaping it would put the prompt back and lose the conversation.
+  it("spares a healthy default session while clearing the ephemeral ones", async () => {
+    const host = listingHost(
+      ["cd-agent-default-podman-1", "cd-gateway-default-podman-1", "cd-agent-1a2b3c4d", "cd-gateway-1a2b3c4d"],
+      ["cd-agent-net-default-podman-1", "cd-agent-net-1a2b3c4d"],
+    );
+    const reaped = await reapOrphanPiAgentSessions(host);
+    expect(reaped).toEqual({
+      containers: ["cd-agent-1a2b3c4d", "cd-gateway-1a2b3c4d"],
+      networks: ["cd-agent-net-1a2b3c4d"],
+    });
+  });
+
+  // The pair is the unit of a session: the gateway holds the credential and the agent cannot reach a model without
+  // it. Half a default answers no prompt while still holding a published port, so it is cleared and rebuilt — and
+  // its network goes with it, because nothing is left on it.
+  it("clears a default session that lost half its pair, and its network with it", async () => {
+    const host = listingHost(["cd-gateway-default-podman-1"], ["cd-agent-net-default-podman-1"]);
+    const reaped = await reapOrphanPiAgentSessions(host);
+    expect(reaped).toEqual({
+      containers: ["cd-gateway-default-podman-1"],
+      networks: ["cd-agent-net-default-podman-1"],
+    });
+  });
+
+  it("clears a default agent left without its gateway", async () => {
+    const host = listingHost(["cd-agent-default-docker-1"], []);
+    const reaped = await reapOrphanPiAgentSessions(host);
+    expect(reaped.containers).toEqual(["cd-agent-default-docker-1"]);
+  });
+
+  // Two connections each keep their own default, so one being broken must not take the other down with it.
+  it("clears only the broken default when another connection's is healthy", async () => {
+    const host = listingHost(
+      ["cd-agent-default-podman-1", "cd-gateway-default-podman-1", "cd-gateway-default-docker-1"],
+      ["cd-agent-net-default-podman-1", "cd-agent-net-default-docker-1"],
+    );
+    const reaped = await reapOrphanPiAgentSessions(host);
+    expect(reaped).toEqual({
+      containers: ["cd-gateway-default-docker-1"],
+      networks: ["cd-agent-net-default-docker-1"],
+    });
   });
 
   // The plugin volume is shared by every session and holds what the user installed. A reaper that took it would

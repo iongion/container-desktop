@@ -65,6 +65,21 @@ export interface AISettings {
   // Absolute path to the single project folder the workspace tools may read/edit/run in. Absent → workspace tools
   // are unavailable. The host capability confines ALL file access to this root (canonicalized, no escapes).
   workspaceRoot?: string;
+  // The session the assistant REUSES on each connection, keyed by connection id. This is what makes "start a session"
+  // a one-time question: a configured entry names everything a boot needs to adopt or recreate the pair, and an
+  // absent one is how "not set up on this engine yet" is expressed. Per connection because a session's containers
+  // live on ONE engine — reaching it is what a connection is.
+  defaultSessions?: Record<string, AIDefaultSessionConfig>;
+}
+
+// What the reusable session was configured with. Only the workspace is required: it is the folder that gets mounted
+// and written to, so it is the one thing the app must never guess. Everything else falls back to the app's own
+// defaults at resolve time, which keeps a session set up before a model was chosen working.
+export interface AIDefaultSessionConfig {
+  workspacePath: string;
+  providerId?: string;
+  modelId?: string;
+  egress?: boolean;
 }
 
 // Core-owned model-listing DTO used by both the channels contract and runtime implementations.

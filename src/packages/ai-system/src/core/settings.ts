@@ -57,5 +57,6 @@ export function normalizeAISettings(raw?: Partial<AISettings>): AISettings {
     providers: merged.providers,
     ...(merged.permissionMode !== undefined ? { permissionMode: merged.permissionMode } : {}),
     ...(merged.workspaceRoot !== undefined ? { workspaceRoot: merged.workspaceRoot } : {}),
+    ...(merged.defaultSessions !== undefined ? { defaultSessions: merged.defaultSessions } : {}),
   };
 }

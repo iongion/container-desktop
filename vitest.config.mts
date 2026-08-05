@@ -1,5 +1,12 @@
+import { availableParallelism } from "node:os";
 import { configDefaults, defineConfig } from "vitest/config";
 import { makeAliases } from "./support/aliases.mjs";
+
+// Half the cores, never all of them. Every worker builds its own jsdom, so an uncapped run on a many-core
+// workstation spawns one heavyweight environment per core and takes the whole desktop unresponsive for the length of
+// the suite — the machine running the tests is also the machine being worked on. The floor of 2 keeps CI (2 cores)
+// exactly as parallel as it was, and VITEST_MAX_WORKERS overrides either way.
+const maxWorkers = Number(process.env.VITEST_MAX_WORKERS) || Math.max(2, Math.floor(availableParallelism() / 2));
 
 // Standalone Vitest config for the HERMETIC suite (the app's vite.config.*.mjs are per-target build
 // configs; the live matrix runs from vitest.live.config.mts). `@` mirrors the tsconfig path alias.
@@ -28,5 +35,6 @@ export default defineConfig({
     // Tests import { describe, it, expect } from "vitest" (globals disabled → no tsconfig types change needed).
     globals: false,
     clearMocks: true,
+    maxWorkers,
   },
 });

@@ -73,6 +73,32 @@ describe("normalizeAISettings", () => {
     expect(ai.providers.anthropic.auth).toEqual({ scheme: "basic", username: "u" });
   });
 
+  // The reusable session per connection. Absent is meaningful: it is how "the assistant has not been set up on this
+  // engine yet" is expressed, and the one time the app is allowed to ask.
+  it("has no reusable session configured until one is set up", () => {
+    expect(normalizeAISettings({}).defaultSessions).toBeUndefined();
+  });
+
+  it("keeps the reusable session configured for a connection", () => {
+    const ai = normalizeAISettings({
+      defaultSessions: { "podman-1": { workspacePath: "/home/me/project", modelId: "qwen3-4b" } },
+    } as never);
+    expect(ai.defaultSessions?.["podman-1"]).toEqual({ workspacePath: "/home/me/project", modelId: "qwen3-4b" });
+  });
+
+  // A default belongs to ONE connection: podman's session and docker's are different containers on different
+  // engines, so configuring one must never disturb the other.
+  it("keeps each connection's session separate", () => {
+    const ai = normalizeAISettings({
+      defaultSessions: {
+        "podman-1": { workspacePath: "/home/me/a" },
+        "docker-1": { workspacePath: "/home/me/b", egress: true },
+      },
+    } as never);
+    expect(ai.defaultSessions?.["podman-1"].workspacePath).toBe("/home/me/a");
+    expect(ai.defaultSessions?.["docker-1"]).toEqual({ workspacePath: "/home/me/b", egress: true });
+  });
+
   it("does not mutate the shared DEFAULT_AI_SETTINGS constant", () => {
     const ai = normalizeAISettings({ webSearch: true });
     ai.providers.llamacpp.model = "mutated";

@@ -15,6 +15,8 @@ export const GATEWAY_PORT_IN_IMAGE = 8788;
 // The uid/gid of the `agent` user baked into the image. Rootless podman maps the invoking host user to
 // container root, so without a mapping the agent user cannot write to the bind-mounted workspace.
 const AGENT_UID_IN_IMAGE = 1001;
+// What marks the reusable per-connection session in a container name, as opposed to an ephemeral session's hex suffix.
+const DEFAULT_MARKER = "default";
 
 export interface PiAgentSessionSpec {
   imageTag: string;
@@ -135,6 +137,47 @@ export function networkCreateArgv(spec: PiAgentSessionSpec): string[] {
 // given a routable NIC the agent does not have — that asymmetry IS "only the gateway is reachable".
 export function egressNetworkName(spec: PiAgentSessionSpec): string {
   return `${spec.networkName}-egress`;
+}
+
+// FNV-1a, hand-rolled because this module is bundled into the renderer where node:crypto is absent. It is only ever
+// used to tell apart two connection ids whose cleaned-up forms collide, so a 32-bit digest is ample.
+function shortDigest(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0").slice(0, 6);
+}
+
+// An engine accepts `[a-zA-Z0-9][a-zA-Z0-9_.-]*` and a connection id is free text, so anything else folds to a dash.
+// The digest is appended only when that folding actually changed something: it keeps the ordinary `podman-1` case
+// readable, while still giving two ids that fold alike two different names.
+function connectionSlug(connectionId: string): string {
+  const folded = connectionId
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .slice(0, 32);
+  const base = folded || "connection";
+  return folded === connectionId ? base : `${base}-${shortDigest(connectionId)}`;
+}
+
+// The names of the session the app REUSES for a connection, rather than the ephemeral one it used to create per
+// start. Derived from the connection so the next boot arrives at them without being told, and deliberately not
+// eight hex characters — that is the shape `reapOrphanPiAgentSessions` treats as an orphan, and this session is
+// meant to outlive the app that started it.
+export function defaultSessionNames(connectionId: string): {
+  agentContainerName: string;
+  gatewayContainerName: string;
+  networkName: string;
+} {
+  const slug = connectionSlug(connectionId);
+  return {
+    agentContainerName: `cd-agent-${DEFAULT_MARKER}-${slug}`,
+    gatewayContainerName: `cd-gateway-${DEFAULT_MARKER}-${slug}`,
+    networkName: `cd-agent-net-${DEFAULT_MARKER}-${slug}`,
+  };
 }
 
 // Attached after the gateway is running, so it keeps the internal network as its first: the agent addresses the
@@ -304,27 +347,63 @@ const SESSION_SUFFIX = "[0-9a-f]{8}";
 const SESSION_CONTAINER = new RegExp(`^cd-(agent|gateway|login)-${SESSION_SUFFIX}$`);
 const SESSION_NETWORK = new RegExp(`^cd-agent-net-${SESSION_SUFFIX}(-egress)?$`);
 
-function matching(output: string, pattern: RegExp): string[] {
+// The reusable session's own shapes. It is NOT swept for being old — that is the whole point of it — but half of one
+// is swept for being unusable: the gateway holds the credential and the agent cannot reach a model without it, so a
+// lone half answers no prompt while still holding a published port.
+const DEFAULT_CONTAINER = new RegExp(`^cd-(agent|gateway)-${DEFAULT_MARKER}-(?<slug>.+)$`);
+const DEFAULT_NETWORK = new RegExp(`^cd-agent-net-${DEFAULT_MARKER}-(?<slug>.+?)(-egress)?$`);
+
+function lines(output: string): string[] {
   return output
     .split("\n")
     .map((line) => line.trim())
-    .filter((name) => pattern.test(name));
+    .filter(Boolean);
 }
 
-// Remove every session container and network on this engine that no longer belongs to a running session.
+// Which connections have a default session that can actually serve — both halves standing. Everything else under the
+// default name is a remnant: a pair that lost one half, or a network whose pair is gone.
+function servingDefaultSlugs(containerNames: readonly string[]): Set<string> {
+  const halves = new Map<string, Set<string>>();
+  for (const name of containerNames) {
+    const match = DEFAULT_CONTAINER.exec(name);
+    const slug = match?.groups?.slug;
+    if (!match || !slug) continue;
+    const half = name.startsWith("cd-agent-") ? "agent" : "gateway";
+    const seen = halves.get(slug) ?? new Set<string>();
+    seen.add(half);
+    halves.set(slug, seen);
+  }
+  return new Set([...halves].filter(([, seen]) => seen.size === 2).map(([slug]) => slug));
+}
+
+// Remove every session container and network on this engine that cannot serve a session.
 //
-// Called at startup, where the question answers itself: a pi session lives only as long as the app holds its bridge
-// client, so anything still standing when the app boots was orphaned by a crash or a force-quit. Each orphan holds a
-// published port, and each network a /24 out of the engine's pool — around sixteen of them and podman refuses to
-// create another, which surfaces as "IPAM error: failed to get ips for container" on a session that did nothing
-// wrong. Housekeeping, so an engine that refuses is reported and never raised: the app must still start.
+// Called at startup. For an EPHEMERAL session the question answers itself: one lives only as long as the app holds its
+// bridge client, so anything still standing when the app boots was orphaned by a crash or a force-quit. Each orphan
+// holds a published port, and each network a /24 out of the engine's pool — around sixteen of them and podman refuses
+// to create another, which surfaces as "IPAM error: failed to get ips for container" on a session that did nothing
+// wrong.
+//
+// The DEFAULT session is the opposite case and must survive: it is the one the app reuses, so the user is asked to
+// start a session once and every boot after that adopts what is already there. It is spared by name — its suffix is
+// not the eight hex characters an ephemeral session carries — and only a default that lost half its pair is cleared,
+// because half of one cannot answer a prompt while still holding a port.
+//
+// Housekeeping, so an engine that refuses is reported and never raised: the app must still start.
 export async function reapOrphanPiAgentSessions(
   host: HostClientFacade,
   scope?: string,
 ): Promise<{ containers: string[]; networks: string[] }> {
   const reaped: { containers: string[]; networks: string[] } = { containers: [], networks: [] };
   const containers = await run(host, ["ps", "--all", "--format", "{{.Names}}"], scope).catch(() => "");
-  for (const name of matching(containers, SESSION_CONTAINER)) {
+  const present = lines(containers);
+  const serving = servingDefaultSlugs(present);
+  const brokenDefault = (name: string) => {
+    const slug = DEFAULT_CONTAINER.exec(name)?.groups?.slug;
+    return !!slug && !serving.has(slug);
+  };
+  // One pass in listing order, so the two rules never remove the same name twice.
+  for (const name of present.filter((name) => SESSION_CONTAINER.test(name) || brokenDefault(name))) {
     const removed = await run(host, ["rm", "--force", name], scope).then(
       () => true,
       (error) => {
@@ -334,9 +413,13 @@ export async function reapOrphanPiAgentSessions(
     );
     if (removed) reaped.containers.push(name);
   }
-  // After the containers: a network still in use cannot be removed.
+  // After the containers: a network still in use cannot be removed. A default's network goes only when its pair did.
   const networks = await run(host, ["network", "ls", "--format", "{{.Name}}"], scope).catch(() => "");
-  for (const name of matching(networks, SESSION_NETWORK)) {
+  const strandedDefaultNetwork = (name: string) => {
+    const slug = DEFAULT_NETWORK.exec(name)?.groups?.slug;
+    return !!slug && !serving.has(slug);
+  };
+  for (const name of lines(networks).filter((name) => SESSION_NETWORK.test(name) || strandedDefaultNetwork(name))) {
     const removed = await run(host, ["network", "rm", name], scope).then(
       () => true,
       (error) => {
