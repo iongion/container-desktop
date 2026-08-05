@@ -1,0 +1,73 @@
+.PluginsScreen .AppScreenContent {
+  padding: 10px;
+  overflow: auto;
+}
+
+.PluginsScreen .PluginError,
+.PluginsScreen .PluginProgress {
+  margin-bottom: 10px;
+}
+
+.PluginsTable {
+  width: 100%;
+}
+
+/* Trailing columns shrink to fit; the plugin name and its contributions take what is left. */
+.PluginsTable th[data-column="Scope"],
+.PluginsTable th[data-column="State"],
+.PluginsTable th[data-column="Actions"],
+.PluginsTable th[data-column="select"] {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.PluginsTable tr[data-enabled="false"] .PluginNameText {
+  color: var(--app-text-muted);
+}
+
+.PluginName,
+.PluginState,
+.PluginContributions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.PluginContributions {
+  flex-wrap: wrap;
+}
+
+.PluginNameText {
+  color: var(--app-text);
+  font-weight: 500;
+}
+
+.PluginMuted {
+  color: var(--app-text-muted);
+}
+
+.AppInstallPluginDrawer .PluginSourcePreview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.AppInstallPluginDrawer .PluginSourceName {
+  color: var(--app-text);
+  font-family: monospace;
+}
+
+.AppInstallPluginDrawer .PluginSourceProblem {
+  color: var(--app-intent-danger-text);
+}
+
+.AppInstallPluginDrawer .PluginInstallNotice {
+  margin: 10px 0;
+}
+
+.AppInstallPluginDrawer .PluginProgressLine {
+  color: var(--app-text-muted);
+  font-family: monospace;
+  font-size: 11px;
+}

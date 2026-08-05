@@ -19,15 +19,15 @@ describe("trusted-webview AI bridge", () => {
     const bus = createInRealmBus();
     const aiBus = createWebviewAIBus(bus);
     const listener = vi.fn();
-    aiBus.subscribe(AI_CHANNELS.threadEvent, listener);
+    aiBus.subscribe(AI_CHANNELS.skillsChanged, listener);
     const envelope = {
-      version: 1 as const,
-      threadId: "thread-1",
-      seq: 1,
-      event: { type: "assistant-start" as const, id: "message-1" },
+      revision: "1",
+      user: { root: "/data/skills", status: "ok" as const },
+      skills: [],
+      diagnostics: [],
     };
-    bus.dispatch(AI_CHANNELS.threadEvent, envelope);
-    bus.dispatch(AI_CHANNELS.threadEvent, { threadId: "invalid" });
+    bus.dispatch(AI_CHANNELS.skillsChanged, envelope);
+    bus.dispatch(AI_CHANNELS.skillsChanged, { revision: 1 });
     expect(listener).toHaveBeenCalledOnce();
     expect(listener).toHaveBeenCalledWith(envelope);
     expect(() => aiBus.subscribe("not-ai" as any, vi.fn())).toThrow("AIBus: subscribe not allowed");

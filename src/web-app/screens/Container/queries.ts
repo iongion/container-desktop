@@ -50,6 +50,17 @@ export const useContainer = (
   });
 };
 
+// One connection's containers, for a form that has to offer them (the assistant's execution target). The merged
+// workspace list the screens render comes from the resource store and follows the ACTIVE connection; a form picks
+// its own, so it reads that connection directly. Not live: a form is filled in once, and a poll behind it would
+// reorder the list under the user's cursor.
+export const useContainers = (connId: string, enabled = true) =>
+  useQuery({
+    queryKey: containerKeys.list(connId),
+    queryFn: async () => new ContainersAdapter(await resolveConnectionHost(connId)).list(),
+    enabled: enabled && !!connId,
+  });
+
 export const useContainerStats = (connId: string, id?: string, enabled = true) =>
   useQuery({
     queryKey: containerKeys.sub(connId, id ?? "", "stats"),

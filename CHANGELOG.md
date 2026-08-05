@@ -7,12 +7,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A thinking level now reaches DeepSeek, GLM and OpenRouter in the shape each one actually wants, instead of OpenAI's — the session's own gateway made every provider look like OpenAI, which also sent those servers a system prompt under a role they do not have and an answer cap under a field they do not read
+- The assistant now actually receives your Project Rules and Memory — it used to confirm them in the UI and send the model nothing
+- Everything the app does on the agent's behalf acts on the folder the session mounted, not the one named in Settings: workspace changes, project rules and memory, and project skills
+- Public web search works for the assistant, or says why not — the setting used to promise something the session could not do
+- The Context and Usage panels show real numbers: tokens, cost, the model's budget and the exact tools the model was offered
+- pi's own slash commands are offered under pi's own names; the app no longer answers `/compact`, `/new`, `/session` or `/resume` with something adjacent of its own
+- A plugin's own commands appear in the palette — every one of them was silently dropped before it got there
+- pi's commands work outside demo mode: a real session announced them before the app was listening, so every one of them answered "Unknown command"
+- Diagnostics answer the question that matters: whether the SESSION can reach the model, through its gateway, and not only whether this app can
+- A turn that has read your project's rules, an untrusted skill or a public web page no longer honours a remembered approval
+- The Wails backend no longer lets the web view read a provider key, which Tauri has always refused
+- A command a container image is too old to know now fails immediately with the reason, instead of hanging for thirty seconds
+- Rejecting a tool call no longer leaves "Connection error." in the transcript — stopping the agent was reported as the model failing, several times over
+- The Context panel reports the model's real budget, asked of the provider: a local server's loaded context length, not the 128k every model used to claim regardless of what the server would accept. A provider that publishes nothing now says so
+- The composer's model chip shows the model the running session is answering with, instead of a saved default it had no way to apply
+- Changing the model no longer costs you the session: the conversation continues on the new one instead of the pair being torn down and built again
+- The Context panel follows a model change instead of going on describing the model the session was started with
+- A turn the model answered with nothing says so, in the transcript and in an exported one — it used to look exactly like a turn that never ran
+- Choosing a model with no room for the session says so at the moment you choose it, naming both numbers, instead of letting the next turn fail with the inference server's own message
+- The provider key has only one route to the gateway container: the app reads it from the OS keychain and writes the file itself, and there is no longer any field it could travel in from the web view
+- The agent's bridge token is protected like the provider key beside it: both env files now live in the one directory the web view cannot read back, instead of the token sitting in a second unguarded one
+- Starting a session with network access turned off works at all: the agent's own network is created internal and the gateway is given a routable one of its own, instead of handing the engine a flag `run` does not have
+- A session no longer fails because something else already holds the port it picked — the agent's bridge port is re-picked and tried again when the engine says it is in use
+- Assistant sessions a crash or a force-quit left behind are removed at startup, together with the networks they were holding: enough of those and the engine refuses to create another for anything
+- The Context panel says whether the budget reserved for the answer is the provider's published cap or the app's own default, instead of presenting one as the other
+- Estimated cost is a real number: the provider's published rates now reach the session, so a priced model reports what it charged instead of nothing
+- A turn that cost a fraction of a cent reports what it charged instead of rounding to zero, which read exactly like a free local model
+- The demo session's Workspace and VS Code buttons open a folder that exists, instead of a path only an agent container has
+- Demo mode holds its engine connections instead of dropping them every few seconds: it was checking the filesystem for sockets no demo has, so the connected engines flapped and the theme flickered between them
+- A project you have not trusted can no longer have plugin settings written into it: pi's own default is to trust the project, and the assistant now starts it untrusted and follows your decision
+- A new conversation keeps your containers, your plugins and your workspace — starting one used to tear the pair down and build it again
+
+- Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
+- A local model server session starts again — asking for a key a keyless provider never had used to stop it
+- The assistant shows that it is working from the moment you send, not only once the answer starts arriving
+- The workspace folder's own start log is styled again
+- The mock model list no longer offers a model that does not exist
+- The assistant can now use an Anthropic model: its gateway speaks Anthropic's own wire shape and signs the request the way Anthropic expects
+- A keyless local model server no longer stops the assistant's gateway from starting
+- The gateway now signs the upstream the way that provider's settings say — bearer token, API-key header, basic auth or a custom header
+- The WebDriver tests are two suites again, told apart by what a failure is allowed to mean: `webdriver/specs/*.e2e.js` runs on the mock app only and is never gated, while `webdriver/smoke/*.smoke.js` is real integration with its own entry point (`yarn test:smoke:tauri`) — the two used to share one glob, so the real-integration specs ran against the mock app by default
+- A smoke spec whose machine, engine, agent image, provider key or loaded model is simply absent now reports SKIP with the command that fixes it, instead of failing: a powered-off VM used to read as five failing hosts
+- A Windows connection now says that reaching its containers needs WSL, instead of naming an execution target kind the app no longer has
+- An SSH connection that fails now says why: ssh writes a post-quantum advisory to stderr before the real error, and the diagnostic reported that advisory as the reason — so "start Docker Desktop" read as a key-exchange warning
+- The smoke specs that took several screenshots in one session no longer wedge the session they are measuring — the frames are budgeted, and the container-logs one now asserts that xterm actually painted instead of only logging what it saw
+- Ending an assistant session ends its sign-in renewals too: one stopped while a renewal was still running went on renewing for the rest of the app's life, starting a throwaway login container every time
+
 ### Added
 
-- AI workers can wear an avatar — pick a built-in face or upload your own, shown across the workers list, cards and Runs
-- The Workers screen has a cards view, now the default, alongside the table
-- Reach the AI area from a highlighted "Runs" entry in the sidebar; a single button opens the Assistant
-- The goal task graph is an interactive canvas — pan, zoom and reset the view, with curved dependency links drawn between tasks
+- A plugin can be installed for THIS PROJECT rather than for the agent everywhere — pi's own second package scope, offered once pi trusts the project and explained when it does not
+- The assistant can look up the app's own built-in troubleshooting knowledge — curated podman, docker, WSL and SSH connection failures with the fix and the commands — as a search it makes when it needs one, not as prose in every prompt
+- The assistant can act on files and run commands in ANOTHER container, where you choose: one already running on the connection, picked from what is actually running with its image and id, or a disposable one created from an image and removed when the session ends. Chosen on the start form, off until you choose it, and every write or command asks first
+- Sign in to any provider pi carries a flow for — Anthropic, GitHub Copilot, Kimi, xAI, Radius, OpenAI Codex and OpenRouter — under that provider's own label: pi's own login runs in a one-shot container, the browser does the signing in, and what it returns goes to the OS keychain
+- A sign-in that expires is renewed for you, before it lapses and without interrupting the conversation — the exchange runs pi's own refresh in a throwaway container, and the renewed credential reaches a running session's gateway without restarting it
+- Every provider pi ships is offered in the model picker — 37 of them, with names and model counts read from pi itself — behind their own heading, under the sources you already use
+- A provider the app was never set up for can be browsed and then added in one click: its endpoint comes from what pi publishes, and only the key is left to paste
+- Every model row in the picker says what it costs, how much room it has and whether it thinks, instead of an id alone
+- A cloud provider you have not added a key for can be browsed instead of being a dead end — the models it publishes are listed, and the key is what using one needs
+- A cloud model's real budget, answer cap and rates now show up even when its provider serves nothing to ask: Anthropic, OpenAI, DeepSeek and GLM models are read from pi's own published catalogue, and a running server's answer still wins wherever one can be asked
+- Claude models offer a thinking level, taken from what pi publishes about each one rather than a claim of the app's own — including that some of them cannot stop thinking
+- A plugin can say what it is working on: its own message replaces the word beside the spinner while a turn runs, and it can hide the indicator altogether — three calls that used to do nothing at all
+- Plugin components take the app's colours, including the ones a plugin renders without asking for a theme: they used to paint in the agent's own dark palette whatever engine and mode you were in, and they now follow both
+- Change the model a running session answers with, from the composer's chip: the conversation, the containers and the plugins all survive it
+- A model is looked up when you choose it — one level of your source's catalogue at a time, nothing fetched or registered up front
+- `/model` switches straight away when you name one, pi's own way (`/model <provider/model>`), and opens the picker when you do not
+- pi's own slash commands, all of them, under pi's own names — the ones this architecture cannot honour are listed with the reason rather than hidden
+- **Every one of pi's own commands works.** The nine that used to be refused — `/clone`, `/resume`, `/import`, `/trust`, `/settings`, `/scoped-models`, `/login`, `/logout`, `/share` — described this app's wiring, not pi's limits
+- `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog`, `/reload`, `/new`, `/clone`, `/resume`, `/trust`, `/settings` and `/scoped-models` run against the session itself
+- A session replaced in place brings its conversation with it: the transcript is rebuilt from the session's own history rather than left empty
+- `/resume` opens a picker of the sessions this workspace has, newest first with the one you are in marked; `/clone` duplicates the conversation as it stands
+- `/import` opens a session JSONL you pick and continues it, in the container you are already running
+- `/share` saves the conversation as one standalone HTML file wherever you choose — no gist, no upload, no GitHub account
+- `/trust` records pi's project-trust decision, which is stored with the agent and never in your workspace, and says when the decision gates nothing here
+- `/settings`, `/trust` and `/scoped-models` open one drawer of the session's own setup — auto-compaction, steering, follow-ups, thinking level, project trust and the models Ctrl+P cycles — as controls rather than typed arguments, hiding the thinking level for a model that does not reason and refusing a level it cannot reach
+- A reasoning model gets its thinking level back, with exactly the efforts its source published — the levels above high included, and no off for a model that cannot stop reasoning
+- `/login` and `/logout` manage provider authentication where it actually lives: the app's settings and the OS keychain
+- A resumed or imported session says so when pi had to fall back to this session's model instead of the one its history was written with
+- `/fork` and `/tree` open a picker: your earlier messages to start again from, or the session's branches with the one you are on marked
+- llama.cpp reports its real context window — the length the server actually loaded, not the maximum the model could do
+- The assistant reports what it has spent and what it is sending the model, after every turn
+- One Assistant: the full screen and the quake console are the same conversation, with the same transcript, cards and composer — the separate Coding Agent screen is gone
+- Start a session from wherever you are — the console offers it too, instead of a composer that leads nowhere
+- The AI screens are reachable again, from a menu on the header's AI button
+- The session's connection, workspace and container ride in the screen header; open the workspace folder, or open it as a VS Code workspace, from there
+- Start an assistant session from the app: pick the connection, the workspace folder, the model and whether it may reach the network
+- A local model server (LM Studio, llama.cpp) is now reachable from the agent's gateway container
+- A truncated command's full output can be opened from its card — the agent writes it inside the container, the app reads it back
+- The assistant now answers, runs tools and asks for approval in demo mode, with no container engine present
+- The assistant runs inside a container, streamed into the app over a token-authenticated bridge
+- `yarn cli agent-image` builds the local pi agent image from the shipped Dockerfile
+- Provider credentials stay in a separate gateway container; the agent container never receives a key
+- The assistant runs on a containerized pi session instead of an in-app agent engine
+- pi extensions can ask you things through native dialogs, and show status entries and widgets around the composer
+- Every tool the assistant runs passes your permission settings first; a rejection blocks the call inside pi
+- The assistant's tool calls read as cards: shell output, file contents, a real diff of every edit, and directory or search results
+- A tool card names the file it touched and says whether it was read or written, and notes when output was truncated
+- Data an extension publishes for the app now appears in the conversation as its own labelled, inspectable card
+- Extension components render in the app: custom dialogs, tool renderers, footers, headers, widgets and editors, with keyboard input
+- Extension output follows the app's own theme, per engine and per light or dark mode
+- Remembered tool decisions are now saved from the approval card, scoped to the workspace and connection
+- The assistant can work with your containers again — list, inspect, read logs and stats, start, stop, remove, and pull images — across every connection
+- Container reads run unattended; every container change asks first, naming the entity and the connection it would act on
 - Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
 - Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily
 - Manage image registries per connection — sign in, add or remove them, and set certificates and a proxy for each engine
@@ -60,21 +158,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Providers without model discovery can use a manually entered model
 - Point the assistant at a project folder so it can read, search, edit and run things there, always asking before it changes anything
 - The assistant shows file reads, edits, searches, listings and command output as rich cards instead of raw text
-- A new Runs screen: describe an outcome, review the plan the Assistant proposes, then watch a Team work through it in parallel
-- Runs show the task graph, each agent's live transcript, a token budget you set up front, and the final answer
-- Runs add a timing waterfall, per-task runtime evidence, and run-wide duration, usage and cost statistics
-- Assistant and Team Run agents now use Open Multi Agent orchestration while retaining app-native approvals and tools
-- Agents pause for your approval before anything that changes your system, and only the agent that asked waits
-- Run several goals at once and follow them from the Runs list, as a board grouped by stage or as a sortable table
-- A workers library: define reusable agents with their own model, instructions and tool permissions, and hand a goal a team drawn from it
-- Choose per worker whether it may use every tool, must ask you before each one, or is limited to tools you tick individually
-- Choose where each worker runs — this host, a remote host over SSH, inside an existing container, or a throwaway sandbox created for the run and removed after
-- Ollama joins the local inference sources you can pick a model from
+- A Plugins screen: install pi plugins from npm or git, then update, disable, re-enable or remove them
+- Each plugin row lists what it contributes — commands, skills and prompt templates — and whether it is enabled and on disk
+- Installing states plainly that the plugin's code will run inside the agent container, and a source with shell characters is refused
+- Disabling a plugin keeps it installed, so switching it back on costs no download
+- Installed plugins persist across sessions, and a fresh install takes effect without restarting the agent
+- Plugin commands, skills and prompt templates appear in the composer's slash-command palette, labelled with the plugin they came from
 
 ### Changed
 
-- A Run's plan actions sit in the panel header, and rejecting a plan now asks you to confirm first
-- Each task in a Run's graph shows its worker's avatar in a leading column
+- The assistant speaks pi's vocabulary throughout: what the app used to call a thread is a **session**, because that is what pi calls it — pi's documentation now reads directly onto this app, with nothing to translate
+- A session is one conversation: the thread list, rename, delete, branch and compaction drawers are gone, replaced by pi's own `/resume`, `/name`, `/fork`, `/tree` and `/compact`
+- The access-profile and reasoning-level pickers are gone, with `/access` and `/reasoning`: a session takes both when it starts and neither can be changed afterwards, so the controls only ever looked live
+- The in-app agent engine's whole path is gone — its thread store, tool-artifact store, knowledge bank and fifteen IPC channels had no caller left once the assistant moved into a container
+- The left sidebar now starts collapsed, giving screens their full width until you expand it
+- Eleven unused libraries are gone from the app, including the retired multi-agent engine — a smaller install and a faster build
 - Container and pod lists no longer refetch on every health-check probe — only real lifecycle events and health-status changes trigger a refresh
 - Resource actions no longer show a success toast — only failures notify, keeping routine start, stop and remove quiet
 - Engine health moves runtime details into its header and lets networking use the full width
@@ -109,6 +207,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Running a skill from the composer or the skills drawer works again — it had stopped reaching the agent after the move into a container, and a skill's declared tool list is now enforced for the turn it runs
+- Rejecting a tool call now stops the assistant, instead of it asking again for the same command every second
+- A container change the assistant asks for is now approved once, not twice — the same removal no longer raises a second identical card after you have already allowed it
+- An approval card for a container change now names the connection it will act on even when the agent did not name one, so it is clear which engine is about to lose a container
+- An assistant session no longer fails to start while the agent container is still opening its port
+- The agent container no longer fails to start because one of pi's packages was missing from the image
+- The AI section tabs no longer link to two screens that no longer exist
+- Stopping a turn reads as stopped, not as a model error
 - A container the engine reports with no name at all is no longer listed and grouped as "undefined"
 - Container ports, container statistics and a container's health block are now typed the way both engines really answer them, so nothing reads a field that is not there
 - A container's published ports are read from the shape both engines actually send, so a mapped port is no longer reported as unpublished

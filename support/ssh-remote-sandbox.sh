@@ -93,8 +93,8 @@ cmd_up() {
   echo "SSH remote engine is up:"
   echo "  ssh -i ${KEY} -p ${PORT} ${SSH_USER}@${HOST}"
   echo "  live target CONTAINER_DESKTOP_REMOTE_$(echo "$ID" | tr '[:lower:]' '[:upper:]')_*  written to ${TARGETS_ENV}"
-  echo "  run:  yarn test:runs-on:live"
-  echo "  or:   CONTAINER_DESKTOP_TEST_TARGETS=${ID} yarn test:runs-on:live"
+  echo "  run:  yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js"
+  echo "  or:   CONTAINER_DESKTOP_TEST_TARGETS=${ID} yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js"
 }
 
 cmd_down() {

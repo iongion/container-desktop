@@ -1,9 +1,7 @@
-// AI subsystem mock data — activated when CONTAINER_DESKTOP_MOCK=1. The language-model mock speaks the same
-// AI-SDK stream protocol as real providers, so session steering, typed tools, and native approvals exercise the
-// production AgentSession path instead of a parallel broker-only event script.
+// AI subsystem mock data — activated when CONTAINER_DESKTOP_MOCK=1. Inference itself is mocked one level up, at
+// the pi bridge (testing/mockPiBridge.ts); what lives here are the ports around it — engine operations, model
+// listings, the key store, the sandbox, knowledge and the permission cache.
 
-import type { LanguageModel } from "ai";
-import type { AvatarRecord, AvatarStore, AvatarStoreSnapshot } from "@/ai-system/core/avatars";
 import {
   AI_PERMISSIONS_VERSION,
   type AIPermissionsCache,
@@ -15,205 +13,12 @@ import {
 } from "@/ai-system/core/permissions";
 import type { AIKeyStore, KnowledgeEntry, SandboxCommand, SandboxExecResult } from "@/ai-system/core/ports";
 import type { ResolvedProvider } from "@/ai-system/core/providers";
-import type { RunEvent, RunEventEnvelope, RunView } from "@/ai-system/core/runEvents";
 import { permissionRule } from "@/ai-system/core/schemas";
-import type { EngineOps, ListedModel, TeamRunPort } from "@/ai-system/core/types";
-import type { WorkerDefinition, WorkerStore, WorkerStoreSnapshot } from "@/ai-system/core/workers";
-import mockAvatars from "@/resources/ai/mock-avatars.json";
+import type { EngineOps, ListedModel } from "@/ai-system/core/types";
 import mockEngine from "@/resources/ai/mock-engine.json";
 import mockKnowledge from "@/resources/ai/mock-knowledge.json";
 import mockModels from "@/resources/ai/mock-models.json";
 import mockPermissions from "@/resources/ai/mock-permissions.json";
-import mockTeamRuns from "@/resources/ai/mock-team-runs.json";
-import mockAssistantResponse from "@/resources/prompts/mock-assistant-response.md?raw";
-import mockToolResultResponse from "@/resources/prompts/mock-tool-result-response.md?raw";
-import { CANONICAL_WORKERS, materializeWorkers } from "./agents";
-import { buildScaleRuns, readMockScaleSpec } from "./scaleRuns";
-
-let mockCallId = 0;
-// Mock-only §18 acceptance triggers (production providers never see aiMocks): "hold the tool" makes the next
-// listContainers hang long enough to reliably Stop mid-tool (scenario 6); the error phrase fails the stream so the
-// task settles to the recoverable error state (scenario 10). Gated mutations for the approval flow: "restart the
-// web container" → one gated call; "restart web and cache" (and/both/all) → TWO gated calls in one step so the
-// multi-approval batch is drivable live; "remove/delete … container" → a destructive gated call.
-let holdToolLong = false;
-const HOLD_TOOL_RE = /hold the tool|hang the tool|slow tool/;
-const FORCE_ERROR_RE = /simulate (?:a )?(?:model )?error|force error|fail now/;
-
-type MockLanguageModel = Extract<LanguageModel, { specificationVersion: "v3" }>;
-type MockStreamOptions = Parameters<MockLanguageModel["doStream"]>[0];
-type MockStreamPart =
-  Awaited<ReturnType<MockLanguageModel["doStream"]>>["stream"] extends ReadableStream<infer Part> ? Part : never;
-const MOCK_USAGE = {
-  inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
-  outputTokens: { total: 1, text: 1, reasoning: 0 },
-} satisfies Extract<MockStreamPart, { type: "finish" }>["usage"];
-
-// A model stream that errors after a beat (aborts cleanly if the segment is torn down first) — the segment's
-// stream loop rejects, so the session settles to `error`. Mirrors a real provider stream failure. Teardown is
-// idempotent: the segmentActor aborts the signal AFTER the stream has settled, so close()/error() must run at
-// most once (a second call on a settled controller throws ERR_INVALID_STATE — an uncaught crash otherwise).
-function errorStream(message: string, signal?: AbortSignal): ReadableStream<MockStreamPart> {
-  let settled = false;
-  return new ReadableStream({
-    start(controller) {
-      const timer = setTimeout(() => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        controller.error(new Error(message));
-      }, 120);
-      signal?.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timer);
-          if (settled) {
-            return;
-          }
-          settled = true;
-          controller.close();
-        },
-        { once: true },
-      );
-    },
-  });
-}
-
-function timedStream(chunks: MockStreamPart[], signal?: AbortSignal): ReadableStream<MockStreamPart> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let settled = false;
-  const settle = (controller: ReadableStreamDefaultController<MockStreamPart>) => {
-    if (settled) {
-      return;
-    }
-    settled = true;
-    controller.close();
-  };
-  return new ReadableStream({
-    start(controller) {
-      let index = 0;
-      const next = () => {
-        if (signal?.aborted || index >= chunks.length) {
-          settle(controller);
-          return;
-        }
-        controller.enqueue(chunks[index]);
-        index += 1;
-        timer = setTimeout(next, 90);
-      };
-      signal?.addEventListener(
-        "abort",
-        () => {
-          if (timer) {
-            clearTimeout(timer);
-          }
-          settle(controller);
-        },
-        { once: true },
-      );
-      next();
-    },
-    cancel() {
-      settled = true;
-      if (timer) {
-        clearTimeout(timer);
-      }
-    },
-  });
-}
-
-function textChunks(text: string, id: string): MockStreamPart[] {
-  const words = text.split(/(?<=\s)/);
-  return [
-    { type: "text-start", id },
-    ...words.map<MockStreamPart>((delta) => ({ type: "text-delta", id, delta })),
-    { type: "text-end", id },
-    {
-      type: "finish",
-      finishReason: { unified: "stop", raw: "stop" },
-      usage: MOCK_USAGE,
-    },
-  ];
-}
-
-const TOOL_FINISH: MockStreamPart = {
-  type: "finish",
-  finishReason: { unified: "tool-calls", raw: "tool-calls" },
-  usage: MOCK_USAGE,
-};
-
-function toolChunks(toolName: string, input: Record<string, unknown>, id: string): MockStreamPart[] {
-  return [{ type: "tool-call", toolCallId: id, toolName, input: JSON.stringify(input) }, TOOL_FINISH];
-}
-
-// Emit several gated tool-calls in ONE model step, so the multi-approval batch (allow/reject, cancel mid-batch)
-// is exercisable live — the single mock tool-call otherwise left dual-approval unit-only.
-function toolChunksMulti(
-  calls: Array<{ toolName: string; input: Record<string, unknown> }>,
-  id: string,
-): MockStreamPart[] {
-  return [
-    ...calls.map<MockStreamPart>((c, i) => ({
-      type: "tool-call",
-      toolCallId: `${id}-${i}`,
-      toolName: c.toolName,
-      input: JSON.stringify(c.input),
-    })),
-    TOOL_FINISH,
-  ];
-}
-
-export function createMockLanguageModel(): LanguageModel {
-  return {
-    specificationVersion: "v3",
-    provider: "container-desktop-mock",
-    modelId: "mock-assistant",
-    supportedUrls: {},
-    doGenerate: async () => Promise.reject(new Error("Mock model supports streaming only")),
-    doStream: async (options: MockStreamOptions) => {
-      mockCallId += 1;
-      const id = `mock-${mockCallId}`;
-      const serializedPrompt = JSON.stringify(options.prompt).toLowerCase();
-      const latestUser = [...(options.prompt ?? [])].reverse().find((message) => message.role === "user");
-      const prompt = JSON.stringify(latestUser ?? {}).toLowerCase();
-      if (FORCE_ERROR_RE.test(prompt)) {
-        return { stream: errorStream("Mock model failure (simulated)", options.abortSignal) };
-      }
-      const hasToolResult = serializedPrompt.includes('"type":"tool-result"');
-      let chunks: MockStreamPart[];
-      if (hasToolResult) {
-        chunks = textChunks(mockToolResultResponse.trim(), id);
-      } else if (HOLD_TOOL_RE.test(prompt)) {
-        holdToolLong = true;
-        chunks = toolChunks("listContainers", {}, id);
-      } else if (/restart\b.*\b(?:and|both|all)\b/.test(prompt)) {
-        chunks = toolChunksMulti(
-          [
-            { toolName: "restartContainer", input: { id: "web" } },
-            { toolName: "restartContainer", input: { id: "cache" } },
-          ],
-          id,
-        );
-      } else if (/(?:remove|delete)\b.*container/.test(prompt)) {
-        chunks = toolChunks("removeContainer", { id: "web" }, id);
-      } else if (/restart|stop .*container/.test(prompt)) {
-        chunks = toolChunks("restartContainer", { id: "web" }, id);
-      } else if (/\bimage/.test(prompt)) {
-        chunks = toolChunks("listImages", {}, id);
-      } else if (/\bnetwork/.test(prompt)) {
-        chunks = toolChunks("listNetworks", {}, id);
-      } else if (/\bvolume/.test(prompt)) {
-        chunks = toolChunks("listVolumes", {}, id);
-      } else if (/\bcontainer|\brunning|\bstopped|\blog/.test(prompt)) {
-        chunks = toolChunks("listContainers", {}, id);
-      } else {
-        chunks = textChunks(mockAssistantResponse.trim(), id);
-      }
-      return { stream: timedStream(chunks, options.abortSignal) };
-    },
-  } as LanguageModel;
-}
 
 // EngineOps — fixture-backed so the typed tools resolve in mock mode (the scripted runner emits the card
 // events directly; this is used when an approved mutation re-runs through the broker, and for completeness).
@@ -222,10 +27,8 @@ export function createMockEngineOps(): EngineOps {
   const ops: EngineOps = {
     listConnections: () => mockEngine.connections,
     listContainers: async () => {
-      // "hold the tool" makes this hang long enough to reliably Stop mid-tool (§18 scenario 6); else a short beat.
-      const ms = holdToolLong ? 4000 : 600;
-      holdToolLong = false;
-      await new Promise((resolve) => setTimeout(resolve, ms));
+      // A short beat, so a list read is visibly asynchronous rather than resolving inside the same frame.
+      await new Promise((resolve) => setTimeout(resolve, 600));
       return mockEngine.containers;
     },
     inspectContainer: async ({ id }) =>
@@ -254,7 +57,7 @@ export function createMockEngineOps(): EngineOps {
 
 // Model listing
 // Per-source fixtures so CONTAINER_DESKTOP_MOCK=1 yarn dev exercises every shape the ModelPicker renders:
-//   • LM Studio (:1234) — a flat list; the "/" in "unsloth/qwen3.5-9b" is an HF org, NOT a vendor prefix.
+//   • LM Studio (:1234) — a flat list; the "/" in "lmstudio-community/qwen3.5-9b" is an HF org, NOT a vendor prefix.
 //   • OpenRouter (openrouter.ai) — vendor-prefixed ids, driving the 3-level gateway→provider→model path.
 //   • llama.cpp (:8080) — exactly one served model (its server binds one at launch via -m).
 //   • other clouds — a small generic list so anthropic/openai/… aren't empty in mock mode.
@@ -283,13 +86,29 @@ export function createMockModelLister() {
 // Provider key store
 // Mock mode: every provider reports a stored secret (so cloud catalogs like OpenRouter's vendor-prefixed
 // list are browsable + connection-testable WITHOUT a real key) and writes are no-ops (nothing persisted).
+// What was WRITTEN, in memory. `hasKey` still answers true for everyone — that is what keeps a cloud catalogue
+// browsable without a real key — so it can never say whether a write happened. A recorded write can, which is the
+// only way a spec can prove the secret the app stored is the one a sign-in flow returned.
+const MOCK_KEY_WRITES = new Map<string, string>();
+
+export function mockKeyWrites(): Record<string, string> {
+  return Object.fromEntries(MOCK_KEY_WRITES);
+}
+
 export function createMockKeyStore(): AIKeyStore {
   return {
     getEncryptionStatus: () => ({ available: true, backend: "mock", degraded: false }),
     hasKey: async () => true,
     getKey: async () => "mock-key",
-    setKey: async () => {},
-    clearKey: async () => {},
+    setKey: async (provider, plaintext) => {
+      MOCK_KEY_WRITES.set(provider, plaintext);
+    },
+    clearKey: async (provider) => {
+      MOCK_KEY_WRITES.delete(provider);
+    },
+    writeSecretFile: async (_provider, fileName) => `/mock/agent/${fileName}`,
+    // The same directory as the secret file's, which is the point of the merge.
+    writeAgentEnvFile: async (fileName) => `/mock/agent/${fileName}`,
   };
 }
 
@@ -419,137 +238,12 @@ export function createMockPermissionsStore(filePath: string): PermissionsStoreLi
   };
 }
 
-// An in-memory workers library, so the Workers screen and a run roster are populated without writing to disk —
-// exactly how createMockPermissionsStore serves the permissions UI. Saves and removes behave for real within the
-// session; nothing survives a restart.
-export function createMockWorkerStore(filePath: string): WorkerStore {
-  // Seeded from the SHARED canonical roster (testing/agents.ts) so the mock app and the live agent tests
-  // exercise identical worker definitions; materializeWorkers resolves the days-ago ages against now.
-  let cache: WorkerDefinition[] = materializeWorkers(CANONICAL_WORKERS, { now: Date.now() });
+// The mock dependency bundle CONTAINER_DESKTOP_MOCK wires in. Inferred rather than declared: the run-era
+// MockAIDeps interface named ports that no longer exist.
+export function createMockAIDeps() {
   return {
-    async load(): Promise<WorkerStoreSnapshot> {
-      return { status: "ok", workers: cache.map((worker) => ({ ...worker })), path: filePath };
-    },
-    async save(workers: WorkerDefinition[]) {
-      cache = workers.map((worker) => ({ ...worker }));
-    },
-  };
-}
-
-// An in-memory avatar library, seeded with sample custom faces so the Workers avatar UI is populated without
-// writing to disk — parallel to createMockWorkerStore. Saves/removes behave for real within the session only.
-export function createMockAvatarStore(filePath: string): AvatarStore {
-  const day = 24 * 60 * 60 * 1000;
-  const now = Date.now();
-  let cache: AvatarRecord[] = (mockAvatars as Array<Omit<AvatarRecord, "createdAt"> & { createdDaysAgo: number }>).map(
-    ({ createdDaysAgo, ...avatar }) => ({ ...avatar, createdAt: now - createdDaysAgo * day }),
-  );
-  return {
-    async load(): Promise<AvatarStoreSnapshot> {
-      return { status: "ok", avatars: cache.map((avatar) => ({ ...avatar })), path: filePath };
-    },
-    async save(avatars: AvatarRecord[]) {
-      cache = avatars.map((avatar) => ({ ...avatar }));
-    },
-  };
-}
-
-// Team runs the host "already holds", one per board column, so the Runs kanban and table are populated on a cold
-// start. Each is a real TeamRunPort rather than a static snapshot: stopping one genuinely moves it to `stopped`
-// and approving a plan genuinely moves it to `running`, so the list actions are exercisable instead of erroring
-// against a run the host cannot find.
-// A seed TeamRunPort that can also stream its state changes to the host, the way a real orchestrated run does.
-// The host wires attachEmit → its per-run broadcast during seeding, so a baked run reacts to gate actions in the
-// LIVE UI (not just host-side): reject clears the plan gate, a tool decision resolves the prompt, Stop settles it.
-export type SeedTeamRunPort = TeamRunPort & {
-  attachEmit: (emit: (envelope: RunEventEnvelope) => void) => void;
-};
-
-// Wrap a seed RunView as a SeedTeamRunPort whose snapshot mirrors the real gate reactions (approve→running,
-// reject/cancel→stopped, tool approval→running) AND emits the matching granular RunEvents so the renderer's
-// reducer converges to the same view. Shared by the baked fixtures and the scale seeds.
-function seedTeamRunPort(seed: RunView): SeedTeamRunPort {
-  let view: RunView = structuredClone(seed);
-  let seq = view.lastSeq;
-  let emit: ((envelope: RunEventEnvelope) => void) | undefined;
-  // Emit an event under a fresh seq and advance the view's cursor so folds stay ordered on top of the snapshot.
-  const push = (event: RunEvent): void => {
-    seq += 1;
-    view = { ...view, lastSeq: seq };
-    emit?.({ version: 1, runId: view.runId, seq, event });
-  };
-  return {
-    attachEmit(fn) {
-      emit = fn;
-    },
-    async start() {
-      return { accepted: true as const, runId: view.runId, phase: view.phase };
-    },
-    async resolvePlan(decision) {
-      // Mirrors the real gate: approving releases the plan and the tasks begin, rejecting settles the run.
-      view =
-        decision === "allow"
-          ? { ...view, phase: "running", planPending: false }
-          : { ...view, phase: "stopped", planPending: false };
-      push({ type: "plan-resolved", decision });
-      push(decision === "allow" ? { type: "phase-changed", phase: "running" } : { type: "run-stopped" });
-      return { accepted: true, phase: view.phase };
-    },
-    async resolveToolApproval(approvalId, decision) {
-      const resolved = view.approvals.find((approval) => approval.approvalId === approvalId);
-      view = {
-        ...view,
-        approvals: view.approvals.map((approval) =>
-          approval.approvalId === approvalId
-            ? { ...approval, status: decision === "allow" ? ("allowed" as const) : ("rejected" as const) }
-            : approval,
-        ),
-        // Only the resolved task resumes — matches reduceRunEvent, which keys the transition off the approval.
-        tasks: view.tasks.map((task) =>
-          resolved && task.id === resolved.taskId ? { ...task, status: "running" as const } : task,
-        ),
-      };
-      push({ type: "tool-approval-resolved", approvalId, decision });
-      return { accepted: true, phase: view.phase };
-    },
-    async cancel() {
-      view = { ...view, phase: "stopped", planPending: false };
-      push({ type: "run-stopped" });
-    },
-    snapshot() {
-      return structuredClone(view);
-    },
-    async dispose() {},
-  } satisfies SeedTeamRunPort;
-}
-
-// Seed the run host with the baked sample runs, plus — when CONTAINER_DESKTOP_MOCK_SCALE is set — synthetic
-// scale runs (one large plan + a long Runs list) so the Runs UI can be driven at scale in the mock app.
-export function createMockTeamRuns(): TeamRunPort[] {
-  const seeds: RunView[] = [...(mockTeamRuns as RunView[])];
-  const scale = readMockScaleSpec();
-  if (scale) seeds.push(...buildScaleRuns(scale));
-  return seeds.map(seedTeamRunPort);
-}
-
-// Full deps factory
-
-export interface MockAIDeps {
-  languageModel: LanguageModel;
-  listModels: (provider: ResolvedProvider, opts?: unknown) => Promise<ListedModel[]>;
-  runSandboxed: (cmd: SandboxCommand, opts?: { enforceFloor?: boolean }) => Promise<SandboxExecResult>;
-  knowledgeBank: { search: (query: string) => Promise<KnowledgeEntry[]> };
-  webSearcher: (query: string) => Promise<{ text: string }>;
-  keyStore: AIKeyStore;
-  engineOps: EngineOps;
-}
-
-export function createMockAIDeps(): MockAIDeps {
-  return {
-    languageModel: createMockLanguageModel(),
     listModels: createMockModelLister(),
     runSandboxed: createMockSandboxRunner(),
-    knowledgeBank: createMockKnowledgeBank(),
     webSearcher: createMockWebSearcher(),
     keyStore: createMockKeyStore(),
     engineOps: createMockEngineOps(),

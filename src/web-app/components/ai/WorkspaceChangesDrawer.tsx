@@ -4,9 +4,9 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { describeError } from "@/ai-system/core/errors";
-import type { WorkerExecutionTarget } from "@/ai-system/core/workers";
 import type {
   WorkspaceChangeEntry,
+  WorkspaceChangeOrigin,
   WorkspaceChangeSnapshot,
   WorkspaceChangeState,
   WorkspaceChangeSummary,
@@ -31,16 +31,14 @@ interface WorkspaceChangesCardProps {
   onOpen: () => void;
 }
 
-function targetLabel(target: WorkerExecutionTarget, t: (key: string) => string): string {
-  switch (target.kind) {
-    case "host":
+function originLabel(origin: WorkspaceChangeOrigin, t: (key: string) => string): string {
+  switch (origin.kind) {
+    case "app":
       return t("This computer");
-    case "remote":
-      return `${t("Remote host")}: ${target.connectionId}`;
     case "container":
-      return `${t("Container")}: ${target.containerId}`;
+      return `${t("Container")}: ${origin.containerId}`;
     case "sandbox":
-      return `${t("Sandbox")}: ${target.image}`;
+      return `${t("Sandbox")}: ${origin.image}`;
   }
 }
 
@@ -189,7 +187,7 @@ export function WorkspaceChangesDrawer({ initialView, onClose }: WorkspaceChange
   const facts = useMemo(() => {
     if (!location) return [];
     return [
-      { label: t("Execution target"), value: targetLabel(location.target, t) },
+      { label: t("Read from"), value: originLabel(location.origin, t) },
       { label: t("Workspace"), value: location.workspaceRoot },
     ];
   }, [location, t]);
@@ -258,7 +256,7 @@ export function WorkspaceChangesCard({ summary, onOpen }: WorkspaceChangesCardPr
           {detail} · {t("{{count}} total", { count: summary.afterCount })}
         </span>
       </span>
-      <Tag minimal>{targetLabel(summary.target, t)}</Tag>
+      <Tag minimal>{originLabel(summary.origin, t)}</Tag>
       <Icon icon={IconNames.CHEVRON_RIGHT} size={14} />
     </button>
   );

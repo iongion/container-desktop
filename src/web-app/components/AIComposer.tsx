@@ -7,11 +7,9 @@ import { Button, Intent, Menu, MenuItem, PopoverNext, TextArea } from "@blueprin
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { AccessProfileId } from "@/ai-system/core/accessProfiles";
 import { describeError } from "@/ai-system/core/errors";
-import { type ReasoningLevel, reasoningCapability } from "@/ai-system/core/reasoning";
+import type { SessionPhase } from "@/ai-system/core/sessionEvents";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
-import type { ThreadPhase } from "@/ai-system/core/threadEvents";
 import type { AISettings } from "@/ai-system/core/types";
 import {
   type AssistantCommandExecutionContext,
@@ -31,17 +29,8 @@ import type {
 import { parseAssistantInput } from "@/ai-system/ui/core/commands/parseCommand";
 import { navigateHistory, pushSubmission, submissionHistory } from "@/ai-system/ui/core/submissionHistory";
 import { AssistantCommandPalette } from "@/web-app/components/ai/AssistantCommandPalette";
-import {
-  AccessProfileMenu,
-  ExecutionTargetMenu,
-  PermissionModeMenu,
-  ReasoningLevelMenu,
-} from "@/web-app/components/ai/AssistantComposerControls";
+import { ExecutionTargetMenu, PermissionModeMenu } from "@/web-app/components/ai/AssistantComposerControls";
 import { useAssistantCommandCompletion } from "@/web-app/hooks/useAssistantCommandCompletion";
-import {
-  type AssistantThreadBindings,
-  useAssistantThreadConfiguration,
-} from "@/web-app/hooks/useAssistantThreadConfiguration";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 import { ModelPicker, type ModelPickerValue } from "./ModelPicker";
@@ -51,8 +40,6 @@ import "./AIComposer.css";
 export interface AIComposerContext {
   providerId: string;
   model: string;
-  accessProfile: AccessProfileId;
-  reasoningLevel: ReasoningLevel;
 }
 
 export type ParsedAssistantCommand = Extract<AssistantInputParseResult, { kind: "command" }>;
@@ -60,7 +47,7 @@ export type ParsedAssistantCommand = Extract<AssistantInputParseResult, { kind: 
 export interface AIComposerCommands {
   registry: AssistantCommandRegistry;
   context: AssistantCommandExecutionContext;
-  threadId: string | null;
+  sessionId: string | null;
   onExecute: (
     command: ParsedAssistantCommand,
   ) => AssistantCommandExecutionResult | Promise<AssistantCommandExecutionResult>;
@@ -69,17 +56,27 @@ export interface AIComposerCommands {
 export interface AIComposerProps {
   // Called with the (trimmed, non-empty) text and the chosen provider/model when the user sends.
   onSubmit: (text: string, ctx: AIComposerContext) => unknown | Promise<unknown>;
-  phase?: ThreadPhase;
+  phase?: SessionPhase;
   onStop?: () => Promise<void> | void;
   placeholder?: string;
-  // Optional left-aligned toolbar content, e.g. the Assistant's "New Thread" button.
+  // Optional left-aligned toolbar content, e.g. the Assistant's "New Session" button.
   leadingActions?: React.ReactNode;
   // Optional working indicator shown before the composer's status in the overlay strip.
   statusLeading?: React.ReactNode;
   // Show the global permission-mode dropdown (Assistant only).
   showPermissionMode?: boolean;
-  threadBindings?: AssistantThreadBindings;
   commands?: AIComposerCommands;
+  // A draft an extension pushed in (pi's setEditorText). The seq is what makes it applicable twice: setting
+  // the same text again is a new instruction, not a no-op.
+  draft?: { text: string; seq: number };
+  // The model a RUNNING session is answering with, and how to re-point it. Present where the composer sits in front
+  // of one: the chip then shows what is actually answering and a pick switches that session in place, instead of
+  // saving a default the next session would pick up. Absent ⇒ the chip is the saved selection, as everywhere else.
+  session?: {
+    providerId: string;
+    model: string;
+    onSelectModel: (modelId: string, providerId: string) => Promise<void>;
+  };
 }
 
 export const AIComposer: React.FC<AIComposerProps> = ({
@@ -90,8 +87,9 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   leadingActions,
   statusLeading,
   showPermissionMode,
-  threadBindings,
   commands,
+  draft: injectedDraft,
+  session,
 }) => {
   const { t } = useTranslation();
   const ai: AISettings = useAppStore((state) => state.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
@@ -100,8 +98,6 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
-  const [accessProfileOpen, setAccessProfileOpen] = useState(false);
-  const [reasoningLevelOpen, setReasoningLevelOpen] = useState(false);
   const [queuedCommands, setQueuedCommands] = useState<QueuedAssistantCommand[]>([]);
   const commandListboxId = useId();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -119,20 +115,13 @@ export const AIComposer: React.FC<AIComposerProps> = ({
     providerId: ai.defaultProvider,
     model: ai.providers?.[ai.defaultProvider]?.model ?? "",
   }));
+  // In front of a live session the session IS the selection: its model is what answers, and the saved default
+  // describes the next session rather than this one.
+  const target: ModelPickerValue = session ? { providerId: session.providerId, model: session.model } : selection;
   const active = phase !== "idle" && phase !== "error";
-  const threadConfiguration = useAssistantThreadConfiguration(threadBindings, active);
-  const { accessProfile, reasoningLevel, pending: configurationPending } = threadConfiguration;
-
-  const updateThreadConfiguration = useCallback(
-    async (patch: Parameters<typeof threadConfiguration.update>[0]) => {
-      setSubmitError(undefined);
-      await threadConfiguration.update(patch);
-    },
-    [threadConfiguration.update],
-  );
 
   const applyCommandEffect = useCallback(
-    async (effect: AssistantCommandExecutionResult) => {
+    (effect: AssistantCommandExecutionResult) => {
       switch (effect?.kind) {
         case "open-command-palette":
           completion.replaceValue(effect.query ? `/${effect.query.replace(/^\/+/, "")}` : "/");
@@ -140,27 +129,9 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         case "open-model-picker":
           setModelPickerOpen(true);
           break;
-        case "open-access-profile":
-          setAccessProfileOpen(true);
-          break;
-        case "set-access-profile":
-          await updateThreadConfiguration({ accessProfile: effect.value });
-          setAccessProfileOpen(false);
-          break;
-        case "open-reasoning-level":
-          setReasoningLevelOpen(true);
-          break;
-        case "set-reasoning-level":
-          if (!reasoningCapability(selection.providerId, selection.model).levels.includes(effect.value)) {
-            setSubmitError(t("{{level}} reasoning is unavailable for this model", { level: t(effect.value) }));
-            break;
-          }
-          await updateThreadConfiguration({ reasoningLevel: effect.value });
-          setReasoningLevelOpen(false);
-          break;
       }
     },
-    [completion.replaceValue, selection.model, selection.providerId, t, updateThreadConfiguration],
+    [completion.replaceValue],
   );
 
   const canStop = active && !!onStop;
@@ -172,29 +143,48 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   const paletteQuery = completion.state.query || "/";
   const commandMatches = completion.matches;
   // Provider authentication is enforced by the broker; saving/selecting the provider already chose its endpoint.
-  const canSubmit =
-    !submitting &&
-    !configurationPending &&
-    draft.trim().length > 0 &&
-    (slashInput ? !!commands : !!selection.model && !blocked);
+  const canSubmit = !submitting && draft.trim().length > 0 && (slashInput ? !!commands : !!target.model && !blocked);
+
+  // Picking a model. In front of a live session that re-points the session itself, in place — a refusal (another
+  // inference source, a model the provider does not serve) is the session's own words, shown like any other hint.
+  const pickModel = useCallback(
+    (next: ModelPickerValue) => {
+      if (!session) {
+        setSelection(next);
+        return;
+      }
+      setSubmitError(undefined);
+      void session.onSelectModel(next.model, next.providerId).catch((error) => setSubmitError(describeError(error)));
+    },
+    [session],
+  );
 
   // A settings change made in another mounted composer/settings surface becomes the idle composer's next
   // submission target. Never switch underneath an active task; that operation retains its explicit selection.
+  // Nothing to track while a session owns the selection: it answers for what is running.
   useEffect(() => {
-    if (active) return;
+    if (active || session) return;
     const next = {
-      providerId: threadBindings?.providerId ?? ai.defaultProvider,
-      model: threadBindings?.model ?? ai.providers?.[threadBindings?.providerId ?? ai.defaultProvider]?.model ?? "",
+      providerId: ai.defaultProvider,
+      model: ai.providers?.[ai.defaultProvider]?.model ?? "",
     };
     setSelection((current) =>
       current.providerId === next.providerId && current.model === next.model ? current : next,
     );
-  }, [active, ai.defaultProvider, ai.providers, threadBindings?.providerId, threadBindings?.model]);
+  }, [active, session, ai.defaultProvider, ai.providers]);
+
+  // An extension replacing the composer text. The store hands over a fresh object per push — its `seq` is what
+  // keeps two identical texts distinct — so applying on identity lands both without reverting live typing.
+  useEffect(() => {
+    if (!injectedDraft) return;
+    setDraft(injectedDraft.text);
+    setHistoryIndex(null);
+  }, [injectedDraft]);
 
   useEffect(() => {
     const entry = queuedCommands[0];
     if (!commands || !entry || processingQueueRef.current) return;
-    const execution = revalidateQueuedAssistantCommand(entry, commands.registry, commands.context, commands.threadId);
+    const execution = revalidateQueuedAssistantCommand(entry, commands.registry, commands.context, commands.sessionId);
     if (execution.kind === "queue") return;
     if (execution.kind === "unavailable") {
       setSubmitError(t(execution.reasonKey));
@@ -265,7 +255,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
               queueCounterRef.current,
               parsed,
               commands!.registry,
-              commands!.threadId,
+              commands!.sessionId,
               Date.now(),
             ),
           );
@@ -284,18 +274,13 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       if (parsed.kind === "command") {
         const effect = await commands!.onExecute(parsed);
         if (effect?.kind === "open-command-palette") {
-          await applyCommandEffect(effect);
+          applyCommandEffect(effect);
           return;
         }
         clearSubmittedDraft(text);
-        await applyCommandEffect(effect);
+        applyCommandEffect(effect);
       } else {
-        await onSubmit(parsed.text, {
-          providerId: selection.providerId,
-          model: selection.model,
-          accessProfile,
-          reasoningLevel,
-        });
+        await onSubmit(parsed.text, { providerId: target.providerId, model: target.model });
         clearSubmittedDraft(text);
       }
     } catch (error) {
@@ -307,7 +292,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
 
   const hint = submitError
     ? submitError
-    : !selection.model
+    : !target.model
       ? t("Pick a model to start.")
       : phase === "awaiting-approval"
         ? t("Allow or reject the request above to continue.")
@@ -500,40 +485,15 @@ export const AIComposer: React.FC<AIComposerProps> = ({
             />
           </PopoverNext>
         ) : null}
-        {showPermissionMode ? (
-          <AccessProfileMenu
-            value={accessProfile}
-            onChange={(value) =>
-              void updateThreadConfiguration({ accessProfile: value }).catch((error) =>
-                setSubmitError(describeError(error)),
-              )
-            }
-            disabled={active || configurationPending}
-            control={{ open: accessProfileOpen, onOpenChange: setAccessProfileOpen }}
-          />
-        ) : null}
-        {showPermissionMode ? <PermissionModeMenu disabled={active || configurationPending} /> : null}
-        {showPermissionMode ? <ExecutionTargetMenu disabled={active || configurationPending} /> : null}
+        {showPermissionMode ? <PermissionModeMenu disabled={active} /> : null}
+        {showPermissionMode ? <ExecutionTargetMenu disabled={active} /> : null}
         <ModelPicker
-          value={selection}
-          onChange={setSelection}
-          disabled={active || configurationPending}
+          value={target}
+          onChange={pickModel}
+          disabled={active}
           control={{ open: modelPickerOpen, onOpenChange: setModelPickerOpen }}
+          autoSelect={!session}
         />
-        {showPermissionMode ? (
-          <ReasoningLevelMenu
-            providerId={selection.providerId}
-            model={selection.model}
-            value={reasoningLevel}
-            onChange={(value) =>
-              void updateThreadConfiguration({ reasoningLevel: value }).catch((error) =>
-                setSubmitError(describeError(error)),
-              )
-            }
-            disabled={active || configurationPending}
-            control={{ open: reasoningLevelOpen, onOpenChange: setReasoningLevelOpen }}
-          />
-        ) : null}
         <span className="AIComposerSpacer" />
         {queuedCommands.length > 0 ? (
           <PopoverNext

@@ -5,18 +5,21 @@ import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
 import { AICardShell } from "./AICardShell";
+import { CardNotice } from "./CardNotice";
 import type { ToolCardProps } from "./types";
 
 interface GrepMatch {
   path: string;
   line: number;
   text: string;
+  context?: boolean;
 }
 
 export const SearchCard: React.FC<ToolCardProps> = ({ title, result }) => {
   const { t } = useTranslation();
-  const data = (result ?? {}) as { pattern?: string; files?: string[]; matches?: GrepMatch[] };
-  const heading = data.pattern ? `${title} · "${data.pattern}"` : title;
+  const data = (result ?? {}) as { pattern?: string; files?: string[]; matches?: GrepMatch[]; notice?: string };
+  // A pi title already reads "grep TODO in src", so repeating the pattern would say it twice.
+  const heading = data.pattern && !title.includes(data.pattern) ? `${title} · "${data.pattern}"` : title;
 
   if (Array.isArray(data.matches)) {
     return (
@@ -35,14 +38,16 @@ export const SearchCard: React.FC<ToolCardProps> = ({ title, result }) => {
             <tbody>
               {data.matches.map((m) => (
                 <tr key={`${m.path}:${m.line}:${m.text}`}>
-                  <td className="AICardStrong">{m.path}</td>
+                  <td className={m.context ? "AICardMuted" : "AICardStrong"}>{m.path}</td>
                   <td className="AICardMuted">{m.line}</td>
-                  <td className="AICardMono">{m.text}</td>
+                  {/* grep's own context lines are shown muted, so a hit still stands out among them. */}
+                  <td className={m.context ? "AICardMono AICardMuted" : "AICardMono"}>{m.text}</td>
                 </tr>
               ))}
             </tbody>
           </HTMLTable>
         )}
+        <CardNotice notice={data.notice} />
       </AICardShell>
     );
   }
@@ -59,6 +64,7 @@ export const SearchCard: React.FC<ToolCardProps> = ({ title, result }) => {
           ))}
         </ul>
       )}
+      <CardNotice notice={data.notice} />
     </AICardShell>
   );
 };

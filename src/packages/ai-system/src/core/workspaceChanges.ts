@@ -1,6 +1,6 @@
+import type { ExecutionTarget } from "./executionTargets";
+import { executionTargetKey } from "./executionTargets";
 import { redactText } from "./redact";
-import type { WorkerExecutionTarget } from "./workers";
-import { executionTargetKey } from "./workers";
 
 export type WorkspaceChangeState =
   | "unchanged"
@@ -20,8 +20,18 @@ export interface WorkspaceChangeEntry {
   worktree: WorkspaceChangeState;
 }
 
+// WHERE a change set was read, which is not an execution target: the exec is injected, and the app reads its own
+// workspace directly. `app` is that case — the folder as this app sees it — while a container or sandbox origin says
+// the status came from inside the one the session chose.
+export type WorkspaceChangeOrigin = { kind: "app" } | ExecutionTarget;
+
+// One stable key per origin, so two snapshots are only compared when they were read from the same place.
+function originKey(origin: WorkspaceChangeOrigin): string {
+  return origin.kind === "app" ? "app" : executionTargetKey(origin);
+}
+
 interface WorkspaceChangeLocation {
-  target: WorkerExecutionTarget;
+  origin: WorkspaceChangeOrigin;
   workspaceRoot: string;
 }
 
@@ -84,7 +94,7 @@ export type WorkspaceChangesExec = (
 ) => Promise<WorkspaceChangesExecResult>;
 
 export interface WorkspaceChangesPortOptions {
-  target: WorkerExecutionTarget;
+  origin: WorkspaceChangeOrigin;
   workspaceRoot: () => Promise<string>;
   exec: WorkspaceChangesExec;
   fingerprint: (text: string) => Promise<string>;
@@ -261,7 +271,7 @@ function capPatch(text: string): { text: string; truncated: boolean } {
 export function createWorkspaceChangesPort(options: WorkspaceChangesPortOptions): WorkspaceChangesPort {
   async function inspect() {
     const workspaceRoot = await options.workspaceRoot();
-    const location = { target: options.target, workspaceRoot };
+    const location = { origin: options.origin, workspaceRoot };
     const status = await options.exec(workspaceRoot, "git", STATUS_ARGS);
     if (status.code !== 0) return { location, failure: failure(location, status) };
     const [unstaged, staged] = await Promise.all([
@@ -354,7 +364,7 @@ export function summarizeWorkspaceChanges(
     !isComparable(before) ||
     !isComparable(after) ||
     before.workspaceRoot !== after.workspaceRoot ||
-    executionTargetKey(before.target) !== executionTargetKey(after.target) ||
+    originKey(before.origin) !== originKey(after.origin) ||
     before.fingerprint === after.fingerprint
   ) {
     return undefined;
@@ -370,7 +380,7 @@ export function summarizeWorkspaceChanges(
     })
     .map(({ path }) => path);
   return {
-    target: after.target,
+    origin: after.origin,
     workspaceRoot: after.workspaceRoot,
     beforeCount: before.entries.length,
     afterCount: after.entries.length,

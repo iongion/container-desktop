@@ -7,7 +7,7 @@
 // module is tree-shaken out of a production bundle.
 //
 // Each probe returns plain JSON observations and asserts nothing — the spec owns the assertions, matching
-// webdriver/specs/off-host-exec.e2e.js. That keeps the probe free of any test framework.
+// webdriver/specs/sandbox-exec.e2e.js. That keeps the probe free of any test framework.
 import { SwarmAdapter } from "@/container-client/adapters/swarm";
 import { createConnectorBy } from "@/container-client/connection";
 import { runSSHPreflight } from "@/container-client/diagnostics/ssh-preflight";

@@ -1,6 +1,6 @@
 // The summonable AI console: a single app-wide host, mounted once at the App level and portaled to <body>
-// so it can overlay the FULL app width (over the sidebar). It renders the SAME <AssistantThread> as the
-// full-page Assistant, against the shared useAIStore Thread. Summon/dismiss with Ctrl/Cmd+` — the toggle is
+// so it can overlay the FULL app width (over the sidebar). It renders the SAME <AssistantSession> as the
+// full-page Assistant, against the shared useAIStore Session. Summon/dismiss with Ctrl/Cmd+` — the toggle is
 // registered in the always-mounted AppLayout (layout-independent, via e.code). Open/variant/opacity/height live in
 // uiStore, shared with the header trigger. The transparency slider (quake variants) drives --console-opacity so the
 // screen shows through; dragging the header grip drives --console-height (quake variants, clamped 10–80%).
@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import { AssistantThread } from "@/web-app/components/ai/AssistantThread";
+import { AssistantSession } from "@/web-app/components/ai/AssistantSession";
 import { CONSOLE_HEIGHT_MAX, CONSOLE_HEIGHT_MIN, clampConsoleHeight, useUIStore } from "@/web-app/stores/uiStore";
 
 import "./AssistantConsole.css";
@@ -31,7 +31,7 @@ export const AssistantConsoleHost: React.FC = () => {
   const setOpacity = useUIStore((s) => s.setAssistantConsoleOpacity);
   const setHeight = useUIStore((s) => s.setAssistantConsoleHeight);
 
-  // Lazy-mount the thread only once the console has actually been opened, so app start never eagerly
+  // Lazy-mount the session only once the console has actually been opened, so app start never eagerly
   // creates an Agent Session or runs model discovery; once mounted it stays (smooth close animation, live store).
   const [everOpened, setEverOpened] = useState(open);
   const asideRef = useRef<HTMLElement | null>(null);
@@ -42,7 +42,7 @@ export const AssistantConsoleHost: React.FC = () => {
   }, [open]);
 
   // When the console opens, put the caret in the composer so the user can type immediately — on first open
-  // and on re-opens of the already-mounted thread. rAF waits for the slide-in/layout to settle.
+  // and on re-opens of the already-mounted session. rAF waits for the slide-in/layout to settle.
   useEffect(() => {
     if (!open) {
       return;
@@ -163,7 +163,7 @@ export const AssistantConsoleHost: React.FC = () => {
             onClick={() => setOpen(false)}
           />
         </div>
-        {everOpened ? <AssistantThread surface="quake-console" /> : null}
+        {everOpened ? <AssistantSession surface="quake-console" /> : null}
       </aside>
     </div>,
     document.body,

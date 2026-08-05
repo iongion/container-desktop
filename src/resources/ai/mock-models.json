@@ -1,6 +1,7 @@
 {
   "lmstudio": [
-    "unsloth/qwen3.5-9b",
+    "qwen3-4b-instruct-2507",
+    "lmstudio-community/qwen3.5-9b",
     "unsloth/llama-3.3-70b-instruct-gguf",
     "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
     "llama-3.2-3b-instruct",

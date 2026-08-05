@@ -1,6 +1,6 @@
-// Exec-routed IWorkspaceAccess (MAIN). The off-host twin of createNodeWorkspaceAccess: instead of node:fs it
-// drives a target (a remote host or a container) through ONE injected captured-exec primitive, so a worker's
-// file + command tools act on a directory that lives WHERE THE WORKER RUNS. File ops use portable, shell-free
+// Exec-routed IWorkspaceAccess (MAIN). The in-container twin of createNodeWorkspaceAccess: instead of node:fs it
+// drives the target container through ONE injected captured-exec primitive, so a session's file + command tools
+// act on a directory that lives WHERE THE SESSION RUNS. File ops use portable, shell-free
 // argv (cat / tee-via-stdin / find / grep / stat / rm / mkdir) with ABSOLUTE target paths, so they are
 // cwd-independent; the model's execCommand runs through the same primitive (its cwd is the target's — a sandbox
 // pins /workspace at creation). Confinement is POSIX-lexical against the target root (targets are unix-like):

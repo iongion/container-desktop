@@ -25,7 +25,7 @@ describe("isValidSkillName", () => {
 });
 
 describe("narrowSkillTools", () => {
-  it("intersects the skill allowlist with the Thread toolset", () => {
+  it("intersects the skill allowlist with the Session toolset", () => {
     expect(narrowSkillTools(new Set(["readFile", "writeFile"]), ["readFile", "removePath"])).toEqual(
       new Set(["readFile"]),
     );

@@ -42,6 +42,18 @@ export const config = {
   runner: "local",
   host: "127.0.0.1",
   port: 4444,
+  // Two suites, and the difference is what a FAILURE is allowed to mean.
+  //
+  //   specs/*.e2e.js  — the mock app only. Nothing outside the app is involved, so a failure can only mean the
+  //                     app is wrong. These always run and are never gated on anything.
+  //   smoke/*.smoke.js — real integration: real engines, real machines, a real account, a real model. Their
+  //                     SUBJECT is the integration, so when the thing they integrate with is absent there is
+  //                     nothing to prove — they skip and say what was missing (webdriver/support/prerequisites.js).
+  //                     Failing there would blame the app; passing would claim coverage nobody has.
+  //
+  // This config IS the e2e suite. The smoke one has its own config (wdio.smoke.conf.js), which reuses everything
+  // here except `specs` — deliberately not a `--suite`, because a suite in the run script stops `--spec` from
+  // narrowing anything, and on that suite a full run starts real containers.
   specs: [path.join(__dirname, "specs", "**", "*.e2e.js")],
   maxInstances: 1,
   capabilities: [
@@ -98,13 +110,10 @@ export const config = {
     // Run standalone next to the developer's app (see the single-instance note above). Inherited by
     // tauri-driver → WebKitWebDriver → the app.
     process.env.CONTAINER_DESKTOP_E2E = "1";
-    // The AI specs (ai-flows, workspace-access) require the mock app — the renderer reads CONTAINER_DESKTOP_MOCK
-    // from the APP's process env via the Tauri bridge, so it must be set HERE (on the wdio process that spawns the
-    // app), not merely on the Vite dev server. CONTAINER_DESKTOP_MOCK_SCALE seeds the Runs-at-scale set the
-    // goalsList flow asserts (bridged into the webview realm since there is no `process` there). Preserve any
-    // caller override so a non-mock run stays possible.
+    // The AI specs require the mock app — the renderer reads CONTAINER_DESKTOP_MOCK from the APP's process env
+    // via the Tauri bridge, so it must be set HERE (on the wdio process that spawns the app), not merely on the
+    // Vite dev server. Preserve any caller override so a non-mock run stays possible.
     process.env.CONTAINER_DESKTOP_MOCK ??= "1";
-    process.env.CONTAINER_DESKTOP_MOCK_SCALE ??= "goals:300,tasks:32";
     // Isolate ALL app state (settings, logs, workspace fixtures) in a throwaway dir so the e2e app never touches
     // the developer's daily release-app data. get_user_data_path honors this override on every shell (the Tauri
     // Rust path has no `-dev` suffix of its own, so without this the debug binary would

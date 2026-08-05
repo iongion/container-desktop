@@ -11,6 +11,8 @@ function keychain(secret = "trusted-realm-secret"): IKeychain {
     getKey: vi.fn(async () => secret),
     setKey: vi.fn(async () => undefined),
     clearKey: vi.fn(async () => undefined),
+    writeSecretFile: async () => "/tmp/agent/file.env",
+    writeAgentEnvFile: async () => "/tmp/agent/agent.env",
   };
 }
 

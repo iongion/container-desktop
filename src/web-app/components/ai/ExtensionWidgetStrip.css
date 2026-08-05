@@ -1,0 +1,35 @@
+.ExtensionWidgetStrip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0;
+}
+.ExtensionWidget {
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background-color: var(--app-chrome);
+  color: var(--app-text-muted);
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+.ExtensionStatusStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0;
+}
+.ExtensionStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+.ExtensionStatusKey {
+  color: var(--app-accent-text);
+}

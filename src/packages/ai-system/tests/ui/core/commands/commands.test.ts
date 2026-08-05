@@ -22,7 +22,7 @@ function userSkill(overrides: Partial<AssistantSkillCommandDefinition> = {}): As
     hiddenSearchTerms: ["pull request", "review"],
     argumentHint: { kind: "literal", value: "[focus]" },
     bypassTier: "queued",
-    availabilityId: "thread-idle",
+    availabilityId: "session-idle",
     confirmation: "none",
     arguments: { kind: "text", required: false },
     surfaces: ["assistant", "quake-console"],
@@ -31,11 +31,15 @@ function userSkill(overrides: Partial<AssistantSkillCommandDefinition> = {}): As
 }
 
 describe("assistant command registry", () => {
-  it("contains only implemented Thread controls", () => {
+  // What the APP performs. Everything pi performs is reported by the session under pi's own name (see
+  // piSessionCommands.test.ts), and every one of these that shares a name with one of pi's — /new, /quit, /session,
+  // /copy, /export, /import, /share, /login, /logout, /model, /reload — carries pi's name and pi's meaning, not a
+  // variant of it.
+  it("contains only the commands the app itself performs", () => {
     expect(BUILTIN_ASSISTANT_COMMANDS.map((command) => command.id)).toEqual([
       "help",
       "skills.open",
-      "skills.reload",
+      "reload",
       "context.usage",
       "context.tools",
       "diagnostics.open",
@@ -47,37 +51,25 @@ describe("assistant command registry", () => {
       "memory.clear",
       "rules.list",
       "rules.init",
-      "thread.list",
-      "thread.new",
-      "thread.switch",
-      "thread.rename",
-      "thread.branch",
-      "thread.compact",
-      "thread.delete",
-      "thread.stop",
-      "thread.copy",
-      "thread.export",
+      "session.new",
+      "session.quit",
+      "session.info",
+      "turn.stop",
+      "session.copy",
+      "session.export",
+      "session.import",
+      "session.share",
+      "provider.login",
+      "provider.logout",
       "model.open",
-      "access.set",
-      "reasoning.set",
       "permissions.open",
-      "worker.list",
-      "worker.show",
-      "worker.create",
-      "run.start",
-      "run.list",
-      "run.show",
-      "run.stop",
     ]);
     const names = BUILTIN_ASSISTANT_COMMANDS.flatMap((command) => [command.path, ...command.aliases]);
     expect(new Set(names).size).toBe(names.length);
   });
 
   it("derives bypass tiers and reserved names from one registry", () => {
-    expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byBypassTier.always.map(({ id }) => id)).toEqual([
-      "thread.stop",
-      "run.stop",
-    ]);
+    expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byBypassTier.always.map(({ id }) => id)).toEqual(["turn.stop"]);
     expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byBypassTier["immediate-ui"].map(({ id }) => id)).toEqual([
       "help",
       "skills.open",
@@ -92,22 +84,18 @@ describe("assistant command registry", () => {
       "memory.clear",
       "rules.list",
       "rules.init",
-      "thread.list",
-      "thread.branch",
-      "thread.compact",
-      "thread.export",
+      "session.info",
+      "session.export",
+      "session.share",
+      "provider.login",
+      "provider.logout",
       "model.open",
-      "access.set",
-      "reasoning.set",
       "permissions.open",
-      "worker.list",
-      "worker.show",
-      "worker.create",
-      "run.list",
-      "run.show",
     ]);
-    expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.reservedNames).toContain("/clear");
-    expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byName["/resume"]?.id).toBe("thread.list");
+    // Every name the app owns is reserved against a skill claiming it. `/resume` is NOT among them: it is pi's and the
+    // SESSION performs it, so the palette entry comes from what the session reports rather than from this catalogue.
+    expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.reservedNames).toContain("/new");
+    expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byName["/resume"]).toBeUndefined();
   });
 
   it("accepts source-qualified prompt skills without changing parser types", () => {
@@ -212,77 +200,61 @@ describe("parseAssistantInput", () => {
     });
   });
 
-  it("resolves canonical Thread commands and compatibility aliases", () => {
-    expect(parseAssistantInput("/thread list", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+  // pi's names mean pi's things. `/new` starts a fresh session because that is what it does in pi; `/clear` and
+  // `/branch` are gone rather than kept as aliases pointing at something adjacent.
+  it("resolves pi's own names to what pi means by them", () => {
+    expect(parseAssistantInput("/new", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "command",
-      id: "thread.list",
+      id: "session.new",
       args: [],
     });
-    expect(parseAssistantInput("/clear", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput("/session", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "command",
-      id: "thread.new",
+      id: "session.info",
       args: [],
     });
-    expect(parseAssistantInput("/resume", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput("/copy", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "command",
-      id: "thread.list",
-      args: [],
+      id: "session.copy",
     });
-    expect(parseAssistantInput("/branch checkpoint-1", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "thread.branch",
-      args: ["checkpoint-1"],
-    });
-  });
-
-  it("resolves access and reasoning compatibility aliases", () => {
-    expect(parseAssistantInput("/security workspace", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "access.set",
-      args: ["workspace"],
-    });
-    for (const alias of ["/effort", "/thinking", "/think"]) {
-      expect(parseAssistantInput(`${alias} high`, BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-        kind: "command",
-        id: "reasoning.set",
-        args: ["high"],
-      });
+    // A pi session takes its access and reasoning AT START, so the app no longer offers a command that could
+    // only have changed a value nothing reads.
+    for (const gone of [
+      "/clear",
+      "/cls",
+      "/branch",
+      "/offload",
+      "/session list",
+      "/context",
+      "/access",
+      "/security",
+      "/reasoning",
+      "/effort",
+      "/thinking",
+      "/think",
+    ]) {
+      expect(parseAssistantInput(gone, BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({ kind: "error" });
     }
   });
 
   it("parses bounded text without shell expansion", () => {
-    expect(parseAssistantInput('/thread rename "Release triage"', BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput('/remember "Release triage"', BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "command",
-      id: "thread.rename",
+      id: "memory.add",
       args: ["Release triage"],
     });
-    expect(parseAssistantInput('/thread rename "Say \\"go\\""', BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput('/remember "Say \\"go\\""', BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "command",
-      id: "thread.rename",
+      id: "memory.add",
       args: ['Say "go"'],
     });
-    expect(parseAssistantInput("/thread rename $(touch nope)", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput("/remember $(touch nope)", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "command",
       args: ["$(touch nope)"],
     });
   });
 
   it("parses native application routes and their compatibility aliases", () => {
-    expect(parseAssistantInput("/worker open Inspector", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "worker.show",
-      args: ["Inspector"],
-    });
-    expect(parseAssistantInput("/plan Audit all images", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "run.start",
-      args: ["Audit all images"],
-    });
-    expect(parseAssistantInput("/run stop run-1", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "run.stop",
-      args: ["run-1"],
-    });
     expect(parseAssistantInput("/remember Prefer typed ports", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "command",
       id: "memory.add",
@@ -296,20 +268,20 @@ describe("parseAssistantInput", () => {
   });
 
   it("rejects unknown commands, unterminated quotes, and invalid arguments locally", () => {
-    expect(parseAssistantInput("/thred new", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput("/expot", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "error",
       code: "unknown-command",
-      suggestions: expect.arrayContaining(["thread.new"]),
+      suggestions: expect.arrayContaining(["session.export"]),
     });
-    expect(parseAssistantInput('/thread rename "broken', BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput('/remember "broken', BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "error",
       code: "unterminated-quote",
     });
-    expect(parseAssistantInput("/thread rename", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput("/remember", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "error",
       code: "missing-argument",
     });
-    expect(parseAssistantInput("/thread stop now", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
+    expect(parseAssistantInput("/stop now", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "error",
       code: "too-many-arguments",
     });
@@ -324,19 +296,20 @@ describe("completeCommands", () => {
   });
 
   it("matches paths, aliases, hidden terms, and descriptions", () => {
-    expect(
-      completeCommands("/thread ren", BUILTIN_ASSISTANT_COMMAND_REGISTRY).map((match) => match.command.id),
-    ).toEqual(["thread.rename"]);
-    expect(completeCommands("/res", BUILTIN_ASSISTANT_COMMAND_REGISTRY)[0]?.command.id).toBe("thread.list");
-    expect(completeCommands("history", BUILTIN_ASSISTANT_COMMAND_REGISTRY).map((match) => match.command.id)).toContain(
-      "thread.list",
+    expect(completeCommands("/memory rem", BUILTIN_ASSISTANT_COMMAND_REGISTRY).map((m) => m.command.id)).toEqual([
+      "memory.remove",
+    ]);
+    expect(completeCommands("/qui", BUILTIN_ASSISTANT_COMMAND_REGISTRY)[0]?.command.id).toBe("session.quit");
+    // A hidden search term, so someone reaching for the old vocabulary still lands on the command that replaced it.
+    expect(completeCommands("session", BUILTIN_ASSISTANT_COMMAND_REGISTRY).map((m) => m.command.id)).toContain(
+      "session.new",
     );
   });
 
-  it("ranks an exact alias before longer prefix matches", () => {
-    const ids = completeCommands("/thread", BUILTIN_ASSISTANT_COMMAND_REGISTRY).map((match) => match.command.id);
-    expect(ids[0]).toBe("thread.list");
-    expect(ids).toContain("thread.rename");
+  it("ranks an exact name before longer prefix matches", () => {
+    const ids = completeCommands("/session", BUILTIN_ASSISTANT_COMMAND_REGISTRY).map((match) => match.command.id);
+    expect(ids[0]).toBe("session.info");
+    expect(ids).toContain("session.export");
   });
 
   it("caps matches before an extension catalogue can overload the palette", () => {

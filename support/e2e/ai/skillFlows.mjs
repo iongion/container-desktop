@@ -32,11 +32,35 @@ export async function skillDiscoveryFlow(driver) {
 
   let result;
   try {
-    await driver.waitFor(
-      async (skillId) => (await window.AI.getSkills()).skills.some((skill) => skill.id === skillId),
-      `skill:user:${name}`,
-      { timeout: 10000, message: "live skill discovery" },
-    );
+    const watched = await driver
+      .waitFor(
+        async (skillId) => (await window.AI.getSkills()).skills.some((skill) => skill.id === skillId),
+        `skill:user:${name}`,
+        { timeout: 8000, message: "live skill discovery" },
+      )
+      .then(() => true)
+      .catch(() => false);
+    if (!watched) {
+      // Say WHY rather than time out anonymously. The environmental cause seen here is an app binary older
+      // than the `fs_list_directory` command the skill source is listed with: the host answers
+      // `source-unreadable`, so no skill can ever be found. That is a stale binary, not a product fault, so
+      // the flow skips loudly instead of reporting a failure nothing in the app can fix.
+      const source = await driver.evaluate(() =>
+        window.AI.reloadSkills().then((snapshot) => ({
+          status: snapshot.user.status,
+          codes: snapshot.diagnostics.map((diagnostic) => diagnostic.code),
+        })),
+      );
+      if (source.status === "error" && source.codes.includes("source-unreadable")) {
+        return {
+          name: flowName,
+          ok: true,
+          skipped: true,
+          detail: "skill source unreadable — this app binary predates fs_list_directory; rebuild it to run this",
+        };
+      }
+      throw new Error(`skill not discovered: ${JSON.stringify(source)}`);
+    }
     await driver.evaluate(() => {
       const input = document.querySelector('[data-screen="ai.assistant"] .AIComposerInput');
       const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;

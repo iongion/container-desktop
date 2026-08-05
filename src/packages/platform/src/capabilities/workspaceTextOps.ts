@@ -1,5 +1,5 @@
 // Pure, node-free workspace text + POSIX-path primitives shared by the two IWorkspaceAccess implementations:
-// the native local workspace (each shell's `workspaceAccess.ts`) and the exec-routed off-host workspace
+// the native local workspace (each shell's `workspaceAccess.ts`) and the exec-routed container workspace
 // (`execWorkspaceAccess.ts`, which runs in the Tauri/Wails webview realm).
 // Because the exec-routed workspace enters the webview bundle, these helpers must import NO node builtins: the
 // posix path math is done here by hand instead of `node:path`, so a single implementation confines paths

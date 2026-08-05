@@ -1,4 +1,4 @@
-import { sha256Text } from "@/ai-system/adapters/sha256";
+import { fetchModelWindow } from "@/ai-system/adapters/modelWindow";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -9,39 +9,30 @@ import {
   type AIStatus,
 } from "@/ai-system/core/channels";
 import type { AIRecordedError } from "@/ai-system/core/diagnostics";
+import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
+import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
-import type { AIKeyStore, ExecutionSelectorFactory, KnowledgeBankLike, SandboxRunner } from "@/ai-system/core/ports";
-import type { ProjectContextPack } from "@/ai-system/core/projectContext";
+import { composeAuthRefreshEnv, composeGatewayEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
+import type {
+  AIKeyStore,
+  ExecutionSelector,
+  ExecutionSelectorFactory,
+  ResolvedExecution,
+  SandboxRunner,
+} from "@/ai-system/core/ports";
 import { type ResolvedProvider, resolveProvider } from "@/ai-system/core/providers";
 import { redactText } from "@/ai-system/core/redact";
 import { validateAIInvokeRequest } from "@/ai-system/core/schemas";
 import { SKILL_LIMITS } from "@/ai-system/core/skills";
-import { createToolArtifactRecord, toolArtifactReference } from "@/ai-system/core/toolArtifacts";
-import type {
-  AISettings,
-  CompactThreadContext,
-  CreateAgentSession,
-  CreateTeamRun,
-  DiagnosticsBundle,
-  EngineOps,
-  ListedModel,
-  ProviderTransport,
-  TeamRunPort,
-} from "@/ai-system/core/types";
+import type { AISettings, DiagnosticsBundle, EngineOps, ListedModel, ProviderTransport } from "@/ai-system/core/types";
 import type { WorkspaceChangesPort } from "@/ai-system/core/workspaceChanges";
+import { dispatchWorkspaceOp } from "@/ai-system/core/workspaceOpDispatch";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
-import { randomUUID } from "@/utils/randomUUID";
-import type { AvatarHost } from "./avatarHost";
 import { createDiagnosticsHost } from "./diagnosticsHost";
 import { createModelDiscoveryHost } from "./modelDiscoveryHost";
 import type { ProjectContextHost } from "./projectContextHost";
-import { createRunHost } from "./runHost";
 import type { SkillHost } from "./skillHost";
-import { createThreadHost } from "./threadHost";
-import type { ThreadRepository } from "./threadRepository";
-import type { ToolArtifactRepository } from "./toolArtifactRepository";
-import type { WorkerHost } from "./workerHost";
 
 export interface AIBrokerDeps<TEvent = unknown> {
   keyStore: AIKeyStore;
@@ -59,25 +50,16 @@ export interface AIBrokerDeps<TEvent = unknown> {
     options: { fetchImpl: typeof fetch; signal?: AbortSignal },
   ) => Promise<ListedModel[]>;
   buildAgentPrompt: (bundle?: DiagnosticsBundle) => string;
-  buildProjectContextPrompt?: (pack: ProjectContextPack) => string;
   projectContextHost?: ProjectContextHost;
-  createAgentSession?: CreateAgentSession;
-  compactThreadContext?: CompactThreadContext;
-  createTeamRun?: CreateTeamRun;
   runSandboxed?: SandboxRunner;
   engineOps?: EngineOps;
   workspaceAccess?: IWorkspaceAccess;
   workspaceChanges?: WorkspaceChangesPort;
   createExecutionSelector?: ExecutionSelectorFactory;
   permissionsStore?: PermissionsStoreLike;
-  knowledgeBank?: KnowledgeBankLike;
+  // The public-web search the agent asks the app to run. Absent ⇒ this runtime cannot pin a destination, and the
+  // tool is refused rather than offered.
   webSearcher?: (query: string) => Promise<{ text: string }>;
-  threadRepository: ThreadRepository;
-  toolArtifactRepository?: ToolArtifactRepository;
-  // The workers library. Absent ⇒ the channels reject and team runs ignore any requested roster.
-  workerHost?: WorkerHost;
-  // The avatar library. Absent ⇒ the avatar channels reject loudly (never a silent empty list).
-  avatarHost?: AvatarHost;
   skillHost?: SkillHost;
   buildSkillInvocationPrompt?: (context: {
     command: string;
@@ -86,9 +68,6 @@ export interface AIBrokerDeps<TEvent = unknown> {
     arguments: string;
     body: string;
   }) => string;
-  // CONTAINER_DESKTOP_MOCK only — runs the host starts life already holding, so the Runs list has
-  // content in every phase without the user starting one first.
-  seedRuns?: TeamRunPort[];
   logger?: { error: (...args: unknown[]) => void };
 }
 
@@ -122,7 +101,7 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     if (recentErrors.length > 20) recentErrors.splice(0, recentErrors.length - 20);
     try {
       deps.logger?.error(message, {
-        ...(id ? { threadId: id } : {}),
+        ...(id ? { sessionId: id } : {}),
         error: detail,
       });
     } catch {
@@ -130,70 +109,32 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     }
   };
 
-  const threadHost = createThreadHost<TEvent>({
-    senderId: deps.senderId,
-    send: deps.send,
-    getAISettings: deps.getAISettings,
-    resolveProviderAccess,
-    providerTransport: deps.providerTransport,
-    buildAgentPrompt: deps.buildAgentPrompt,
-    buildProjectContextPrompt: deps.buildProjectContextPrompt,
-    projectContextHost: deps.projectContextHost,
-    createAgentSession: deps.createAgentSession,
-    compactThreadContext: deps.compactThreadContext,
-    runSandboxed: deps.runSandboxed,
-    engineOps: deps.engineOps,
-    workspaceAccess: deps.workspaceAccess,
-    workspaceChanges: deps.workspaceChanges,
-    permissionsStore: deps.permissionsStore,
-    knowledgeBank: deps.knowledgeBank,
-    webSearcher: deps.webSearcher,
-    threadRepository: deps.threadRepository,
-    storeToolArtifact: deps.toolArtifactRepository
-      ? async (input) =>
-          toolArtifactReference(
-            await deps.toolArtifactRepository!.put(
-              createToolArtifactRecord({
-                id: randomUUID(),
-                threadId: input.threadId,
-                createdAt: Date.now(),
-                content: input.content,
-                byteLength: input.byteLength,
-                fingerprint: await sha256Text(input.content),
-              }),
-            ),
-          )
-      : undefined,
-    deleteToolArtifacts: deps.toolArtifactRepository
-      ? (threadId) => deps.toolArtifactRepository!.deleteForThread(threadId)
-      : undefined,
-    reportError,
-    logger: deps.logger,
-  });
   const requireProjectContext = (): ProjectContextHost => {
     if (!deps.projectContextHost) throw new Error("AI: project context is unavailable");
     return deps.projectContextHost;
   };
-  const runHost = createRunHost<TEvent>({
-    senderId: deps.senderId,
-    send: deps.send,
-    getAISettings: deps.getAISettings,
-    resolveProviderAccess,
-    providerTransport: deps.providerTransport,
-    buildAgentPrompt: deps.buildAgentPrompt,
-    createTeamRun: deps.createTeamRun,
-    workerHost: deps.workerHost,
-    seedRuns: deps.seedRuns,
-    runSandboxed: deps.runSandboxed,
-    engineOps: deps.engineOps,
-    workspaceAccess: deps.workspaceAccess,
-    createExecutionSelector: deps.createExecutionSelector,
-    permissionsStore: deps.permissionsStore,
-    knowledgeBank: deps.knowledgeBank,
-    webSearcher: deps.webSearcher,
-    reportError,
-    logger: deps.logger,
-  });
+
+  // One execution selector per RUN, so every workspace call a session makes shares its backend — and its single
+  // sandbox container. Held here rather than in the renderer because the selector owns host-side ports the web view
+  // cannot have, and released explicitly: a sandbox exists for the run and must not outlive it.
+  const selectors = new Map<string, ExecutionSelector>();
+  const resolveExecution = async (runId: string, target: ExecutionTarget): Promise<ResolvedExecution | undefined> => {
+    if (!deps.createExecutionSelector) return undefined;
+    let selector = selectors.get(runId);
+    if (!selector) {
+      selector = deps.createExecutionSelector(runId);
+      selectors.set(runId, selector);
+    }
+    return selector.select(target);
+  };
+  const releaseExecution = async (runId: string): Promise<void> => {
+    const selector = selectors.get(runId);
+    if (!selector) return;
+    selectors.delete(runId);
+    // Reported, never raised: the session is ending either way, and a sandbox left standing is a leak to log rather
+    // than a reason to fail the call that was tidying up.
+    await selector.dispose().catch((error) => reportError("AI: releasing a workspace target failed", runId, error));
+  };
   const models = createModelDiscoveryHost<TEvent>({
     senderId: deps.senderId,
     resolveProviderAccess,
@@ -214,8 +155,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     skillHost: deps.skillHost,
     webSearchAvailable: !!deps.webSearcher,
     capabilities: {
-      agentSessions: !!deps.createAgentSession,
-      teamRuns: !!deps.createTeamRun,
       sandbox: !!deps.runSandboxed,
       containerTools: !!deps.engineOps,
       workspaceTools: !!deps.workspaceAccess,
@@ -227,16 +166,8 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     if (!deps.isAllowedSender(event)) throw new Error("AI: unauthorized sender");
     return task();
   };
-  // A shell that offers no workers library must fail the channel loudly. Answering with an empty list would look
-  // to the editor like "you have no workers", and its next save would appear to succeed while persisting nothing.
-  const requireWorkers = (): WorkerHost => {
-    if (!deps.workerHost) throw new Error("AI: the workers library is unavailable on this runtime");
-    return deps.workerHost;
-  };
-  const requireAvatars = (): AvatarHost => {
-    if (!deps.avatarHost) throw new Error("AI: the avatar library is unavailable on this runtime");
-    return deps.avatarHost;
-  };
+  // A shell that offers no skills library must fail the channel loudly. Answering with an empty list would look
+  // like "you have no skills", and the next save would appear to succeed while persisting nothing.
   const requireSkills = (): SkillHost => {
     if (!deps.skillHost) throw new Error("AI: the skills library is unavailable on this runtime");
     return deps.skillHost;
@@ -280,49 +211,53 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
         return { ok: true };
       }),
     );
-    onInvoke(AI_CHANNELS.threadList, (event) => guarded(event, () => threadHost.list()));
-    onInvoke(AI_CHANNELS.threadCreate, (event, request) => guarded(event, () => threadHost.create(request)));
-    onInvoke(AI_CHANNELS.threadRename, (event, request) =>
-      guarded(event, () => threadHost.rename(request.threadId, request.title)),
-    );
-    onInvoke(AI_CHANNELS.threadConfigure, (event, request) =>
-      guarded(event, () =>
-        threadHost.configure(request.threadId, {
-          accessProfile: request.accessProfile,
-          reasoningLevel: request.reasoningLevel,
-        }),
-      ),
-    );
-    onInvoke(AI_CHANNELS.threadBranchPreview, (event, request) =>
-      guarded(event, () => threadHost.branchPreview(request.threadId)),
-    );
-    onInvoke(AI_CHANNELS.threadBranch, (event, request) =>
-      guarded(event, () => threadHost.branch(request.threadId, request.checkpointId, request.title)),
-    );
-    onInvoke(AI_CHANNELS.threadCompactionPreview, (event, request) =>
-      guarded(event, () => threadHost.compactionPreview(request.threadId)),
-    );
-    onInvoke(AI_CHANNELS.threadCompact, (event, request) =>
-      guarded(event, () => threadHost.compact(request.threadId, request.revision, request.instructions)),
-    );
-    onInvoke(AI_CHANNELS.threadSubmit, (event, request) => guarded(event, () => threadHost.submit(event, request)));
-    onInvoke(AI_CHANNELS.threadResolveApproval, (event, request) =>
-      guarded(event, () => threadHost.resolve(event, request)),
-    );
-    onInvoke(AI_CHANNELS.threadStop, (event, request) =>
-      guarded(event, () => threadHost.cancel(event, request.threadId)),
-    );
-    onInvoke(AI_CHANNELS.threadSnapshot, (event, request) =>
-      guarded(event, () => threadHost.snapshot(event, request.threadId)),
-    );
-    onInvoke(AI_CHANNELS.toolArtifactGet, (event, request) =>
+    // The coding agent's gateway container needs the provider key, and the renderer cannot read it — the key
+    // lives in the OS keychain. So the env file that carries it is composed and written HERE, and the renderer
+    // only learns its path. A provider with no key stored yields an empty value, which is correct for a
+    // keyless local server.
+    onInvoke(AI_CHANNELS.agentGatewayEnv, (event, request) =>
       guarded(event, async () => {
-        const artifact = await deps.toolArtifactRepository?.get(request.threadId, request.artifactId);
-        if (!artifact) throw new Error("AI: tool artifact not found");
-        return artifact;
+        // The credential SHAPE is derived here too, from the settings this host reads itself — the renderer
+        // never describes how a provider authenticates, only which one it picked. `baseUrl` stays the caller's:
+        // it carries the engine's host-alias rewrite, which only the renderer knows.
+        const resolved = resolveProvider(await deps.getAISettings(), request.provider);
+        // The key is NEVER read here. This host can run in a web-view realm, where the vault deliberately
+        // refuses to hand over a secret at all — so the file is composed with a placeholder and the realm that
+        // owns the vault substitutes it while writing, answering only the path. That keeps one composer and one
+        // file format while the plaintext stays where it started.
+        const contents = composeGatewayEnv({
+          baseUrl: request.baseUrl,
+          apiKey: KEYCHAIN_SECRET_PLACEHOLDER,
+          bridgeToken: request.bridgeToken,
+          gatewayPort: request.gatewayPort,
+          providerKind: resolved.kind,
+          auth: resolved.auth,
+        });
+        const path = await deps.keyStore.writeSecretFile(request.provider, request.fileName, contents);
+        return { path };
       }),
     );
-    onInvoke(AI_CHANNELS.threadDelete, (event, request) => guarded(event, () => threadHost.delete(request.threadId)));
+    // The one-shot auth container's env file for a refresh. Composed with the same placeholder the gateway's uses, so
+    // the credential is substituted by the realm that owns the vault and never crosses into the web view — which is
+    // precisely why the exchange happens in a container rather than here.
+    onInvoke(AI_CHANNELS.authRefreshEnv, (event, request) =>
+      guarded(event, async () => ({
+        path: await deps.keyStore.writeSecretFile(
+          request.provider,
+          request.fileName,
+          composeAuthRefreshEnv({
+            bridgeToken: request.bridgeToken,
+            bridgePort: request.bridgePort,
+            credential: KEYCHAIN_SECRET_PLACEHOLDER,
+          }),
+        ),
+      })),
+    );
+    // The AGENT container's env file, into the SAME protected directory. It carries the bridge token — a secret in its
+    // own right — so it belongs behind the same guard rather than in a second directory the web view can read back.
+    onInvoke(AI_CHANNELS.agentEnvFile, (event, request) =>
+      guarded(event, async () => ({ path: await deps.keyStore.writeAgentEnvFile(request.fileName, request.contents) })),
+    );
     onInvoke(AI_CHANNELS.changesStatus, (event) =>
       guarded(event, () => {
         if (!deps.workspaceChanges) throw new Error("AI: workspace change review is unavailable");
@@ -358,34 +293,70 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     onInvoke(AI_CHANNELS.projectMemoryImport, (event, content) =>
       guarded(event, () => requireProjectContext().importMemory(content)),
     );
-    onInvoke(AI_CHANNELS.runStart, (event, request) => guarded(event, () => runHost.start(event, request)));
-    onInvoke(AI_CHANNELS.runApprovePlan, (event, request) => guarded(event, () => runHost.resolvePlan(event, request)));
-    onInvoke(AI_CHANNELS.runApproveTool, (event, request) => guarded(event, () => runHost.resolveTool(event, request)));
-    onInvoke(AI_CHANNELS.runCancel, (event, request) => guarded(event, () => runHost.cancel(event, request.runId)));
-    onInvoke(AI_CHANNELS.runSnapshot, (event, request) => guarded(event, () => runHost.snapshot(event, request.runId)));
-    onInvoke(AI_CHANNELS.runList, (event) => guarded(event, () => ({ runs: runHost.list(event) })));
-    onInvoke(AI_CHANNELS.workersList, (event) => guarded(event, () => ({ workers: requireWorkers().list() })));
-    onInvoke(AI_CHANNELS.workersSave, (event, request) =>
-      guarded(event, async () => ({ workers: await requireWorkers().save(request.worker) })),
-    );
-    onInvoke(AI_CHANNELS.workersRemove, (event, request) =>
-      guarded(event, async () => ({ workers: await requireWorkers().remove(request.id) })),
-    );
-    onInvoke(AI_CHANNELS.avatarsList, (event) => guarded(event, () => ({ avatars: requireAvatars().list() })));
-    onInvoke(AI_CHANNELS.avatarsSave, (event, request) =>
-      guarded(event, async () => ({ avatars: await requireAvatars().save(request.avatar) })),
-    );
-    onInvoke(AI_CHANNELS.avatarsRemove, (event, request) =>
-      guarded(event, async () => ({ avatars: await requireAvatars().remove(request.id) })),
-    );
     onInvoke(AI_CHANNELS.modelsList, (event, request) =>
       guarded(event, () => models.list(event, request.requestId, request.providerId)),
     );
     onInvoke(AI_CHANNELS.modelsCancel, (event, request) =>
       guarded(event, () => models.cancel(event, request.requestId)),
     );
+    // What the PROVIDER says its window is. Answered host-side because only this realm holds the credential and can
+    // reach a provider's own endpoint; an unknown provider answers `{}`, which the panel shows as "unknown".
+    onInvoke(AI_CHANNELS.modelWindow, (event, request) =>
+      guarded(event, async () => {
+        const resolved = resolveProvider(await deps.getAISettings(), request.providerId);
+        return (await fetchModelWindow({ ...resolved, model: request.model })) ?? {};
+      }),
+    );
+    // The coding agent's container toolset lands here. dispatchEngineOp answers with a reason instead of
+    // throwing, so an unbound port or a dead connection reaches the agent as a tool error it can act on.
+    onInvoke(AI_CHANNELS.engineOp, (event, request) =>
+      guarded(event, () =>
+        dispatchEngineOp(
+          deps.engineOps,
+          { op: request.op, args: request.args },
+          { connectionId: request.defaultConnectionId },
+        ),
+      ),
+    );
+    // The coding agent's WORKSPACE toolset. The target travels with every call and the selector is memoized per
+    // run, so everything a session does on one target shares one backend — and one sandbox container.
+    onInvoke(AI_CHANNELS.workspaceOp, (event, request) =>
+      guarded(event, async () => {
+        const resolved = await resolveExecution(request.runId, request.target).catch((error) => {
+          // Building a backend can genuinely fail — a sandbox image that will not pull, a workspace root that
+          // cannot be made in the container. That is a reason the model can act on, not a rejected invoke.
+          reportError("AI: preparing the workspace target failed", request.runId, error);
+          return undefined;
+        });
+        if (!resolved) {
+          return { ok: false as const, error: "The workspace target could not be prepared for this session." };
+        }
+        return dispatchWorkspaceOp(resolved.workspaceAccess, { op: request.op, args: request.args });
+      }),
+    );
+    onInvoke(AI_CHANNELS.workspaceRelease, (event, request) =>
+      guarded(event, async () => {
+        await releaseExecution(request.runId);
+        return { ok: true as const };
+      }),
+    );
+    // The agent's public-web search. The user's switch is enforced HERE, on every call, rather than by withholding
+    // the tool: it can be turned off while a session runs, and "the user turned it off" is a reason the model can
+    // act on. A runtime with no pinned public fetch never offers it at all (webSearchAvailable is false).
+    onInvoke(AI_CHANNELS.webSearch, (event, request) =>
+      guarded(event, async () => {
+        if (!deps.webSearcher) throw new Error("AI: web search is unavailable on this runtime");
+        if (!(await deps.getAISettings()).webSearch) {
+          throw new Error("AI: web search is turned off in Settings → AI");
+        }
+        return deps.webSearcher(request.query);
+      }),
+    );
     onInvoke(AI_CHANNELS.permissionsList, (event) =>
       guarded(event, () => requirePermissions(deps.permissionsStore).load()),
+    );
+    onInvoke(AI_CHANNELS.permissionsAdd, (event, request) =>
+      guarded(event, () => requirePermissions(deps.permissionsStore).addCommand(request.list, request.rule)),
     );
     onInvoke(AI_CHANNELS.permissionsRemove, (event, request) =>
       guarded(event, () => requirePermissions(deps.permissionsStore).removeCommand(request.list, request.key)),
@@ -429,36 +400,21 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
         if (new TextEncoder().encode(prompt).byteLength > SKILL_LIMITS.renderedPromptBytes) {
           throw new Error("AI: rendered skill prompt is too large");
         }
-        const createdAt = Date.now();
-        const id = randomUUID();
-        const displayContent = `${resolved.descriptor.command}${resolved.arguments ? ` ${resolved.arguments}` : ""}`;
-        return threadHost.submit(
-          event,
-          { threadId: request.threadId, message: { id, content: displayContent, createdAt }, history: [] },
-          {
-            message: {
-              id,
-              content: prompt,
-              displayContent,
-              createdAt,
-              skill: {
-                skillId: resolved.descriptor.id,
-                command: resolved.descriptor.command,
-                source: resolved.descriptor.source.kind,
-                fingerprint: resolved.descriptor.fingerprint,
-              },
-            },
-            ...(resolved.manifest.allowedTools ? { allowedTools: new Set(resolved.manifest.allowedTools) } : {}),
-            ...(resolved.initialTaint ? { initialTaint: true } : {}),
-            contextSources: [
-              {
-                kind: "skill",
-                trust: resolved.descriptor.source.kind === "bundled" ? "application" : resolved.descriptor.source.kind,
-                characters: prompt.length,
-              },
-            ],
+        // Resolved and rendered, not submitted: the agent runs on the pi bridge, so the renderer is what owns
+        // the turn. Everything security-relevant — the fingerprint match, the project-trust check, the tool
+        // narrowing and the taint verdict — is decided HERE and travels with the prompt.
+        return {
+          prompt,
+          displayContent: `${resolved.descriptor.command}${resolved.arguments ? ` ${resolved.arguments}` : ""}`,
+          skill: {
+            skillId: resolved.descriptor.id,
+            command: resolved.descriptor.command,
+            source: resolved.descriptor.source.kind,
+            fingerprint: resolved.descriptor.fingerprint,
           },
-        );
+          ...(resolved.manifest.allowedTools ? { allowedTools: [...resolved.manifest.allowedTools] } : {}),
+          ...(resolved.initialTaint ? { initialTaint: true } : {}),
+        };
       }),
     );
   };
@@ -466,14 +422,10 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
   return {
     register,
     disposeForSender(senderId: number | string): void {
-      threadHost.disposeForSender(senderId);
-      runHost.disposeForSender(senderId);
       models.disposeForSender(senderId);
       skillObservers.delete(senderId);
     },
     dispose(): void {
-      threadHost.dispose();
-      runHost.dispose();
       models.dispose();
       unsubscribeSkills?.();
       deps.skillHost?.dispose();

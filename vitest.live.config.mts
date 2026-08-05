@@ -19,5 +19,9 @@ export default defineConfig({
     testTimeout: 60_000,
     hookTimeout: 60_000,
     globals: false,
+    // The suite is currently EMPTY: every real-engine and real-model check now runs on WebDriver against the
+    // shipped shell (webdriver/specs/). The project stays so a future node-level live test has a home, and
+    // vitest.config.mts still excludes the glob — without this, `yarn test:live` would exit non-zero.
+    passWithNoTests: true,
   },
 });

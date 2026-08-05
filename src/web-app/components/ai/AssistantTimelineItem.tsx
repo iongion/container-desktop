@@ -2,28 +2,26 @@ import { Button, ButtonGroup, Callout, Card, Icon, Intent, Tag } from "@blueprin
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
-import type { ThreadTimelineItem, ThreadView } from "@/ai-system/core/threadEvents";
-import { threadTimelineMessageContent } from "@/ai-system/core/threadReducer";
-import type { ThreadSummary } from "@/ai-system/core/threads";
+import type { SessionTimelineItem, SessionView } from "@/ai-system/core/sessionEvents";
+import { sessionTimelineMessageContent } from "@/ai-system/core/sessionReducer";
+import type { SessionSummary } from "@/ai-system/core/sessions";
 import { toolTitle } from "@/ai-system/ui/core/toolTitle";
 import { AssistantMarkdown } from "@/web-app/components/ai/AssistantMarkdown";
+import { DataCard } from "@/web-app/components/ai/cards/DataCard";
 import { ToolCard } from "@/web-app/components/ai/cards/registry";
-import type { ThreadBranchSource } from "@/web-app/components/ai/ThreadBranchDrawer";
 import { WorkspaceChangesCard } from "@/web-app/components/ai/WorkspaceChangesDrawer";
 
 export interface AssistantTimelineContext {
-  view?: ThreadView;
-  activeThread?: ThreadSummary;
-  activeThreadId?: string;
-  checkpointMessageIds: ReadonlySet<string>;
+  view?: SessionView;
+  activeSession?: SessionSummary;
+  activeSessionId?: string;
   rememberApprovals: boolean;
-  onBranch: (source: ThreadBranchSource) => void;
   onResolveApproval: (approvalId: string, decision: "allow" | "reject") => Promise<unknown>;
   onOpenWorkspaceChanges: () => void;
 }
 
 interface AssistantTimelineItemProps {
-  item: ThreadTimelineItem;
+  item: SessionTimelineItem;
   timelineIndex: number;
   context: AssistantTimelineContext;
 }
@@ -32,7 +30,7 @@ function ApprovalActions({
   item,
   context,
 }: {
-  item: Extract<ThreadTimelineItem, { kind: "approval" }>;
+  item: Extract<SessionTimelineItem, { kind: "approval" }>;
   context: AssistantTimelineContext;
 }) {
   const { t } = useTranslation();
@@ -76,29 +74,11 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
   const { t } = useTranslation();
   switch (item.kind) {
     case "message": {
-      const content = context.view ? threadTimelineMessageContent(context.view, item, timelineIndex) : item.content;
-      const canBranch = context.checkpointMessageIds.has(item.id);
+      const content = context.view ? sessionTimelineMessageContent(context.view, item, timelineIndex) : item.content;
       return (
         <div className={`AssistantMessage AssistantMessage--${item.role}`}>
           <div className="AssistantMessageContent">
             <AssistantMarkdown content={content || (item.status === "streaming" ? "…" : "")} />
-            {canBranch && context.activeThread && context.view ? (
-              <Button
-                className="AssistantMessageBranch"
-                icon={IconNames.GIT_BRANCH}
-                size="small"
-                variant="minimal"
-                title={t("Branch from here")}
-                aria-label={t("Branch from here")}
-                onClick={() =>
-                  context.onBranch({
-                    thread: context.activeThread as ThreadSummary,
-                    view: context.view as ThreadView,
-                    checkpointReference: item.id,
-                  })
-                }
-              />
-            ) : null}
           </div>
           {item.role === "user" && item.delivery === "queued" ? (
             <span className="AssistantMessageStatus">{t("Queued")}</span>
@@ -131,8 +111,20 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
       );
     case "error":
       return <Callout intent={Intent.DANGER}>{item.message}</Callout>;
+    case "notice":
+      // Not an error: the turn ran and the model chose to say nothing, or its cap was reached before it could. The
+      // words live here because the projector is pure and cannot translate.
+      return (
+        <Callout className="AssistantTurnNotice" intent={Intent.WARNING} icon={IconNames.INFO_SIGN}>
+          {item.notice === "output-cap"
+            ? t("The model reached its answer limit before writing anything.")
+            : t("The model answered with nothing.")}
+        </Callout>
+      );
     case "workspace-changes":
       return <WorkspaceChangesCard summary={item} onOpen={context.onOpenWorkspaceChanges} />;
+    case "data":
+      return <DataCard customType={item.customType} data={item.data} text={item.text} />;
     case "tool":
       if (item.tool === "runCommand") {
         const result = item.result as
@@ -157,7 +149,11 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
         );
       }
       return (
-        <ToolCard {...item} threadId={context.activeThreadId} title={toolTitle(item.tool, item.args, t, item.title)} />
+        <ToolCard
+          {...item}
+          sessionId={context.activeSessionId}
+          title={toolTitle(item.tool, item.args, t, item.title)}
+        />
       );
     default:
       return null;

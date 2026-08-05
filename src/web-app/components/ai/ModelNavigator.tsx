@@ -33,18 +33,22 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import type { ProviderCatalogEntry } from "@/ai-system/core/providers";
 import { getProviderEntry } from "@/ai-system/core/providers";
+import type { SubmitSessionRequest } from "@/ai-system/core/sessionEvents";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
-import type { SubmitThreadRequest } from "@/ai-system/core/threadEvents";
 import type { AISettings } from "@/ai-system/core/types";
 import { buildModelTree, type ModelLeaf, type SourceModelNotice } from "@/ai-system/ui/core/modelCatalog";
+import { formatModelFacts } from "@/ai-system/ui/core/modelFacts";
+import { sourceCatalogEntry } from "@/ai-system/ui/core/providerSources";
+import { piProviderModelIds } from "@/pi-bridge/modelBaseline";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 import { ProviderSourceList } from "./ProviderSourceList";
 import { type ModelDiscovery, NO_KEY } from "./useModelDiscovery";
 
-export type ModelPickerValue = Required<Pick<SubmitThreadRequest, "providerId" | "model">>;
+export type ModelPickerValue = Required<Pick<SubmitSessionRequest, "providerId" | "model">>;
 
 export interface ModelNavigatorProps {
   value: ModelPickerValue;
@@ -113,14 +117,45 @@ function NotConfigured({ icon, title, description }: { icon: IconName; title: st
   );
 }
 
+// The second line of a model row: what somebody published about it. Absent facts render nothing at all, so a row
+// stays a single line rather than showing a shrug.
+function ModelRowText({ leaf, thinksLabel }: { leaf: ModelLeaf; thinksLabel: string }) {
+  const summary = formatModelFacts(leaf.facts);
+  if (summary.parts.length === 0 && summary.thinks === undefined) {
+    return <>{leaf.label}</>;
+  }
+  return (
+    <span className="ModelRow">
+      <span className="ModelRowId">{leaf.label}</span>
+      <span className="ModelRowFacts">
+        {summary.parts.map((part, index) => (
+          <span key={part}>
+            {index > 0 ? <span className="ModelRowSep">·</span> : null}
+            {part}
+          </span>
+        ))}
+        {summary.thinks !== undefined ? (
+          <span className="ModelRowThinks">{summary.thinks ? `${thinksLabel} · ${summary.thinks}` : thinksLabel}</span>
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
 // Model leaves as MenuItems (listoption → `selected` shows a tick). llama.cpp's single served model is a
 // disabled entry tagged with the native `label` slot. Plain helper (no hooks).
-function modelItems(sourceId: string, leaves: ModelLeaf[], ctx: PickerContextValue, served: string) {
+function modelItems(
+  sourceId: string,
+  leaves: ModelLeaf[],
+  ctx: PickerContextValue,
+  served: string,
+  thinksLabel: string,
+) {
   return leaves.map((leaf) => (
     <MenuItem
       key={leaf.model}
       roleStructure="listoption"
-      text={leaf.label}
+      text={<ModelRowText leaf={leaf} thinksLabel={thinksLabel} />}
       selected={leaf.readOnly ? undefined : leaf.selected}
       disabled={leaf.readOnly}
       shouldDismissPopover={false}
@@ -154,12 +189,83 @@ function modelNoticeText(notice: SourceModelNotice | undefined, t: ReturnType<ty
   }
 }
 
+// A provider's PUBLISHED catalogue: the models pi ships for it, above a strip saying why they are readable but
+// not yet usable. `adopt` is the case where the app has no provider entry at all — one click writes it, and the
+// key is then set in AI settings like any other source's.
+function PublishedModels({
+  sourceId,
+  entry,
+  adopt = false,
+}: {
+  sourceId: string;
+  entry: ProviderCatalogEntry;
+  adopt?: boolean;
+}) {
+  const { t } = useTranslation();
+  const ctx = usePicker();
+  const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
+  // Nothing here is the session's model, so nothing may wear a tick: `buildModelTree` resolves a choice (and would
+  // auto-select the first option off an empty saved id), which is right when picking and wrong when browsing.
+  const leaves = (
+    buildModelTree({ entry, models: piProviderModelIds(sourceId), savedModel: "" }).groups[0]?.models ?? []
+  ).map((leaf) => ({ ...leaf, selected: false })) as ModelLeaf[];
+  const shown = leaves.filter((leaf) => matchesFilter(leaf, ctx.filter));
+  const name = entry.labelKey;
+
+  // Adopting writes the connection facts pi already published — its endpoint and that it takes a bearer token —
+  // so the provider becomes one the app can configure and start a session on. The KEY is never touched here.
+  const onAdopt = () => {
+    const current = useAppStore.getState().userSettings.ai ?? DEFAULT_AI_SETTINGS;
+    void setGlobalUserSettings({
+      ai: {
+        ...current,
+        providers: {
+          ...current.providers,
+          [sourceId]: {
+            model: "",
+            ...(entry.defaultBaseURL ? { baseURL: entry.defaultBaseURL } : {}),
+            auth: { scheme: entry.defaultAuthScheme },
+          },
+        },
+      },
+    });
+  };
+
+  return (
+    <>
+      <div className="ModelNavigatorUnkeyed">
+        <Icon icon={IconNames.KEY} />
+        <span>
+          {adopt
+            ? t("{{name}} is not set up here yet — these are the models it publishes.", { name })
+            : t("No API key yet — these are the models {{name}} publishes. Add a key to use one.", { name })}
+        </span>
+        <AnchorButton
+          variant="minimal"
+          size="small"
+          icon={IconNames.COG}
+          text={adopt ? t("Add {{name}}", { name }) : t("Add a key")}
+          href={AI_SETTINGS_HREF}
+          onClick={adopt ? onAdopt : undefined}
+        />
+      </div>
+      <Menu size="small">
+        {shown.length === 0 ? (
+          <MenuItem disabled text={t("No matching models.")} />
+        ) : (
+          modelItems(sourceId, shown, ctx, t("served"), t("thinks"))
+        )}
+      </Menu>
+    </>
+  );
+}
+
 // The body of a source panel: spinner / no-key / error notice, OR a menu of either upstream-provider
 // drill rows (aggregator) or model leaves (flat / single).
 function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: PanelProps<object>["openPanel"] }) {
   const { t } = useTranslation();
   const ctx = usePicker();
-  const entry = getProviderEntry(sourceId);
+  const entry = sourceCatalogEntry(sourceId);
   if (!entry) {
     return null;
   }
@@ -171,8 +277,19 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
       </div>
     );
   }
+  // A source only pi carries: the app has no provider entry, so there is nothing to discover FROM yet. Its
+  // published catalogue is the panel, and adopting it is what turns it into a source a session can start on.
+  if (!getProviderEntry(sourceId)) {
+    return <PublishedModels sourceId={sourceId} entry={entry} adopt />;
+  }
+
   const error = ctx.errorBySource[sourceId];
   if (error === NO_KEY) {
+    // pi published this provider's models, so the catalogue is readable before a key exists — browsing costs
+    // nothing and the key is what USING one needs. This used to be a dead end for every cloud provider.
+    if (piProviderModelIds(sourceId).length > 0) {
+      return <PublishedModels sourceId={sourceId} entry={entry} />;
+    }
     // Popover: a clean NonIdealState pointing at settings. Embedded: a one-liner — the key field is
     // right below the navigator (so the user is never stuck on the chicken-and-egg).
     return ctx.showNotConfigured ? (
@@ -245,7 +362,7 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
       {leaves.length === 0 ? (
         <MenuItem disabled text={t("No matching models.")} />
       ) : (
-        modelItems(sourceId, leaves, ctx, t("served"))
+        modelItems(sourceId, leaves, ctx, t("served"), t("thinks"))
       )}
     </Menu>
   );
@@ -262,6 +379,7 @@ function SourcesPanel({ openPanel }: PanelProps<object>) {
       <ProviderSourceList
         activeId={ctx.value.providerId}
         filter={ctx.filter}
+        includePiCatalogue
         renderItemRight={() => <Icon icon={IconNames.CHEVRON_RIGHT} />}
         onSelect={(entry) =>
           openPanel({ title: t(entry.labelKey), props: { sourceId: entry.id }, renderPanel: SourceContentPanel })
@@ -282,7 +400,7 @@ function SourceContentPanel({ sourceId, openPanel }: PanelProps<{ sourceId: stri
 function ProviderModelsPanel({ sourceId, providerKey }: PanelProps<{ sourceId: string; providerKey: string }>) {
   const { t } = useTranslation();
   const ctx = usePicker();
-  const entry = getProviderEntry(sourceId);
+  const entry = sourceCatalogEntry(sourceId);
   const tree = entry
     ? buildModelTree({
         entry,
@@ -298,7 +416,7 @@ function ProviderModelsPanel({ sourceId, providerKey }: PanelProps<{ sourceId: s
         {leaves.length === 0 ? (
           <MenuItem disabled text={t("No matching models.")} />
         ) : (
-          modelItems(sourceId, leaves, ctx, t("served"))
+          modelItems(sourceId, leaves, ctx, t("served"), t("thinks"))
         )}
       </Menu>
     </div>
@@ -368,9 +486,9 @@ export const ModelNavigator = forwardRef<ModelNavigatorHandle, ModelNavigatorPro
   const currentSourceId = topProps.sourceId ?? value.providerId;
 
   const headerTitle = topProps.providerKey
-    ? t(getProviderEntry(topProps.providerKey)?.labelKey ?? topProps.providerKey)
+    ? t(sourceCatalogEntry(topProps.providerKey)?.labelKey ?? topProps.providerKey)
     : topProps.sourceId
-      ? t(getProviderEntry(topProps.sourceId)?.labelKey ?? topProps.sourceId)
+      ? t(sourceCatalogEntry(topProps.sourceId)?.labelKey ?? topProps.sourceId)
       : t("Inference source");
 
   const ctxValue = useMemo<PickerContextValue>(

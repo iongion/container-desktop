@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { getProviderEntry } from "@/ai-system/core/providers";
 
 import { buildModelTree, formatSelectedPath, selectedPath } from "@/ai-system/ui/core/modelCatalog";
+import { piModelBaseline, piProviderModelIds } from "@/pi-bridge/modelBaseline";
 
 const lmstudio = getProviderEntry("lmstudio")!;
 const llamacpp = getProviderEntry("llamacpp")!;
@@ -26,10 +27,10 @@ describe("buildModelTree — flat source (LM Studio / clouds, source == provider
   });
 
   it("keeps an HF-org-prefixed flat id intact (no aggregator split)", () => {
-    const tree = buildModelTree({ entry: lmstudio, models: ["unsloth/qwen3.5-9b"], savedModel: "" });
+    const tree = buildModelTree({ entry: lmstudio, models: ["lmstudio-community/qwen3.5-9b"], savedModel: "" });
     expect(tree.groups).toHaveLength(1);
-    expect(tree.groups[0].models[0].model).toBe("unsloth/qwen3.5-9b");
-    expect(tree.groups[0].models[0].label).toBe("unsloth/qwen3.5-9b");
+    expect(tree.groups[0].models[0].model).toBe("lmstudio-community/qwen3.5-9b");
+    expect(tree.groups[0].models[0].label).toBe("lmstudio-community/qwen3.5-9b");
   });
 
   it("auto-selects the first model when none is saved", () => {
@@ -165,5 +166,41 @@ describe("formatSelectedPath", () => {
     expect(formatSelectedPath(["Select a model"], false, (value) => `translated:${value}`)).toBe(
       "translated:Select a model",
     );
+  });
+});
+
+describe("buildModelTree — what pi published about a leaf", () => {
+  const anthropic = getProviderEntry("anthropic")!;
+
+  // A row can only say what somebody published, and pi carries this id — so the leaf carries its window and rates.
+  it("carries pi's facts for a model it knows", () => {
+    const published = piProviderModelIds("anthropic")[0];
+
+    const tree = buildModelTree({ entry: anthropic, models: [published], savedModel: "" });
+
+    expect(tree.groups[0].models[0].facts).toEqual(piModelBaseline("anthropic", published));
+    expect(tree.groups[0].models[0].facts?.contextWindow).toBeGreaterThan(0);
+  });
+
+  // The mock app's own cloud fixture is exactly this shape — an invented id under a real provider. No `facts` key
+  // at all is the honest answer, and it is why such a row stays single-line instead of claiming a window.
+  it("carries no facts for an id pi never published", () => {
+    const tree = buildModelTree({ entry: anthropic, models: ["default-large"], savedModel: "" });
+
+    expect(tree.groups[0].models[0]).not.toHaveProperty("facts");
+  });
+
+  // pi carries no LM Studio entry: only the running server knows what it loaded.
+  it("carries no facts for a provider pi does not carry", () => {
+    const tree = buildModelTree({ entry: lmstudio, models: ["qwen3-4b-instruct-2507"], savedModel: "" });
+
+    expect(tree.groups[0].models[0]).not.toHaveProperty("facts");
+  });
+
+  // An aggregator's ids are vendor-prefixed and pi has no baseline for one, so its rows stay ids alone.
+  it("carries no facts for an aggregator's models", () => {
+    const tree = buildModelTree({ entry: openrouter, models: ["anthropic/claude-3.5-sonnet"], savedModel: "" });
+
+    expect(tree.groups[0].models[0]).not.toHaveProperty("facts");
   });
 });

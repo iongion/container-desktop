@@ -3,8 +3,8 @@ import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { pathTo } from "@/web-app/Navigator";
 
+import { getAIScreenUrl } from "./Navigation";
 import "./ScreenHeader.css";
 
 interface ScreenHeaderSectionsTabBarProps {
@@ -12,9 +12,9 @@ interface ScreenHeaderSectionsTabBarProps {
   isActive?: (screen: string) => boolean;
 }
 
-// Mirrors screens/Troubleshoot/ScreenHeader.tsx — one shared section tab bar for the AI family (the multi-agent
-// Runs screen and the Workers library), highlighting whichever screen is active. The AI screens are excluded from
-// the sidebar and reached through the header AI menu, so this bar is how they cross-link.
+// Mirrors screens/Volume/ScreenHeader.tsx — one shared section tab bar for the AI family (the Assistant and
+// its Plugins), highlighting whichever screen is active. The AI screens are
+// excluded from the sidebar and reached through the header AI menu, so this bar is how they cross-link.
 export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProps> = ({
   expand,
   isActive,
@@ -24,19 +24,17 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
     <>
       <AnchorButton
         variant="minimal"
-        // A single run lives under the Runs list, so the run screen keeps this tab lit rather than
-        // leaving the bar with nothing active while you watch a run.
-        active={isActive ? isActive("ai.runs") || isActive("ai.run") : false}
-        icon={IconNames.GRAPH}
-        text={t("Runs")}
-        href={pathTo("/screens/ai/runs")}
+        active={isActive ? isActive("ai.assistant") : false}
+        icon={IconNames.CHAT}
+        text={t("Assistant")}
+        href={getAIScreenUrl("assistant")}
       />
       <AnchorButton
         variant="minimal"
-        active={isActive ? isActive("ai.workers") : false}
-        icon={IconNames.PEOPLE}
-        text={t("Workers")}
-        href={pathTo("/screens/ai/workers")}
+        active={isActive ? isActive("ai.plugins") : false}
+        icon={IconNames.CUBE_ADD}
+        text={t("Plugins")}
+        href={getAIScreenUrl("plugins")}
       />
     </>
   ) : undefined;
@@ -48,12 +46,12 @@ interface ScreenHeaderProps {
   titleText?: string;
   rightContent?: React.ReactNode;
   centerContent?: React.ReactNode;
-  // The execution screens (Assistant, a single Run) have nothing to search. The list
-  // screens (Runs, Workers) do, so search is opt-in rather than suppressed for the whole family.
+  // The Assistant has nothing to search; a list screen does, so search is opt-in rather than suppressed for the
+  // whole family.
   searchTerm?: string;
   onSearch?: React.ChangeEventHandler<HTMLInputElement>;
-  // A detail sub-screen (a single Run) opts into the canonical ScreenHeader back affordance — the
-  // left chevron + optional jump-to-list icon — instead of hand-rolling a labelled button in rightContent.
+  // A detail sub-screen opts into the canonical ScreenHeader back affordance — the left chevron + optional
+  // jump-to-list icon — instead of hand-rolling a labelled button in rightContent.
   withBack?: boolean;
   listRoutePath?: string;
   listRouteIcon?: IconName;

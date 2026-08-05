@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@container-desktop/host-contract": "*",
+    "@container-desktop/pi-bridge": "*",
     "@container-desktop/template": "*",
     "@container-desktop/utils": "*"
   }

@@ -3,7 +3,7 @@ import { summarizeWorkspaceChanges, type WorkspaceChangeSnapshot } from "@/ai-sy
 
 function snapshot(fingerprint: string, entries: WorkspaceChangeSnapshot["entries"] = []): WorkspaceChangeSnapshot {
   return {
-    target: { kind: "host" },
+    origin: { kind: "app" },
     workspaceRoot: "/workspace",
     state: entries.length ? "changes" : "clean",
     entries,
@@ -30,7 +30,7 @@ describe("summarizeWorkspaceChanges", () => {
     ]);
 
     expect(summarizeWorkspaceChanges(before, after)).toEqual({
-      target: { kind: "host" },
+      origin: { kind: "app" },
       workspaceRoot: "/workspace",
       beforeCount: 2,
       afterCount: 2,

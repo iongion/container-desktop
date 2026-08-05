@@ -11,7 +11,7 @@ export interface QueuedAssistantCommand {
   canonicalInput: string;
   registryRevision: string;
   sourceIdentity: string;
-  targetThreadId: string | null;
+  targetSessionId: string | null;
   enqueuedAt: number;
 }
 
@@ -28,6 +28,12 @@ function sourceIdentity(source: AssistantCommandSource): string {
       return `${source.kind}:${source.workspaceId}:${source.fingerprint}`;
     case "plugin-skill":
       return `${source.kind}:${source.pluginId}:${source.fingerprint}`;
+    // pi's own commands have no content to fingerprint: what a queued `/compact` means cannot change under it the
+    // way a rewritten skill file can.
+    case "pi-builtin":
+      return source.kind;
+    case "pi-plugin":
+      return `${source.kind}:${source.pluginId}`;
     default:
       return `${source.kind}:${source.fingerprint}`;
   }
@@ -38,7 +44,7 @@ export function enqueueAssistantCommand(
   queueId: number,
   command: ParsedAssistantCommand,
   registry: AssistantCommandRegistry,
-  targetThreadId: string | null,
+  targetSessionId: string | null,
   enqueuedAt: number,
 ): QueuedAssistantCommand[] {
   if (queue.length >= MAX_QUEUED_ASSISTANT_COMMANDS) throw new Error("Command queue is full");
@@ -51,7 +57,7 @@ export function enqueueAssistantCommand(
       canonicalInput,
       registryRevision: registry.revision,
       sourceIdentity: sourceIdentity(command.command.source),
-      targetThreadId,
+      targetSessionId,
       enqueuedAt,
     },
   ];
@@ -68,10 +74,10 @@ export function revalidateQueuedAssistantCommand(
   entry: QueuedAssistantCommand,
   registry: AssistantCommandRegistry,
   context: AssistantCommandExecutionContext,
-  activeThreadId: string | null,
+  activeSessionId: string | null,
 ): QueuedAssistantCommandValidation {
-  if (entry.targetThreadId !== activeThreadId) {
-    return { kind: "unavailable", reasonKey: "The queued command belongs to another Thread" };
+  if (entry.targetSessionId !== activeSessionId) {
+    return { kind: "unavailable", reasonKey: "The queued command belongs to another Session" };
   }
   const definition = registry.commands.find((command) => command.id === entry.commandId);
   if (!definition || sourceIdentity(definition.source) !== entry.sourceIdentity) {

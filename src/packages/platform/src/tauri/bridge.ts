@@ -80,10 +80,13 @@ export async function installTauriHostBridge(): Promise<void> {
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK" })) ?? "";
     // Expose the Runs-at-scale knob to the webview realm (no `process` here) so readMockScaleSpec seeds the
     // scaled run set under Tauri. Absent ⇒ "" ⇒ no scaled seed (the default).
-    target.CONTAINER_DESKTOP_MOCK_SCALE =
-      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SCALE" })) ?? "";
     target.CONTAINER_DESKTOP_MOCK_SWARM =
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SWARM" })) ?? "";
+    // The same flag that turns the single-instance guard off (lib.rs) so the harness runs beside a dev app. The
+    // webview needs it because work that assumes "only this app is running" — reaping orphaned agent sessions —
+    // must stand down when a second instance may hold a live one.
+    target.CONTAINER_DESKTOP_E2E =
+      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_E2E" })) ?? "";
     // CURRENT_DARWIN_MAJOR (uname-derived natively) so macOS Apple-Container network gating
     // (container-client runtime profiles) works under Tauri too; null/undefined off Darwin.
     const darwinMajor = (await invoke<number | null>("get_darwin_major")) ?? undefined;
@@ -158,8 +161,8 @@ export async function installTauriHostBridge(): Promise<void> {
       userDataDir: await invoke<string>("get_user_data_path"),
       getAISettings: async () => normalizeAISettings(await userConfiguration.getKey("ai")),
       engineOps: createEngineOpsAdapter(resourceSyncHost.service as any),
-      // Off-host worker execution: bind the AI system to the SAME in-realm engine service so a worker's
-      // remote/container/sandbox target runs where it should, not silently on the host.
+      // Container execution: bind the AI system to the SAME in-realm engine service so a session's container or
+      // sandbox target runs where it should, not silently on this machine.
       connectionExec: createConnectionExecAdapter(resourceSyncHost.service as any),
       mock: !!target.CONTAINER_DESKTOP_MOCK,
       logger: createLogger("tauri.ai"),

@@ -1,4 +1,4 @@
-// Assistant conversation, composer, completion, and Thread-history flows.
+// Assistant conversation, composer, completion, and Session-history flows.
 import {
   closeOpenAppDrawer,
   composerReadyOn,
@@ -102,15 +102,6 @@ export async function slashCommandKeyboardFlow(driver) {
   await driver.waitFor(composerReadyOn, "ai.assistant", { timeout: 20000, message: "assistant composer" });
   await closeOpenAppDrawer(driver);
   await newAssistantChat(driver);
-  if (await driver.evaluate(() => !!document.querySelector(".ThreadHistoryPopover"))) {
-    await driver.evaluate(() =>
-      document.querySelector('[data-screen="ai.assistant"] [aria-label="Thread history"]')?.click(),
-    );
-    await driver.waitFor(() => !document.querySelector(".ThreadHistoryPopover"), undefined, {
-      timeout: 3000,
-      message: "close Thread history before slash completion",
-    });
-  }
   await driver.evaluate(() => {
     const input = document.querySelector('[data-screen="ai.assistant"] .AIComposerInput');
     const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
@@ -129,12 +120,17 @@ export async function slashCommandKeyboardFlow(driver) {
   );
   if (!focusRetained) return { name: "slashCommandKeyboard", ok: false, detail: "palette stole composer focus" };
 
-  await driver.typeText("thread");
+  await driver.typeText("memory");
   await driver.waitFor(
-    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/thread",
+    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/memory",
     undefined,
     { timeout: 3000, message: "typed slash query" },
   );
+  // `/memory` narrows to the four Project-context commands, so ArrowDown below has somewhere to move.
+  await driver.waitFor(() => document.querySelectorAll(".AssistantCommandPaletteRow").length === 4, undefined, {
+    timeout: 3000,
+    message: "slash query narrowed to a navigable set",
+  });
   await driver.waitFor(
     () => {
       const input = document.querySelector('[data-screen="ai.assistant"] .AIComposerInput');
@@ -155,7 +151,7 @@ export async function slashCommandKeyboardFlow(driver) {
       anchor: palette?.getAttribute("data-command-anchor") || null,
       aboveInput: !!inputRect && !!paletteRect && paletteRect.bottom <= inputRect.top + 2,
       sameWidth: !!inputRect && !!paletteRect && Math.abs(paletteRect.width - inputRect.width) <= 2,
-      textVisible: input?.value === "/thread",
+      textVisible: input?.value === "/memory",
     };
   });
   if (typedAnchor.anchor !== "input" || !typedAnchor.aboveInput || !typedAnchor.sameWidth || !typedAnchor.textVisible) {
@@ -169,7 +165,7 @@ export async function slashCommandKeyboardFlow(driver) {
     () => document.querySelector('.AssistantCommandPaletteRow[aria-selected="true"] code')?.textContent || "",
   );
 
-  await driver.typeText(" ren");
+  await driver.typeText(" add");
   await driver.waitFor(() => document.querySelectorAll(".AssistantCommandPaletteRow").length === 1, undefined, {
     timeout: 3000,
     message: "filtered slash-command result",
@@ -202,14 +198,14 @@ export async function slashCommandKeyboardFlow(driver) {
     { timeout: 3000, message: "composer cleared before button palette" },
   );
   await driver.evaluate(() => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.focus());
-  await driver.typeText("/thread swi");
+  await driver.typeText("/memory rem");
   await driver.waitFor(() => document.querySelectorAll(".AssistantCommandPaletteRow").length === 1, undefined, {
     timeout: 3000,
     message: "Tab completion result",
   });
   await driver.press("Tab");
   await driver.waitFor(
-    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/thread switch ",
+    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/memory remove ",
     undefined,
     { timeout: 3000, message: "Tab inserted command" },
   );
@@ -224,7 +220,7 @@ export async function slashCommandKeyboardFlow(driver) {
   });
   await driver.typeText("/worker");
   await driver.waitFor(
-    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/thread switch /worker",
+    () => document.querySelector('[data-screen="ai.assistant"] .AIComposerInput')?.value === "/memory remove /worker",
     undefined,
     { timeout: 3000, message: "slash remains argument text after command completion" },
   );
@@ -266,7 +262,7 @@ export async function slashCommandKeyboardFlow(driver) {
   const ok =
     before !== after &&
     highlighted &&
-    completed.value === "/thread rename " &&
+    completed.value === "/memory add " &&
     completed.selectionStart === completed.value.length &&
     completed.selectionEnd === completed.value.length &&
     !completed.paletteOpen &&
@@ -285,171 +281,3 @@ export async function slashCommandKeyboardFlow(driver) {
   };
 }
 
-/**
- * Thread history is one keyboard-owned combobox/listbox: arrows move the full-row highlight while focus remains in
- * search, filtering preserves a stable row identity, and Enter chooses that row. Real shell input catches page/list
- * scrolling regressions that synthetic key events miss. @param {AiE2eDriver} driver @returns {Promise<FlowResult>}
- */
-export async function threadHistoryKeyboardFlow(driver) {
-  await driver.goto("#/screens/ai/assistant");
-  await driver.waitFor(composerReadyOn, "ai.assistant", { timeout: 20000, message: "assistant composer" });
-  await driver.waitFor(() => !document.querySelector('[data-screen="ai.assistant"] .AIComposerStop'), undefined, {
-    timeout: 20000,
-    message: "assistant idle before Thread history keyboard flow",
-  });
-  const wasOpen = await driver.evaluate(() => !!document.querySelector(".ThreadHistoryPopover"));
-  if (wasOpen) {
-    await driver.evaluate(() =>
-      document.querySelector('[data-screen="ai.assistant"] [aria-label="Thread history"]')?.click(),
-    );
-    await driver.waitFor(() => !document.querySelector(".ThreadHistoryPopover"), undefined, {
-      timeout: 3000,
-      message: "reset open Thread history",
-    });
-  }
-  await driver.evaluate(() =>
-    document.querySelector('[data-screen="ai.assistant"] [aria-label="Thread history"]')?.click(),
-  );
-  await driver.waitFor(() => !!document.querySelector(".ThreadHistoryPopover input"), undefined, {
-    timeout: 3000,
-    message: "Thread history search",
-  });
-  await driver.evaluate(() => {
-    const input = document.querySelector(".ThreadHistoryPopover input");
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-    setter.call(input, "");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.focus();
-  });
-  await driver.waitFor(() => document.querySelectorAll(".ThreadHistoryItem").length > 1, undefined, {
-    timeout: 3000,
-    message: "unfiltered Thread history",
-  });
-  await driver.waitFor(() => !!document.querySelector(".ThreadHistoryItem.bp6-active"), undefined, {
-    timeout: 3000,
-    message: "initial Thread history highlight",
-  });
-  const before = await driver.evaluate(() => {
-    const input = document.querySelector(".ThreadHistoryPopover input");
-    const row = document.querySelector(".ThreadHistoryItem.bp6-active");
-    const list = document.querySelector(".ThreadHistoryList");
-    const popup = document.querySelector(".ThreadHistoryPopover");
-    return {
-      focused: document.activeElement === input,
-      selected: row?.getAttribute("data-thread-id") || null,
-      pageScroll: window.scrollY,
-      listScroll: list?.scrollTop || 0,
-      rowMinHeight: Number.parseFloat(getComputedStyle(row).minHeight),
-      listMaxHeight: Number.parseFloat(getComputedStyle(list).maxHeight),
-      popupPadding: Number.parseFloat(getComputedStyle(popup).paddingTop),
-      redundantEdit: !!document.querySelector('[data-screen="ai.assistant"] .ThreadSelectorEdit'),
-      rowEdit: !!document.querySelector('.ThreadHistoryItem [aria-label="Edit"]'),
-      decorativeIconVisible: [...document.querySelectorAll(".ThreadHistoryItem .bp6-menu-item-icon")].some(
-        (icon) => getComputedStyle(icon).display !== "none",
-      ),
-      renderedRows: document.querySelectorAll(".ThreadHistoryItem").length,
-      totalRows: Number(list?.getAttribute("data-total-count") || 0),
-      arrow: !!document.querySelector(".ThreadHistoryOverlay .bp6-popover-arrow"),
-    };
-  });
-  if (!before.focused || !before.selected) {
-    return { name: "threadHistoryKeyboard", ok: false, detail: `initial state: ${JSON.stringify(before)}` };
-  }
-
-  await driver.press("ArrowDown");
-  await driver.waitFor(
-    (selected) => document.querySelector(".ThreadHistoryItem.bp6-active")?.getAttribute("data-thread-id") !== selected,
-    before.selected,
-    { timeout: 3000, message: "Thread history ArrowDown highlight" },
-  );
-  await driver.waitFor(
-    () => {
-      const rowRect = document.querySelector(".ThreadHistoryItem.bp6-active")?.getBoundingClientRect();
-      const listRect = document.querySelector(".ThreadHistoryList")?.getBoundingClientRect();
-      return !!rowRect && !!listRect && rowRect.top >= listRect.top && rowRect.bottom <= listRect.bottom;
-    },
-    undefined,
-    { timeout: 3000, message: "Thread history highlighted row visible" },
-  );
-  const afterArrow = await driver.evaluate(() => {
-    const row = document.querySelector(".ThreadHistoryItem.bp6-active");
-    const list = document.querySelector(".ThreadHistoryList");
-    const rowRect = row?.getBoundingClientRect();
-    const listRect = list?.getBoundingClientRect();
-    return {
-      focused: document.activeElement === document.querySelector(".ThreadHistoryPopover input"),
-      selected: row?.getAttribute("data-thread-id") || null,
-      pageScroll: window.scrollY,
-      listScroll: list?.scrollTop || 0,
-      selectedVisible: !!rowRect && !!listRect && rowRect.top >= listRect.top && rowRect.bottom <= listRect.bottom,
-      ariaSelected: row?.parentElement?.getAttribute("aria-selected"),
-    };
-  });
-
-  await driver.typeText("restart");
-  await driver.waitFor(
-    () => {
-      const rows = [...document.querySelectorAll(".ThreadHistoryTitle")];
-      return rows.length > 0 && rows.every((row) => (row.textContent || "").toLocaleLowerCase().includes("restart"));
-    },
-    undefined,
-    { timeout: 3000, message: "Thread history reactive filter" },
-  );
-  await driver.waitFor(() => !!document.querySelector(".ThreadHistoryItem.bp6-active"), undefined, {
-    timeout: 3000,
-    message: "filtered Thread history highlight",
-  });
-  const beforeFilteredArrow = await driver.evaluate(
-    () => document.querySelector(".ThreadHistoryItem.bp6-active")?.getAttribute("data-thread-id") || "",
-  );
-  await driver.press("ArrowDown");
-  await driver.waitFor(
-    (selected) => document.querySelector(".ThreadHistoryItem.bp6-active")?.getAttribute("data-thread-id") !== selected,
-    beforeFilteredArrow,
-    { timeout: 3000, message: "filtered Thread history ArrowDown highlight" },
-  );
-  const chosen = await driver.evaluate(
-    () => document.querySelector(".ThreadHistoryItem.bp6-active .ThreadHistoryTitle")?.textContent || "",
-  );
-  await driver.press("Enter");
-  await driver.waitFor(() => !document.querySelector(".ThreadHistoryPopover"), undefined, {
-    timeout: 3000,
-    message: "Thread history Enter selection",
-  });
-  const title = await driver.evaluate(
-    () => document.querySelector('[data-screen="ai.assistant"] .ThreadSelectorTitle')?.textContent?.trim() || "",
-  );
-  await driver.screenshot("./webdriver/artifacts/ai-thread-history-keyboard.png");
-
-  const ok =
-    afterArrow.focused &&
-    afterArrow.selected !== before.selected &&
-    afterArrow.ariaSelected === "true" &&
-    afterArrow.selectedVisible &&
-    afterArrow.pageScroll === before.pageScroll &&
-    before.rowMinHeight <= 32 &&
-    before.listMaxHeight <= 300 &&
-    before.popupPadding <= 6 &&
-    !before.redundantEdit &&
-    !before.rowEdit &&
-    !before.decorativeIconVisible &&
-    before.renderedRows < before.totalRows &&
-    !before.arrow &&
-    !!chosen &&
-    title === chosen;
-  return {
-    name: "threadHistoryKeyboard",
-    ok,
-    detail: ok
-      ? "compact history kept search focus, moved full-row selection, filtered, and selected with Enter"
-      : JSON.stringify({ before, afterArrow, chosen, title }),
-  };
-}
-
-/**
- * Worker lifecycle through the REAL editor UI: create with the full config surface exercised (specialty, the
- * model inherit toggle, tool policy `ask` hides the grid / `granular` shows an editable grid, and the runs-on
- * target transitions), then EDIT the specialty, then DELETE via the card's ConfirmMenu (the "…" → Remove → Yes),
- * NOT the `window.AI.removeWorker` bridge. Self-contained + uniquely named, so it leaves no residue between runs.
- * @param {AiE2eDriver} driver @returns {Promise<FlowResult>}
- */

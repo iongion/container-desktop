@@ -12,21 +12,16 @@ export const AI_CHANNELS = {
   keyHas: "ai:key:has", // invoke({ provider }) → boolean
   keySet: "ai:key:set", // invoke({ provider, key, allowDegraded? }) → { ok: true }
   keyClear: "ai:key:clear", // invoke({ provider }) → { ok: true }
-  threadSubmit: "ai:thread:submit",
-  threadList: "ai:thread:list",
-  threadCreate: "ai:thread:create",
-  threadRename: "ai:thread:rename",
-  threadConfigure: "ai:thread:configure",
-  threadBranchPreview: "ai:thread:branch-preview",
-  threadBranch: "ai:thread:branch",
-  threadCompactionPreview: "ai:thread:compaction-preview",
-  threadCompact: "ai:thread:compact",
-  threadResolveApproval: "ai:thread:resolve-approval",
-  threadSnapshot: "ai:thread:snapshot",
-  toolArtifactGet: "ai:tool-artifact:get",
-  threadDelete: "ai:thread:delete",
-  threadEvent: "ai:thread:event",
-  threadStop: "ai:thread:stop",
+  // Write the coding agent gateway's private env file, with the provider key read from the OS keychain and
+  // put in host-side. The renderer cannot read that key — only ask for the file that carries it.
+  agentGatewayEnv: "ai:agent:gateway-env",
+  // invoke({ fileName, contents }) → { path }. The AGENT container's env file, written into the same protected
+  // directory as the gateway's so one guard covers both. Carries the bridge token, never a provider key.
+  agentEnvFile: "ai:agent:env-file", // invoke(AgentGatewayEnvRequest) → { path }
+  // invoke({ provider, fileName, bridgeToken, bridgePort }) → { path }. The one-shot auth container's env file for a
+  // REFRESH run: it carries the stored credential, put in host-side, because the web view cannot read one out of the
+  // vault. Same protected directory and same guard as the two above.
+  authRefreshEnv: "ai:auth:refresh-env",
   changesStatus: "ai:changes:status",
   changesDiff: "ai:changes:diff",
   projectContextSnapshot: "ai:project-context:snapshot",
@@ -36,29 +31,14 @@ export const AI_CHANNELS = {
   projectMemoryRemove: "ai:project-context:memory-remove",
   projectMemoryClear: "ai:project-context:memory-clear",
   projectMemoryImport: "ai:project-context:memory-import",
-  // Team Runs execute one Goal through multiple agents. Parallel to Threads, with a task-DAG RunView
-  // projection rather than the linear Thread timeline.
-  runStart: "ai:run:start", // invoke(StartRunRequest) → StartRunResult
-  runCancel: "ai:run:cancel",
-  runApprovePlan: "ai:run:approve-plan", // invoke({ runId, decision }) → ResolveRunPlanResult
-  runApproveTool: "ai:run:approve-tool", // invoke({ runId, approvalId, decision }) → ResolveRunPlanResult
-  runSnapshot: "ai:run:snapshot",
-  runEvent: "ai:run:event",
-  runList: "ai:run:list", // invoke() → { runs: RunView[] } — the runs the HOST still holds, for re-attach
-  // The workers library — reusable agent definitions (model, prompt, tool policy). Broker-owned writes to a
-  // dedicated versioned file, exactly like the permission record: the renderer never names a policy inline.
-  workersList: "ai:workers:list", // invoke() → { workers }
-  workersSave: "ai:workers:save", // invoke({ worker }) → { workers }
-  workersRemove: "ai:workers:remove", // invoke({ id }) → { workers }
-  // The avatar library — custom uploaded faces a worker references by id. Broker-owned writes to a dedicated
-  // versioned file (ai-avatars.json), parallel to the workers store. Presets are shipped assets, never stored.
-  avatarsList: "ai:avatars:list", // invoke() → { avatars }
-  avatarsSave: "ai:avatars:save", // invoke({ avatar }) → { avatars }
-  avatarsRemove: "ai:avatars:remove", // invoke({ id }) → { avatars }
   modelsList: "ai:models:list", // invoke({ providerId }) → { models }
   modelsCancel: "ai:models:cancel",
+  // invoke({ providerId?, model }) → { contextWindow?, maxOutputTokens? }. Asked of the PROVIDER, because the
+  // OpenAI-shaped listing carries no window and a made-up one promises room a server will refuse.
+  modelWindow: "ai:model:window",
   // The user-managed allow/reject record (a dedicated versioned file; broker-owned writes).
   permissionsList: "ai:permissions:list", // invoke() → PermissionsSnapshot
+  permissionsAdd: "ai:permissions:add", // invoke({ list, rule }) → PermissionsSnapshot
   permissionsRemove: "ai:permissions:remove", // invoke({ list, key }) → PermissionsSnapshot
   skillsSnapshot: "ai:skills:snapshot",
   skillsReload: "ai:skills:reload",
@@ -66,7 +46,21 @@ export const AI_CHANNELS = {
   skillsSetProjectTrust: "ai:skills:project-trust",
   skillsInvoke: "ai:skills:invoke",
   skillsChanged: "ai:skills:changed",
-  // The knowledge bank has no renderer surface — the agent searches it main-side (see tools.ts).
+  // One container-engine operation, performed on the agent's behalf. The coding agent runs inside a container
+  // and cannot reach the engine ports, so its container toolset executes here, where engineOps is bound.
+  engineOp: "ai:engine:op", // invoke({ op, args?, defaultConnectionId? }) → EngineOpResult
+  // One workspace file or command operation, performed for the agent WHERE the session chose: this machine, a
+  // connection's own host, a container on one, or a disposable sandbox. It executes here because only this realm
+  // holds the connection transports and the local filesystem — the agent container can reach none of them.
+  workspaceOp: "ai:workspace:op", // invoke({ op, args?, target, runId }) → WorkspaceOpResult
+  // Release what a session's targets built — above all the disposable sandbox container, which exists only for
+  // that run and would otherwise outlive the session that asked for it.
+  workspaceRelease: "ai:workspace:release", // invoke({ runId }) → { ok: true }
+  // One public-web query, run for the agent. It executes here because the app owns the address-pinned fetch and
+  // the user's own web-search switch — which this refuses on while it is off.
+  webSearch: "ai:web:search", // invoke({ query }) → { text }
+  // The knowledge bank has no channel: its entries ship inside the agent image, so the session's own
+  // `searchKnowledge` tool answers from there without asking the app for anything.
 } as const;
 
 export interface AIStatus {
@@ -83,10 +77,7 @@ export type { AIDiagnosticsSnapshot };
 // Channel groupings derive from AI_CHANNELS (the independent constant), so the boundary schemas in
 // schemas.ts can be key-checked against them (`satisfies Record<AIInvokeChannel, …>`) with no import cycle.
 type AIChannel = (typeof AI_CHANNELS)[keyof typeof AI_CHANNELS];
-export type AIPushChannel =
-  | (typeof AI_CHANNELS)["threadEvent"]
-  | (typeof AI_CHANNELS)["runEvent"]
-  | (typeof AI_CHANNELS)["skillsChanged"];
+export type AIPushChannel = (typeof AI_CHANNELS)["skillsChanged"];
 export type AIInvokeChannel = Exclude<AIChannel, AIPushChannel>;
 
 // Request/response shapes derive from those schemas — one source of truth, no hand-kept twin that can drift.

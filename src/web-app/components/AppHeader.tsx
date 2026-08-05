@@ -1,4 +1,14 @@
-import { AnchorButton, Button, ButtonGroup, Divider, Navbar, NavbarGroup } from "@blueprintjs/core";
+import {
+  AnchorButton,
+  Button,
+  ButtonGroup,
+  Divider,
+  Menu,
+  MenuItem,
+  Navbar,
+  NavbarGroup,
+  PopoverNext,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiBug, mdiRobot } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -93,8 +103,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     });
   }
 
-  // AI lives here as a single button that opens the Assistant. The other AI screens are reached through the
-  // "Work" sidebar entry (→ Workers) and its section tab bar (→ Runs), not a header menu. AI is always on.
+  // AI lives here: the button summons the quake console, and its caret opens the AI screens. Those screens are
+  // ExcludeFromSidebar, so this menu is the ONLY way in — without it they are unreachable. AI is always on.
   const aiActions = (
     <ButtonGroup variant="minimal" className="AppHeaderAIActions">
       <Button
@@ -110,6 +120,34 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           toggleAssistantConsole();
         }}
       />
+      <PopoverNext
+        usePortal
+        placement="bottom-end"
+        content={
+          <Menu>
+            <MenuItem
+              icon={IconNames.CHAT}
+              text={t("Assistant")}
+              href={pathTo("/screens/ai/assistant")}
+              data-action="ai-screen-assistant"
+            />
+            <MenuItem
+              icon={IconNames.CUBE_ADD}
+              text={t("Plugins")}
+              href={pathTo("/screens/ai/plugins")}
+              data-action="ai-screen-plugins"
+            />
+          </Menu>
+        }
+      >
+        <Button
+          className="AppHeaderActionButton AppHeaderAIMenuTrigger"
+          data-action="ai-menu"
+          icon={IconNames.CARET_DOWN}
+          title={t("Open the AI screens")}
+          aria-label={t("Open the AI screens")}
+        />
+      </PopoverNext>
     </ButtonGroup>
   );
 

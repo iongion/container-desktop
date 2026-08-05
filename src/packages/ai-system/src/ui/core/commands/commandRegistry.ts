@@ -33,6 +33,14 @@ function normalizeCommand(command: AssistantCommandDefinition): AssistantCommand
 function isMalformed(command: AssistantCommandDefinition): boolean {
   const names = commandNames(command);
   if (!command.id.trim() || names.some((name) => !COMMAND_NAME.test(name))) return true;
+  // A pi command carries literal text (pi's own description, in pi's words) and a name to send over the bridge.
+  if (command.kind === "pi") {
+    if (!command.commandName.trim()) return true;
+    if (command.venue === "unavailable" && !command.unavailableReason?.trim()) return true;
+    return [command.description, command.argumentHint]
+      .filter((text) => text !== undefined)
+      .some((text) => text.kind !== "literal");
+  }
   if (command.kind !== "skill") return false;
   if (!command.skillId.trim() || !command.source.fingerprint.trim()) return true;
   return [command.description, command.argumentHint]
@@ -63,9 +71,11 @@ export function createAssistantCommandRegistry(
       return false;
     });
 
+  // Names a skill may not claim. Both the app's own commands and pi's own commands own their names: a file dropped
+  // into a skills directory must not be able to shadow `/compact` or `/doctor`.
   const reservedOwners = new Map<string, string>();
   for (const command of candidates) {
-    if (command.kind !== "control") continue;
+    if (command.kind === "skill") continue;
     for (const name of commandNames(command)) reservedOwners.set(name, command.id);
   }
 

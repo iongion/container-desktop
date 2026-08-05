@@ -1,15 +1,12 @@
 # Dev/test-only stack for container-desktop. NOT shipped and NOT loaded by the app at runtime.
 #
-# `remote-engine` is a self-contained, SSH-reachable docker-in-docker host used to exercise — on a real
-# transport and with ZERO external machines:
-#   - remote (SSH) engine connections in the app and the live connection matrix
-#     (src/__tests__/live/connection-matrix.live.test.ts), and
-#   - the agentic worker "Runs on" targets — remote / remote-sandbox / remote-container — in
-#     src/__tests__/live/runs-on.live.test.ts.
+# `remote-engine` is a self-contained, SSH-reachable docker-in-docker host used to exercise remote (SSH)
+# engine connections on a real transport with ZERO external machines — both in the app and in the smoke
+# connection matrix (webdriver/smoke/connection-matrix.smoke.js), where it appears as the `devssh` target.
 #
 # Bring it up with `support/ssh-remote-sandbox.sh up` (generates an ephemeral keypair and writes the
-# live suite's targets.env), and tear it down with `support/ssh-remote-sandbox.sh down`.
-# See docs/testing-runs-on.md → "Remote / remote-container".
+# target into src/__tests__/live/targets.env), and tear it down with `support/ssh-remote-sandbox.sh down`.
+# While it is down the matrix SKIPS that target rather than failing it. See docs/testing.md.
 name: container-desktop-dev
 
 services:

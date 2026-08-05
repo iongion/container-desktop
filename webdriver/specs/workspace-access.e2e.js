@@ -1,105 +1,105 @@
 // Workspace-access end-to-end over W3C WebDriver (Tauri / WebKitGTK). This is the ONE seam the hermetic suite
 // cannot cover: platform/tauri/capabilities/workspaceAccess.ts → `invoke` (camelCase→snake_case arg mapping) →
-// the native workspace_* commands in src-tauri/src/host.rs. Everything above it (OMA runner, workspace toolset,
-// specs, cards) is shared and already verified in the hermetic suite.
+// the native workspace_* commands in src-tauri/src/host.rs.
+//
+// It is driven through the channels that USE that seam today — the project context the assistant is given: reading
+// the workspace's rule and memory files, writing a memory into it, and clearing it again. The prompt-driven
+// `createChat`/`submitChat`/`getChatSnapshot` path this spec used to drive belonged to the in-app engine and has not
+// existed since the assistant moved into a container, so it could only ever time out.
 //
 // Runs against the mock app (CONTAINER_DESKTOP_MOCK=1, set by wdio.conf). The fixture workspace + ai.workspaceRoot
 // are seeded into an ISOLATED CONTAINER_DESKTOP_USER_DATA_DIR by wdio.conf onPrepare (before the app launches, so
-// it wins the boot-time settings-write race) — never the developer's release-app data. No manual Settings → AI
-// configuration is needed.
+// it wins the boot-time settings-write race) — never the developer's release-app data.
 
-const POLL_ATTEMPTS = 80;
-const POLL_INTERVAL_MS = 250;
+import { strict as assert } from "node:assert";
+import path from "node:path";
 
-async function submitPrompt(sessionId, content) {
-  return browser.executeAsync(
-    (sid, text, done) => {
-      (async () => {
-        try {
-          await window.AI.createChat({ id: sid, title: "workspace-access" });
-          await window.AI.submitChat({
-            sessionId: sid,
-            message: { id: "m1", content: text, createdAt: Date.now() },
-            history: [],
-          });
-          done({ ok: true });
-        } catch (error) {
-          done({ ok: false, error: String(error?.message ?? error) });
-        }
-      })();
-    },
-    sessionId,
-    content,
-  );
-}
+// The harness seeds this folder and points ai.workspaceRoot at it (wdio.conf onPrepare).
+const FIXTURE = path.join(
+  process.env.CONTAINER_DESKTOP_USER_DATA_DIR ?? path.join(process.cwd(), "webdriver", ".e2e-user-data"),
+  "workspace-fixture",
+);
 
-async function snapshot(sessionId) {
-  return browser.executeAsync((sid, done) => {
-    window.AI.getChatSnapshot(sid)
-      .then((view) => done(view))
+const context = () =>
+  browser.executeAsync((done) => {
+    window.AI.getProjectContext()
+      .then((snapshot) => done(snapshot))
       .catch((error) => done({ error: String(error?.message ?? error) }));
-  }, sessionId);
-}
-
-// Drive one prompt to completion and return the first tool timeline item.
-async function runPrompt(sessionId, content) {
-  const submitted = await submitPrompt(sessionId, content);
-  expect(submitted.ok).toBe(true);
-  let view = null;
-  for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt += 1) {
-    view = await snapshot(sessionId);
-    const timeline = view?.timeline ?? [];
-    const hasTool = timeline.some((item) => item.kind === "tool");
-    if ((view?.phase === "idle" || view?.phase === "error") && hasTool) break;
-    await browser.pause(POLL_INTERVAL_MS);
-  }
-  return (view?.timeline ?? []).find((item) => item.kind === "tool") ?? null;
-}
+  });
 
 describe("Workspace over the Tauri invoke bridge (WebKitGTK / WebDriver)", () => {
   before(async () => {
-    // The debug binary boots and hosts the AI system before it is interactive — settle, then confirm window.AI is
-    // up (the fixture workspace was pre-seeded by wdio.conf onPrepare).
+    // The debug binary boots and hosts the AI system before it is interactive — settle, then confirm the seam's own
+    // channel is up (the fixture workspace was pre-seeded by wdio.conf onPrepare).
     await browser.pause(4000);
-    await browser.waitUntil(async () => browser.execute(() => !!window.AI?.createChat), {
+    await browser.waitUntil(async () => browser.execute(() => !!window.AI?.getProjectContext), {
       timeout: 30000,
-      timeoutMsg: "window.AI never became available",
+      timeoutMsg: "window.AI never exposed the project-context channel",
     });
+    // Host-side reads follow the SESSION's folder, so the session has to be on the fixture: mock mode boots one on
+    // the home directory, which is a real folder with none of this spec's files in it.
+    await browser.waitUntil(async () => browser.execute(() => !!window.__cdCodingAgentStore), { timeout: 30000 });
+    await browser.executeAsync((workspacePath, done) => {
+      const store = window.__cdCodingAgentStore.getState();
+      store
+        .stop()
+        .then(() =>
+          window.__cdCodingAgentStore.getState().start({
+            connectionId: "mock-connection",
+            workspacePath,
+            modelId: "mock-assistant",
+            upstreamBaseUrl: "",
+            appVersion: "0.0.0",
+          }),
+        )
+        .then(() => done(true))
+        .catch(() => done(false));
+    }, FIXTURE);
+    await browser.waitUntil(
+      async () =>
+        (await browser.execute(() => window.__cdCodingAgentStore.getState().spec?.workspacePath)) === FIXTURE,
+      { timeout: 30000, timeoutMsg: "the session never took the fixture workspace" },
+    );
   });
 
-  it("reads a real file through workspace_read (Rust)", async () => {
-    const tool = await runPrompt(`cw-read-${Date.now()}`, "read the file package.json please");
-    expect(tool).not.toBe(null);
-    expect(tool.tool).toBe("readFile");
-    expect(tool.status).toBe("complete");
-    // Proves the Rust command returned real file contents through the invoke bridge.
-    expect(String(tool.result?.content ?? "")).toContain("demo");
+  // Reading: the snapshot's root is the CANONICAL fixture path, which only Rust can answer — the webview never
+  // resolves a real path — and its files were read through workspace_read.
+  it("reads the workspace through the native commands", async () => {
+    const snapshot = await context();
+    assert.equal(snapshot.error, undefined, `getProjectContext failed: ${snapshot.error}`);
+    assert.equal(snapshot.state, "ready", `the project context was not ready: ${JSON.stringify(snapshot.state)}`);
+    assert.equal(snapshot.workspaceRoot, FIXTURE);
+    assert.ok(Array.isArray(snapshot.rules), "the rules half of the snapshot was not read");
+    assert.ok(Array.isArray(snapshot.memory), "the memory half of the snapshot was not read");
   });
 
-  it("globs the workspace through workspace_glob (Rust)", async () => {
-    const tool = await runPrompt(`cw-glob-${Date.now()}`, "list the files in this project");
-    expect(tool).not.toBe(null);
-    expect(tool.tool).toBe("findFiles");
-    expect(tool.status).toBe("complete");
-    expect(Array.isArray(tool.result?.files)).toBe(true);
-    expect(tool.result.files).toContain("package.json");
+  // Writing: the same seam in the other direction. A memory added has to be there on the NEXT read, which is a
+  // separate invoke round trip — a write the binding dropped would still leave the first answer looking right.
+  it("writes into the workspace through the native commands, and reads it back", async () => {
+    const token = `WS-SEAM-${Date.now().toString(36)}`;
+    const written = await browser.executeAsync((content, done) => {
+      window.AI.addProjectMemory(content)
+        .then((snapshot) => done({ ok: true, entries: snapshot.memory?.length ?? 0 }))
+        .catch((error) => done({ ok: false, error: String(error?.message ?? error) }));
+    }, token);
+    assert.equal(written.ok, true, `addProjectMemory failed: ${written.error}`);
+
+    const reread = await context();
+    const entries = reread.memory ?? [];
+    assert.ok(
+      entries.some((entry) => (entry.content ?? "").includes(token)),
+      `the memory written through the seam did not read back: ${JSON.stringify(entries.map((e) => e.content))}`,
+    );
   });
 
-  it("greps the workspace through workspace_grep (Rust)", async () => {
-    const tool = await runPrompt(`cw-grep-${Date.now()}`, 'grep "hello world" in the project');
-    expect(tool).not.toBe(null);
-    expect(tool.tool).toBe("searchText");
-    expect(tool.status).toBe("complete");
-    expect(tool.result?.matches?.length).toBeGreaterThan(0);
-    expect(tool.result.matches[0].line).toBe(1);
-  });
-
-  // The security property: confinement is enforced in RUST, not in the webview binding.
-  it("rejects a path that escapes the workspace root", async () => {
-    const tool = await runPrompt(`cw-escape-${Date.now()}`, "read the file ../../../secret.env");
-    expect(tool).not.toBe(null);
-    expect(tool.tool).toBe("readFile");
-    expect(tool.status).toBe("error");
-    expect(String(tool.message ?? "")).toContain("escapes the workspace");
+  // And removing it: the fixture is shared with the other specs, so this leaves nothing behind.
+  it("clears what it wrote, through the same seam", async () => {
+    const cleared = await browser.executeAsync((done) => {
+      window.AI.clearProjectMemory()
+        .then((snapshot) => done({ ok: true, entries: snapshot.memory?.length ?? 0 }))
+        .catch((error) => done({ ok: false, error: String(error?.message ?? error) }));
+    });
+    assert.equal(cleared.ok, true, `clearProjectMemory failed: ${cleared.error}`);
+    assert.equal(cleared.entries, 0, "the memory file still had entries after it was cleared");
   });
 });

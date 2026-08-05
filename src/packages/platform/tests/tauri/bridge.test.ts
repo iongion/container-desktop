@@ -120,7 +120,6 @@ describe("installTauriHostBridge", () => {
       "MessageBus",
       "Preloaded",
       "CONTAINER_DESKTOP_MOCK",
-      "CONTAINER_DESKTOP_MOCK_SCALE",
       "CONTAINER_DESKTOP_MOCK_SWARM",
     ]) {
       delete (window as any)[key];
@@ -151,9 +150,8 @@ describe("installTauriHostBridge", () => {
     await installTauriHostBridge();
 
     // The webview has no `process`, so mode.ts reads these as globals. The swarm scenario is what
-    // webdriver/specs/swarm.e2e.js selects with, so it has to cross the boundary like its siblings.
+    // webdriver/specs/swarm-ui.e2e.js selects its fixture state with, so it has to cross the boundary too.
     expect((window as any).CONTAINER_DESKTOP_MOCK).toBe("env:CONTAINER_DESKTOP_MOCK");
-    expect((window as any).CONTAINER_DESKTOP_MOCK_SCALE).toBe("env:CONTAINER_DESKTOP_MOCK_SCALE");
     expect((window as any).CONTAINER_DESKTOP_MOCK_SWARM).toBe("env:CONTAINER_DESKTOP_MOCK_SWARM");
   });
 

@@ -1,0 +1,59 @@
+.ExtensionDialog {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background-color: var(--app-surface);
+  color: var(--app-text);
+}
+.ExtensionDialogHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ExtensionDialogTitle {
+  flex: 1;
+  font-weight: 600;
+  font-size: 12px;
+}
+.ExtensionDialogMessage {
+  color: var(--app-text-muted);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.ExtensionDialogActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ExtensionDialogOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ExtensionDialogOption {
+  padding: 3px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background-color: var(--app-chrome);
+  color: var(--app-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ExtensionDialogOption:hover {
+  border-color: var(--app-accent);
+  color: var(--app-accent-text);
+}
+.ExtensionDialogEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+.ExtensionDialogTextArea {
+  min-height: 96px;
+  font-family: monospace;
+  font-size: 12px;
+}

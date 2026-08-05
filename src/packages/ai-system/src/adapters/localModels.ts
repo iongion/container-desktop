@@ -35,7 +35,8 @@ class ModelDiscoveryHTTPError extends Error {
 
 function boundedOptions(opts?: ModelListOptions) {
   return {
-    fetchImpl: opts?.fetchImpl ?? fetch,
+    // Bound on purpose — a bare `fetch` reference loses its realm and WebKit rejects the call.
+    fetchImpl: opts?.fetchImpl ?? ((input, init) => globalThis.fetch(input, init)),
     timeoutMs: opts?.timeoutMs ?? MODEL_DISCOVERY_TIMEOUT_MS,
     maxResponseBytes: opts?.maxResponseBytes ?? MAX_MODEL_DISCOVERY_RESPONSE_BYTES,
     maxModels: opts?.maxModels ?? MAX_DISCOVERED_MODELS,

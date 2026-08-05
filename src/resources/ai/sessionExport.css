@@ -1,0 +1,98 @@
+/* The stylesheet inlined into a shared session's HTML. It is a STANDALONE document — opened from a file, with no
+   app, no network and no `--app-*` variables — so literal colours are correct here and nowhere else in this repo.
+   The values track the app's dark surface tokens so a shared transcript still looks like the app it came from. */
+
+:root {
+  color-scheme: dark light;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: #22272e;
+  color: #e6edf3;
+  font:
+    14px / 1.55 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
+header {
+  border-bottom: 1px solid #373e47;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+header p {
+  color: #909dab;
+  font-size: 12px;
+  margin: 0;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 auto;
+  max-width: 900px;
+}
+
+article {
+  background: #2d333b;
+  border: 1px solid #373e47;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+article > h2 {
+  color: #909dab;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+article[data-role="user"] {
+  background: #316dca20;
+  border-color: #316dca80;
+}
+
+article[data-failed] {
+  border-color: #e5534b80;
+}
+
+article[data-kind="error"] {
+  background: #e5534b20;
+  border-color: #e5534b80;
+}
+
+pre {
+  background: #22272e;
+  border-radius: 4px;
+  margin: 0;
+  overflow-x: auto;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+footer {
+  color: #909dab;
+  font-size: 12px;
+  margin: 24px auto 0;
+  max-width: 900px;
+}

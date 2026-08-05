@@ -3,16 +3,16 @@
 // shape. The registry's <ToolCard> handles the running/error states centrally, so a card only renders its
 // successful result.
 
-import type { ToolArtifactReference } from "@/ai-system/core/toolArtifacts";
-
 export interface ToolCardProps {
   tool: string;
   title: string;
+  // pi's id for this execution. A plugin tool that renders itself is matched to its surface by this, so a
+  // card only ever paints the component belonging to its own call.
+  toolCallId?: string;
   args: Record<string, unknown>;
   status: "running" | "complete" | "error";
   ok?: boolean;
   result?: unknown;
-  artifact?: ToolArtifactReference;
-  threadId?: string;
+  sessionId?: string;
   message?: string;
 }

@@ -72,7 +72,7 @@ pub fn document() -> &'static str {
       }
     }
   ],
-  "ai": { "provider": "ollama", "model": "llama3" },
+  "ai": { "provider": "lmstudio", "model": "llama3" },
   "theme": "dark"
 }"#
 }

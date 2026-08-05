@@ -4,6 +4,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
 import { AICardShell } from "./AICardShell";
+import { CardNotice } from "./CardNotice";
 import type { ToolCardProps } from "./types";
 
 interface DirEntry {
@@ -13,9 +14,10 @@ interface DirEntry {
 
 export const ListingCard: React.FC<ToolCardProps> = ({ title, result }) => {
   const { t } = useTranslation();
-  const data = (result ?? {}) as { path?: string; entries?: DirEntry[] };
+  const data = (result ?? {}) as { path?: string; entries?: DirEntry[]; notice?: string };
   const entries = Array.isArray(data.entries) ? data.entries : [];
-  const heading = data.path && data.path !== "." ? `${title} · ${data.path}` : title;
+  // A pi title already reads "ls src", so repeating the path would say it twice.
+  const heading = data.path && data.path !== "." && !title.includes(data.path) ? `${title} · ${data.path}` : title;
 
   return (
     <AICardShell title={heading} icon={IconNames.FOLDER_CLOSE}>
@@ -39,6 +41,7 @@ export const ListingCard: React.FC<ToolCardProps> = ({ title, result }) => {
           </tbody>
         </HTMLTable>
       )}
+      <CardNotice notice={data.notice} />
     </AICardShell>
   );
 };

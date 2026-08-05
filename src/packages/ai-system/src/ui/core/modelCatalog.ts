@@ -7,6 +7,7 @@
 // fetch; this just shapes the result.
 
 import { getProviderEntry, type ProviderCatalogEntry, parseAggregatedModelId } from "@/ai-system/core/providers";
+import { type PiModelBaseline, piModelBaseline } from "@/pi-bridge/modelBaseline";
 
 import { resolveModelChoice } from "./modelChoice";
 
@@ -18,6 +19,10 @@ export interface ModelLeaf {
   selected: boolean;
   // llama.cpp's single served model is informational — the server bound it at launch and can't switch.
   readOnly?: boolean;
+  // What pi published about this model, when it published anything: the window, the answer cap, the rates and the
+  // reasoning. Absent for an aggregator's ids (pi carries no baseline for one) and for a local server's models,
+  // where only the server itself knows — the row then shows the id alone.
+  facts?: PiModelBaseline;
 }
 
 export interface ProviderGroup {
@@ -57,6 +62,13 @@ export interface BuildModelTreeArgs {
 // segment is shown as-is (e.g. "meta-llama", "google") — honest, no lossy prettifying.
 function upstreamLabel(segment: string): string {
   return getProviderEntry(segment)?.labelKey ?? segment;
+}
+
+// Only what pi actually published, and only where it published anything — spread into a leaf so a model pi has
+// never heard of carries no `facts` key at all rather than an empty object.
+function factsOf(sourceId: string, modelId: string): { facts?: PiModelBaseline } {
+  const facts = piModelBaseline(sourceId, modelId);
+  return facts ? { facts } : {};
 }
 
 function emptyNotice(entry: ProviderCatalogEntry): SourceModelNotice {
@@ -105,7 +117,12 @@ export function buildModelTree({ entry, models, savedModel }: BuildModelTreeArgs
   const selectedValue = choice.value;
 
   if (!entry.aggregator) {
-    const leaves: ModelLeaf[] = choice.options.map((id) => ({ model: id, label: id, selected: id === selectedValue }));
+    const leaves: ModelLeaf[] = choice.options.map((id) => ({
+      model: id,
+      label: id,
+      selected: id === selectedValue,
+      ...factsOf(entry.id, id),
+    }));
     return {
       ...base,
       groups: [{ providerId: entry.id, label: entry.labelKey, models: leaves }],

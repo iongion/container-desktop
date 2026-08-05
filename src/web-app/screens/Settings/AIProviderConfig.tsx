@@ -10,6 +10,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { schemeNeedsSecret } from "@/ai-system/core/auth";
+import { providerLoginOffer } from "@/ai-system/core/piAuth";
 import { authSchemesFor, getProviderEntry, isRemoteProviderEndpoint } from "@/ai-system/core/providers";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import type { AIAuthScheme, AIProviderSettings, AISettings } from "@/ai-system/core/types";
@@ -17,6 +18,8 @@ import { ProviderSourceList } from "@/web-app/components/ai/ProviderSourceList";
 import { queryClient } from "@/web-app/domain/queryClient";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useProviderLoginStore } from "@/web-app/stores/providerLogin";
+import { ProviderLoginDrawer } from "./ProviderLoginDrawer";
 
 import "./AIProviderConfig.css";
 
@@ -196,6 +199,37 @@ export const AIProviderConfig: React.FC<AIProviderConfigProps> = ({ allowDegrade
       Notification.show({ message: error?.message ?? t("Unable to update the credential"), intent: Intent.DANGER });
     }
   }, [bridge, commitProviderConfig, configId, keyDraft, allowDegraded, t]);
+
+  // Sign in instead of pasting: pi carries the flow, and the key it hands back lands in the same keychain slot a
+  // typed one does — so everything after this point is the credential path that already existed.
+  const loginOffer = providerLoginOffer(configId);
+  const signIn = useProviderLoginStore((state) => state.signIn);
+  const resetLogin = useProviderLoginStore((state) => state.reset);
+  const loginStatus = useProviderLoginStore((state) => state.status);
+  const [signingIn, setSigningIn] = useState(false);
+  const onSignIn = useCallback(async () => {
+    if (!loginOffer) return;
+    setSigningIn(true);
+    resetLogin();
+    try {
+      const result = await signIn(loginOffer.providerId, { allowDegraded });
+      if (!result.stored) {
+        Notification.show({ message: result.reason, intent: Intent.WARNING });
+        return;
+      }
+      setKeyPresent(true);
+      // The same two steps a saved credential takes: the revision is what a running session reads to know its key
+      // changed, and the cached model list was answered under "no key".
+      await commitProviderConfig(loginOffer.providerId, {}, true);
+      queryClient.removeQueries({
+        predicate: (query) =>
+          query.queryKey[0] === "ai" && query.queryKey[1] === "models" && query.queryKey[2] === loginOffer.providerId,
+      });
+      Notification.show({ message: t("Credential saved"), intent: Intent.SUCCESS });
+    } finally {
+      setSigningIn(false);
+    }
+  }, [allowDegraded, commitProviderConfig, loginOffer, resetLogin, signIn, t]);
 
   // Probe connectivity for ANY provider by listing its models against the configured endpoint + auth — a
   // real round-trip that reuses the same gate/auth as chat (uses the SAVED secret, so Save before Test).
@@ -388,6 +422,16 @@ export const AIProviderConfig: React.FC<AIProviderConfigProps> = ({ allowDegrade
               onClick={onSaveKey}
             />
           ) : null}
+          {/* pi's own words for the sign-in ("Sign in with OpenRouter"), never ours for someone else's login. */}
+          {loginOffer && schemeNeedsSecret(scheme) ? (
+            <Button
+              icon={IconNames.LOG_IN}
+              text={loginOffer.label}
+              loading={signingIn}
+              disabled={!bridge || connectionDirty}
+              onClick={() => void onSignIn()}
+            />
+          ) : null}
           <Button
             icon={IconNames.GLOBE_NETWORK}
             text={t("Test connection")}
@@ -397,6 +441,10 @@ export const AIProviderConfig: React.FC<AIProviderConfigProps> = ({ allowDegrade
           />
         </div>
       </div>
+
+      {/* Open while the flow is running AND while it is reporting: a refusal the user never saw would leave them
+          wondering what happened to a sign-in they completed in the browser. */}
+      {loginStatus !== "idle" ? <ProviderLoginDrawer onClose={resetLogin} /> : null}
     </div>
   );
 };

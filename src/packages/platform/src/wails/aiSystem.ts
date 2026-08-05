@@ -1,3 +1,4 @@
+import { sessionWorkspaceRoot } from "@/ai-system/adapters/sessionWorkspace";
 import type { AIBroker } from "@/ai-system/host/broker";
 import { createWailsDnsResolve } from "@/platform/wails/capabilities/dns";
 import { createWailsExecuteIsolated } from "@/platform/wails/capabilities/executeIsolated";
@@ -26,7 +27,11 @@ export async function createAISystem<TEvent = unknown>(deps: AISystemDeps<TEvent
     // Address-pinned public web fetch: the web-search guard's validated addresses are re-checked + pinned in Go
     // (PublicWebFetchService), so the fetch cannot be DNS-rebound after validation.
     publicWebFetch: createWailsPublicWebFetch({ invoke: deps.invoke, newChannel: deps.newPublicWebFetchChannel }),
-    // Confined workspace, enforced natively in Go (workspace_service.go).
-    workspaceAccess: createWailsWorkspaceAccess(deps.invoke, async () => (await deps.getAISettings()).workspaceRoot),
+    // Confined workspace, enforced natively in Go (workspace_service.go). The root follows the RUNNING session's
+    // mounted folder, and Settings → AI only when no session is up — the same rule as the Tauri shell.
+    workspaceAccess: createWailsWorkspaceAccess(
+      deps.invoke,
+      sessionWorkspaceRoot(async () => (await deps.getAISettings()).workspaceRoot),
+    ),
   });
 }

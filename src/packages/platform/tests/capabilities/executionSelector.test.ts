@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectionExecHost } from "@/ai-system/core/ports";
 import type { EngineOps } from "@/ai-system/core/types";
-import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
 import { createExecutionSelector } from "@/platform/capabilities/executionSelector";
 
 interface ContainerExecCall {
@@ -37,31 +36,7 @@ function fakeConnectionExec() {
   return { host, onConnection, inContainer, created, removed };
 }
 
-const localWorkspace = { root: async () => "/local" } as unknown as IWorkspaceAccess;
-
 describe("createExecutionSelector", () => {
-  it("host reuses the local workspace, strict floor, no-op dispose", async () => {
-    const { host } = fakeConnectionExec();
-    const selector = createExecutionSelector({ runId: "r1", localWorkspace, connectionExec: host });
-    const resolved = await selector.select({ kind: "host" });
-    expect(resolved.workspaceAccess).toBe(localWorkspace);
-    expect(resolved.floorScope).toBe("strict");
-    await expect(resolved.dispose()).resolves.toBeUndefined();
-  });
-
-  it("remote routes workspace ops through execOnConnection with a strict floor", async () => {
-    const cx = fakeConnectionExec();
-    const selector = createExecutionSelector({ runId: "r1", connectionExec: cx.host });
-    const resolved = await selector.select({ kind: "remote", connectionId: "c9" });
-    expect(resolved.floorScope).toBe("strict");
-    await resolved.workspaceAccess?.read("a.txt");
-    expect(cx.onConnection).toContainEqual({
-      connectionId: "c9",
-      program: "cat",
-      args: ["/tmp/container-desktop-ai/r1/a.txt"],
-    });
-  });
-
   it("container routes workspace ops through execInContainer with a container floor", async () => {
     const cx = fakeConnectionExec();
     const selector = createExecutionSelector({ runId: "r1", connectionExec: cx.host });
@@ -93,17 +68,6 @@ describe("createExecutionSelector", () => {
     await a.dispose();
     await a.dispose();
     expect(cx.removed).toEqual([{ connectionId: "c1", containerId: "sandbox-123" }]);
-  });
-
-  it("remote surfaces a failed workspace mkdir instead of silently continuing", async () => {
-    const host: ConnectionExecHost = {
-      execOnConnection: async () => ({ code: 1, stdout: "", stderr: "mkdir: permission denied", truncated: false }),
-      execInContainer: async () => ({ code: 0, stdout: "", stderr: "", truncated: false }),
-      createSandboxContainer: async () => ({ containerId: "x" }),
-      removeSandboxContainer: async () => undefined,
-    };
-    const selector = createExecutionSelector({ runId: "r1", connectionExec: host });
-    await expect(selector.select({ kind: "remote", connectionId: "c9" })).rejects.toThrow(/permission denied/);
   });
 
   it("container surfaces a failed workspace mkdir instead of silently continuing", async () => {

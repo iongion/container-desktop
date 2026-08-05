@@ -28,9 +28,13 @@ export interface ModelPickerProps {
   onChange: (value: ModelPickerValue) => void;
   disabled?: boolean;
   control?: { open: boolean; onOpenChange: (open: boolean) => void };
+  // Whether a reachable source with nothing saved may have its first (or served) model applied for the user. False
+  // where the VALUE belongs to something that already made the choice — a running session — because an auto-select
+  // would re-point a live conversation at a model nobody picked.
+  autoSelect?: boolean;
 }
 
-export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disabled, control }) => {
+export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disabled, control, autoSelect = true }) => {
   const { t } = useTranslation();
   const ai: AISettings = useAppStore((state) => state.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
   const discovery = useModelDiscovery();
@@ -59,10 +63,12 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disab
   );
 
   // Pre-fetch the active source on mount (and when it changes) so the composer has a model to submit even
-  // if the user never opens the popover.
+  // if the user never opens the popover. Skipped where the value comes from something that already chose — a running
+  // session — because then nothing here can use the answer: the trigger label needs no catalogue, the auto-select
+  // below is off, and asking a provider for a listing the user never opened is exactly what the drill-down avoids.
   useEffect(() => {
-    void discover(value.providerId);
-  }, [discover, value.providerId]);
+    if (autoSelect) void discover(value.providerId);
+  }, [autoSelect, discover, value.providerId]);
 
   // Smart default: when the active source is reachable and nothing is saved (or llama.cpp's served model
   // drifted), apply its first/served model. Converges — once saved, autoSelect clears.
@@ -70,14 +76,14 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disab
     const sourceId = value.providerId;
     const entry = getProviderEntry(sourceId);
     const models = modelsBySource[sourceId];
-    if (!entry || !models) {
+    if (!autoSelect || !entry || !models) {
       return;
     }
     const tree = buildModelTree({ entry, models, savedModel: ai.providers?.[sourceId]?.model ?? "" });
     if (tree.autoSelect && tree.autoSelect !== value.model) {
       persist({ providerId: sourceId, model: tree.autoSelect });
     }
-  }, [modelsBySource, value.providerId, value.model, ai.providers, persist]);
+  }, [autoSelect, modelsBySource, value.providerId, value.model, ai.providers, persist]);
 
   const triggerLabel = useMemo(() => {
     const path = selectedPath(value.providerId, value.model);

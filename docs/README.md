@@ -24,7 +24,7 @@ The app has two pillars, and the docs are organized around them:
 | [architecture/overview.md](architecture/overview.md)                     | The whole system at a glance — C4 **Context** (L1) + **Containers** (L2). Start here.                    |
 | [architecture/platform-ports.md](architecture/platform-ports.md)         | Tauri/Wails platform-port naming, aligned concepts, and intentional runtime-specific modules.       |
 | [architecture/system-tray.md](architecture/system-tray.md)               | System tray — a native OS menu projected from the engine service, so it works with the app window closed. |
-| [architecture/ai-subsystem.md](architecture/ai-subsystem.md)             | AI layer — C4 **Components** (L3): the broker + boundaries (sender · provider transport · redaction), the three surfaces (**Assistant · Runs · Workers**), the OMA runtime engines (chat + team, webview shims), **native token/cost telemetry** (span projection · cost registry · run stats), the **tool permission system** (3 modes · safety floor · allow/reject record), the two tool families (**container + workspace**), worker **execution targets ("Runs on")**, providers, and **typed tools → generative-UI cards**. |
+| [architecture/ai-subsystem.md](architecture/ai-subsystem.md)             | AI layer — C4 **Components** (L3): the **containerized pi coding agent** and its two containers, the **WebSocket bridge protocol**, the **credential gateway**, **container tools over `engine_op`**, the **permission model** (3 modes · two boundaries · allow/reject record), **extension UI** (native dialogs · generative-UI cards · ANSI surfaces), plugin management, providers, and what the broker still owns. |
 
 ## How to read the diagrams
 

@@ -98,6 +98,9 @@ export interface IWindowControl {
   relaunch(): void;
   openDevTools(): void;
   openStorageFolder(): void;
+  // Reveal an arbitrary directory in the OS file manager. openStorageFolder's sibling, but the caller names
+  // the path — the session's workspace is chosen by the user, not fixed by the app.
+  openPath(path: string): void;
 }
 
 // Native dialogs / OS integrations exposed to the renderer (the Tauri dialog plugin / the Wails services).
@@ -105,6 +108,9 @@ export interface IDialogs {
   openFileSelector(options: OpenFileSelectorOptions): Promise<{ canceled: boolean; filePaths: string[] } | undefined>;
   saveFileSelector(options: SaveFileSelectorOptions): Promise<{ canceled: boolean; filePath?: string } | undefined>;
   openTerminal(options: OpenTerminalOptions): Promise<boolean | undefined>;
+  // Open a DIRECTORY as a VS Code workspace, through the vscode:// URI handler — so it needs neither the
+  // `code` CLI on PATH nor a general "run any program" capability. False when VS Code cannot be reached.
+  openInVSCode(path: string): Promise<boolean | undefined>;
 }
 
 export interface SaveFileSelectorOptions {

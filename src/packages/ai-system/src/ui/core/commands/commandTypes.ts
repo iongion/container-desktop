@@ -1,10 +1,7 @@
-import type { AccessProfileId } from "@/ai-system/core/accessProfiles";
-import type { ReasoningLevel } from "@/ai-system/core/reasoning";
-
 export type BuiltinAssistantCommandId =
   | "help"
   | "skills.open"
-  | "skills.reload"
+  | "reload"
   | "context.usage"
   | "context.tools"
   | "diagnostics.open"
@@ -16,27 +13,18 @@ export type BuiltinAssistantCommandId =
   | "memory.clear"
   | "rules.list"
   | "rules.init"
-  | "thread.list"
-  | "thread.new"
-  | "thread.switch"
-  | "thread.rename"
-  | "thread.branch"
-  | "thread.compact"
-  | "thread.delete"
-  | "thread.stop"
-  | "thread.copy"
-  | "thread.export"
+  | "session.new"
+  | "session.quit"
+  | "session.info"
+  | "session.copy"
+  | "session.export"
+  | "session.import"
+  | "session.share"
+  | "provider.login"
+  | "provider.logout"
+  | "turn.stop"
   | "model.open"
-  | "access.set"
-  | "reasoning.set"
-  | "permissions.open"
-  | "worker.list"
-  | "worker.show"
-  | "worker.create"
-  | "run.start"
-  | "run.list"
-  | "run.show"
-  | "run.stop";
+  | "permissions.open";
 
 export type AssistantCommandId = string;
 
@@ -45,7 +33,10 @@ export type AssistantCommandSource =
   | { kind: "bundled-skill"; fingerprint: string }
   | { kind: "user-skill"; fingerprint: string }
   | { kind: "project-skill"; workspaceId: string; fingerprint: string }
-  | { kind: "plugin-skill"; pluginId: string; fingerprint: string };
+  | { kind: "plugin-skill"; pluginId: string; fingerprint: string }
+  // A command the pi SESSION owns: one of pi's own built-ins, or one a loaded plugin registered with it.
+  | { kind: "pi-builtin" }
+  | { kind: "pi-plugin"; pluginId: string };
 
 export type AssistantCommandText = { kind: "i18n"; key: string } | { kind: "literal"; value: string };
 
@@ -54,10 +45,10 @@ export type AssistantCommandBypassTier = "always" | "connecting" | "immediate-ui
 export type AssistantCommandAvailabilityId =
   | "always"
   | "idle"
-  | "thread"
-  | "thread-idle"
-  | "thread-idle-only"
-  | "thread-active"
+  | "session"
+  | "session-idle"
+  | "session-idle-only"
+  | "session-active"
   | "assistant-only"
   | "quake-console-only";
 
@@ -94,10 +85,34 @@ export interface AssistantControlCommandDefinition extends AssistantCommandBase 
 export interface AssistantSkillCommandDefinition extends AssistantCommandBase {
   kind: "skill";
   skillId: string;
-  source: Exclude<AssistantCommandSource, { kind: "builtin" }>;
+  source: Extract<
+    AssistantCommandSource,
+    { kind: "bundled-skill" } | { kind: "user-skill" } | { kind: "project-skill" } | { kind: "plugin-skill" }
+  >;
 }
 
-export type AssistantCommandDefinition = AssistantControlCommandDefinition | AssistantSkillCommandDefinition;
+// Where a pi command is carried out. `session` crosses the bridge and runs against pi's own session; `prompt` is
+// text pi expands itself when it arrives (how a plugin's command and a prompt template work); `app` is one the GUI
+// performs, and is declared in the app's own catalogue instead; `unavailable` is offered with a reason and refused
+// before it runs.
+export type AssistantPiCommandVenue = "session" | "prompt" | "app" | "unavailable";
+
+// A command the pi session owns, under pi's own name. NOT a skill: a skill is a file the user or a package supplies
+// and pi only ever invokes as `/skill:<name>`, whereas these own their names the way a built-in does.
+export interface AssistantPiCommandDefinition extends AssistantCommandBase {
+  kind: "pi";
+  // pi's name for it, without the slash — exactly what travels over the bridge.
+  commandName: string;
+  venue: AssistantPiCommandVenue;
+  // Why this architecture cannot honour it. Present only for `unavailable`.
+  unavailableReason?: string;
+  source: Extract<AssistantCommandSource, { kind: "pi-builtin" } | { kind: "pi-plugin" }>;
+}
+
+export type AssistantCommandDefinition =
+  | AssistantControlCommandDefinition
+  | AssistantSkillCommandDefinition
+  | AssistantPiCommandDefinition;
 
 export interface AssistantCommandConflict {
   commandId: AssistantCommandId;
@@ -150,12 +165,6 @@ export interface AssistantCommandMatch {
   matchedBy: string;
 }
 
-export type AssistantCommandUIEffect =
-  | { kind: "open-command-palette"; query: string }
-  | { kind: "open-model-picker" }
-  | { kind: "open-access-profile" }
-  | { kind: "set-access-profile"; value: AccessProfileId }
-  | { kind: "open-reasoning-level" }
-  | { kind: "set-reasoning-level"; value: ReasoningLevel };
+export type AssistantCommandUIEffect = { kind: "open-command-palette"; query: string } | { kind: "open-model-picker" };
 
 export type AssistantCommandExecutionResult = AssistantCommandUIEffect | undefined;

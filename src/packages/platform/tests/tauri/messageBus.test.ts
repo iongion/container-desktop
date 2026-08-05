@@ -26,7 +26,7 @@ function makeDeps() {
         setFocus: vi.fn(),
       },
       openFileDialog: vi.fn(async () => "/tmp/Dockerfile"),
-      saveFileDialog: vi.fn(async () => "/tmp/thread.json"),
+      saveFileDialog: vi.fn(async () => "/tmp/session.json"),
       exit: vi.fn(),
       relaunch: vi.fn(),
       applyProxy: vi.fn(async () => ({ ok: true, proxy: { mode: "disabled" } })),
@@ -72,13 +72,13 @@ describe("createMessageBus", () => {
     const { deps } = makeDeps();
     const bus = createMessageBus(deps);
 
-    await expect(bus.invoke("saveFileSelector", { defaultPath: "thread.json" })).resolves.toEqual({
+    await expect(bus.invoke("saveFileSelector", { defaultPath: "session.json" })).resolves.toEqual({
       canceled: false,
-      filePath: "/tmp/thread.json",
+      filePath: "/tmp/session.json",
     });
     expect(deps.saveFileDialog).toHaveBeenCalledWith({
       filters: undefined,
-      defaultPath: "thread.json",
+      defaultPath: "session.json",
     });
   });
 

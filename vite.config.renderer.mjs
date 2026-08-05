@@ -34,26 +34,6 @@ export function popperCoreShim() {
   };
 }
 
-// @open-multi-agent/core (the goal/chat orchestrator) eagerly imports a few `node:` built-ins on its runTeam
-// import graph. Only `node:crypto` is actually CALLED at runtime on our path (pure id-generation for trace/run
-// ids) — we shim it to Web Crypto, which exists in every webview (WebKitGTK, WebView2, WKWebView).
-// `child_process` (OMA's default-deny bash/grep) and `node:fs`/`node:path` (OMA's built-in filesystem tools) are
-// NEVER called: we inject our own host-driven customTools (which forward to the IFileSystem/IPath/exec host ports
-// → Tauri/Wails), so OMA's node built-ins only need to link, not run. These are `resolve.alias` entries
-// (not a resolveId plugin) because Vite's esbuild dep-optimizer honors aliases but not rollup resolveId hooks, so
-// aliases are the only form that shims a PRE-BUNDLED dependency in dev AND the production build. Renderer-only —
-// this map is merged into the renderer config's resolve, never the main/preload CJS build. Vendor LLM SDKs stay
-// out of the bundle because we inject AgentConfig.adapter, bypassing OMA's dynamic createAdapter import().
-export function omaWebviewNodeAliases() {
-  const shim = (name) => path.resolve(PROJECT_HOME, `src/packages/ai-system/src/runtime/omaShim/${name}.ts`);
-  const childProcessShim = shim("childProcess");
-  return {
-    "node:crypto": shim("crypto"),
-    child_process: childProcessShim,
-    "node:child_process": childProcessShim,
-  };
-}
-
 export function docsServer() {
   return {
     apply: "serve",
@@ -110,10 +90,6 @@ export const createConfig = ({ mode, command, host, port }) => {
   const viteConfig = getCommonViteConfig({
     mode,
     command,
-    // Renderer-only: shim the node built-ins OMA touches to browser-safe modules (merged with the @/… alias map).
-    resolve: {
-      alias: omaWebviewNodeAliases(),
-    },
     // app specific
     // outputName: APP_MAIN,
     plugins: [
@@ -143,7 +119,6 @@ export const createConfig = ({ mode, command, host, port }) => {
         "@xterm/addon-fit",
         "@xterm/addon-search",
         "@xterm/addon-unicode11",
-        "@xterm/addon-web-links",
         "@xterm/addon-webgl",
         "@monaco-editor/react",
         "monaco-editor",

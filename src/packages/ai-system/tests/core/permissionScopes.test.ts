@@ -32,9 +32,9 @@ describe("scoped permission decisions", () => {
     expect(cachedVerdict({ allowed, blocked: [] }, key)).toBeUndefined();
   });
 
-  it("includes Worker identity without conflating it with an Access Profile", () => {
-    const worker = { ...context, subject: { kind: "worker", id: "worker-a" } } as const;
-    expect(permissionKey(toolRule(worker, "removeContainer", { id: "a" }))).not.toBe(
+  it("includes an external server's identity without conflating it with an Access Profile", () => {
+    const server = { ...context, subject: { kind: "server", id: "mcp-a" } } as const;
+    expect(permissionKey(toolRule(server, "removeContainer", { id: "a" }))).not.toBe(
       permissionKey(toolRule(context, "removeContainer", { id: "a" })),
     );
   });

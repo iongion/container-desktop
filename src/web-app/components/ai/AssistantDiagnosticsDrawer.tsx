@@ -6,9 +6,11 @@ import { useTranslation } from "react-i18next";
 
 import type { AIDiagnosticsSnapshot } from "@/ai-system/core/diagnostics";
 import { getProviderEntry } from "@/ai-system/core/providers";
+import type { SessionProviderCheck } from "@/pi-bridge/protocol";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { groupDiagnosticErrors } from "@/web-app/components/ai/diagnosticErrors";
-import { threadRelativeAge } from "@/web-app/components/ai/threadHistory";
+import { sessionRelativeAge } from "@/web-app/components/ai/sessionHistory";
+import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
 import "./AssistantDiagnosticsDrawer.css";
 
@@ -45,7 +47,27 @@ function CapabilityRow({ label, available }: { label: string; available: boolean
   );
 }
 
-function DiagnosticsContent({ snapshot }: { snapshot: AIDiagnosticsSnapshot }) {
+// What the SESSION answered, which is a different question from what the app can reach: a turn dials the provider
+// from the agent container, through the gateway, with the credential the gateway substitutes. `undefined` means no
+// session is running, so there is nothing to ask.
+function sessionReachability(check: SessionProviderCheck | undefined): "reachable" | "unreachable" | "not-checked" {
+  if (!check) return "not-checked";
+  return check.reachable ? "reachable" : "unreachable";
+}
+
+function sessionDetail(check: SessionProviderCheck | undefined, t: (key: string) => string): string {
+  if (!check) return t("No session is running");
+  if (check.reachable) return t("Reached the model through the gateway");
+  return check.error ?? (check.status ? `HTTP ${check.status}` : t("The session could not reach the model"));
+}
+
+function DiagnosticsContent({
+  snapshot,
+  sessionCheck,
+}: {
+  snapshot: AIDiagnosticsSnapshot;
+  sessionCheck: SessionProviderCheck | undefined;
+}) {
   const { t, i18n } = useTranslation();
   const providerName = t(getProviderEntry(snapshot.provider.id)?.labelKey ?? snapshot.provider.id);
   const errors = groupDiagnosticErrors(snapshot.recentErrors);
@@ -54,8 +76,6 @@ function DiagnosticsContent({ snapshot }: { snapshot: AIDiagnosticsSnapshot }) {
     [i18n.language, i18n.resolvedLanguage],
   );
   const capabilities = [
-    ["Agent Sessions", snapshot.capabilities.agentSessions],
-    ["Team Runs", snapshot.capabilities.teamRuns],
     ["Sandboxed commands", snapshot.capabilities.sandbox],
     ["Container tools", snapshot.capabilities.containerTools],
     ["Workspace tools", snapshot.capabilities.workspaceTools],
@@ -78,7 +98,14 @@ function DiagnosticsContent({ snapshot }: { snapshot: AIDiagnosticsSnapshot }) {
           <StateTag state={snapshot.provider.credential} />
           <span>{t("Models discovered")}</span>
           <strong>{snapshot.provider.modelCount ?? t("Unknown")}</strong>
+          {/* The two questions kept apart on purpose: this app could reach the provider while the session cannot,
+              which is exactly what a loopback endpoint does to a containerized agent. */}
+          <span>{t("Reachable from the app")}</span>
+          <StateTag state={snapshot.provider.reachability} />
+          <span>{t("Reachable from the session")}</span>
+          <StateTag state={sessionReachability(sessionCheck)} />
         </div>
+        <div className="AssistantDiagnosticSessionDetail">{sessionDetail(sessionCheck, t)}</div>
       </section>
 
       <section className="AssistantDiagnosticPanel">
@@ -119,7 +146,7 @@ function DiagnosticsContent({ snapshot }: { snapshot: AIDiagnosticsSnapshot }) {
             <Tag minimal>{errors.length}</Tag>
           </h5>
           {errors.map(({ error, count }) => {
-            const age = threadRelativeAge(error.at);
+            const age = sessionRelativeAge(error.at);
             return (
               <details key={`${error.at}:${error.message}`} className="AssistantDiagnosticError">
                 <summary>
@@ -145,13 +172,20 @@ function DiagnosticsContent({ snapshot }: { snapshot: AIDiagnosticsSnapshot }) {
 export function AssistantDiagnosticsDrawer({ providerId, onClose }: AssistantDiagnosticsDrawerProps) {
   const { t } = useTranslation();
   const [snapshot, setSnapshot] = useState<AIDiagnosticsSnapshot>();
+  const [sessionCheck, setSessionCheck] = useState<SessionProviderCheck>();
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const load = useCallback(async () => {
     setLoading(true);
     setError(undefined);
     try {
-      setSnapshot(await window.AI.diagnostics(providerId));
+      // Both checks, every time: their answers are independent and a stale one next to a fresh one reads as agreement.
+      const [hostSnapshot, session] = await Promise.all([
+        window.AI.diagnostics(providerId),
+        useCodingAgentStore.getState().checkSessionProvider(),
+      ]);
+      setSnapshot(hostSnapshot);
+      setSessionCheck(session);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t("AI diagnostics failed"));
     } finally {
@@ -184,7 +218,7 @@ export function AssistantDiagnosticsDrawer({ providerId, onClose }: AssistantDia
               <span>{t("Checking AI system…")}</span>
             </div>
           ) : snapshot ? (
-            <DiagnosticsContent snapshot={snapshot} />
+            <DiagnosticsContent snapshot={snapshot} sessionCheck={sessionCheck} />
           ) : null}
         </div>
       </div>

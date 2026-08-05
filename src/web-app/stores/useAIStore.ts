@@ -1,107 +1,72 @@
-// React hook bindings over the vanilla AI store (ui/core/stores/aiStore.ts). Thin wrapper.
-// Self-initializing: the vanilla store is lazily created with window.AI/AIBus on first access. The
-// diagnostics bundle (engine/activity/errors + a live resource summary) is collected here, where the
-// renderer's app/activity/resource stores are reachable, and injected into the store.
+// React hook bindings over the assistant state the UI consumes, derived from the pi session store.
+//
+// A pi session IS one conversation, so it surfaces as exactly one session and the state says only what the session can
+// answer for. There is no reject-by-name list any more: what pi can do is offered under pi's own command names, and
+// what this architecture cannot honour is refused with its reason where the command is defined — not from inside a
+// store, three layers after the user was told it was available.
 
-import { useStore } from "zustand";
+import { useMemo } from "react";
 
-import { AI_CHANNELS } from "@/ai-system/core/channels";
-import type { ThreadEventEnvelope, ThreadView } from "@/ai-system/core/threadEvents";
-import type { DiagnosticsBundle } from "@/ai-system/core/types";
-import { buildResourceContext, type ConnectionResourceSummary } from "@/ai-system/ui/core/resourceContext";
-import { buildScreenContext } from "@/ai-system/ui/core/screenContext";
-import { type AIState, type AIStore, createAIStore } from "@/ai-system/ui/core/stores/aiStore";
-import { ContainerStateList } from "@/container-client/types/container";
-import { createLogger } from "@/logger";
-import { resolveScreenPrompt } from "@/template/screenPrompts";
-import { useActivityStore } from "@/web-app/stores/activityStore";
-import { useAppStore } from "@/web-app/stores/appStore";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
-import { useUIStore } from "@/web-app/stores/uiStore";
+import { piSessionSummary } from "@/ai-system/core/piAIState";
+import type { SessionView } from "@/ai-system/core/sessionEvents";
+import type { SessionSummary } from "@/ai-system/core/sessions";
+import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
-// Best-effort live context the renderer owns; main-side tools gather more during the run. Folds the
-// engine/connection/activity/error signal with a compact summary of every open connection's resources.
-function collectBundle(): DiagnosticsBundle {
-  const app = useAppStore.getState();
-  const conn = app.currentConnector as any;
-  const entries = (useActivityStore.getState().entries ?? []) as any[];
-  const errors = entries
-    .filter((e) => e?.severity === "error" || e?.status === "failure")
-    .slice(0, 12)
-    .map((e) => `${e.kind}: ${e.title ?? e.message ?? ""}`)
-    .join("\n");
-  const activity = entries
-    .slice(0, 20)
-    .map((e) => `${e.kind}/${e.severity ?? ""}: ${e.title ?? e.message ?? ""}`)
-    .join("\n");
+export interface AssistantSessionState {
+  // "hydrating" until the session is up, so the UI can distinguish "no answer yet" from "nothing to say".
+  lifecycle: "hydrating" | "ready";
+  sessions: SessionSummary[];
+  activeSessionId: string;
+  views: Record<string, SessionView>;
+  recoveryErrors: Record<string, string>;
+  submitMessage: (text: string) => Promise<undefined>;
+  cancel: () => Promise<void>;
+  // pi's `/new`: one session is one conversation, so a fresh conversation is a fresh session — replaced in the
+  // container it is already running in, keeping the containers, the plugins and the mounted workspace.
+  newSession: () => Promise<string>;
+  resolveApproval: (approvalId: string, decision: "allow" | "reject") => Promise<undefined>;
+}
 
-  const res = useResourceStore.getState();
-  const summaries: ConnectionResourceSummary[] = (res.activeRuntime ?? []).map((rt: any) => {
-    const snap = res.byConnection[rt.id];
-    const containers = snap?.containers.items ?? [];
-    return {
-      name: rt.name,
-      engine: rt.engine,
-      connected: rt.running,
-      containers: containers.length,
-      running: containers.filter((c: any) => c.Computed?.DecodedState === ContainerStateList.RUNNING).length,
-      images: snap?.images.items.length ?? 0,
-      pods: snap?.pods.items.length ?? 0,
-      volumes: snap?.volumes.items.length ?? 0,
-      networks: snap?.networks.items.length ?? 0,
-      secrets: snap?.secrets.items.length ?? 0,
-    };
-  });
-  const resources = buildResourceContext(summaries) || undefined;
-
-  // What the user is currently looking at (screen id/title). The per-screen focus guidance is folded in by
-  // the console/registry in a later step; here we attach at least the screen identity every turn.
-  const screenMeta = useUIStore.getState().currentScreen;
-  const screen =
-    buildScreenContext({
-      id: screenMeta.id,
-      title: screenMeta.title,
-      focus: resolveScreenPrompt(screenMeta.id).focus,
-    }) || undefined;
-
+function deriveState(view: SessionView, status: string, modelId: string, startedAt: number): AssistantSessionState {
+  const summary = piSessionSummary({ view, modelId, startedAt });
   return {
-    os: String(app.osType ?? ""),
-    engine: conn?.engine ? String(conn.engine) : undefined,
-    connection: conn ? `${conn.name ?? conn.id ?? ""} (host: ${conn.host ?? "?"})` : undefined,
-    screen,
-    activity: activity || undefined,
-    errors: errors || undefined,
-    resources,
+    lifecycle: status === "idle" ? "hydrating" : "ready",
+    sessions: [summary],
+    activeSessionId: summary.id,
+    views: { [summary.id]: view },
+    recoveryErrors: {},
+    submitMessage: async (text: string) => {
+      await useCodingAgentStore.getState().submit(text);
+      return undefined;
+    },
+    cancel: async () => {
+      await useCodingAgentStore.getState().abortTurn();
+    },
+    newSession: async () => {
+      await useCodingAgentStore.getState().newConversation();
+      return useCodingAgentStore.getState().view.sessionId;
+    },
+    // The approvalId is the container's requestId, so the card answers the exact tool call that is parked.
+    resolveApproval: async (approvalId: string, decision: "allow" | "reject") => {
+      await useCodingAgentStore.getState().resolveApproval(approvalId, decision);
+      return undefined;
+    },
   };
 }
 
-let _store: AIStore | null = null;
-const ACTIVE_THREAD_KEY = "container-desktop:ai:active-thread";
-
-function getStore(): AIStore {
-  if (!_store) {
-    _store = createAIStore({
-      getAI: () => window.AI,
-      log: { error: (...args: any[]) => createLogger("ai.store").error(...args) },
-      collectBundle,
-      subscribeEvents: (listener) =>
-        window.AIBus.subscribe(AI_CHANNELS.threadEvent, (event: ThreadEventEnvelope) => listener(event)),
-      loadSelectedThreadId: () => localStorage.getItem(ACTIVE_THREAD_KEY),
-      saveSelectedThreadId: (threadId) => {
-        if (threadId) localStorage.setItem(ACTIVE_THREAD_KEY, threadId);
-        else localStorage.removeItem(ACTIVE_THREAD_KEY);
-      },
-    });
-  }
-  return _store;
+export function useAIStore<T>(selector: (state: AssistantSessionState) => T): T {
+  const view = useCodingAgentStore((state) => state.view);
+  const status = useCodingAgentStore((state) => state.status);
+  const modelId = useCodingAgentStore((state) => state.spec?.modelId ?? "pi");
+  const state = useMemo(() => deriveState(view, status, modelId, 0), [view, status, modelId]);
+  return selector(state);
 }
 
-// React hook over the vanilla store. Non-React callers may read the projection, but only actor events may mutate it.
-export function useAIStore<T>(selector: (state: AIState) => T): T {
-  return useStore(getStore(), selector);
-}
-useAIStore.getState = () => getStore().getState();
+useAIStore.getState = (): AssistantSessionState => {
+  const { view, status, spec } = useCodingAgentStore.getState();
+  return deriveState(view, status, spec?.modelId ?? "pi", 0);
+};
 
-export function replaceAIViewForDev(threadId: string, view: ThreadView): void {
-  getStore().replaceViewForDev(threadId, view);
+export function replaceAIViewForDev(sessionId: string, view: SessionView): void {
+  useCodingAgentStore.setState({ view: { ...view, sessionId } });
 }

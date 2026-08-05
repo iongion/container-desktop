@@ -29,7 +29,7 @@ function skill(index: number): AssistantSkillCommandDefinition {
     description: { kind: "literal", value: `Test skill ${index}` },
     hiddenSearchTerms: [],
     bypassTier: "queued",
-    availabilityId: "thread-idle",
+    availabilityId: "session-idle",
     confirmation: "none",
     arguments: { kind: "text", required: false },
     surfaces: ["assistant"],
@@ -41,44 +41,44 @@ describe("assistant command completion controller", () => {
     const actor = createAssistantCommandCompletionActor(BUILTIN_ASSISTANT_COMMAND_REGISTRY);
 
     expect(actor.getSnapshot().phase).toBe("closed");
-    actor.send({ type: "input-changed", input: input("/thread") });
+    actor.send({ type: "input-changed", input: input("/memory") });
     expect(actor.getSnapshot()).toMatchObject({
       phase: "suggesting",
       anchor: "input",
-      selectedCommandId: "thread.list",
+      selectedCommandId: "memory.list",
     });
-    actor.send({ type: "input-changed", input: input("/thread rename title") });
-    expect(actor.getSnapshot()).toMatchObject({ phase: "arguments", selectedCommandId: "thread.rename" });
+    actor.send({ type: "input-changed", input: input("/memory add title") });
+    expect(actor.getSnapshot()).toMatchObject({ phase: "arguments", selectedCommandId: "memory.add" });
   });
 
   it("recognizes an input trigger range while preserving native escapes and selections", () => {
     const actor = createAssistantCommandCompletionActor(BUILTIN_ASSISTANT_COMMAND_REGISTRY);
-    actor.send({ type: "input-changed", input: input("  /thread ren") });
+    actor.send({ type: "input-changed", input: input("  /memory ad") });
 
     expect(actor.getSnapshot()).toMatchObject({
       phase: "suggesting",
       anchor: "input",
-      query: "/thread ren",
-      trigger: { start: 2, end: 13 },
-      selectedCommandId: "thread.rename",
+      query: "/memory ad",
+      trigger: { start: 2, end: 12 },
+      selectedCommandId: "memory.add",
     });
-    actor.send({ type: "input-changed", input: input("//thread") });
+    actor.send({ type: "input-changed", input: input("//memory") });
     expect(actor.getSnapshot().phase).toBe("closed");
-    actor.send({ type: "input-changed", input: input("/thread", 1, 4) });
+    actor.send({ type: "input-changed", input: input("/memory", 1, 4) });
     expect(actor.getSnapshot().phase).toBe("closed");
   });
 
   it("keeps selection by command identity as filtering and registry revisions change", () => {
     const actor = createAssistantCommandCompletionActor(BUILTIN_ASSISTANT_COMMAND_REGISTRY);
-    actor.send({ type: "input-changed", input: input("/thread") });
-    actor.send({ type: "select", commandId: "thread.rename" });
-    actor.send({ type: "input-changed", input: input("/thread ren") });
+    actor.send({ type: "input-changed", input: input("/memory") });
+    actor.send({ type: "select", commandId: "memory.add" });
+    actor.send({ type: "input-changed", input: input("/memory ad") });
     const narrowed = actor.getSnapshot();
     const extendedRegistry = createAssistantCommandRegistry("extended", [BUILTIN_ASSISTANT_COMMANDS, [skill(1)]]);
     actor.send({ type: "registry-changed", registry: extendedRegistry });
 
-    expect(narrowed.selectedCommandId).toBe("thread.rename");
-    expect(actor.getSnapshot().selectedCommandId).toBe("thread.rename");
+    expect(narrowed.selectedCommandId).toBe("memory.add");
+    expect(actor.getSnapshot().selectedCommandId).toBe("memory.add");
     expect(actor.getSnapshot().registryRevision).toBe("extended");
   });
 
@@ -96,23 +96,23 @@ describe("assistant command completion controller", () => {
 
   it("returns an exact range edit and caret for keyboard acceptance", () => {
     const actor = createAssistantCommandCompletionActor(BUILTIN_ASSISTANT_COMMAND_REGISTRY);
-    const snapshot = input("/thread renlater", 11);
+    const snapshot = input("/memory adlater", 10);
     actor.send({ type: "input-changed", input: snapshot });
     const accepted = actor.send({ type: "accept", input: snapshot, method: "enter" });
 
     expect(accepted.edit).toEqual({
-      commandId: "thread.rename",
-      range: { start: 0, end: 11 },
-      text: "/thread rename ",
-      selection: { start: 15, end: 15 },
+      commandId: "memory.add",
+      range: { start: 0, end: 10 },
+      text: "/memory add ",
+      selection: { start: 12, end: 12 },
       method: "enter",
     });
     expect(applyAssistantCommandCompletionEdit(snapshot.value, accepted.edit!)).toEqual({
-      value: "/thread rename later",
-      selectionStart: 15,
-      selectionEnd: 15,
+      value: "/memory add later",
+      selectionStart: 12,
+      selectionEnd: 12,
     });
-    expect(accepted.state).toMatchObject({ phase: "arguments", selectedCommandId: "thread.rename" });
+    expect(accepted.state).toMatchObject({ phase: "arguments", selectedCommandId: "memory.add" });
   });
 
   it("opens from the toolbar without changing text and replaces through an explicit edit", () => {
@@ -120,7 +120,7 @@ describe("assistant command completion controller", () => {
     const snapshot = input("draft message");
     actor.send({ type: "open-button", input: snapshot });
     const opened = actor.getSnapshot();
-    actor.send({ type: "select", commandId: "thread.new" });
+    actor.send({ type: "select", commandId: "session.new" });
     const accepted = actor.send({ type: "accept", input: snapshot, method: "pointer" });
 
     expect(opened).toMatchObject({
@@ -130,9 +130,9 @@ describe("assistant command completion controller", () => {
       trigger: { start: 0, end: 13 },
     });
     expect(applyAssistantCommandCompletionEdit(snapshot.value, accepted.edit!)).toEqual({
-      value: "/thread new",
-      selectionStart: 11,
-      selectionEnd: 11,
+      value: "/new",
+      selectionStart: 4,
+      selectionEnd: 4,
     });
   });
 
@@ -151,32 +151,32 @@ describe("assistant command completion controller", () => {
   it("suspends completion changes during IME composition and reconciles on completion", () => {
     const actor = createAssistantCommandCompletionActor(BUILTIN_ASSISTANT_COMMAND_REGISTRY);
     actor.send({ type: "composition-started" });
-    actor.send({ type: "input-changed", input: input("/thread") });
+    actor.send({ type: "input-changed", input: input("/memory") });
     const ignored = actor.getSnapshot();
-    actor.send({ type: "composition-ended", input: input("/thread") });
+    actor.send({ type: "composition-ended", input: input("/memory") });
 
     expect(ignored).toMatchObject({ phase: "composing", composing: true });
-    expect(actor.getSnapshot()).toMatchObject({ phase: "suggesting", composing: false, query: "/thread" });
+    expect(actor.getSnapshot()).toMatchObject({ phase: "suggesting", composing: false, query: "/memory" });
   });
 
   it("enters argument phase without reopening suggestions after a completed command", () => {
     const actor = createAssistantCommandCompletionActor(BUILTIN_ASSISTANT_COMMAND_REGISTRY);
-    actor.send({ type: "input-changed", input: input("/thread rename Release triage") });
+    actor.send({ type: "input-changed", input: input("/memory add Release triage") });
 
     expect(actor.getSnapshot()).toMatchObject({
       phase: "arguments",
       anchor: undefined,
-      selectedCommandId: "thread.rename",
-      query: "/thread rename Release triage",
+      selectedCommandId: "memory.add",
+      query: "/memory add Release triage",
     });
     expect(actor.project().matches).toEqual([]);
   });
 
   it("treats a later slash as argument text but opens a fresh completion after replacement", () => {
     const actor = createAssistantCommandCompletionActor(BUILTIN_ASSISTANT_COMMAND_REGISTRY);
-    actor.send({ type: "input-changed", input: input("/thread rename /worker") });
+    actor.send({ type: "input-changed", input: input("/memory add /worker") });
 
-    expect(actor.getSnapshot()).toMatchObject({ phase: "arguments", selectedCommandId: "thread.rename" });
+    expect(actor.getSnapshot()).toMatchObject({ phase: "arguments", selectedCommandId: "memory.add" });
     expect(actor.project().matches).toEqual([]);
 
     actor.send({ type: "input-changed", input: input("") });

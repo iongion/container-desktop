@@ -1,4 +1,5 @@
 import { Channel } from "@tauri-apps/api/core";
+import { sessionWorkspaceRoot } from "@/ai-system/adapters/sessionWorkspace";
 import type { AIBroker } from "@/ai-system/host/broker";
 import { createTauriDnsResolve } from "@/platform/tauri/capabilities/dns";
 import { createTauriExecuteIsolated } from "@/platform/tauri/capabilities/executeIsolated";
@@ -32,7 +33,12 @@ export async function createAISystem<TEvent = unknown>(deps: AISystemDeps<TEvent
       invoke: deps.invoke,
       newChannel: () => new Channel<unknown>(),
     }),
-    // Confined workspace, enforced natively in Rust (host.rs workspace_* commands).
-    workspaceAccess: createTauriWorkspaceAccess(deps.invoke, async () => (await deps.getAISettings()).workspaceRoot),
+    // Confined workspace, enforced natively in Rust (host.rs workspace_* commands). The root follows the RUNNING
+    // session's mounted folder, and Settings → AI only when no session is up: acting on the folder the container
+    // never had is wrong however well it is confined.
+    workspaceAccess: createTauriWorkspaceAccess(
+      deps.invoke,
+      sessionWorkspaceRoot(async () => (await deps.getAISettings()).workspaceRoot),
+    ),
   });
 }

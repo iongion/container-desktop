@@ -26,6 +26,16 @@ export interface IKeychain {
   getKey(key: string): Promise<string | undefined>;
   setKey(key: string, plaintext: string, opts?: { allowDegraded?: boolean }): Promise<void>;
   clearKey(key: string): Promise<void>;
+  // Write a private file whose secret placeholder is substituted with the stored secret for `key`, IN THE
+  // REALM THAT OWNS THE VAULT, and answer only its path. This is how a credential reaches a container's env
+  // file in a web-view realm whose getKey deliberately refuses: the caller supplies the shape, never sees the
+  // secret, and cannot read the result back.
+  writeSecretFile(key: string, fileName: string, contents: string): Promise<string>;
+  // Write a private file into the SAME protected directory, with no secret to substitute — the agent
+  // container's own env file, which carries the bridge token but no provider credential. It lives beside the
+  // gateway's rather than in a second directory of its own, so one guard covers both: the web view may ask for
+  // it and learn its path, and cannot read either back.
+  writeAgentEnvFile(fileName: string, contents: string): Promise<string>;
 }
 
 export interface IsolatedExecOpts {

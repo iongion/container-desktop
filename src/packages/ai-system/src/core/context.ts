@@ -1,6 +1,6 @@
 import type { Money } from "./cost";
 import type { AIPermissionMode } from "./permissions";
-import type { WorkerToolGroup } from "./workerTools";
+import type { ToolGroup } from "./toolCatalogue";
 
 export type EffectiveContextSectionKind = "system" | "history" | "turn" | "tools";
 export type EffectiveContextSourceKind =
@@ -33,7 +33,7 @@ export interface EffectiveToolView {
   name: string;
   title: string;
   description?: string;
-  group: WorkerToolGroup | "other";
+  group: ToolGroup | "other";
   gated: boolean;
 }
 
@@ -41,7 +41,15 @@ export interface EffectiveContextSnapshot {
   providerId: string;
   model: string;
   capturedAt: number;
-  window: { status: "known"; maxInputTokens: number; reservedOutputTokens: number } | { status: "unknown" };
+  window:
+    | {
+        status: "known";
+        maxInputTokens: number;
+        reservedOutputTokens: number;
+        // Whether the reserved output is the provider's published cap or our own default standing in for one.
+        reservedFromProvider: boolean;
+      }
+    | { status: "unknown" };
   sections: EffectiveContextSection[];
   totals: { characters: number; estimatedTokens: number };
   sources: EffectiveContextSource[];
@@ -50,7 +58,7 @@ export interface EffectiveContextSnapshot {
   truncation: { applied: boolean; omittedMessages: number };
 }
 
-export interface ThreadUsageSnapshot {
+export interface SessionUsageSnapshot {
   requests: number;
   inputTokens: number;
   outputTokens: number;

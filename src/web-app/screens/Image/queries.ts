@@ -36,6 +36,15 @@ export const useImage = (connId: string, id?: string, opts?: FetchImageOptions) 
   });
 };
 
+// One connection's images, for a form that has to offer them — the image a disposable sandbox is created from.
+// Same reasoning as useContainers: a form picks its own connection, and is read once rather than polled.
+export const useImages = (connId: string, enabled = true) =>
+  useQuery({
+    queryKey: imageKeys.list(connId),
+    queryFn: async () => new ImagesAdapter(await resolveConnectionHost(connId)).list(),
+    enabled: enabled && !!connId,
+  });
+
 export const useImageHistory = (connId: string, id?: string) =>
   useQuery({
     queryKey: imageKeys.sub(connId, id ?? "", "history"),

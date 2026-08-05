@@ -42,5 +42,14 @@ export async function createTauriKeychain(invoke: TauriInvoke): Promise<IKeychai
     },
 
     clearKey: (provider) => invoke<void>("keychain_clear", { account: provider }),
+
+    // The counterpart to getKey's refusal: the secret still has to reach a container's env file, so Rust
+    // substitutes it while writing and answers only the path. Nothing plaintext crosses back.
+    writeSecretFile: (provider, fileName, contents) =>
+      invoke<string>("keychain_write_secret_file", { account: provider, fileName, contents }),
+
+    // The same protected directory, no secret to substitute: the agent container's own env file. One guard then
+    // covers both, instead of a second directory the web view could read the bridge token out of.
+    writeAgentEnvFile: (fileName, contents) => invoke<string>("keychain_write_agent_file", { fileName, contents }),
   };
 }

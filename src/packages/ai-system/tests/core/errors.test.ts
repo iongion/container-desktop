@@ -29,7 +29,7 @@ describe("describeError", () => {
     expect(describeError({ error: { message: "invalid model ID" } })).toBe("invalid model ID");
   });
 
-  it("preserves a provider response body nested inside an OMA result", () => {
+  it("preserves a provider response body nested inside a result envelope", () => {
     const providerError = Object.assign(new Error("Provider returned an error response"), {
       responseBody: JSON.stringify({ error: { message: "invalid/does-not-exist is not a valid model ID" } }),
     });

@@ -18,7 +18,7 @@ function deepMerge<T>(...sources: Partial<T>[]): T {
 
 // Built from the ONE provider catalog (providers.ts) so settings, resolveProvider, AISettingsForm and
 // the model picker never drift. Each provider starts model-less; local servers + clouds carry their
-// catalog defaultBaseURL (the public API root for clouds — @ai-sdk/openai-compatible appends
+// catalog defaultBaseURL (the public API root for clouds, onto which a client appends its own path such as
 // /chat/completions) and its default auth scheme (none for local, bearer for cloud). Order follows the
 // catalog (LM Studio first). deepMerge then lets older configs inherit a newly-added scheme while a user's
 // explicit `auth` overrides it cleanly.

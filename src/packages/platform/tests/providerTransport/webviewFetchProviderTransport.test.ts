@@ -49,9 +49,28 @@ describe("trusted-webview provider fetch composition", () => {
     const keychain = await createKeychain.mock.results[0].value;
     expect(mocks.createFetchProviderTransport).toHaveBeenCalledWith({
       keychain,
-      fetchImpl: globalThis.fetch,
+      fetchImpl: expect.any(Function),
       anthropicDirectBrowserAccess: true,
     });
+
+    // NOT the bare `globalThis.fetch`: handed over detached it loses `this`, and WebKit refuses it outright
+    // ("Can only call Window.fetch on instances of Window") — which broke every request the web view made,
+    // including a keyless provider's connection test. This asserted the defect before it asserted the fix.
+    const { fetchImpl } = (
+      mocks.createFetchProviderTransport.mock.lastCall as unknown as [{ fetchImpl: typeof fetch }]
+    )[0];
+    expect(fetchImpl).not.toBe(globalThis.fetch);
+    const realm = globalThis as { fetch: typeof fetch };
+    const original = realm.fetch;
+    realm.fetch = function boundOnly(this: unknown) {
+      if (this !== globalThis) throw new TypeError("Can only call Window.fetch on instances of Window");
+      return Promise.resolve(new Response("{}", { status: 200 }));
+    } as unknown as typeof fetch;
+    try {
+      await expect(fetchImpl("https://example.test/")).resolves.toMatchObject({ status: 200 });
+    } finally {
+      realm.fetch = original;
+    }
     expect(mocks.createSharedAISystem).toHaveBeenCalledWith(
       expect.objectContaining({ keychain }),
       expect.objectContaining({ providerTransport: expect.anything() }),

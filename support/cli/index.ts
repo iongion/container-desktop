@@ -5,6 +5,7 @@ import {
   fetchMsix,
   installSelfSignedAppx,
   publishMeta,
+  runAgentImage,
   runBuild,
   runBuildWebsite,
   runBump,
@@ -136,6 +137,14 @@ program
 program.command("start").description("Run the app in development (yarn dev)").action(runStart);
 
 program.command("build-website").description("Compile website-src/ into website/ (Eleventy)").action(runBuildWebsite);
+
+program
+  .command("agent-image")
+  .description("Build the local pi coding-agent image")
+  .option("--engine <engine>", "container engine to build with", "podman")
+  .action(async (options) => {
+    await runAgentImage(options);
+  });
 
 program.command("checksums").description("Write side-by-side .sha256 files for release artifacts").action(runChecksums);
 

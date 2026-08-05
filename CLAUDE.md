@@ -132,14 +132,26 @@ How you build here, **per change** — not an end-of-task afterthought:
   `CONTAINER_DESKTOP_E2E_APP`. **Paint caveat:** WebKitGTK parks its compositor when idle, so a
   WebDriver screenshot can force a paint the live view hadn't done — read the DOM to confirm data,
   use eyes/screenshots for paint.
-- **Per-scenario UI specs:** `test:e2e:tauri:mock:podman` / `:mock:docker` (inventory counts),
-  `test:e2e:tauri:swarm` / `:swarm:none` (swarm tabs vs the Initialize empty state).
-- **Real-engine specs** need a NON-mock app (`CONTAINER_DESKTOP_MOCK=`) and a configured target from
-  `src/__tests__/live/targets.env`: `test:e2e:tauri:connections` (the connectivity matrix),
-  `test:e2e:tauri:execution-targets` (off-host worker execution), `test:e2e:tauri:swarm:live`
-  (real Docker Swarm, against `support/swarm-sandbox.sh up` — NEVER your primary daemon). They
-  drive `window.__cdLiveProbe` / `window.__cdExecutionMatrixProbe`, DEV-gated seams that run the
-  SHIPPED ports inside the webview, so one probe covers both backends.
+- **TWO suites, and what a failure is allowed to mean is the difference.** `webdriver/specs/*.e2e.js` is the
+  **mock app only** — nothing outside the app is involved, so a failure can only mean the app is wrong; these
+  always run and are **never gated on anything**. `webdriver/smoke/*.smoke.js` is **real integration** (real
+  engines, machines, account, model): their subject IS the integration, so an absent subject must **skip**, not
+  fail (that would blame the app) and not pass (that would claim coverage nobody has).
+- **One entry point per suite.** `yarn test:e2e:tauri` (mock) · `yarn test:smoke:tauri` (real, clears
+  `CONTAINER_DESKTOP_MOCK`). Select with `--spec <file>`; let the scenario travel in the environment
+  (`CONTAINER_DESKTOP_MOCK=podman|docker`, `CONTAINER_DESKTOP_MOCK_SWARM=manager|none`). Do NOT add a
+  package.json script per spec/scenario.
+- **Smoke specs** need a configured target from `src/__tests__/live/targets.env`:
+  `connection-matrix.smoke.js` (the connectivity matrix), `swarm.smoke.js` (real Docker Swarm, against
+  `support/swarm-sandbox.sh up` — NEVER your primary daemon). They drive `window.__cdLiveProbe` /
+  `window.__cdExecutionMatrixProbe`, DEV-gated seams that run the SHIPPED ports inside the webview, so one
+  probe covers both backends.
+- **A smoke spec's missing prerequisite SKIPS, it never fails.** It asks
+  `webdriver/support/prerequisites.js` first — real app, engine, agent image for that engine,
+  `OPENROUTER_API_KEY`, LM Studio's loaded context, and whether the target machine is even powered on — and
+  reports SKIP with the fixing command. Never start a VM, load a model, stand up a sandbox or build an image
+  to make a spec run; never gate a mock spec (nothing is absent, so a gate could only hide a defect); and
+  never let a gate skip something that would have run — that reads as coverage.
 - **The Wails shell has its own driver**, `support/wails-mcp.mjs` (MCP + X11 grab).
 - **NEVER GUESS ROUTES.** Every hash route you navigate to (or assert on) MUST come from the source —
   a screen's `Screen.Route.Path` / its `Navigation.ts` constant (e.g. `BUILD_ROUTE`), a real `#/...`
@@ -206,15 +218,13 @@ How you build here, **per change** — not an end-of-task afterthought:
   `.md` file under `src/resources/prompts/`, rendered via `renderPrompt` (nunjucks **browser** build
   → node-free) or imported `?raw`. NEVER inline prompt/markdown prose in TS/TSX — add a `.md` there and import it.
 - **AI dependency direction — a review rule, NOT a suite test.** `@/ai-system/core/` stays dependency-free: no
-  imports of `@/platform`, `@/i18n`, `@/web-app`/`@/components`, the AI SDK (`ai` / `@ai-sdk/*`),
-  `@open-multi-agent/core`, `xstate`, `react`, `node:*`, `@tauri`/`@wailsio`, or sibling
-  `@/ai-system/{adapters,runtime,host,ui}`. The package's layers are `core/` (pure protocol + policy) →
-  `adapters/` (impure infra) → `runtime/` (the assistant runtime: agent loops, OMA, toolsets), with `host/`
-  composing `core/` + `adapters/` only. **`core/` and `host/` MUST NOT import `runtime/`** — the engine factories
-  are injected into `createAISystem` precisely so `@open-multi-agent/core` never enters their graph. A separate
-  package used to enforce that; since the merge nothing does but review. No barrels / `index.ts` aggregators /
-  pass-through re-exports anywhere in `@/ai-system` — import from the defining module.
-  This is common sense; hold the line in review, don't encode it as a Vitest test.
+  imports of `@/platform`, `@/i18n`, `@/web-app`/`@/components`, the AI SDK (`ai` / `@ai-sdk/*`), `react`,
+  `node:*`, `@tauri`/`@wailsio`, or sibling `@/ai-system/{adapters,host,ui}`. The package's layers are `core/`
+  (pure protocol + policy) → `adapters/` (impure infra) → `host/`, which composes `core/` + `adapters/` only.
+  The agent engine is **not** in this package: the assistant runs on the pi bridge (`@/pi-bridge` protocol +
+  `@/pi-agent-host` in the container), injected into `createAISystem`, so no agent library enters `core`'s
+  graph. No barrels / `index.ts` aggregators / pass-through re-exports anywhere in `@/ai-system` — import from
+  the defining module. This is common sense; hold the line in review, don't encode it as a Vitest test.
 - **Shell port-module parity is a review rule, not a test.** Keep the Tauri / Wails port modules in
   `src/platform/<shell>/` aligned (a capability added to one shell usually needs its peers) — verify it in review;
   don't assert directory-listing parity in a Vitest test.

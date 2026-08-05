@@ -6,22 +6,26 @@ import { useTranslation } from "react-i18next";
 import { CopyButton } from "@/web-app/components/CopyButton";
 
 import { AICardShell } from "./AICardShell";
+import { CardNotice } from "./CardNotice";
 import type { ToolCardProps } from "./types";
 
-export const FileCard: React.FC<ToolCardProps> = ({ result }) => {
+export const FileCard: React.FC<ToolCardProps> = ({ title, result }) => {
   const { t } = useTranslation();
-  const data = (result ?? {}) as { path?: string; content?: string; contents?: string };
+  const data = (result ?? {}) as { path?: string; content?: string; contents?: string; notice?: string };
   const body = (data.content ?? data.contents ?? "").replace(/\n+$/, "");
-  const title = data.path ? String(data.path) : t("File");
+  // The passed title says which tool ran, and one card serves both: without it a read and a write are the
+  // same card over the same path.
+  const heading = title || (data.path ? String(data.path) : t("File"));
 
   return (
-    <AICardShell title={title} icon={IconNames.DOCUMENT}>
+    <AICardShell title={heading} icon={IconNames.DOCUMENT}>
       <div className="AICardLogsWrap">
         <span className="AICardLogsCopy">
           <CopyButton text={body} disabled={!body} />
         </span>
         <pre className="AICardLogs">{body || t("(empty file)")}</pre>
       </div>
+      <CardNotice notice={data.notice} />
     </AICardShell>
   );
 };

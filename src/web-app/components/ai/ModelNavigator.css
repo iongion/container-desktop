@@ -85,3 +85,68 @@
   padding: 28px 18px;
   gap: 8px;
 }
+
+/* A model row that has facts to show: the id, and under it what somebody published about it. */
+.ModelRow {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.ModelRowId {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ModelRowFacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--app-text-muted);
+}
+.ModelRowSep {
+  padding-right: 5px;
+  opacity: 0.45;
+}
+.ModelRowThinks {
+  padding: 0 4px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 45%, transparent);
+  border-radius: 3px;
+  color: var(--app-accent-text);
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.bp6-menu-item.bp6-selected .ModelRowFacts,
+.bp6-menu-item:hover .ModelRowFacts {
+  color: var(--app-text);
+}
+
+/* A provider whose catalogue is readable but not usable yet — pi published the models, the key is what using
+   one needs. Sits above the rows rather than replacing them. */
+.ModelNavigatorUnkeyed {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 4px;
+  padding: 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--app-intent-warning-rest) 30%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 10%, var(--app-surface));
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--app-text);
+}
+.ModelNavigatorUnkeyed .bp6-icon {
+  margin-top: 1px;
+  color: var(--app-intent-warning-text);
+}
+/* The action keeps to one line: it names a provider, and "Add Mistral" broken across two reads as two words. */
+.ModelNavigatorUnkeyed .bp6-button {
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
+}

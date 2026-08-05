@@ -3,7 +3,7 @@
 // The WebGL addon is a win ONLY on a hardware-accelerated GL stack (Chromium/WebView2 on a real GPU): it
 // offloads glyph rendering to the GPU. Under WebKitGTK (the Tauri webview) WebGL is frequently SOFTWARE-
 // rendered (Mesa llvmpipe / SwiftShader). There the addon is a net loss twice over: creating the GL context +
-// glyph atlas stalls the main thread at terminal mount (the "UI blocks when I open Logs" jank), and per-frame
+// glyph atlas stalls the main session at terminal mount (the "UI blocks when I open Logs" jank), and per-frame
 // rendering is no faster than — often slower than — the DOM path. xterm's DOM renderer is more than adequate
 // for log/terminal volumes.
 //

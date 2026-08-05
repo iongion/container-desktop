@@ -10,6 +10,8 @@ const PACKAGES = [
   "container-provisioning",
   "host-contract",
   "logger",
+  "pi-agent-host",
+  "pi-bridge",
   "i18n",
   "platform",
   "template",
@@ -17,15 +19,7 @@ const PACKAGES = [
 ];
 
 export function makeAliases(root) {
-  const omaOptionalProviderShim = path.join(
-    root,
-    "src/packages/ai-system/src/runtime/omaShim/optionalProviders.ts",
-  );
   const alias = {
-    openai: omaOptionalProviderShim,
-    "@anthropic-ai/sdk": omaOptionalProviderShim,
-    "@google/genai": omaOptionalProviderShim,
-    "@aws-sdk/client-bedrock-runtime": omaOptionalProviderShim,
     "@/cli": path.join(root, "support/cli"),
   };
   for (const pkg of PACKAGES) {

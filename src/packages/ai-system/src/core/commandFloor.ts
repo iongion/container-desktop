@@ -18,8 +18,8 @@ export interface FloorVerdict {
   reason?: string;
 }
 
-// How strictly the floor's destructive/privileged PROGRAM denylist applies, chosen by where a worker runs:
-//   strict    — host + remote-host-direct: a real machine, full denylist.
+// How strictly the floor's destructive/privileged PROGRAM denylist applies, chosen by where the command runs:
+//   strict    — this machine, through the app's own sandboxed exec: a real box, full denylist. The default.
 //   container — an existing container (real infra the user cares about): full denylist.
 //   sandbox   — a disposable, per-run sandbox container: the program denylist is lifted so builds/tests/package
 //               managers can run; the container itself is the isolation. Structural rules still apply.

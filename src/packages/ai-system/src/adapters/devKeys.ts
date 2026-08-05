@@ -31,7 +31,17 @@ export function withDevApiKeys(keyStore: AIKeyStore, devApiKeys: Record<string, 
   return {
     getEncryptionStatus: () => keyStore.getEncryptionStatus(),
     hasKey: async (provider: string) => (await keyStore.hasKey(provider)) || fallback(provider) !== undefined,
-    getKey: async (provider: string) => (await keyStore.getKey(provider)) ?? fallback(provider),
+    getKey: async (provider: string) => {
+      try {
+        return (await keyStore.getKey(provider)) ?? fallback(provider);
+      } catch {
+        // A web-view realm refuses to read the vault at all; the dev fallback is still meaningful there.
+        return fallback(provider);
+      }
+    },
+    writeSecretFile: (provider: string, fileName: string, contents: string) =>
+      keyStore.writeSecretFile(provider, fileName, contents),
+    writeAgentEnvFile: (fileName: string, contents: string) => keyStore.writeAgentEnvFile(fileName, contents),
     setKey: (provider: string, key: string, opts?: { allowDegraded?: boolean }) => keyStore.setKey(provider, key, opts),
     clearKey: (provider: string) => keyStore.clearKey(provider),
   };

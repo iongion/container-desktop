@@ -39,10 +39,10 @@ export default {
     {
       eyebrow: "AI assistant",
       title: "An assistant that drives your engines",
-      copy: "Ask in plain language and a built-in, local-first AI inspects and operates your containers — it calls typed tools and renders the results as rich cards, and asks before anything that changes state. Hand it a goal and a roster of specialized workers plans and carries it out. Bring your own model: LM Studio, Ollama or llama.cpp on your machine, or OpenRouter, Anthropic and more in the cloud.",
+      copy: "Ask in plain language and a built-in, local-first AI inspects and operates your containers — it calls typed tools and renders the results as rich cards, and asks before anything that changes state. It runs in a disposable container on your own engine, with only the workspace folder you pick, and its provider key stays in a separate proxy container. Bring your own model: LM Studio or llama.cpp on your machine, or OpenRouter, Anthropic and more in the cloud.",
       bullets: [
         "Local-first — your data stays on your machine",
-        "Runs &amp; workers — plan, approve, run in parallel",
+        "Runs in a container — your workspace, your engine, no key inside",
         "Your model, your keys (stored in the OS keychain)",
       ],
       img: "/img/podman/AIAssistant.png",

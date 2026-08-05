@@ -3,40 +3,18 @@
 // No React/AI-SDK/node:* imports (zod is the neutral validation lib backing the boundary schemas).
 
 import type { z } from "zod";
-import type { FloorScope } from "./commandFloor";
-import type { EffectiveContextSource } from "./context";
-import type {
-  AIPermissionMode,
-  PermissionDecisionContext,
-  PermissionsSnapshot,
-  PermissionsStoreLike,
-  WorkerToolPolicyMode,
-} from "./permissions";
-import type { AgentExecutionDeps } from "./ports";
-import type { ProviderKind, ResolvedProvider } from "./providers";
-import type { ReasoningThinking } from "./reasoning";
-import type { ResolveRunPlanResult, RunEventEnvelope, RunView, StartRunResult } from "./runEvents";
+import type { AIPermissionMode } from "./permissions";
+import type { ProviderKind } from "./providers";
 import type { approvalDecision, diagnosticsBundle } from "./schemas";
 import type { SkillInvocationProvenance } from "./skills";
-import type { ResolveThreadApprovalResult, SubmitThreadResult, ThreadEventEnvelope, ThreadView } from "./threadEvents";
-import type { ThreadCompaction } from "./threads";
-import type { ToolArtifactReference } from "./toolArtifacts";
 
-export type ThreadRole = "user" | "assistant" | "system";
+export type SessionRole = "user" | "assistant" | "system";
 
-export interface ThreadMessage {
+export interface SessionMessage {
   id: string;
-  role: ThreadRole;
+  role: SessionRole;
   content: string;
   createdAt: number;
-  skill?: SkillInvocationProvenance;
-}
-
-export interface AgentSessionInputMessage {
-  id: string;
-  content: string;
-  createdAt: number;
-  displayContent?: string;
   skill?: SkillInvocationProvenance;
 }
 
@@ -205,156 +183,3 @@ export interface ProviderTransport {
   request(request: ProviderTransportRequest, signal: AbortSignal): Promise<ProviderTransportResponse>;
   dispose(): void;
 }
-
-// Neutral session-actor PORT. The host supplies resolved task settings + execution capabilities; the concrete
-// AI-SDK actor (runtimes/agent) owns rich model history, streams, tools, and approval state.
-export interface AgentSessionTaskSettings {
-  resolved: ResolvedProvider;
-  providerFetch: typeof fetch;
-  system: string;
-  permissionMode: AIPermissionMode;
-  permissions?: PermissionsSnapshot;
-  // Host-resolved authority scope. Without it remembered decisions are ignored and never persisted.
-  permissionContext?: PermissionDecisionContext;
-  thinking?: ReasoningThinking;
-  execution: AgentExecutionDeps;
-  // Per-turn skill policy can only narrow the normal execution toolset. Undefined keeps every Thread tool.
-  allowedTools?: ReadonlySet<string>;
-  // Project-controlled prompt content must ask again before its first gated action, even with a remembered allow.
-  initialTaint?: boolean;
-  // Provenance metadata for prompt sections already rendered into `system` or the current skill input.
-  // Values never contain the prompt text itself.
-  contextSources?: readonly EffectiveContextSource[];
-}
-
-export interface AgentSessionPort {
-  submit(message: AgentSessionInputMessage, taskSettings?: AgentSessionTaskSettings): Promise<SubmitThreadResult>;
-  resolveApproval(approvalId: string, decision: ApprovalDecision): Promise<ResolveThreadApprovalResult>;
-  cancel(): Promise<void>;
-  snapshot(): ThreadView;
-  durableSnapshot(): AgentSessionDurableSnapshot;
-  dispose(): Promise<void>;
-}
-
-export interface AgentSessionDurableSnapshot {
-  view: ThreadView;
-  modelHistory: unknown[];
-  traceRecords?: unknown[];
-}
-
-export interface AgentSessionCreationOptions {
-  threadId: string;
-  history: ThreadMessage[];
-  view?: ThreadView;
-  modelHistory?: unknown[];
-  activeCompaction?: ThreadCompaction;
-  taskSettings: AgentSessionTaskSettings;
-  permissionsStore?: PermissionsStoreLike;
-  storeToolArtifact?: (input: {
-    threadId: string;
-    toolCallId: string;
-    tool: string;
-    content: string;
-    byteLength: number;
-  }) => Promise<ToolArtifactReference>;
-  emit: (event: ThreadEventEnvelope) => void;
-  logger?: { error: (...args: unknown[]) => void };
-}
-
-export type CreateAgentSession = (options: AgentSessionCreationOptions) => AgentSessionPort;
-
-export interface ThreadCompactionGenerationInput {
-  resolved: ResolvedProvider;
-  providerFetch: typeof fetch;
-  modelHistory: unknown[];
-  source: ThreadCompaction["source"];
-  instructions?: string;
-  signal?: AbortSignal;
-}
-
-export interface ThreadCompactionGenerationResult {
-  summary: string;
-  providerId: string;
-  model?: string;
-  inputTokens: number;
-  outputTokens: number;
-}
-
-export type CompactThreadContext = (
-  input: ThreadCompactionGenerationInput,
-) => Promise<ThreadCompactionGenerationResult>;
-
-// Neutral team-run PORT — the multi-agent counterpart to AgentSessionPort. The host resolves provider access and
-// the cost caps; the engine (@/ai-system/runtime) owns decomposition, scheduling and synthesis and reports as
-// RunEventEnvelopes the renderer folds with reduceRunEvent. A Run is an explicit screen action, never the
-// default chat path, because a single run fans out over many model turns.
-export interface RunBudget {
-  // Cumulative input+output tokens the run may spend before it stops early with finishReason "budget".
-  maxTokens: number;
-  maxTasks: number;
-}
-
-// One library worker as the ENGINE sees it: fully resolved host-side, so the driver never reads settings, never
-// touches the keychain, and never decides policy. The wire carries only worker ids (startRunRequest.workerIds);
-// everything here was looked up from the user's own stored definitions.
-export interface ResolvedWorker {
-  id: string;
-  name: string;
-  // What this worker is good at — goes into the coordinator's roster, so it is what the model reads when
-  // deciding which worker a task belongs to.
-  specialty: string;
-  // Base agent prompt + the worker's own, already concatenated.
-  system: string;
-  resolved: ResolvedProvider;
-  // Bound to THIS worker's provider origin + credential, so two workers on two providers cannot cross-send keys.
-  providerFetch: typeof fetch;
-  policy: WorkerToolPolicyMode;
-  permissionContext?: PermissionDecisionContext;
-  // Present only for a "granular" policy. Undefined means "do not filter"; an empty set means "no tools at all".
-  allowedTools?: ReadonlySet<string>;
-  // How strictly the command floor applies for this worker, derived from its execution target. Absent ⇒ strict.
-  // Populated when the run host resolves the worker's execution backend.
-  floorScope?: FloorScope;
-  // The worker's own execution backend (engineOps + workspace bound to its target). Absent ⇒ the orchestrator
-  // uses the run-level execution (host). Populated when the run host resolves a per-worker "Runs on" target.
-  execution?: AgentExecutionDeps;
-}
-
-export interface TeamRunTaskSettings {
-  resolved: ResolvedProvider;
-  providerFetch: typeof fetch;
-  // Optional cheaper model for decomposition + synthesis: the coordinator reasons over task titles and summaries
-  // rather than raw tool output, so it rarely needs the workers' frontier model. Absent ⇒ reuse the worker model.
-  coordinatorModel?: string;
-  system: string;
-  permissionMode: AIPermissionMode;
-  permissions?: PermissionsSnapshot;
-  permissionContext?: PermissionDecisionContext;
-  execution: AgentExecutionDeps;
-  budget: RunBudget;
-  // The resolved roster for this run. Absent or empty ⇒ every task uses the run defaults above, which is the
-  // pre-workers behaviour byte for byte.
-  workers?: readonly ResolvedWorker[];
-}
-
-export interface TeamRunPort {
-  start(): Promise<StartRunResult>;
-  resolvePlan(decision: ApprovalDecision): Promise<ResolveRunPlanResult>;
-  // Resolve ONE worker's gated tool call. Keyed by approvalId rather than by run, because workers execute in
-  // parallel and several can be blocked at once — the run keeps making progress on its other branches meanwhile.
-  resolveToolApproval(approvalId: string, decision: ApprovalDecision): Promise<ResolveRunPlanResult>;
-  cancel(): Promise<void>;
-  snapshot(): RunView;
-  dispose(): Promise<void>;
-}
-
-export interface TeamRunCreationOptions {
-  runId: string;
-  goal: string;
-  taskSettings: TeamRunTaskSettings;
-  permissionsStore?: PermissionsStoreLike;
-  emit: (envelope: RunEventEnvelope) => void;
-  logger?: { error: (...args: unknown[]) => void };
-}
-
-export type CreateTeamRun = (options: TeamRunCreationOptions) => TeamRunPort;

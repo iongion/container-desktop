@@ -1,7 +1,81 @@
-/* The full-page Assistant surface. The Thread (transcript + composer) and its styles live in the
-   shared components/ai/AssistantThread.{tsx,css}; this screen only provides the full-height column. */
+/* The full-page Assistant surface. The conversation itself — transcript, cards, empty state and composer —
+   lives in the shared components/ai/AssistantSession.{tsx,css}; this screen provides the full-height column,
+   the session summary bar, and the start drawer's own rules. */
 .AppScreen[data-screen="ai.assistant"] {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
+}
+
+.AssistantScreen .AppScreenContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The shared session lays itself out as a flex column, so the screen only gives it the remaining height. */
+.AssistantScreen .AssistantSession {
+  flex: 1;
+  min-height: 0;
+}
+
+/* The session summary rides in the header's LEFT group, after the back button — a strip of its own repeated
+   the framing the header already provides, and its longest field (the workspace path) crowded out the rest.
+   It yields space first, so the section tabs and reload on the right are never pushed off. */
+.AssistantScreen .AssistantSessionSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text-muted);
+}
+
+.AssistantScreen .AssistantSessionDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--app-intent-success-rest);
+}
+
+.AssistantScreen .AssistantSessionContainer {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssistantScreen .AssistantSessionError {
+  padding: 6px 8px;
+  border: 1px solid var(--app-intent-danger-rest);
+  border-radius: 3px;
+  color: var(--app-intent-danger-text);
+}
+
+/* The start drawer renders in a portal, outside the screen — its rules scope to the drawer itself. */
+.AppStartAgentSessionDrawer .AssistantStartLog {
+  margin: 10px 0 0;
+  padding: 8px;
+  max-height: 132px;
+  overflow: auto;
+  background: var(--app-group-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+
+.AppStartAgentSessionDrawer .AgentStartProblems,
+.AppStartAgentSessionDrawer .AgentStartFailure {
+  margin-top: 10px;
+}
+
+.AppStartAgentSessionDrawer .AgentStartImageNote {
+  margin-top: 8px;
+  color: var(--app-text-muted);
+  font-size: 11px;
 }

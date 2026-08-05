@@ -11,7 +11,14 @@ export default defineConfig({
     // jsdom covers both pure-function tests (normalizers/comparators) and
     // hook tests (renderHook + QueryClientProvider for the invalidation matrix).
     environment: "jsdom",
-    include: ["src/**/*.{test,spec}.{ts,tsx}", "support/**/*.{test,spec}.{ts,tsx}"],
+    // `webdriver/**` holds the WebDriver harness. Its specs are `*.e2e.js` / `*.smoke.js` and are driven by wdio,
+    // never collected here; what this picks up is the harness's own hermetic unit tests (the skip decisions in
+    // support/prerequisites.js), which must not need a browser, a machine or a process.
+    include: [
+      "src/**/*.{test,spec}.{ts,tsx}",
+      "support/**/*.{test,spec}.{ts,tsx}",
+      "webdriver/**/*.{test,spec}.{ts,tsx}",
+    ],
     // `*.live.test.ts` also ends in `.test.ts`, so it WOULD match the include glob — exclude it
     // explicitly so the real-VM suite never runs in the hermetic/CI run.
     exclude: [...configDefaults.exclude, "src/**/*.live.test.{ts,tsx}"],

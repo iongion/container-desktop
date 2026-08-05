@@ -11,7 +11,7 @@ import * as monaco from "monaco-editor/editor/editor.api.js";
 import "monaco-editor/language/json/monaco.contribution.js";
 // Basic-languages Monarch tokenizers give offline syntax highlighting for the read-only JS/TS code examples
 // (e.g. the Connection info "code example", language="javascript") and the writable Build Studio Dockerfile
-// editor. They colorize on the main thread and need no dedicated worker — unlike the JSON language service
+// editor. They colorize on the main session and need no dedicated worker — unlike the JSON language service
 // above — so the base editor worker is enough. Monaco 0.56 consolidated the per-language contributions into
 // this single entry, which lazily registers every basic language (tokenizers load on first use).
 import "monaco-editor/basic-languages/monaco.contribution.js";

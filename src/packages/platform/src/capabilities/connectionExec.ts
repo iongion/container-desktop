@@ -118,7 +118,7 @@ export function createConnectionExecAdapter(service: EngineDataService): Connect
       probe = runOn(host, settings, "wsl", ["-e", "true"]).then((result) => {
         if (result.code !== 0) {
           throw new Error(
-            `A Windows worker target requires WSL, but "wsl -e true" failed on connection "${connectionId}": ${result.stderr || "WSL is not available"}`,
+            `Reaching a Windows connection's containers requires WSL, but "wsl -e true" failed on connection "${connectionId}": ${result.stderr || "WSL is not available"}`,
           );
         }
       });

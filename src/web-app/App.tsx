@@ -34,9 +34,7 @@ import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { waitForPreload } from "@/web-app/Native";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as AIAssistantScreen } from "@/web-app/screens/AI/AssistantScreen";
-import { Screen as AIRunsScreen } from "@/web-app/screens/AI/Run/ManageScreen";
-import { Screen as AIRunScreen } from "@/web-app/screens/AI/Run/RunScreen";
-import { Screen as AIWorkersScreen } from "@/web-app/screens/AI/Worker/ManageScreen";
+import { Screen as AIPluginsScreen } from "@/web-app/screens/AI/Plugins/PluginsScreen";
 import { Screen as BuildScreen } from "@/web-app/screens/Build/ManageScreen";
 import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Connections/ConnectionInfoScreen";
 import { Screen as ConnectionsScreen } from "@/web-app/screens/Connections/ManageScreen";
@@ -76,6 +74,7 @@ import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectS
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 import { Screen as MountsScreen } from "@/web-app/screens/Volume/mounts/MountsScreen";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { reapOrphanedAgentSessions } from "@/web-app/stores/codingAgent";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { useUIStore } from "@/web-app/stores/uiStore";
 
@@ -84,9 +83,7 @@ const logger = createLogger("web.app");
 const Screens = [
   DashboardScreen,
   AIAssistantScreen,
-  AIRunsScreen,
-  AIRunScreen,
-  AIWorkersScreen,
+  AIPluginsScreen,
   ContainersScreen,
   ContainerLogsScreen,
   ContainerInspectScreen,
@@ -401,7 +398,13 @@ export function AppMainScreen() {
       return;
     }
     startRef.current = true;
-    initialize().then(() => startApplication());
+    // Housekeeping after the engines are up: an assistant session that outlived its app — a crash, a force-quit —
+    // left a container pair behind and a network holding a /24, and only this app would ever remove them. Never
+    // awaited and never fatal; nothing about startup depends on it.
+    initialize()
+      .then(() => startApplication())
+      .then(() => reapOrphanedAgentSessions())
+      .catch((error) => logger.debug("startup housekeeping failed", error));
   }, [initialize, startApplication]);
 
   useEffect(() => {

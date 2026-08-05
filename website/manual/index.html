@@ -89,7 +89,7 @@
       <div class="grp"><i class="fab fa-linux"></i> Linux</div><a href="#linux-req">Requirements</a><a href="#linux-quick">1 · Quick guide</a><a href="#linux-podman-docker">2 · Podman as Docker</a><a href="#linux-dd-alt">3 · Docker Desktop alternative</a><a href="#linux-share">4 · Sharing connection</a>
       <div class="grp"><i class="fab fa-apple"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-apple-container">5 · Apple™ Container</a><a href="#macos-share">6 · Sharing connection</a>
       <div class="grp"><i class="fab fa-windows"></i> Windows</div><a href="#windows-req">Requirements</a><a href="#windows-quick">1 · Quick guide</a><a href="#windows-best">2 · Best experience</a><a href="#windows-podman-docker">3 · Podman as Docker</a><a href="#windows-dd-alt">4 · Docker Desktop alternative</a><a href="#windows-podman-custom">5 · Podman custom install</a><a href="#windows-share">6 · Sharing connection</a><a href="#windows-tips">7 · Tips &amp; tricks</a>
-      <div class="grp"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</div><a href="#assistant-what">What it is</a><a href="#assistant-model">Choose your model</a><a href="#assistant-do">What it can do</a><a href="#assistant-runs">Runs &amp; workers</a><a href="#assistant-runson">Where a worker runs</a><a href="#assistant-privacy">Privacy &amp; permissions</a>
+      <div class="grp"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</div><a href="#assistant-what">What it is</a><a href="#assistant-model">Choose your model</a><a href="#assistant-do">What it can do</a><a href="#assistant-runs">Where it runs</a><a href="#assistant-plugins">Plugins &amp; commands</a><a href="#assistant-privacy">Privacy &amp; permissions</a>
       <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-build">Building images</a>
       <div class="grp"><i class="fas fa-keyboard"></i> Keyboard shortcuts</div><a href="#shortcuts-find">Find</a><a href="#shortcuts-all">All shortcuts</a>
     </aside>
@@ -423,7 +423,7 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <h3>Choose your model</h3>
 <p>Pick your inference <strong>source → provider → model</strong> from the selector in the message box. Two kinds of source are supported:</p>
 <ul>
-<li><strong>Local (no API key, runs on your machine):</strong> <strong>LM Studio</strong>, <strong>Ollama</strong> and <strong>llama.cpp</strong>. Start the server, and the assistant lists its models — your prompts and container data never leave the device.</li>
+<li><strong>Local (no API key, runs on your machine):</strong> <strong>LM Studio</strong> and <strong>llama.cpp</strong>. Start the server, and the assistant lists its models — your prompts and container data never leave the device.</li>
 <li><strong>Cloud (needs an API key):</strong> <strong>OpenRouter</strong>, <strong>Anthropic</strong>, <strong>OpenAI</strong>, <strong>DeepSeek</strong>, <strong>GLM</strong> and <strong>MiniMax</strong>. Add a key in <strong>Settings → AI</strong>; OpenRouter exposes many vendors' models behind one key.</li>
 </ul>
 <div class="note info">
@@ -436,28 +436,30 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <ul>
 <li><strong>Look:</strong> list and inspect <strong>containers, images, networks and volumes</strong>, read a container's <strong>logs</strong>, and check its <strong>stats</strong> — shown as sortable tables, a log viewer, and state badges. These read-only actions run freely.</li>
 <li><strong>Act:</strong> <strong>start / stop / restart / pause / remove</strong> a container, <strong>pull</strong> or <strong>remove</strong> an image, <strong>remove</strong> a network or volume. Every state-changing action <strong>asks for your approval first</strong> (see below).</li>
-<li><strong>Files:</strong> read, write and edit files, list a directory, search text, and run a command in a confined <strong>workspace</strong> — the same tools the chat and Team Run workers share.</li>
+<li><strong>Files:</strong> read, write and edit files, list a directory, search text, and run commands in the <strong>workspace folder</strong> you pick for the session.</li>
 <li><strong>Escape hatch:</strong> for anything the typed tools don't cover, it can run a host command in a <strong>sandbox</strong> (no shell, scrubbed environment, output capped) — also gated by your approval.</li>
 </ul>
 </section>
 <section class="guide-sec" id="assistant-runs">
-<h3>Runs &amp; workers</h3>
-<p>Beyond one-off chat, you can start a <strong>Run</strong> with a <strong>Goal</strong> — <em>&quot;triage every stopped container and tell me why each one exited&quot;</em> — and a coordinator plans the work before a Team of specialized <strong>Workers</strong> carries it out. Reach both from the <strong>AI menu</strong> in the header.</p>
+<h3>Where it runs</h3>
+<p>The assistant runs <strong>inside a container</strong> on one of your engine connections, not in the app. You start a session by picking that connection and a <strong>workspace folder</strong> from your machine, which is mounted into the container as the one folder its file and command tools can reach.</p>
 <ul>
-<li><strong>Workers</strong> are reusable agents you define once: a <strong>name</strong>, a <strong>specialty</strong> (what it's good at), an optional <strong>avatar</strong>, its own <strong>model</strong>, and a <strong>toolset</strong> you can narrow. A Team Run draws its roster from this library.</li>
-<li>A <strong>Team Run</strong> turns its Goal into a <strong>Plan</strong> — a set of Tasks with dependencies — that you <strong>approve</strong> before anything runs. Independent Tasks run in parallel; each is assigned to the best-fit Worker; results are synthesized into one answer. You stay in control: approve the Plan, approve state-changing tool calls, and stop the Run at any time.</li>
+<li><strong>Your key never enters it.</strong> Inference goes through a second, separate container that holds the provider credential; the agent container has no key, no access to your keychain and no route to your provider except through that proxy.</li>
+<li><strong>Sign in instead of pasting a key.</strong> Where the provider offers it, <strong>Settings → AI</strong> runs that provider's own sign-in — in a throwaway container, because the sign-in needs one — and stores what it returns in your OS keychain. A sign-in that expires is <strong>renewed for you</strong>, before it lapses and without interrupting the conversation.</li>
+<li><strong>Network access is yours to give.</strong> Leave it on so package managers work, or turn it off for a session and only the inference proxy stays reachable.</li>
+<li><strong>The container is disposable, the folder is not.</strong> Stopping a session removes the pair; your workspace is a normal folder on your machine and whatever the assistant wrote is simply there. <strong>Workspace changes</strong> shows you exactly what it touched, as a Git status and diff.</li>
+<li><strong>Change the model mid-conversation</strong> from the chip in the message box: the session, the containers and everything installed in them survive it, and a reasoning model's <strong>thinking level</strong> is offered when its provider says it has one.</li>
+<li><strong>Give the assistant a second container to work in</strong>, if you want it acting somewhere other than its own: on the start form, choose an <strong>existing container</strong> on that connection — picked from a list of what is actually running, with its image and id — or a <strong>disposable one</strong> created from an image and removed when the session ends. Every file write and command there asks first.</li>
 </ul>
 </section>
-<section class="guide-sec" id="assistant-runson">
-<h3>Where a worker runs</h3>
-<p>Each worker chooses <strong>where its file and command tools execute</strong> — its <em>&quot;Runs on&quot;</em> target — so you can sandbox risky work away from your host, using the app's own connections and containers:</p>
+<section class="guide-sec" id="assistant-plugins">
+<h3>Plugins &amp; commands</h3>
+<p>The assistant is a GUI for the <a href="https://github.com/earendil-works/pi">pi</a> coding agent, so pi's own ecosystem works here.</p>
 <ul>
-<li><strong>Host</strong> — directly on this machine (the default).</li>
-<li><strong>A remote host</strong> — over one of your <strong>SSH</strong> connections.</li>
-<li><strong>A container</strong> — inside an existing container on any connection.</li>
-<li><strong>A sandbox</strong> — a throwaway container the app creates for the run from an image you pick, and <strong>removes when the run ends</strong>.</li>
+<li><strong>Plugins</strong> install from <strong>npm or a Git URL</strong> on the <strong>Plugins</strong> screen — reachable from the <strong>AI menu</strong> — and stay installed across sessions. What a plugin contributes (extra commands, skills and prompts) appears in the message box's slash-command palette, and anything it asks you is shown as a native dialog rather than terminal text.</li>
+<li><strong>Slash commands</strong> cover the session itself: start a new one, compact the context, review project trust, look something up in the built-in troubleshooting notes, or save the whole conversation as a single standalone <strong>HTML file</strong>. They are pi's commands under pi's names, so <a href="https://github.com/earendil-works/pi">pi's own documentation</a> applies here unchanged.</li>
+<li><strong>Skills</strong> are reusable prompt-backed workflows you invoke by name; the app checks a skill's fingerprint and your project's trust before it runs one.</li>
 </ul>
-<p>Container operations (list, inspect, start/stop, …) already follow the worker's connection; the <em>&quot;Runs on&quot;</em> target additionally decides where its files live and its commands run. Pick the connection with the same <strong>connection selector</strong> you use everywhere else in the app.</p>
 </section>
 <section class="guide-sec" id="assistant-privacy">
 <h3>Privacy &amp; permissions</h3>

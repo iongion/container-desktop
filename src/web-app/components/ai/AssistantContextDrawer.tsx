@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { EffectiveContextSnapshot, EffectiveContextSourceKind } from "@/ai-system/core/context";
-import type { ThreadView } from "@/ai-system/core/threadEvents";
+import type { SessionView } from "@/ai-system/core/sessionEvents";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ProjectContextPanel, type ProjectContextRequest } from "@/web-app/components/ai/ProjectContextPanel";
 import { compactTokens, formatCost } from "@/web-app/utils/format";
@@ -15,7 +15,7 @@ import "./AssistantContextDrawer.css";
 export type AssistantContextSection = "usage" | "context" | "tools" | "project";
 
 interface AssistantContextDrawerProps {
-  view?: ThreadView;
+  view?: SessionView;
   initialSection: AssistantContextSection;
   projectRequest?: ProjectContextRequest;
   onClose: () => void;
@@ -87,7 +87,7 @@ function ContextOverview({ context }: { context: EffectiveContextSnapshot }) {
   );
 }
 
-function UsageOverview({ view }: { view: ThreadView }) {
+function UsageOverview({ view }: { view: SessionView }) {
   const { t } = useTranslation();
   const context = view.context;
   const usage = view.usage;
@@ -120,6 +120,17 @@ function UsageOverview({ view }: { view: ThreadView }) {
               })
             : t("This provider does not publish a verified context window to the app.")}
         </div>
+        {context?.window.status === "known" ? (
+          <div className="AssistantContextNotice">
+            {context.window.reservedFromProvider
+              ? t("{{reserved}} reserved for the answer, as this provider publishes it", {
+                  reserved: compactTokens(context.window.reservedOutputTokens),
+                })
+              : t("{{reserved}} reserved for the answer — our default, since this provider publishes no cap", {
+                  reserved: compactTokens(context.window.reservedOutputTokens),
+                })}
+          </div>
+        ) : null}
       </section>
       <section className="AssistantContextPanel">
         <div className="AssistantContextPanelHeader">

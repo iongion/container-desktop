@@ -1,12 +1,12 @@
-// ExecutionSelector (MAIN). Turns a worker's execution target into the concrete backend it runs against. The host
-// keeps the fast local node:fs workspace; every other target is driven through the captured ConnectionExecHost and
-// the exec-routed workspace. Distinct targets are memoized so N workers on one target share a backend (and one
-// sandbox lifecycle). A sandbox target lazily creates a disposable container; dispose (idempotent) removes it.
+// ExecutionSelector (MAIN). Turns a session's execution target into the concrete backend it runs against. Both
+// kinds are containers, so both are driven through the captured ConnectionExecHost and the exec-routed workspace —
+// there is no local-filesystem arm to fall back to. Distinct targets are memoized so everything on one target
+// shares a backend (and one sandbox lifecycle). A sandbox target lazily creates a disposable container; dispose
+// (idempotent) removes it.
 
+import { type ExecutionTarget, executionTargetKey, floorScopeFor } from "@/ai-system/core/executionTargets";
 import type { ConnectionExecHost, ExecutionSelector, ResolvedExecution } from "@/ai-system/core/ports";
 import type { EngineOps } from "@/ai-system/core/types";
-import { executionTargetKey, floorScopeFor, type WorkerExecutionTarget } from "@/ai-system/core/workers";
-import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
 
 import { createExecWorkspaceAccess, type TargetExec } from "./execWorkspaceAccess";
 
@@ -14,16 +14,15 @@ const SANDBOX_LABEL_KEY = "container-desktop.ai.sandbox";
 const SANDBOX_ROOT = "/workspace";
 
 export interface ExecutionSelectorOptions {
-  // Identifies the run — labels the sandbox container and scopes off-host workspace roots so runs never collide.
+  // Identifies the run — labels the sandbox container and scopes container workspace roots so runs never collide.
   runId: string;
-  // The host defaults, reused verbatim for kind:"host".
+  // The app's own engine ops, re-scoped per target to the connection that target is reached through.
   engineOps?: EngineOps;
-  localWorkspace?: IWorkspaceAccess;
   connectionExec: ConnectionExecHost;
 }
 
-// A path unique to this run for a remote/existing-container workspace root (a sandbox uses /workspace directly).
-function offHostRoot(runId: string): string {
+// A path unique to this run for an existing container's workspace root (a sandbox uses /workspace directly).
+function containerWorkspaceRoot(runId: string): string {
   return `/tmp/container-desktop-ai/${runId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
@@ -51,40 +50,15 @@ export function createExecutionSelector(options: ExecutionSelectorOptions): Exec
   const { runId, connectionExec } = options;
   const cache = new Map<string, Promise<ResolvedExecution>>();
 
-  async function build(target: WorkerExecutionTarget): Promise<ResolvedExecution> {
+  async function build(target: ExecutionTarget): Promise<ResolvedExecution> {
     const floorScope = floorScopeFor(target);
-    if (target.kind === "host") {
-      return {
-        engineOps: options.engineOps,
-        workspaceAccess: options.localWorkspace,
-        floorScope,
-        dispose: async () => undefined,
-      };
-    }
-
     const connectionId = target.connectionId;
-
-    if (target.kind === "remote") {
-      const exec: TargetExec = (program, args, opts) =>
-        connectionExec.execOnConnection(connectionId, program, args, opts);
-      const root = offHostRoot(runId);
-      const made = await connectionExec.execOnConnection(connectionId, "mkdir", ["-p", root]);
-      if (made.code !== 0) {
-        throw new Error(`Unable to prepare the remote workspace ${root}: ${made.stderr || "mkdir failed"}`);
-      }
-      return {
-        engineOps: scopeEngineOps(options.engineOps, connectionId),
-        workspaceAccess: createExecWorkspaceAccess({ root, exec }),
-        floorScope,
-        dispose: async () => undefined,
-      };
-    }
 
     if (target.kind === "container") {
       const containerId = target.containerId;
       const exec: TargetExec = (program, args, opts) =>
         connectionExec.execInContainer(connectionId, containerId, program, args, opts);
-      const root = offHostRoot(runId);
+      const root = containerWorkspaceRoot(runId);
       const made = await exec("mkdir", ["-p", root]);
       if (made.code !== 0) {
         throw new Error(`Unable to prepare the container workspace ${root}: ${made.stderr || "mkdir failed"}`);
@@ -128,6 +102,16 @@ export function createExecutionSelector(options: ExecutionSelectorOptions): Exec
         cache.set(key, existing);
       }
       return existing;
+    },
+
+    // Every backend this selector built, torn down once. A build that FAILED has nothing to dispose and must not
+    // stop the others: a run ends either way, and the sandbox is the one thing that must not survive it.
+    async dispose() {
+      const built = [...cache.values()];
+      cache.clear();
+      for (const pending of built) {
+        await pending.then((resolved) => resolved.dispose()).catch(() => undefined);
+      }
     },
   };
 }

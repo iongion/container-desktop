@@ -33,7 +33,7 @@ interface AssistantCommandPaletteProps {
 const BUILTIN_COMMAND_ICONS: Record<BuiltinAssistantCommandId, IconName> = {
   help: IconNames.HELP,
   "skills.open": IconNames.LIGHTBULB,
-  "skills.reload": IconNames.REFRESH,
+  reload: IconNames.REFRESH,
   "context.usage": IconNames.TIMELINE_BAR_CHART,
   "context.tools": IconNames.WRENCH,
   "diagnostics.open": IconNames.PULSE,
@@ -45,32 +45,29 @@ const BUILTIN_COMMAND_ICONS: Record<BuiltinAssistantCommandId, IconName> = {
   "memory.clear": IconNames.DELETE,
   "rules.list": IconNames.DOCUMENT,
   "rules.init": IconNames.NEW_OBJECT,
-  "thread.list": IconNames.HISTORY,
-  "thread.new": IconNames.ADD,
-  "thread.switch": IconNames.SWAP_HORIZONTAL,
-  "thread.rename": IconNames.EDIT,
-  "thread.branch": IconNames.GIT_BRANCH,
-  "thread.compact": IconNames.COMPRESSED,
-  "thread.delete": IconNames.TRASH,
-  "thread.stop": IconNames.STOP,
-  "thread.copy": IconNames.CLIPBOARD,
-  "thread.export": IconNames.EXPORT,
+  "session.new": IconNames.ADD,
+  "session.quit": IconNames.LOG_OUT,
+  "session.info": IconNames.INFO_SIGN,
+  "session.copy": IconNames.CLIPBOARD,
+  "session.export": IconNames.EXPORT,
+  "session.import": IconNames.IMPORT,
+  "session.share": IconNames.SHARE,
+  "turn.stop": IconNames.STOP,
   "model.open": IconNames.MODEL,
-  "access.set": IconNames.EYE_OPEN,
-  "reasoning.set": IconNames.LIGHTBULB,
+  "provider.login": IconNames.KEY,
+  "provider.logout": IconNames.KEY_DELETE,
   "permissions.open": IconNames.SHIELD,
-  "worker.list": IconNames.PEOPLE,
-  "worker.show": IconNames.SEARCH,
-  "worker.create": IconNames.NEW_PERSON,
-  "run.start": IconNames.PLAY,
-  "run.list": IconNames.LIST,
-  "run.show": IconNames.SEARCH,
-  "run.stop": IconNames.STOP,
 };
 
 function commandIcon(command: AssistantCommandDefinition): IconName {
   if (command.kind === "control") return BUILTIN_COMMAND_ICONS[command.id];
   switch (command.source.kind) {
+    // pi's own vocabulary. A command this session cannot honour is shown crossed rather than hidden, so a pi user
+    // can see it exists and read why.
+    case "pi-builtin":
+      return command.kind === "pi" && command.venue === "unavailable" ? IconNames.BAN_CIRCLE : IconNames.CONSOLE;
+    case "pi-plugin":
+      return IconNames.APPLICATIONS;
     case "bundled-skill":
       return IconNames.LIGHTBULB;
     case "user-skill":
@@ -114,6 +111,10 @@ function commandSource(command: AssistantCommandDefinition, t: (key: string) => 
       return t("Project skill");
     case "plugin-skill":
       return `${t("Plugin skill")} · ${command.source.pluginId}`;
+    case "pi-builtin":
+      return t("pi");
+    case "pi-plugin":
+      return `${t("Plugin")} · ${command.source.pluginId}`;
   }
 }
 
@@ -158,7 +159,7 @@ export function AssistantCommandPalette({
           const execution = planCommandExecution(command, commands.context);
           const unavailable = execution.kind === "unavailable";
           const matchedAlias = command.aliases.includes(matchedBy as `/${string}`) ? matchedBy : undefined;
-          const source = command.kind === "skill" ? commandSource(command, t) : undefined;
+          const source = command.kind === "control" ? undefined : commandSource(command, t);
           const meta = [matchedAlias ? `${t("Alias")}: ${matchedAlias}` : undefined, source]
             .filter(Boolean)
             .join(" · ");

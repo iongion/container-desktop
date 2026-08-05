@@ -10,7 +10,6 @@ import {
   type PermissionRule,
   permissionKey,
   resolveToolAction,
-  resolveWorkerToolAction,
   toolKey,
   toolRule,
 } from "@/ai-system/core/permissions";
@@ -164,54 +163,5 @@ describe("toolCommandFloorBlocked — the floor applied to typed tool calls by s
   it("agrees with isFloorBlocked, which the sandbox path uses directly", () => {
     expect(isFloorBlocked({ program: "rm", args: [] }).blocked).toBe(true);
     expect(isFloorBlocked({ program: "podman", args: ["ps"] }).blocked).toBe(false);
-  });
-});
-
-// A worker's tool policy is the authority for its own tasks — both it and the global mode are user-authored,
-// so a roster is not a privilege boundary. What a worker may NEVER do is bypass the catastrophic floor or
-// overturn an explicit remembered block.
-describe("resolveWorkerToolAction", () => {
-  const base = { runMode: "ask" as AIPermissionMode, floorBlocked: false };
-
-  it("runs everything under an all-allowed worker, whatever the global mode says", () => {
-    expect(resolveWorkerToolAction({ ...base, policy: "all", runMode: "ask" })).toBe("run");
-    expect(resolveWorkerToolAction({ ...base, policy: "all", runMode: "remember" })).toBe("run");
-  });
-
-  // The difference from the global "allow" mode, which predates workers and deliberately skips the floor.
-  it("still rejects a catastrophic command for an all-allowed worker", () => {
-    expect(resolveWorkerToolAction({ policy: "all", runMode: "allow", floorBlocked: true })).toBe("reject");
-    expect(resolveToolAction({ mode: "allow", floorBlocked: true })).toBe("run");
-  });
-
-  it("never overturns an explicit remembered block", () => {
-    expect(resolveWorkerToolAction({ ...base, policy: "all", cached: "block" })).toBe("reject");
-    expect(resolveWorkerToolAction({ ...base, policy: "ask", cached: "block" })).toBe("reject");
-    expect(resolveWorkerToolAction({ ...base, policy: "granular", cached: "block" })).toBe("reject");
-  });
-
-  // The point of "ask": it is the only way to gate an UNGATED read tool, which is the primary injection intake.
-  it("asks for every call under a prompt-me worker, even a remembered allow", () => {
-    expect(resolveWorkerToolAction({ ...base, policy: "ask" })).toBe("ask");
-    expect(resolveWorkerToolAction({ ...base, policy: "ask", cached: "allow" })).toBe("ask");
-    expect(resolveWorkerToolAction({ ...base, policy: "ask", runMode: "allow" })).toBe("ask");
-  });
-
-  it("defers to the global mode for a granular worker, whose toolset is already narrowed", () => {
-    expect(resolveWorkerToolAction({ ...base, policy: "granular", runMode: "ask" })).toBe("ask");
-    expect(resolveWorkerToolAction({ ...base, policy: "granular", runMode: "allow" })).toBe("run");
-    expect(resolveWorkerToolAction({ ...base, policy: "granular", runMode: "remember", cached: "allow" })).toBe("run");
-    expect(resolveWorkerToolAction({ ...base, policy: "granular", runMode: "remember" })).toBe("ask");
-  });
-
-  it("keeps the injection-taint rule for a granular worker's remembered allow", () => {
-    const opts = {
-      ...base,
-      policy: "granular" as const,
-      runMode: "remember" as AIPermissionMode,
-      cached: "allow" as const,
-    };
-    expect(resolveWorkerToolAction(opts)).toBe("run");
-    expect(resolveWorkerToolAction({ ...opts, tainted: true })).toBe("ask");
   });
 });

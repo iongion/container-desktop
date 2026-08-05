@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PI_THINKING_LEVELS } from "@/pi-bridge/protocol";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -8,46 +9,19 @@ import {
   type AIPushPayload,
 } from "./channels";
 import type { EffectiveContextSectionKind, EffectiveContextSourceKind } from "./context";
-import {
-  MAX_ACTIVE_RUNS,
-  MAX_AVATAR_DATA_URL_BYTES,
-  MAX_AVATAR_NAME_CHARS,
-  MAX_AVATARS,
-  MAX_DIAGNOSTICS_BUNDLE_CHARS,
-  MAX_GOAL_CHARS,
-  MAX_RETAINED_THREADS,
-  MAX_RUN_SPAN_BATCH,
-  MAX_RUN_SPAN_BYTES,
-  MAX_RUN_SPANS,
-  MAX_RUN_SYNTHESIS_CHARS,
-  MAX_RUN_TASK_DESCRIPTION_CHARS,
-  MAX_RUN_TASK_OUTPUT_CHARS,
-  MAX_RUN_TASK_TOOL_RESULTS,
-  MAX_RUN_TASKS,
-  MAX_RUN_TOKEN_BUDGET,
-  MAX_RUN_WORKERS,
-  MAX_THREAD_COMPACTION_INSTRUCTIONS_CHARS,
-  MAX_THREAD_COMPACTION_SUMMARY_CHARS,
-  MAX_THREAD_COMPACTIONS,
-  MAX_THREAD_MODEL_MESSAGES,
-  MAX_THREAD_RECORD_BYTES,
-  MAX_THREAD_TIMELINE_ITEMS,
-  MAX_WORKER_ALLOWED_TOOLS,
-  MAX_WORKER_NAME_CHARS,
-  MAX_WORKER_PROMPT_CHARS,
-  MAX_WORKER_SPECIALTY_CHARS,
-  MAX_WORKERS,
-} from "./limits";
+import { MAX_ALLOWED_TOOLS, MAX_DIAGNOSTICS_BUNDLE_CHARS, MAX_SESSION_TIMELINE_ITEMS } from "./limits";
 import { PROJECT_CONTEXT_LIMITS } from "./projectContext";
+import { MAX_AI_TEXT_CHARS, MAX_INITIAL_SESSION_HISTORY_MESSAGES } from "./sessionEvents";
 import { SKILL_DIAGNOSTIC_CODES, SKILL_LIMITS } from "./skills";
-import { MAX_AI_TEXT_CHARS, MAX_INITIAL_THREAD_HISTORY_MESSAGES } from "./threadEvents";
-import { toolArtifactRecordSchema, toolArtifactReferenceSchema } from "./toolArtifacts";
 
 const MAX_ID_CHARS = 256;
 const MAX_PROVIDER_CHARS = 64;
 const MAX_MODEL_CHARS = 512;
 const MAX_TITLE_CHARS = 256;
 const MAX_PERMISSION_KEY_CHARS = 8_192;
+// An engine failure message is the engine's own text, which the model reads to decide what to do next. Long
+// enough to keep a CLI error intact, short enough that a runaway one cannot flood a tool result.
+const MAX_ENGINE_OP_ERROR_CHARS = 4_096;
 const MAX_CREDENTIAL_CHARS = 16_384;
 
 const id = z.string().trim().min(1).max(MAX_ID_CHARS);
@@ -58,8 +32,6 @@ const provider = z
 const optionalProvider = provider.optional();
 const model = z.string().max(MAX_MODEL_CHARS).optional();
 const empty = z.undefined();
-const threadId = z.object({ threadId: id }).strict();
-const runRef = z.object({ runId: id }).strict();
 
 export const diagnosticsBundle = z
   .object({
@@ -82,72 +54,62 @@ const historyMessage = z
   })
   .strict();
 
-export const accessProfileId = z.enum(["observe", "workspace", "operator"]);
-export const reasoningLevel = z.enum(["default", "low", "medium", "high"]);
-
-export const submitThreadRequest = z
+export const submitSessionRequest = z
   .object({
-    threadId: id,
+    sessionId: id,
     message: z
       .object({
         id,
         content: z
           .string()
           .trim()
-          .min(1, "AI: Thread message is empty")
-          .max(MAX_AI_TEXT_CHARS, "AI: Thread message is too long"),
+          .min(1, "AI: Session message is empty")
+          .max(MAX_AI_TEXT_CHARS, "AI: Session message is too long"),
         createdAt: z.number().nonnegative(),
       })
       .strict(),
-    history: z.array(historyMessage).max(MAX_INITIAL_THREAD_HISTORY_MESSAGES, "AI: Thread history is too large"),
+    history: z.array(historyMessage).max(MAX_INITIAL_SESSION_HISTORY_MESSAGES, "AI: Session history is too large"),
     providerId: optionalProvider,
     model,
-    accessProfile: accessProfileId.optional(),
-    reasoningLevel: reasoningLevel.optional(),
     bundle: diagnosticsBundle.optional(),
   })
   .strict();
 
 export const approvalDecision = z.enum(["allow", "reject"]);
-export const resolveThreadApprovalRequest = z
-  .object({ threadId: id, approvalId: id, decision: approvalDecision })
+export const resolveSessionApprovalRequest = z
+  .object({ sessionId: id, approvalId: id, decision: approvalDecision })
   .strict();
 export const permissionsList = z.enum(["allowed", "blocked"]);
 
-// Team run. `model` drives the worker agents; `coordinatorModel` optionally points decomposition + synthesis at a
-// cheaper model (the coordinator reasons over task titles, not tool output, so it rarely needs the frontier model).
-// `maxTokens`/`maxTasks` are the user-facing cost caps — absent ⇒ the DEFAULT_RUN_* ceilings in limits.
-export const startRunRequest = z
+// One remembered allow/reject, scoped to a workspace, target, authority subject, typed operation, normalized
+// arguments and trust epoch. Declared up here because the invoke registry below validates it on the wire.
+export const permissionRule = z
   .object({
-    runId: id,
-    goal: z.string().trim().min(1, "AI: goal is empty").max(MAX_GOAL_CHARS, "AI: goal is too long"),
-    providerId: optionalProvider,
-    model,
-    coordinatorModel: model,
-    maxTokens: z.number().int().positive().max(MAX_RUN_TOKEN_BUDGET).optional(),
-    maxTasks: z.number().int().positive().max(MAX_RUN_TASKS).optional(),
-    // Ids into the workers library. The host resolves them to definitions; absent/empty ⇒ every task runs
-    // on the run defaults, which is the pre-workers behaviour.
-    workerIds: z.array(id).max(MAX_RUN_WORKERS).optional(),
+    workspaceId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
+    targetId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
+    subject: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("access-profile"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
+      z.object({ kind: z.literal("server"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
+    ]),
+    operation: z
+      .object({
+        kind: z.literal("tool"),
+        id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
+        serverId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS).optional(),
+      })
+      .strict(),
+    normalizedArgs: z.string().max(MAX_PERMISSION_KEY_CHARS),
+    contentTrustEpoch: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
+    addedAt: z.string().max(64).optional(),
   })
   .strict();
 
-export const resolveRunPlanRequest = z.object({ runId: id, decision: approvalDecision }).strict();
-export const resolveRunToolRequest = z.object({ runId: id, approvalId: id, decision: approvalDecision }).strict();
-
-// The workers library
-// A worker is a reusable agent definition the coordinator may assign to a plan task: its own model, system
-// prompt and tool policy. Definitions are USER-AUTHORED and live host-side; a run references them by id only
-// (see startRunRequest.workerIds), so nothing renderer-side can inject a policy into a run.
-export const workerToolPolicyMode = z.enum(["all", "ask", "granular"]);
-
-// Where a worker's tools execute. The union grows by adding members; a stored {kind:"host"} record is unaffected.
-// A container/sandbox whose connection is an SSH (*_REMOTE) connection IS the remote-container case — the
-// transport wraps argv in `ssh … --`, so no separate remote-container kind is needed.
+// Where the assistant's tools execute. A target is a CONTAINER — either one already running or a disposable one —
+// and the connection is HOW it is reached, never a target of its own. Connections are this app's core principle: a
+// local engine, a machine VM, WSL and an SSH host are all reached the same way, and a container on an SSH
+// (*_REMOTE) connection IS the remote case, because the transport wraps argv in `ssh … --`.
 const executionRef = z.string().trim().min(1).max(MAX_TITLE_CHARS);
-export const workerExecutionTarget = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("host") }).strict(),
-  z.object({ kind: z.literal("remote"), connectionId: id }).strict(),
+export const executionTarget = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("container"), connectionId: id, containerId: executionRef }).strict(),
   z.object({ kind: z.literal("sandbox"), connectionId: id, image: executionRef }).strict(),
 ]);
@@ -181,8 +143,12 @@ const workspaceChangeEntrySchema = z
   })
   .strict();
 
+// Where the change set was READ, which is not an execution target: the app reads its own workspace folder, and only
+// a session's container origin is one of the two target shapes.
+const workspaceChangeOrigin = z.union([z.object({ kind: z.literal("app") }).strict(), executionTarget]);
+
 const workspaceChangeLocationSchema = {
-  target: workerExecutionTarget,
+  origin: workspaceChangeOrigin,
   workspaceRoot: z.string().min(1).max(8_192),
 };
 
@@ -242,63 +208,6 @@ export const workspaceDiffSchema = z.discriminatedUnion("state", [
     })
     .strict(),
 ]);
-
-export const workerDefinition = z
-  .object({
-    id,
-    name: z.string().trim().min(1, "AI: a worker needs a name").max(MAX_WORKER_NAME_CHARS),
-    // An opaque avatar reference — a shipped preset id or a custom library id. NEVER a preset/image copy, and it
-    // MUST NOT be projected into the coordinator roster (see rosterBlock): the model never sees avatar bytes.
-    avatarId: id.optional(),
-    // One line describing what this worker is good at. Goes into the coordinator's roster, so it is what the
-    // model actually reads when deciding which worker a task belongs to.
-    specialty: z.string().trim().max(MAX_WORKER_SPECIALTY_CHARS),
-    systemPrompt: z.string().max(MAX_WORKER_PROMPT_CHARS),
-    providerId: optionalProvider,
-    model,
-    toolPolicy: z
-      .object({
-        mode: workerToolPolicyMode,
-        // Tool ids, consulted only when mode is "granular". Bounded opaque strings: validating them against the
-        // real tool unions belongs in the editor UI, which can enumerate both toolsets.
-        allowed: z.array(z.string().trim().min(1).max(MAX_TITLE_CHARS)).max(MAX_WORKER_ALLOWED_TOOLS),
-      })
-      .strict(),
-    execution: workerExecutionTarget,
-    createdAt: z.number().int().nonnegative(),
-    updatedAt: z.number().int().nonnegative(),
-  })
-  .strict();
-
-export const workerFileSchema = z
-  .object({ version: z.literal(1), workers: z.array(workerDefinition).max(MAX_WORKERS) })
-  .strict();
-
-export const saveWorkerRequest = z.object({ worker: workerDefinition }).strict();
-export const removeWorkerRequest = z.object({ id }).strict();
-export const workersResult = z.object({ workers: z.array(workerDefinition).max(MAX_WORKERS) }).strict();
-
-// The avatar library — custom uploaded faces (presets are shipped assets, never stored). dataUrl is a downscaled
-// inline image; the regex + byte cap are the trust boundary that keeps an arbitrary/oversized string out of the file.
-export const avatarRecord = z
-  .object({
-    id,
-    name: z.string().trim().min(1, "AI: an avatar needs a name").max(MAX_AVATAR_NAME_CHARS),
-    dataUrl: z
-      .string()
-      .max(MAX_AVATAR_DATA_URL_BYTES, "AI: the avatar image is too large")
-      .regex(/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/, "AI: unsupported avatar image"),
-    createdAt: z.number().int().nonnegative(),
-  })
-  .strict();
-
-export const avatarFileSchema = z
-  .object({ version: z.literal(1), avatars: z.array(avatarRecord).max(MAX_AVATARS) })
-  .strict();
-
-export const saveAvatarRequest = z.object({ avatar: avatarRecord }).strict();
-export const removeAvatarRequest = z.object({ id }).strict();
-export const avatarsResult = z.object({ avatars: z.array(avatarRecord).max(MAX_AVATARS) }).strict();
 
 const skillFingerprint = z.string().regex(/^[a-f0-9]{64}$/u);
 const skillSource = z.discriminatedUnion("kind", [
@@ -428,6 +337,52 @@ export const projectContextSnapshotSchema = z.discriminatedUnion("state", [
     .strict(),
 ]);
 
+// One container operation the agent asked the app to run. The op name is validated against the real container
+// tool list by the dispatcher, so this only has to bound the strings; `args` stays open because twenty-one
+// operations take twenty-one argument shapes and restating them here would be a second source of truth.
+const engineOpRequest = z
+  .object({
+    op: z.string().min(1).max(MAX_TITLE_CHARS),
+    args: z.record(z.string(), z.unknown()).optional(),
+    // The connection the asking session runs on, used only when the operation did not name one.
+    defaultConnectionId: z.string().max(MAX_ID_CHARS).optional(),
+  })
+  .strict();
+
+// Answered as a value, not by throwing: a blocked agent is waiting on this, so a failure has to come back as a
+// reason it can act on rather than a rejected invoke the renderer would have to translate. Shared by every
+// operation the app performs for the agent — an engine one and a workspace one answer the same way.
+const hostOpResult = z.union([
+  z.object({ ok: z.literal(true), value: z.unknown().optional() }).strict(),
+  z.object({ ok: z.literal(false), error: z.string().max(MAX_ENGINE_OP_ERROR_CHARS) }).strict(),
+]);
+
+// One workspace file or command operation the agent asked the app to perform. `target` travels with every call
+// rather than being remembered here: the broker stays stateless about which session is which, and a request that
+// names no target cannot be served at all — which is what keeps an unchosen target from defaulting to this machine.
+// `runId` is what scopes the container workspace root and labels a sandbox, so two sessions never collide.
+const workspaceOpRequest = z
+  .object({
+    op: z.string().min(1).max(MAX_TITLE_CHARS),
+    args: z.record(z.string(), z.unknown()).optional(),
+    target: executionTarget,
+    runId: z.string().min(1).max(MAX_ID_CHARS),
+  })
+  .strict();
+
+// Release everything a session's targets built — above all a sandbox container, which exists only for that run.
+const workspaceReleaseRequest = z.object({ runId: z.string().min(1).max(MAX_ID_CHARS) }).strict();
+
+// One public-web query. Bounded because it is model-authored text on its way to a URL; the adapter redacts it
+// before it leaves the device and rejects an empty one.
+const webSearchRequest = z.object({ query: z.string().trim().min(1).max(MAX_TITLE_CHARS) }).strict();
+
+// The page text the agent reads. Bounded ABOVE the adapter's own 96 KB download cap rather than at the
+// model-facing text limit: a legitimate result must not be rejected here, and pi already truncates long tool
+// output inside the container — writing the full text to a file the card can read back — so the model-facing
+// decision belongs there and not in this channel.
+const webSearchResult = z.object({ text: z.string().max(128 * 1024) }).strict();
+
 export const invokeSchemas = {
   [AI_CHANNELS.status]: empty,
   [AI_CHANNELS.diagnostics]: z.object({ providerId: optionalProvider }).strict(),
@@ -444,56 +399,52 @@ export const invokeSchemas = {
     })
     .strict(),
   [AI_CHANNELS.keyClear]: z.object({ provider }).strict(),
-  [AI_CHANNELS.threadList]: empty,
-  [AI_CHANNELS.threadCreate]: z
+  // The file name is session-scoped, not a path: the host decides where its private agent directory is, so a
+  // caller cannot aim this write anywhere else.
+  [AI_CHANNELS.agentGatewayEnv]: z
     .object({
-      id,
-      title: z.string().trim().min(1).max(MAX_TITLE_CHARS),
-      providerId: optionalProvider,
-      model,
-      accessProfile: accessProfileId.optional(),
-      reasoningLevel: reasoningLevel.optional(),
+      provider,
+      fileName: z
+        .string()
+        .trim()
+        .min(1)
+        .max(128)
+        .regex(/^[a-zA-Z0-9._-]+\.env$/, "AI: the gateway env file name must be a simple <name>.env"),
+      baseUrl: z.url().max(2048),
+      bridgeToken: z.string().trim().min(1).max(256),
+      gatewayPort: z.number().int().positive().max(65535),
     })
     .strict(),
-  [AI_CHANNELS.threadRename]: z.object({ threadId: id, title: z.string().trim().min(1).max(MAX_TITLE_CHARS) }).strict(),
-  [AI_CHANNELS.threadConfigure]: z
+  // The refresh run's env file. Same naming rule, and the credential is never described by the caller — only which
+  // provider's it is.
+  [AI_CHANNELS.authRefreshEnv]: z
     .object({
-      threadId: id,
-      accessProfile: accessProfileId.optional(),
-      reasoningLevel: reasoningLevel.optional(),
-    })
-    .strict()
-    .refine((request) => request.accessProfile !== undefined || request.reasoningLevel !== undefined, {
-      message: "AI: Thread configuration is empty",
-    }),
-  [AI_CHANNELS.threadBranchPreview]: threadId,
-  [AI_CHANNELS.threadBranch]: z
-    .object({
-      threadId: id,
-      checkpointId: id,
-      title: z.string().trim().min(1).max(MAX_TITLE_CHARS),
+      provider,
+      fileName: z
+        .string()
+        .trim()
+        .min(1)
+        .max(128)
+        .regex(/^[a-zA-Z0-9._-]+\.env$/, "AI: the auth env file name must be a simple <name>.env"),
+      bridgeToken: z.string().trim().min(1).max(256),
+      bridgePort: z.number().int().positive().max(65535),
     })
     .strict(),
-  [AI_CHANNELS.threadCompactionPreview]: threadId,
-  [AI_CHANNELS.threadCompact]: z
+  [AI_CHANNELS.agentEnvFile]: z
     .object({
-      threadId: id,
-      revision: z
-        .object({
-          lastSeq: z.number().int().nonnegative(),
-          modelHistoryLength: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-          activeCompactionId: id.optional(),
-        })
-        .strict(),
-      instructions: z.string().trim().min(1).max(MAX_THREAD_COMPACTION_INSTRUCTIONS_CHARS).optional(),
+      // The same naming rule as the gateway's: a simple <name>.env, never a path. Both writers refuse anything else
+      // in the native realm too — this is the first of the two checks, not the only one.
+      fileName: z
+        .string()
+        .trim()
+        .min(1)
+        .max(128)
+        .regex(/^[a-zA-Z0-9._-]+\.env$/, "AI: the agent env file name must be a simple <name>.env"),
+      // The whole env body. Bounded well above what the agent needs, and far below anything that would be a file
+      // rather than an environment.
+      contents: z.string().min(1).max(65536),
     })
     .strict(),
-  [AI_CHANNELS.threadSubmit]: submitThreadRequest,
-  [AI_CHANNELS.threadResolveApproval]: resolveThreadApprovalRequest,
-  [AI_CHANNELS.threadStop]: threadId,
-  [AI_CHANNELS.threadSnapshot]: threadId,
-  [AI_CHANNELS.toolArtifactGet]: z.object({ threadId: id, artifactId: id }).strict(),
-  [AI_CHANNELS.threadDelete]: threadId,
   [AI_CHANNELS.changesStatus]: empty,
   [AI_CHANNELS.changesDiff]: empty,
   [AI_CHANNELS.projectContextSnapshot]: empty,
@@ -503,21 +454,17 @@ export const invokeSchemas = {
   [AI_CHANNELS.projectMemoryRemove]: z.object({ id }).strict(),
   [AI_CHANNELS.projectMemoryClear]: empty,
   [AI_CHANNELS.projectMemoryImport]: z.string().max(PROJECT_CONTEXT_LIMITS.storeBytes),
-  [AI_CHANNELS.runStart]: startRunRequest,
-  [AI_CHANNELS.runCancel]: runRef,
-  [AI_CHANNELS.runApprovePlan]: resolveRunPlanRequest,
-  [AI_CHANNELS.runApproveTool]: resolveRunToolRequest,
-  [AI_CHANNELS.runSnapshot]: runRef,
-  [AI_CHANNELS.runList]: empty,
-  [AI_CHANNELS.workersList]: empty,
-  [AI_CHANNELS.workersSave]: saveWorkerRequest,
-  [AI_CHANNELS.workersRemove]: removeWorkerRequest,
-  [AI_CHANNELS.avatarsList]: empty,
-  [AI_CHANNELS.avatarsSave]: saveAvatarRequest,
-  [AI_CHANNELS.avatarsRemove]: removeAvatarRequest,
   [AI_CHANNELS.modelsList]: z.object({ providerId: optionalProvider, requestId: id }).strict(),
   [AI_CHANNELS.modelsCancel]: z.object({ requestId: id }).strict(),
+  [AI_CHANNELS.modelWindow]: z
+    .object({ providerId: optionalProvider, model: z.string().trim().min(1).max(MAX_MODEL_CHARS) })
+    .strict(),
+  [AI_CHANNELS.engineOp]: engineOpRequest,
+  [AI_CHANNELS.workspaceOp]: workspaceOpRequest,
+  [AI_CHANNELS.workspaceRelease]: workspaceReleaseRequest,
+  [AI_CHANNELS.webSearch]: webSearchRequest,
   [AI_CHANNELS.permissionsList]: empty,
+  [AI_CHANNELS.permissionsAdd]: z.object({ list: permissionsList, rule: permissionRule }).strict(),
   [AI_CHANNELS.permissionsRemove]: z
     .object({ list: permissionsList, key: z.string().max(MAX_PERMISSION_KEY_CHARS) })
     .strict(),
@@ -529,7 +476,6 @@ export const invokeSchemas = {
     .strict(),
   [AI_CHANNELS.skillsInvoke]: z
     .object({
-      threadId: id,
       skillId: id,
       expectedFingerprint: skillFingerprint,
       arguments: z.string().max(SKILL_LIMITS.argumentBytes),
@@ -537,9 +483,9 @@ export const invokeSchemas = {
     .strict(),
 } satisfies Record<AIInvokeChannel, z.ZodType>;
 
-export const threadPhase = z.enum(["idle", "model", "tool", "interrupting", "awaiting-approval", "stopping", "error"]);
+export const sessionPhase = z.enum(["idle", "model", "tool", "interrupting", "awaiting-approval", "stopping", "error"]);
 const ok = z.object({ ok: z.literal(true) }).strict();
-export const threadSummarySchema = z
+export const sessionSummarySchema = z
   .object({
     id,
     title: z.string().max(MAX_TITLE_CHARS),
@@ -548,16 +494,14 @@ export const threadSummarySchema = z
     updatedAt: z.number().nonnegative(),
     providerId: optionalProvider,
     model,
-    accessProfile: accessProfileId.optional(),
-    reasoningLevel: reasoningLevel.optional(),
-    phase: threadPhase,
+    phase: sessionPhase,
     lastSeq: z.number().int().nonnegative(),
   })
   .strict();
 const args = z.record(z.string(), z.unknown());
 const assistantMessageStatus = z.enum(["streaming", "complete", "interrupted", "stopped", "error"]);
 const userMessageDelivery = z.enum(["queued", "applied", "discarded"]);
-const threadErrorScope = z.enum(["submit", "model", "tool", "approval", "session"]);
+const sessionErrorScope = z.enum(["submit", "model", "tool", "approval", "session"]);
 const skillInvocationProvenance = z
   .object({
     skillId: id,
@@ -597,6 +541,8 @@ const effectiveContext = z
           status: z.literal("known"),
           maxInputTokens: z.number().int().nonnegative(),
           reservedOutputTokens: z.number().int().nonnegative(),
+          // Whether that reservation is the provider's published cap or our own default standing in for one.
+          reservedFromProvider: z.boolean(),
         })
         .strict(),
     ]),
@@ -643,7 +589,7 @@ const effectiveContext = z
     truncation: z.object({ applied: z.boolean(), omittedMessages: z.number().int().nonnegative() }).strict(),
   })
   .strict();
-const threadUsage = z
+const sessionUsage = z
   .object({
     requests: z.number().int().nonnegative(),
     inputTokens: z.number().int().nonnegative(),
@@ -674,7 +620,6 @@ const timelineItem = z.discriminatedUnion("kind", [
       status: z.enum(["running", "complete", "error"]),
       ok: z.boolean().optional(),
       result: z.unknown().optional(),
-      artifact: toolArtifactReferenceSchema.optional(),
       message: z.string().max(MAX_AI_TEXT_CHARS).optional(),
     })
     .strict(),
@@ -702,8 +647,11 @@ const timelineItem = z.discriminatedUnion("kind", [
     })
     .strict(),
   z
-    .object({ kind: z.literal("error"), id, scope: threadErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) })
+    .object({ kind: z.literal("error"), id, scope: sessionErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) })
     .strict(),
+  // Something the TURN did that the transcript would otherwise have nothing to show for. A code, not prose: the
+  // projector is pure and cannot translate, so the renderer owns the words.
+  z.object({ kind: z.literal("notice"), id, notice: z.enum(["empty-answer", "output-cap"]) }).strict(),
   z
     .object({
       kind: z.literal("workspace-changes"),
@@ -711,17 +659,29 @@ const timelineItem = z.discriminatedUnion("kind", [
       ...workspaceChangeSummarySchema.shape,
     })
     .strict(),
+  // Data a plugin published for the GUI: `pi.appendEntry` or a custom `pi.sendMessage`. The customType is
+  // the card key, and `data` is the plugin's own payload — unknown by design, rendered as inspectable JSON
+  // until a card claims that type.
+  z
+    .object({
+      kind: z.literal("data"),
+      id,
+      customType: z.string().min(1).max(MAX_TITLE_CHARS),
+      data: z.unknown().optional(),
+      text: z.string().max(MAX_AI_TEXT_CHARS).optional(),
+    })
+    .strict(),
 ]);
-export const threadView = z
+export const sessionView = z
   .object({
-    threadId: id,
-    phase: threadPhase,
+    sessionId: id,
+    phase: sessionPhase,
     activeTaskId: id.optional(),
     activeSegmentId: id.optional(),
     lastSeq: z.number().int().nonnegative(),
-    timeline: z.array(timelineItem).max(MAX_THREAD_TIMELINE_ITEMS),
+    timeline: z.array(timelineItem).max(MAX_SESSION_TIMELINE_ITEMS),
     context: effectiveContext.optional(),
-    usage: threadUsage.optional(),
+    usage: sessionUsage.optional(),
     streamingAssistant: z
       .object({ id, timelineIndex: z.number().int().nonnegative(), content: z.string().max(MAX_AI_TEXT_CHARS) })
       .strict()
@@ -729,241 +689,6 @@ export const threadView = z
   })
   .strict();
 
-function streamingPointerConsistent(view: z.infer<typeof threadView>): boolean {
-  const streaming = view.streamingAssistant;
-  if (!streaming) return true;
-  const item = view.timeline[streaming.timelineIndex];
-  return (
-    item?.kind === "message" && item.role === "assistant" && item.status === "streaming" && item.id === streaming.id
-  );
-}
-
-function withinRecordBytes(record: unknown): boolean {
-  try {
-    return JSON.stringify(record).length <= MAX_THREAD_RECORD_BYTES;
-  } catch {
-    return false;
-  }
-}
-
-// Durable thread record/file. Reuses threadView and adds the cross-field invariants the hand-written
-// validators used to enforce: view.threadId === id, a consistent streaming-assistant pointer, and a
-// per-record serialized-byte ceiling. parseThreadFile layers on the text-byte and unique-id checks.
-export const threadCheckpointSchema = z
-  .object({
-    id,
-    messageId: id,
-    createdAt: z.number().nonnegative(),
-    timelineLength: z.number().int().positive().max(MAX_THREAD_TIMELINE_ITEMS),
-    modelHistoryLength: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-  })
-  .strict();
-
-export const threadLineageSchema = z
-  .object({
-    parentThreadId: id,
-    parentCheckpointId: id,
-  })
-  .strict();
-
-export const threadCompactionSourceSchema = z
-  .object({
-    historyStart: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-    historyEnd: z.number().int().positive().max(MAX_THREAD_MODEL_MESSAGES),
-    messageStartId: id,
-    messageEndId: id,
-  })
-  .strict();
-
-export const threadCompactionSchema = z
-  .object({
-    id,
-    createdAt: z.number().nonnegative(),
-    source: threadCompactionSourceSchema,
-    summary: z.string().trim().min(1).max(MAX_THREAD_COMPACTION_SUMMARY_CHARS),
-    instructions: z.string().trim().min(1).max(MAX_THREAD_COMPACTION_INSTRUCTIONS_CHARS).optional(),
-    providerId: optionalProvider,
-    model,
-    inputTokens: z.number().int().nonnegative(),
-    outputTokens: z.number().int().nonnegative(),
-    fingerprint: z.string().regex(/^[a-f0-9]{64}$/u),
-    contentTrust: z.enum(["application", "external", "user", "project"]),
-    tainted: z.boolean(),
-  })
-  .strict()
-  .refine((artifact) => artifact.source.historyStart < artifact.source.historyEnd, {
-    message: "AI: Thread compaction source range is empty",
-  })
-  .refine((artifact) => artifact.tainted || !["external", "project"].includes(artifact.contentTrust), {
-    message: "AI: untrusted Thread compaction must remain tainted",
-  });
-
-const threadRecordShape = z
-  .object({
-    version: z.literal(5),
-    id,
-    title: z.string().max(MAX_TITLE_CHARS),
-    titleOrigin: z.enum(["default", "message", "user"]).optional(),
-    createdAt: z.number().nonnegative(),
-    updatedAt: z.number().nonnegative(),
-    providerId: optionalProvider,
-    model,
-    accessProfile: accessProfileId,
-    reasoningLevel,
-    view: threadView,
-    // Canonical AI-SDK model messages are opaque to core: bounded JSON only, never the AI SDK's own shapes.
-    modelHistory: z.array(z.unknown()).max(MAX_THREAD_MODEL_MESSAGES),
-    checkpoints: z.array(threadCheckpointSchema).max(MAX_THREAD_TIMELINE_ITEMS),
-    lineage: threadLineageSchema.optional(),
-    compactions: z.array(threadCompactionSchema).max(MAX_THREAD_COMPACTIONS),
-    activeCompactionId: id.optional(),
-  })
-  .strict();
-
-function checkpointsConsistent(record: z.infer<typeof threadRecordShape>): boolean {
-  if (new Set(record.checkpoints.map((checkpoint) => checkpoint.id)).size !== record.checkpoints.length) return false;
-  let timelineLength = 0;
-  let modelHistoryLength = 0;
-  for (const checkpoint of record.checkpoints) {
-    if (
-      checkpoint.timelineLength < timelineLength ||
-      checkpoint.modelHistoryLength < modelHistoryLength ||
-      checkpoint.timelineLength > record.view.timeline.length ||
-      checkpoint.modelHistoryLength > record.modelHistory.length
-    ) {
-      return false;
-    }
-    const boundary = record.view.timeline[checkpoint.timelineLength - 1];
-    if (boundary?.kind !== "message" || boundary.id !== checkpoint.messageId || boundary.delivery !== "applied") {
-      return false;
-    }
-    timelineLength = checkpoint.timelineLength;
-    modelHistoryLength = checkpoint.modelHistoryLength;
-  }
-  return true;
-}
-
-function compactionsConsistent(record: z.infer<typeof threadRecordShape>): boolean {
-  if (new Set(record.compactions.map(({ id: compactionId }) => compactionId)).size !== record.compactions.length) {
-    return false;
-  }
-  if (
-    record.activeCompactionId &&
-    !record.compactions.some(({ id: compactionId }) => compactionId === record.activeCompactionId)
-  ) {
-    return false;
-  }
-  let historyEnd = 0;
-  for (const compaction of record.compactions) {
-    if (compaction.source.historyEnd < historyEnd || compaction.source.historyEnd > record.modelHistory.length)
-      return false;
-    const checkpoint = record.checkpoints.find(
-      (candidate) =>
-        candidate.modelHistoryLength === compaction.source.historyEnd &&
-        candidate.messageId === compaction.source.messageEndId,
-    );
-    const start = record.view.timeline.find(
-      (item) => item.kind === "message" && item.id === compaction.source.messageStartId && item.delivery === "applied",
-    );
-    if (!checkpoint || !start) return false;
-    historyEnd = compaction.source.historyEnd;
-  }
-  return true;
-}
-
-export const threadRecordSchema = threadRecordShape
-  .refine((record) => record.view.threadId === record.id, { message: "AI: thread view/session id mismatch" })
-  .refine((record) => streamingPointerConsistent(record.view), { message: "AI: streaming pointer inconsistent" })
-  .refine(checkpointsConsistent, { message: "AI: Thread checkpoints are inconsistent" })
-  .refine(compactionsConsistent, { message: "AI: Thread compactions are inconsistent" })
-  .refine(withinRecordBytes, { message: "AI: thread record exceeds size limit" });
-
-export const threadFileSchema = z
-  .object({
-    version: z.literal(5),
-    records: z.array(threadRecordSchema).max(MAX_RETAINED_THREADS),
-  })
-  .strict()
-  .refine((file) => new Set(file.records.map((record) => record.id)).size === file.records.length, {
-    message: "AI: duplicate thread id",
-  });
-
-export const threadBranchPreviewSchema = z
-  .object({
-    source: threadSummarySchema,
-    checkpoints: z.array(threadCheckpointSchema).max(MAX_THREAD_TIMELINE_ITEMS),
-    bindings: z
-      .object({
-        providerId: optionalProvider,
-        model,
-        workspaceRoot: z.string().max(MAX_PERMISSION_KEY_CHARS).optional(),
-        permissionMode: z.enum(["ask", "remember", "allow"]),
-        contextPolicy: z.literal("application"),
-        target: z.literal("host"),
-      })
-      .strict(),
-    environmentRestored: z.literal(false),
-  })
-  .strict();
-
-export const threadBranchResultSchema = z.object({ thread: threadSummarySchema, view: threadView }).strict();
-
-const threadCompactionRevisionSchema = z
-  .object({
-    lastSeq: z.number().int().nonnegative(),
-    modelHistoryLength: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-    activeCompactionId: id.optional(),
-  })
-  .strict();
-
-const threadCompactionPlanSchema = z
-  .object({
-    source: threadCompactionSourceSchema,
-    sourceHistoryMessages: z.number().int().positive().max(MAX_THREAD_MODEL_MESSAGES),
-    retainedHistoryMessages: z.number().int().nonnegative().max(MAX_THREAD_MODEL_MESSAGES),
-    replacesCompactionId: id.optional(),
-    revision: threadCompactionRevisionSchema,
-  })
-  .strict()
-  .refine((plan) => plan.sourceHistoryMessages === plan.source.historyEnd - plan.source.historyStart, {
-    message: "AI: Thread compaction source count is inconsistent",
-  });
-
-const threadCompactionPreviewSchema = z
-  .object({
-    thread: threadSummarySchema,
-    plan: threadCompactionPlanSchema,
-    providerId: provider,
-    model,
-    active: threadCompactionSchema.optional(),
-  })
-  .strict();
-
-const threadCompactionExecutionResultSchema = z
-  .object({ thread: threadSummarySchema, view: threadView, compaction: threadCompactionSchema })
-  .strict();
-
-export const permissionRule = z
-  .object({
-    workspaceId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
-    targetId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
-    subject: z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("access-profile"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
-      z.object({ kind: z.literal("worker"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
-      z.object({ kind: z.literal("server"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
-    ]),
-    operation: z
-      .object({
-        kind: z.literal("tool"),
-        id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
-        serverId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS).optional(),
-      })
-      .strict(),
-    normalizedArgs: z.string().max(MAX_PERMISSION_KEY_CHARS),
-    contentTrustEpoch: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
-    addedAt: z.string().max(64).optional(),
-  })
-  .strict();
 export const permissionsSnapshot = z
   .object({
     version: z.string().max(64),
@@ -974,257 +699,37 @@ export const permissionsSnapshot = z
   })
   .strict();
 
-export const submitThreadResult = z
+export const submitSessionResult = z
   .object({
     accepted: z.literal(true),
-    threadId: id,
+    sessionId: id,
     taskId: id,
     mode: z.enum(["started", "interrupting", "queued", "duplicate"]),
-    phase: threadPhase,
+    phase: sessionPhase,
   })
   .strict();
-export const resolveThreadApprovalResult = z.object({ accepted: z.boolean(), phase: threadPhase }).strict();
+export const resolveSessionApprovalResult = z.object({ accepted: z.boolean(), phase: sessionPhase }).strict();
 
-// Run projection. Where chat folds into a linear timeline, a Run folds into a task DAG: `dependsOn` carries
-// the edges, and the renderer lays the graph out from them. Task output is the per-agent transcript, kept on the
-// task rather than in a parallel structure so one seq-ordered event stream drives the whole view.
-export const runPhase = z.enum([
-  "idle",
-  "planning",
-  "awaiting-plan",
-  "running",
-  "synthesizing",
-  "cancelling",
-  "stopped",
-  "done",
-  "error",
-]);
-// "awaiting-approval" is a VIEW-only status: the scheduler still counts the task as running (its worker is
-// in-flight, holding a concurrency slot), but the DAG shows it blocked so the user can see what to act on.
-const runTaskStatus = z.enum(["pending", "running", "awaiting-approval", "complete", "failed", "skipped"]);
-const runErrorScope = z.enum(["start", "plan", "task", "synthesis", "run"]);
-const runMoney = z.object({ amount: z.number().nonnegative(), currency: z.string().trim().min(1).max(16) }).strict();
-// BOTH runTask and runTaskView carry `workerId`, and they must change together. The reducer spreads a plan task
-// straight into the view ({...task, status, output}), and the push-validation failure at the client bridge is
-// swallowed by design — so a workerId present on one schema and absent from the other would silently drop
-// `plan-ready` and leave the screen stuck in "planning" with no error anywhere.
-const runTask = z
+// A resolved skill, rendered but not yet sent. The host owns resolution — the trust check, the fingerprint
+// match and the prompt template — and the renderer owns submission, because the agent lives on the pi bridge
+// rather than behind this broker.
+export const skillInvocationResult = z
   .object({
-    id,
-    title: z.string().max(MAX_TITLE_CHARS),
-    description: z.string().max(MAX_RUN_TASK_DESCRIPTION_CHARS),
-    dependsOn: z.array(id).max(MAX_RUN_TASKS),
-    agent: z.string().max(MAX_TITLE_CHARS),
-    // Set when the run supplied a roster: which library worker carries this task out.
-    workerId: id.optional(),
+    prompt: z.string().max(SKILL_LIMITS.renderedPromptBytes),
+    displayContent: z.string().max(MAX_TITLE_CHARS),
+    skill: z
+      .object({
+        skillId: id,
+        command: z.string().max(MAX_TITLE_CHARS),
+        source: z.enum(["bundled", "user", "project"]),
+        fingerprint: skillFingerprint,
+      })
+      .strict(),
+    // The skill's declared `allowed-tools`, absent when it declared none.
+    allowedTools: z.array(z.string().trim().min(1).max(MAX_TITLE_CHARS)).max(MAX_ALLOWED_TOOLS).optional(),
+    // The source is not one the user has vouched for, so its instructions are untrusted for the turn.
+    initialTaint: z.boolean().optional(),
   })
-  .strict();
-const runTaskView = z
-  .object({
-    id,
-    title: z.string().max(MAX_TITLE_CHARS),
-    description: z.string().max(MAX_RUN_TASK_DESCRIPTION_CHARS),
-    dependsOn: z.array(id).max(MAX_RUN_TASKS),
-    agent: z.string().max(MAX_TITLE_CHARS),
-    workerId: id.optional(),
-    status: runTaskStatus,
-    output: z.string().max(MAX_RUN_TASK_OUTPUT_CHARS),
-    error: z.string().max(MAX_AI_TEXT_CHARS).optional(),
-    // The model that ACTUALLY ran this task (resolved per-worker at dispatch, folded from the task-started event).
-    // Only on the VIEW — the plan task (runTask) has no model, it is chosen when the task is dispatched. Absent
-    // until the task starts; the UI-level multi-inference proof asserts ≥2 distinct values across completed tasks.
-    model,
-    provider: z.string().max(MAX_TITLE_CHARS).optional(),
-    inputTokens: z.number().int().nonnegative().optional(),
-    outputTokens: z.number().int().nonnegative().optional(),
-    cost: runMoney.optional(),
-    startedAt: z.number().int().nonnegative().optional(),
-    endedAt: z.number().int().nonnegative().optional(),
-    durationMs: z.number().nonnegative().optional(),
-    toolCalls: z.number().int().nonnegative().optional(),
-    toolResults: z
-      .array(
-        z
-          .object({
-            toolCallId: id,
-            tool: id,
-            title: z.string().max(MAX_TITLE_CHARS),
-            args,
-            ok: z.boolean(),
-            result: z.unknown(),
-          })
-          .strict(),
-      )
-      .max(MAX_RUN_TASK_TOOL_RESULTS)
-      .optional(),
-    retries: z.number().int().nonnegative().optional(),
-  })
-  .strict();
-// Cumulative run totals, not per-turn deltas — the reducer replaces rather than accumulates, so a dropped or
-// replayed usage event can never double-count the budget the cost cap is enforced against.
-const runUsage = z
-  .object({ inputTokens: z.number().int().nonnegative(), outputTokens: z.number().int().nonnegative() })
-  .strict();
-const runSpanStatus = z.enum([
-  "running",
-  "ok",
-  "error",
-  "cancelled",
-  "timeout",
-  "budget_exhausted",
-  "rejected",
-  "skipped",
-  "unknown",
-]);
-const runSpanView = z
-  .object({
-    key: id,
-    traceId: id,
-    spanId: id,
-    parentKey: id.optional(),
-    attempt: z.number().int().positive(),
-    kind: z.string().trim().min(1).max(64),
-    name: z.string().trim().min(1).max(MAX_TITLE_CHARS),
-    status: runSpanStatus,
-    incomplete: z.boolean(),
-    startUnixMs: z.number().int().nonnegative().optional(),
-    endUnixMs: z.number().int().nonnegative().optional(),
-    durationMs: z.number().nonnegative().optional(),
-    agent: z.string().max(MAX_TITLE_CHARS).optional(),
-    taskId: id.optional(),
-    taskTitle: z.string().max(MAX_TITLE_CHARS).optional(),
-    model,
-    provider: z.string().max(MAX_TITLE_CHARS).optional(),
-    tool: id.optional(),
-    phase: z.string().max(64).optional(),
-    inputTokens: z.number().int().nonnegative().optional(),
-    outputTokens: z.number().int().nonnegative().optional(),
-    cost: runMoney.optional(),
-    retries: z.number().int().nonnegative().optional(),
-    error: z.string().max(MAX_AI_TEXT_CHARS).optional(),
-  })
-  .strict();
-const runSpanUpdate = z.object({ type: z.enum(["open", "close"]), span: runSpanView }).strict();
-// Workers run in parallel, so several can be blocked on a tool approval at once — hence a LIST, not a single
-// pending approval the way the linear chat timeline can assume.
-const runApproval = z
-  .object({
-    approvalId: id,
-    taskId: id,
-    toolCallId: id,
-    tool: id,
-    title: z.string().max(MAX_TITLE_CHARS),
-    args,
-    reason: z.string().max(MAX_AI_TEXT_CHARS),
-    status: z.enum(["pending", "allowed", "rejected"]),
-  })
-  .strict();
-
-export const runView = z
-  .object({
-    runId: id,
-    goal: z.string().max(MAX_GOAL_CHARS),
-    phase: runPhase,
-    lastSeq: z.number().int().nonnegative(),
-    tasks: z.array(runTaskView).max(MAX_RUN_TASKS),
-    spans: z.array(runSpanView).max(MAX_RUN_SPANS),
-    spanBytes: z.number().int().nonnegative().max(MAX_RUN_SPAN_BYTES).optional(),
-    droppedSpanRecords: z.number().int().nonnegative().optional(),
-    approvals: z.array(runApproval).max(MAX_RUN_TASKS),
-    synthesis: z.string().max(MAX_RUN_SYNTHESIS_CHARS),
-    usage: runUsage,
-    // The run's token budget (the cap `usage` is spent against). Threaded from the run's settings via the usage
-    // event so the UI can render "spent / cap"; absent until the first usage event, then exact.
-    maxTokens: z.number().int().positive().max(MAX_RUN_TOKEN_BUDGET).optional(),
-    // The run-level failure (planning/synthesis/transport), so the error screen can say WHY it failed and offer a
-    // way out — a task-scoped fault is recorded on the task instead. Set when phase becomes "error".
-    error: z
-      .object({ scope: runErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) })
-      .strict()
-      .optional(),
-    planPending: z.boolean(),
-  })
-  .strict();
-
-export const startRunResult = z.object({ accepted: z.literal(true), runId: id, phase: runPhase }).strict();
-export const resolveRunPlanResult = z.object({ accepted: z.boolean(), phase: runPhase }).strict();
-
-export const runEvent = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("phase-changed"), phase: runPhase }).strict(),
-  z.object({ type: z.literal("plan-ready"), tasks: z.array(runTask).max(MAX_RUN_TASKS) }).strict(),
-  z.object({ type: z.literal("plan-resolved"), decision: approvalDecision }).strict(),
-  z.object({ type: z.literal("task-started"), taskId: id, model }).strict(),
-  z.object({ type: z.literal("task-delta"), taskId: id, text: z.string().max(MAX_RUN_TASK_OUTPUT_CHARS) }).strict(),
-  z.object({ type: z.literal("task-completed"), taskId: id }).strict(),
-  z.object({ type: z.literal("task-failed"), taskId: id, message: z.string().max(MAX_AI_TEXT_CHARS) }).strict(),
-  z.object({ type: z.literal("task-skipped"), taskId: id, reason: z.string().max(MAX_AI_TEXT_CHARS) }).strict(),
-  z
-    .object({
-      type: z.literal("task-metrics"),
-      taskId: id,
-      model,
-      provider: z.string().max(MAX_TITLE_CHARS).optional(),
-      inputTokens: z.number().int().nonnegative().optional(),
-      outputTokens: z.number().int().nonnegative().optional(),
-      cost: runMoney.optional(),
-      startedAt: z.number().int().nonnegative().optional(),
-      endedAt: z.number().int().nonnegative().optional(),
-      durationMs: z.number().nonnegative().optional(),
-      toolCalls: z.number().int().nonnegative().optional(),
-      retries: z.number().int().nonnegative().optional(),
-    })
-    .strict(),
-  z.object({ type: z.literal("span-open"), span: runSpanView }).strict(),
-  z.object({ type: z.literal("span-close"), span: runSpanView }).strict(),
-  z
-    .object({
-      type: z.literal("span-batch"),
-      updates: z.array(runSpanUpdate).max(MAX_RUN_SPAN_BATCH),
-      dropped: z.number().int().nonnegative().optional(),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal("task-tool-result"),
-      taskId: id,
-      toolCallId: id,
-      tool: id,
-      title: z.string().max(MAX_TITLE_CHARS),
-      args,
-      ok: z.boolean(),
-      result: z.unknown(),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal("tool-approval-request"),
-      approvalId: id,
-      taskId: id,
-      toolCallId: id,
-      tool: id,
-      title: z.string().max(MAX_TITLE_CHARS),
-      args,
-      reason: z.string().max(MAX_AI_TEXT_CHARS),
-    })
-    .strict(),
-  z.object({ type: z.literal("tool-approval-resolved"), approvalId: id, decision: approvalDecision }).strict(),
-  z.object({ type: z.literal("synthesis-delta"), text: z.string().max(MAX_RUN_SYNTHESIS_CHARS) }).strict(),
-  z
-    .object({
-      type: z.literal("usage"),
-      inputTokens: z.number().int().nonnegative(),
-      outputTokens: z.number().int().nonnegative(),
-      // The run's token budget, carried on the usage stream so the view can render "spent / cap".
-      maxTokens: z.number().int().positive().max(MAX_RUN_TOKEN_BUDGET).optional(),
-    })
-    .strict(),
-  z.object({ type: z.literal("run-complete"), finishReason: z.string().max(MAX_TITLE_CHARS) }).strict(),
-  z.object({ type: z.literal("run-stopped") }).strict(),
-  z.object({ type: z.literal("error"), scope: runErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) }).strict(),
-]);
-
-export const runEventEnvelope = z
-  .object({ version: z.literal(1), runId: id, seq: z.number().int().nonnegative(), event: runEvent })
   .strict();
 
 export const responseSchemas = {
@@ -1262,8 +767,6 @@ export const responseSchemas = {
         .strict(),
       capabilities: z
         .object({
-          agentSessions: z.boolean(),
-          teamRuns: z.boolean(),
           sandbox: z.boolean(),
           containerTools: z.boolean(),
           workspaceTools: z.boolean(),
@@ -1298,20 +801,9 @@ export const responseSchemas = {
   [AI_CHANNELS.keyHas]: z.boolean(),
   [AI_CHANNELS.keySet]: ok,
   [AI_CHANNELS.keyClear]: ok,
-  [AI_CHANNELS.threadList]: z.array(threadSummarySchema).max(MAX_RETAINED_THREADS),
-  [AI_CHANNELS.threadCreate]: threadSummarySchema,
-  [AI_CHANNELS.threadRename]: threadSummarySchema,
-  [AI_CHANNELS.threadConfigure]: threadSummarySchema,
-  [AI_CHANNELS.threadBranchPreview]: threadBranchPreviewSchema,
-  [AI_CHANNELS.threadBranch]: threadBranchResultSchema,
-  [AI_CHANNELS.threadCompactionPreview]: threadCompactionPreviewSchema,
-  [AI_CHANNELS.threadCompact]: threadCompactionExecutionResultSchema,
-  [AI_CHANNELS.threadSubmit]: submitThreadResult,
-  [AI_CHANNELS.threadResolveApproval]: resolveThreadApprovalResult,
-  [AI_CHANNELS.threadStop]: ok,
-  [AI_CHANNELS.threadSnapshot]: threadView.nullable(),
-  [AI_CHANNELS.toolArtifactGet]: toolArtifactRecordSchema,
-  [AI_CHANNELS.threadDelete]: ok,
+  [AI_CHANNELS.agentGatewayEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
+  [AI_CHANNELS.agentEnvFile]: z.object({ path: z.string().min(1).max(4096) }).strict(),
+  [AI_CHANNELS.authRefreshEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.changesStatus]: workspaceChangeStatusSchema,
   [AI_CHANNELS.changesDiff]: workspaceDiffSchema,
   [AI_CHANNELS.projectContextSnapshot]: projectContextSnapshotSchema,
@@ -1323,36 +815,55 @@ export const responseSchemas = {
   [AI_CHANNELS.projectMemoryRemove]: projectContextSnapshotSchema,
   [AI_CHANNELS.projectMemoryClear]: projectContextSnapshotSchema,
   [AI_CHANNELS.projectMemoryImport]: projectContextSnapshotSchema,
-  [AI_CHANNELS.runStart]: startRunResult,
-  [AI_CHANNELS.runCancel]: ok,
-  [AI_CHANNELS.runApprovePlan]: resolveRunPlanResult,
-  [AI_CHANNELS.runApproveTool]: resolveRunPlanResult,
-  [AI_CHANNELS.runSnapshot]: runView.nullable(),
-  [AI_CHANNELS.runList]: z.object({ runs: z.array(runView).max(MAX_ACTIVE_RUNS) }).strict(),
-  [AI_CHANNELS.workersList]: workersResult,
-  [AI_CHANNELS.workersSave]: workersResult,
-  [AI_CHANNELS.workersRemove]: workersResult,
-  [AI_CHANNELS.avatarsList]: avatarsResult,
-  [AI_CHANNELS.avatarsSave]: avatarsResult,
-  [AI_CHANNELS.avatarsRemove]: avatarsResult,
   [AI_CHANNELS.modelsList]: z
     .object({ models: z.array(z.object({ id: z.string().trim().min(1).max(MAX_MODEL_CHARS) }).strict()).max(10_000) })
     .strict(),
   [AI_CHANNELS.modelsCancel]: ok,
+  // Every field absent means the provider did not say — rendered as "unknown", never as a confident number.
+  [AI_CHANNELS.modelWindow]: z
+    .object({
+      contextWindow: z.number().int().positive().optional(),
+      maxOutputTokens: z.number().int().positive().optional(),
+      // Dollars per million tokens, so fractional by nature — a rate of 0.01 is a real price, not a rounding error.
+      pricing: z
+        .object({
+          input: z.number().nonnegative(),
+          output: z.number().nonnegative(),
+          cacheRead: z.number().positive().optional(),
+          cacheWrite: z.number().positive().optional(),
+        })
+        .strict()
+        .optional(),
+      // Present only when a provider published a reasoning capability for this model. An empty object still says
+      // "it reasons" — the levels are how hard it may be asked to, which not every provider names.
+      reasoning: z
+        .object({
+          levels: z.array(z.enum(PI_THINKING_LEVELS)).max(PI_THINKING_LEVELS.length).optional(),
+          mandatory: z.boolean().optional(),
+        })
+        .strict()
+        .optional(),
+    })
+    .strict(),
+  [AI_CHANNELS.engineOp]: hostOpResult,
+  [AI_CHANNELS.workspaceOp]: hostOpResult,
+  [AI_CHANNELS.workspaceRelease]: ok,
+  [AI_CHANNELS.webSearch]: webSearchResult,
   [AI_CHANNELS.permissionsList]: permissionsSnapshot,
+  [AI_CHANNELS.permissionsAdd]: permissionsSnapshot,
   [AI_CHANNELS.permissionsRemove]: permissionsSnapshot,
   [AI_CHANNELS.skillsSnapshot]: skillHostSnapshot,
   [AI_CHANNELS.skillsReload]: skillHostSnapshot,
   [AI_CHANNELS.skillsSetProjectSource]: skillHostSnapshot,
   [AI_CHANNELS.skillsSetProjectTrust]: skillHostSnapshot,
-  [AI_CHANNELS.skillsInvoke]: submitThreadResult,
+  [AI_CHANNELS.skillsInvoke]: skillInvocationResult,
 } satisfies Record<AIInvokeChannel, z.ZodType>;
 
-export const threadEvent = z.discriminatedUnion("type", [
+export const sessionEvent = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("phase-changed"),
-      phase: threadPhase,
+      phase: sessionPhase,
     })
     .strict(),
   z
@@ -1382,7 +893,6 @@ export const threadEvent = z.discriminatedUnion("type", [
       title: z.string().max(MAX_TITLE_CHARS),
       ok: z.boolean(),
       result: z.unknown(),
-      artifact: toolArtifactReferenceSchema.optional(),
     })
     .strict(),
   z
@@ -1430,26 +940,24 @@ export const threadEvent = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("error"),
-      scope: threadErrorScope,
+      scope: sessionErrorScope,
       message: z.string().max(MAX_AI_TEXT_CHARS),
     })
     .strict(),
 ]);
 
-export const threadEventEnvelope = z
+export const sessionEventEnvelope = z
   .object({
     version: z.literal(1),
-    threadId: id,
+    sessionId: id,
     taskId: id.optional(),
     segmentId: id.optional(),
     seq: z.number().int().nonnegative(),
-    event: threadEvent,
+    event: sessionEvent,
   })
   .strict();
 
 export const pushSchemas = {
-  [AI_CHANNELS.threadEvent]: threadEventEnvelope,
-  [AI_CHANNELS.runEvent]: runEventEnvelope,
   [AI_CHANNELS.skillsChanged]: skillHostSnapshot,
 } satisfies Record<AIPushChannel, z.ZodType>;
 

@@ -166,6 +166,8 @@ pub fn run() {
             process::process_kill,
             bridge::proxy_bridge_stop,
             shell::open_storage_folder,
+            shell::open_path,
+            shell::open_in_vscode,
             shell::open_external,
             shell::toggle_devtools,
             shell::launch_terminal,
@@ -176,6 +178,8 @@ pub fn run() {
             keychain::keychain_has,
             keychain::keychain_set,
             keychain::keychain_clear,
+            keychain::keychain_write_secret_file,
+            keychain::keychain_write_agent_file,
             tray::tray_update,
         ])
         .run(tauri::generate_context!())

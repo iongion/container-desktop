@@ -14,7 +14,8 @@ describe("AI subsystem end-to-end (WebKitGTK / WebDriver)", () => {
     const driver = createWebdriverioDriver(browser);
     const results = await runAiFlows(driver);
     for (const result of results) {
-      console.log(`${result.ok ? "PASS" : "FAIL"} ${result.name} — ${result.detail}`);
+      const verdict = result.skipped ? "SKIP" : result.ok ? "PASS" : "FAIL";
+      console.log(`${verdict} ${result.name} — ${result.detail}`);
     }
     expect(results.every((result) => result.ok)).toBe(true);
   });

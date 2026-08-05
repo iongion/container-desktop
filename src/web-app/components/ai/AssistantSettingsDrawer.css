@@ -1,0 +1,84 @@
+.AssistantSettingsDrawer .bp6-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.AssistantSettingsPanel {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.AssistantSettingsPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+}
+
+.AssistantSettingsPanelHeader h5 {
+  margin: 0;
+  color: var(--app-text);
+}
+
+.AssistantSettingsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 7px 10px;
+}
+
+.AssistantSettingsRow + .AssistantSettingsRow {
+  border-top: 1px solid var(--app-border);
+}
+
+.AssistantSettingsRow > div {
+  min-width: 0;
+}
+
+.AssistantSettingsRow strong {
+  display: block;
+  font-weight: 400;
+  color: var(--app-text);
+}
+
+.AssistantSettingsRow small {
+  display: block;
+  margin-top: 2px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+.AssistantSettingsNotice {
+  padding: 10px;
+  color: var(--app-text-muted);
+}
+
+.AssistantSettingsPath {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--app-text-muted);
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.AssistantSettingsChoice,
+.AssistantSettingsRow > .bp6-tag {
+  flex: 0 0 auto;
+}
+
+.AssistantSettingsChoice .bp6-button {
+  font-size: 12px;
+}
+
+.AssistantSettingsRow .bp6-control {
+  margin: 0;
+}

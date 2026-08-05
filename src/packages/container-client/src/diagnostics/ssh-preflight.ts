@@ -55,8 +55,18 @@ function defaultDeps(): SSHPreflightDeps {
   };
 }
 
+// The first line of ssh's stderr is routinely an advisory, not the failure: a post-quantum key-exchange warning, or
+// "Permanently added … to the list of known hosts". Reporting it as the reason a remote engine did not answer hides
+// the line that actually says why, which is the only thing this diagnostic exists to surface. Advisories are skipped;
+// if there is nothing else, the advisory is still better than an empty reason.
 function firstLine(text?: string): string {
-  return (text || "").split("\n")[0].trim();
+  const lines = (text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  // `**` is ssh's own advisory marker and the block runs to several lines, only the first of which says "WARNING";
+  // `Warning:` covers the plain ones ("Permanently added … to the list of known hosts").
+  return lines.find((line) => !/^(\*|warning\b)/i.test(line)) ?? lines[0] ?? "";
 }
 
 export async function runSSHPreflight(

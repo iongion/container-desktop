@@ -1,6 +1,6 @@
 // VirtualEngineHost — an in-memory ConnectionExecHost for tests AND the CONTAINER_DESKTOP_MOCK app. It is the
 // mock twin of the real platform connectionExec adapter: instead of spawning podman/docker it models a container
-// registry over per-target virtual filesystems and EMULATES the exact POSIX argv the worker's exec-routed
+// registry over per-target virtual filesystems and EMULATES the exact POSIX argv the session's exec-routed
 // workspace emits (mkdir -p / tee+stdin / cat / ls -1Ap / stat -c / find / grep -rnIE / rm -r) plus a couple of
 // generic commands (echo / pwd / true). That fidelity is the point: the SAME scenario suite runs the real
 // createExecutionSelector + createExecWorkspaceAccess against this host (hermetic) and against live engines, so a
@@ -68,7 +68,7 @@ function fail(code: number, stderr: string): ConnectionExecResult {
 }
 
 // Emulate one argv against a virtual filesystem. Covers exactly what createExecWorkspaceAccess emits, plus a few
-// generic programs (echo/pwd/true) so a worker's execCommand has something real to run.
+// generic programs (echo/pwd/true) so a session's execCommand has something real to run.
 function runCommand(fs: Vfs, program: string, args: string[], opts?: ConnectionExecOptions): ConnectionExecResult {
   let mtimeSeq = fs.files.size + 1;
   const last = args[args.length - 1];
@@ -181,7 +181,7 @@ function runCommand(fs: Vfs, program: string, args: string[], opts?: ConnectionE
       return ok();
     default:
       // Unknown program: a real engine's `exec` returns 127 for a command that is not on PATH. The mock MUST
-      // mirror that — masking it as a silent success let a worker (or a test) shell out to a program this vhost
+      // mirror that — masking it as a silent success let a session (or a test) shell out to a program this vhost
       // does not emulate and read a fabricated success it would never get live. 127 is the POSIX "command not
       // found" code; the stderr mirrors the shell's own wording so callers can pattern-match it.
       return fail(127, `vhost: unknown command ${program}`);
@@ -189,7 +189,7 @@ function runCommand(fs: Vfs, program: string, args: string[], opts?: ConnectionE
 }
 
 export interface VirtualEngineHostHandle extends ConnectionExecHost {
-  // Create a plain, unlabeled, long-lived container (the "existing container" a worker attaches to). Returns its
+  // Create a plain, unlabeled, long-lived container (the "existing container" a session attaches to). Returns its
   // id. Unlike a sandbox it carries no AI label, so teardown assertions never count it.
   createContainer(): string;
   // Live (not-removed) containers, for a test's teardown assertion.

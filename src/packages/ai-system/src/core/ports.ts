@@ -4,8 +4,8 @@
 
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
 import type { FloorScope } from "./commandFloor";
+import type { ExecutionTarget } from "./executionTargets";
 import type { EngineOps } from "./types";
-import type { WorkerExecutionTarget } from "./workers";
 import type { WorkspaceChangesPort } from "./workspaceChanges";
 
 // Provider key store = the AI subsystem's view of the generic host Keychain port. Provider keys ARE the
@@ -23,6 +23,16 @@ export interface AIKeyStore {
   getKey(key: string): Promise<string | undefined>;
   setKey(key: string, plaintext: string, opts?: { allowDegraded?: boolean }): Promise<void>;
   clearKey(key: string): Promise<void>;
+  // Write a private file whose secret placeholder is substituted with the stored secret for `key`, IN THE
+  // REALM THAT OWNS THE VAULT, and answer only its path. This is how a credential reaches a container's env
+  // file in a web-view realm whose getKey deliberately refuses: the caller supplies the shape, never sees the
+  // secret, and cannot read the result back.
+  writeSecretFile(key: string, fileName: string, contents: string): Promise<string>;
+  // Write a private file into the SAME protected directory, with no secret to substitute — the agent
+  // container's own env file, which carries the bridge token but no provider credential. It lives beside the
+  // gateway's rather than in a second directory of its own, so one guard covers both: the web view may ask for
+  // it and learn its path, and cannot read either back.
+  writeAgentEnvFile(fileName: string, contents: string): Promise<string>;
 }
 
 // Knowledge bank
@@ -36,10 +46,6 @@ export interface KnowledgeEntry {
   solution: string;
   commands?: string[];
   tags?: string[];
-}
-
-export interface KnowledgeBankLike {
-  search(query: string): Promise<KnowledgeEntry[]>;
 }
 
 // Sandbox
@@ -61,7 +67,7 @@ export interface SandboxExecResult {
   rejectedReason?: string;
 }
 
-// `enforceFloor` defaults true; the tool gate threads `false` in "always allow" mode so the catastrophic
+// `enforceFloor` defaults true; the tool gate sessions `false` in "always allow" mode so the catastrophic
 // floor (denylist/metachars/traversal) is bypassed — every other structural guard (no shell, scrubbed env,
 // timeout, output cap + redaction) still applies.
 export type SandboxRunner = (cmd: SandboxCommand, opts?: { enforceFloor?: boolean }) => Promise<SandboxExecResult>;
@@ -83,8 +89,8 @@ export interface AgentToolDeps extends AgentExecutionDeps {
 }
 
 // Captured (non-interactive) command execution against one of the app's connections — the backend that lets a
-// worker run on a remote host or inside a container instead of the local box. Resolution of a connectionId to a
-// live engine host, and the SSH/WSL/Lima transport wrapping, live in the platform impl; core only sees this port.
+// session's tools act INSIDE a container rather than on this machine. Resolution of a connectionId to a live
+// engine host, and the SSH/WSL/Lima transport wrapping, live in the platform impl; core only sees this port.
 export interface ConnectionExecResult {
   // Process exit code, or null if terminated by a signal.
   code: number | null;
@@ -133,7 +139,7 @@ export interface ConnectionExecHost {
   removeSandboxContainer(connectionId: string, containerId: string): Promise<void>;
 }
 
-// The per-target execution backend a worker runs against: its container-API ops, its confined workspace (file +
+// The per-target execution backend a session runs against: its container-API ops, its confined workspace (file +
 // command), the floor strictness for that target, and a teardown (sandbox removal; a no-op otherwise).
 export interface ResolvedExecution {
   engineOps?: EngineOps;
@@ -142,13 +148,17 @@ export interface ResolvedExecution {
   dispose(): Promise<void>;
 }
 
-// Builds the backend for a worker's execution target. The run host calls this once per DISTINCT target within a
-// run and shares the result across workers on the same target; `dispose` runs at run end.
+// Builds the backend for a session's execution target. The run host calls this once per DISTINCT target within a
+// session and shares the result across everything running on the same target; `dispose` runs when it ends.
 export interface ExecutionSelector {
-  select(target: WorkerExecutionTarget): Promise<ResolvedExecution>;
+  select(target: ExecutionTarget): Promise<ResolvedExecution>;
+  // Tear down every backend this selector built, once. The selector already holds them — asking a caller to
+  // remember what it selected is how a sandbox container outlives the run that created it.
+  dispose(): Promise<void>;
 }
 
 // A run-scoped ExecutionSelector factory: the run host builds one selector PER RUN (keyed off the run id) so a
 // sandbox created for one run is never shared with — or disposed by — another. Injected by the shell root; absent
-// on a shell with no off-host execution, where every worker falls back to the run-level host backend.
+// on a shell that cannot reach a connection's containers, where a workspace call is ANSWERED WITH A FAILURE
+// instead of served here — there is no fallback that would quietly act on this machine.
 export type ExecutionSelectorFactory = (runId: string) => ExecutionSelector;
