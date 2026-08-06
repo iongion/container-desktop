@@ -14,6 +14,7 @@ import {
   TIMEOUT,
   closeAnyDrawer,
   commandScenarioReason,
+  composerHint,
   draftText,
   openAssistant,
   runByClick,
@@ -38,7 +39,7 @@ describe("/reload — reloads the session's contributed resources", () => {
     await runByClick(browser, "/reload");
     // A refusal surfaces as the composer's hint. Its absence is what "accepted" looks like here.
     await browser.pause(1000);
-    const hint = await browser.execute(() => document.querySelector(".AIComposerHint")?.textContent ?? "");
+    const hint = await composerHint(browser);
     assert.ok(!/unavailable|cannot|failed/i.test(hint), `/reload was refused: ${hint}`);
     assert.ok(!(await draftText(browser)).includes("/reload"), "/reload was typed into the composer instead of run");
 

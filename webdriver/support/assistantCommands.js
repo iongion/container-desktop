@@ -17,6 +17,10 @@
 //     promise, and the rejection is reported against whichever command runs next.
 //   • Never return an object with a key named `error`: WebdriverIO reads it as a W3C error response and throws.
 //   • ONE saveScreenshot per session. These specs take none — everything they assert is DOM.
+//   • A UI state read the instant after a programmatic change answers for the render that has not happened yet.
+//     `setDraft` returns before the palette it opens exists, and a scenario that reads once and believes the answer
+//     then sends Enter into a palette that opened in between — where Enter completes the command instead of sending
+//     it. Wait for such an answer to hold still; `paletteIsOpen()` is not a decision on its own.
 
 import { strict as assert } from "node:assert";
 import path from "node:path";
@@ -41,6 +45,8 @@ export const ASSISTANT_SCREEN = '[data-screen="ai.assistant"]';
 export const COMPOSER = ".AIComposerInput";
 export const TRIGGER = ".AIComposerCommandTrigger";
 export const PALETTE = ".AssistantCommandPalette";
+// A turn is running exactly when the composer offers to stop it, so this doubles as the activity signal.
+export const STOP = ".AIComposerStop";
 export const TIMEOUT = 60000;
 
 export function commandScenarioReason() {
@@ -138,6 +144,41 @@ export async function paletteIsOpen() {
   return (await visibleRows()).length > 0;
 }
 
+// Whether the palette anchored to the COMPOSER is up, asked of the app rather than counted off the screen: the
+// composer publishes it on the control it drives. Two things make the row count the wrong question for the typed
+// path — two palettes are mounted at once, and a row handle that React re-rendered between the query and the
+// visibility check reads as "not displayed" rather than raising. `aria-expanded` is one value, read atomically.
+// It answers ONLY for the input-anchored palette: the toolbar trigger's palette leaves it false, which is why the
+// click path still counts rows.
+function inputPaletteIsOpen(browser) {
+  return browser.execute(
+    (selector) => document.querySelector(selector)?.getAttribute("aria-expanded") === "true",
+    COMPOSER,
+  );
+}
+
+// The palette opens on a LATER render than the change that caused it, so a single read taken the instant the draft
+// is written answers for the palette that has not appeared yet — and a scenario that believes it then sends Enter
+// into an open palette, where Enter completes rather than sends. Wait for the answer to hold still instead.
+async function settledInputPaletteIsOpen(browser) {
+  let previous = await inputPaletteIsOpen(browser);
+  for (let attempt = 0; attempt < 15; attempt += 1) {
+    await browser.pause(200);
+    const current = await inputPaletteIsOpen(browser);
+    if (current === previous) return current;
+    previous = current;
+  }
+  return previous;
+}
+
+// A keystroke goes wherever focus is. `setDraft` writes the value without touching focus, and dismissing the palette
+// can drop focus to <body> — where Enter means nothing and the scenario waits forever for a command never sent.
+// Focusing does not disturb a dismissal: the composer re-notifies the completion with the same trigger identity it
+// just dismissed, and the machine ignores that one.
+function focusComposer(browser) {
+  return browser.execute((selector) => document.querySelector(selector)?.focus(), COMPOSER);
+}
+
 export async function openPalette(browser) {
   if (!(await paletteIsOpen())) await $(TRIGGER).click();
   await browser.waitUntil(paletteIsOpen, { timeout: TIMEOUT, timeoutMsg: "the command palette never opened" });
@@ -184,13 +225,19 @@ export async function runByClick(browser, commandPath) {
 // writes it in, since there is nothing to run until they have said what it applies to.
 export async function runByTyping(browser, text) {
   await setDraft(browser, text);
+  await focusComposer(browser);
   // Typing a slash opens the palette, and Enter there ACCEPTS the completion rather than submitting — so the
   // palette is dismissed first, and only then does Enter mean send. Without this the command is merely completed
-  // and the scenario waits forever for something that was never sent.
-  if (await paletteIsOpen()) {
+  // and the scenario waits forever for something that was never sent. A command that carries arguments never
+  // reaches the suggesting phase at all, so there is nothing to dismiss and this is a no-op for it.
+  if (await settledInputPaletteIsOpen(browser)) {
     await browser.keys(["Escape"]);
-    await browser.waitUntil(async () => !(await paletteIsOpen()), { timeout: 10000, timeoutMsg: "palette stayed up" });
+    await browser.waitUntil(async () => !(await inputPaletteIsOpen(browser)), {
+      timeout: 10000,
+      timeoutMsg: "the command palette stayed up after Escape",
+    });
   }
+  await focusComposer(browser);
   await browser.keys(["Enter"]);
 }
 
@@ -207,6 +254,66 @@ export async function unavailableReason(commandPath) {
 export async function closeAnyDrawer(browser) {
   await browser.keys(["Escape"]);
   await browser.pause(300);
+}
+
+// A refusal never throws — it is written into the composer's hint, next to the input that was refused. Reading it is
+// how a scenario tells "correctly declined, and said why" from "quietly did nothing".
+export function composerHint(browser) {
+  return browser.execute(() => document.querySelector(".AIComposerHint")?.textContent?.trim() ?? "");
+}
+
+// Toasts expire on their own, so a scenario that goes looking for one after the fact races its disappearance. Start
+// collecting BEFORE the action, then read back what was seen.
+export function collectNotifications(browser) {
+  return browser.execute(() => {
+    window.clearInterval(window.__cdCommandToastPoll);
+    window.__cdCommandToasts = [];
+    window.__cdCommandToastPoll = window.setInterval(() => {
+      for (const node of document.querySelectorAll(".NotificationAppToaster .bp6-toast-message")) {
+        const text = node.textContent?.trim() ?? "";
+        if (text && !window.__cdCommandToasts.includes(text)) window.__cdCommandToasts.push(text);
+      }
+    }, 100);
+  });
+}
+
+// Read-only on purpose, so it can be polled: the toast a command raises appears when the command's async work
+// finishes, which is AFTER the send returns. Reading once, right after sending, reports the empty list every time.
+export function collectedNotifications(browser) {
+  return browser.execute(() => window.__cdCommandToasts ?? []);
+}
+
+export function turnIsActive(browser) {
+  return browser.execute((selector) => !!document.querySelector(selector), STOP);
+}
+
+// A command whose whole subject is an active turn cannot be told apart from a scenario that never started one, so the
+// scenarios that need a turn wait for the model to actually begin rather than assuming a submit was enough.
+export async function waitForTurn(browser, timeout = TIMEOUT) {
+  await browser.waitUntil(() => turnIsActive(browser), {
+    timeout,
+    interval: 250,
+    timeoutMsg: "no turn ever started — the model never began answering",
+  });
+}
+
+export async function waitForIdle(browser, timeout = TIMEOUT) {
+  await browser.waitUntil(async () => !(await turnIsActive(browser)), {
+    timeout,
+    interval: 250,
+    timeoutMsg: "the turn never finished",
+  });
+}
+
+// Which section of the context drawer is showing. Three commands open the SAME drawer and differ only in where they
+// land, so the drawer existing proves almost nothing on its own.
+export function contextDrawerSection(browser) {
+  return browser.execute(
+    () =>
+      document
+        .querySelector(".AssistantContextDrawer .AppSegmentedControl .bp6-active")
+        ?.textContent?.trim() ?? "",
+  );
 }
 
 // Every scenario starts a real pair, and NOTHING else will take it down: the app deliberately does not reap the

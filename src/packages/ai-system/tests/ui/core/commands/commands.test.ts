@@ -267,6 +267,29 @@ describe("parseAssistantInput", () => {
     });
   });
 
+  // An alias that resolves to nothing is invisible to the catalogue table, which only reads what is declared. Every
+  // spelling the catalogue advertises has to reach the command that owns it — checked over the whole catalogue rather
+  // than the two aliases someone remembered to write a case for.
+  it("resolves every alias the catalogue declares to the command that owns it", () => {
+    // A command that requires arguments errors on its bare name whichever spelling asked, so each alias is given
+    // the least it accepts — the claim under test is which command the NAME reaches, not what it does without input.
+    const satisfy = (command: (typeof BUILTIN_ASSISTANT_COMMANDS)[number]): string => {
+      if (command.arguments.kind === "text") return command.arguments.required ? " placeholder" : "";
+      if (command.arguments.kind === "tokens") return " placeholder".repeat(command.arguments.min);
+      return "";
+    };
+    const aliased = BUILTIN_ASSISTANT_COMMANDS.flatMap((command) =>
+      command.aliases.map((alias) => ({ input: `${alias}${satisfy(command)}`, id: command.id })),
+    );
+    expect(aliased.length).toBeGreaterThan(0);
+    for (const { input, id } of aliased) {
+      expect(parseAssistantInput(input, BUILTIN_ASSISTANT_COMMAND_REGISTRY), input).toMatchObject({
+        kind: "command",
+        id,
+      });
+    }
+  });
+
   it("rejects unknown commands, unterminated quotes, and invalid arguments locally", () => {
     expect(parseAssistantInput("/expot", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "error",
