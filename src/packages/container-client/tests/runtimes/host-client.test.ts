@@ -26,7 +26,10 @@ describe("HostClient.isProgramAvailable — scoped runs in the host, native runs
   let cmd: ReturnType<typeof installFakeCommand>;
   afterEach(() => cmd?.restore());
 
-  it("scoped host verifies the engine IN THE HOST (which over the scope), ignoring local FS", async () => {
+  // The engine is asked for its OWN version rather than located with `which`: that is a POSIX command, and a Windows
+  // remote answers ssh with cmd.exe, where it does not exist — so every Windows SSH connection reported its engine as
+  // absent however it was installed. A version probe is answerable by every shell.
+  it("scoped host verifies the engine IN THE HOST, by asking the engine, ignoring local FS", async () => {
     cmd = installFakeCommand(); // every command succeeds
     const { client, settings } = await clientFor(ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA, OperatingSystem.MacOS);
     expect(client.isScoped()).toBe(true);
@@ -34,20 +37,36 @@ describe("HostClient.isProgramAvailable — scoped runs in the host, native runs
     const result = await client.isProgramAvailable(settings);
 
     expect(result.success).toBe(true);
-    // Proof it executed in the host: a scope probe (limactl shell <scope> which podman) was issued.
-    const probe = cmd.calls.find((c) => c.args.includes("which") && c.args.includes("podman"));
+    // Proof it executed in the host: a scope probe (limactl shell <scope> <engine> --version) was issued.
+    const probe = cmd.calls.find((c) => c.args.includes("--version"));
     expect(probe?.launcher).toBe("limactl");
     expect(probe?.args).toContain("shell");
+    // Nothing POSIX-only is used to find it, which is what a Windows remote could never answer.
+    expect(cmd.calls.some((c) => c.args.includes("which"))).toBe(false);
   });
 
-  it("scoped host reports which engine is absent in the host", async () => {
-    cmd = installFakeCommand((call) => (call.args.includes("which") ? { success: false, code: 1 } : {}));
+  it("scoped host reports an engine the host cannot run", async () => {
+    cmd = installFakeCommand((call) => (call.args.includes("--version") ? { success: false, code: 1 } : {}));
     const { client, settings } = await clientFor(ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA, OperatingSystem.MacOS);
 
     const result = await client.isProgramAvailable(settings);
 
     expect(result.success).toBe(false);
-    expect(result.details).toBe('Program "podman" was not found');
+    // Named with the path it actually tried, because "not found" about a name the operator never typed is unactionable.
+    expect(result.details).toBe(`Program "podman" was not found at ${ABSENT_LOCAL}`);
+  });
+
+  // The path the operator configured is what a remote with a non-PATH install needs, and locating by NAME threw it
+  // away — so an explicitly configured engine still reported as missing.
+  it("probes the configured program path, not only its name", async () => {
+    cmd = installFakeCommand();
+    const { client, settings } = await clientFor(ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA, OperatingSystem.MacOS);
+    settings.program.path = "/opt/homebrew/bin/podman";
+
+    await client.isProgramAvailable(settings);
+
+    const probe = cmd.calls.find((c) => c.args.includes("--version"));
+    expect(probe?.args.join(" ")).toContain("/opt/homebrew/bin/podman");
   });
 
   it("native host uses the local filesystem and issues no scope command", async () => {
@@ -112,10 +131,11 @@ describe("HostClient.isProgramAvailable — scoped runs in the host, native runs
     cmd = installFakeCommand();
     const { client, settings } = await clientFor(ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA, OperatingSystem.MacOS);
     settings.program.name = "";
+    settings.program.path = "";
 
     await client.isProgramAvailable(settings);
 
-    const probe = cmd.calls.find((c) => c.args.includes("which"));
+    const probe = cmd.calls.find((c) => c.args.includes("--version"));
     expect(probe?.args).toContain("podman");
     expect(probe?.args).not.toContain("");
   });

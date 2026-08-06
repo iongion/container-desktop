@@ -335,14 +335,21 @@ export class HostClient implements HostContext {
       // isApiAvailable's !isScoped guard). The scope is already started by the time getAvailability runs
       // (Application.connectHostClient), so runScopeCommand is live.
       try {
+        // The program is asked for its OWN version rather than located with `which`: that is a POSIX command, and a
+        // Windows remote answers ssh with cmd.exe, where it does not exist — so every Windows SSH connection reported
+        // its engine as absent however it was installed. A version probe is answerable by every shell, and it uses the
+        // configured PATH when the operator gave one, which locating by name threw away.
         const probe = await this.runScopeCommand(
-          "which",
-          [programName],
+          programPath,
+          ["--version"],
           currentSettings.controller?.scope || "",
           currentSettings,
         );
         if (!probe.success) {
-          result.details = `Program "${programName}" was not found`;
+          result.details =
+            programPath === programName
+              ? `Program "${programName}" was not found`
+              : `Program "${programName}" was not found at ${programPath}`;
           return result;
         }
       } catch (error: any) {

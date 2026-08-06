@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A connection to a Windows machine over SSH can be established at all: the app looked for the engine with a command only a Unix shell has, so a Windows remote always reported the engine as missing however it was installed. It now asks the engine itself, and uses the path you configured when you gave one
+
 - A thinking level now reaches DeepSeek, GLM and OpenRouter in the shape each one actually wants, instead of OpenAI's — the session's own gateway made every provider look like OpenAI, which also sent those servers a system prompt under a role they do not have and an answer cap under a field they do not read
 - The assistant now actually receives your Project Rules and Memory — it used to confirm them in the UI and send the model nothing
 - Everything the app does on the agent's behalf acts on the folder the session mounted, not the one named in Settings: workspace changes, project rules and memory, and project skills
