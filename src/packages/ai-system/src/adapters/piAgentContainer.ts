@@ -396,6 +396,13 @@ async function freeSessionNames(host: HostClientFacade, spec: PiAgentSessionSpec
   }
 }
 
+// The engines' several ways of saying "that name is taken". Everything else a create can fail with — an exhausted
+// address pool above all — has to travel, because the caller's next command fails for a reason that reads nothing
+// like the real one.
+function isExistingNameError(error: unknown): boolean {
+  return /already exists|already in use|already used/i.test(`${(error as Error)?.message ?? error}`);
+}
+
 export async function startPiAgentSession(
   host: HostClientFacade,
   spec: PiAgentSessionSpec,
@@ -410,9 +417,12 @@ export async function startPiAgentSession(
     : spec.workspacePath;
 
   await run(host, networkCreateArgv(spec), spec.scope).catch((error) => {
-    // A pre-existing network is not an error: the name is session-scoped, so a retry can find its own
-    // leftovers from a crashed run.
-    logger.debug("network create skipped", error);
+    // A name already taken is not an error: it is session-scoped, so a retry finds its own leftovers from a crashed
+    // run. Anything else IS one, and swallowing it costs the reader the answer — an exhausted address pool caught
+    // here comes back moments later as `run` reporting the network does not exist, which sends them looking for a
+    // missing network instead of for the reason it could not be made.
+    if (!isExistingNameError(error)) throw error;
+    logger.debug("network create skipped — the name is already taken", error);
     return "";
   });
   if (!spec.egress) {
