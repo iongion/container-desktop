@@ -9,8 +9,6 @@ import type { ModelWindow } from "@/ai-system/adapters/modelWindow";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   attachPiAgentSession,
-  engineIsRemote,
-  engineMachineAddress,
   engineSharesAppFilesystem,
   findDefaultSession,
   pickHostPort,
@@ -58,6 +56,9 @@ import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/
 import { isWorkspaceToolName } from "@/ai-system/core/workspaceToolNames";
 import { readSessionNameAnswer, readSessionTreeAnswer } from "@/ai-system/ui/core/commands/piCommandAnswers";
 import { isMockMode } from "@/container-client/mock/mode";
+import { engineIsRemote } from "@/container-client/proxy-route";
+import { connectionCommandScope } from "@/container-client/runtimes/commandScope";
+import { publishedPortAddress } from "@/container-client/runtimes/publishedPortHost";
 import { getAvailableSSHConnections } from "@/container-client/shared";
 import { credentialsFromSSHHost } from "@/container-client/ssh-args";
 import type { ContainerEngineHost } from "@/container-client/types/engine";
@@ -445,7 +446,6 @@ export interface StartCodingAgentOptions {
   // only holds a keyless endpoint keeps working on the OpenAI-shaped default.
   providerKind?: ProviderKind;
   upstreamAuth?: AIAuthSettings;
-  scope?: string;
   egress?: boolean;
   // Where this session's WORKSPACE tools run. Absent means the toolset is not offered at all: a registered tool is a
   // promise to the model that the operation can happen, and nowhere to run one is not a place.
@@ -1064,7 +1064,10 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       return;
     }
     const names = defaultSessionNamesFor(options.connectionId);
-    const attached = await attachPiAgentSession(host, names.agentContainerName, options.scope);
+    // Asked of the connection, exactly as `start` does: a scoped connection's engine commands are wrapped, and which
+    // scope they are wrapped in is the connection's answer, never the caller's.
+    const commandScope = await connectionCommandScope(host);
+    const attached = await attachPiAgentSession(host, names.agentContainerName, commandScope);
     if (!attached) {
       set({
         status: "error",
@@ -1080,9 +1083,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     const sessionsPath = attached.sessionsDir ? await readSessionsDir() : undefined;
     // Attaching binds nothing — the pair's sockets are where they are — but the forward still has to be pointed at
     // them, and a pair built inside a machine published on that machine's address rather than the remote's loopback.
-    const machineAddress = engineIsRemote(host.HOST)
-      ? await engineMachineAddress(host, options.scope, agentImageTag(options.appVersion))
-      : undefined;
+    const machineAddress = await publishedPortAddress(host, agentImageTag(options.appVersion));
     // The pair's OWN facts win where it has them — the model it is running, the socket it publishes — and the rest is
     // what this connection's session was configured with.
     const spec: PiAgentSessionSpec = {
@@ -1110,7 +1111,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       modelId: attached.modelId ?? options.modelId,
       egress: options.egress ?? true,
       ...(options.executionTarget ? { executionTarget: options.executionTarget } : {}),
-      scope: options.scope,
+      scope: commandScope,
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
     };
     let bridge: { url: string; tunnel?: BridgeTunnel } | undefined;
@@ -1247,9 +1248,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     const shared = conversations && engineSharesAppFilesystem(host.HOST);
     // Asked BEFORE the pair is built, because it decides what the sockets are bound to: a remote engine running inside
     // a machine publishes into that machine's own network, which the host running it cannot reach.
-    const machineAddress = engineIsRemote(host.HOST)
-      ? await engineMachineAddress(host, options.scope, agentImageTag(options.appVersion))
-      : undefined;
+    const machineAddress = await publishedPortAddress(host, agentImageTag(options.appVersion));
+    // Which scope this connection's engine commands run through, asked of the connection itself. It used to arrive as a
+    // start option that nothing in the app ever filled, so a scoped connection ran its assistant's engine commands on
+    // THIS machine — which for a remote one is not where its containers are.
+    const commandScope = await connectionCommandScope(host);
     // The same question the conversations ask, for the same reason: an engine that cannot see this filesystem cannot
     // be handed the agent's env file either — `--env-file` is read on ITS machine — so the environment is carried in
     // a session volume instead.
@@ -1281,7 +1284,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       modelId: options.modelId,
       egress: options.egress ?? true,
       ...(options.executionTarget ? { executionTarget: options.executionTarget } : {}),
-      scope: options.scope,
+      scope: commandScope,
       // Podman maps the invoking user to container root under rootless mode, so the agent user needs an
       // explicit mapping or the bind-mounted workspace is effectively read-only. Docker has no keep-id.
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },

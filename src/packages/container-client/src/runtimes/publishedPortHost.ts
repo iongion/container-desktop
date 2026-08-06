@@ -1,11 +1,9 @@
-// Where a port published by this engine actually answers.
+// Where a port published by this connection's engine actually answers.
 //
-// This is CONNECTION knowledge, and it lives with the rest of it. It was written inside the AI subsystem, which
-// meant that package asking podman about machines and parsing podman's own rows — a second machine-aware path
-// beside the podman dialects and the podman-machine transport, which already resolve a connection's machine and
-// how to reach it. A caller supplies the exec seam and the image to probe with, so nothing about a session or an
-// agent reaches in here. Consolidating the listing below with the dialect's own `getPodmanMachineInspect` is the
-// remaining step; `UserModeNetworking` is published by `machine list`, which is why this still asks for it.
+// This is CONNECTION knowledge and it is asked of the connection: the machines come from the dialect that already
+// owns them (`getPodmanMachines`, routed through the scope for a remote engine), the scope from the connection, and
+// the address from a container the engine runs itself. Nothing about a session or an agent reaches in here — the
+// caller names only the image to probe with.
 //
 // An engine that runs its containers itself publishes on the loopback of the machine running it, which is what the
 // bridge dials and what `ssh -NL` forwards for a remote one. podman on Windows does not: its engine lives inside a
@@ -20,23 +18,22 @@
 //
 // Everything else keeps the loopback bind and the loopback dial it has today, because everything else relays: that is
 // what `--user-mode-networking` IS on podman, what gvproxy does on macOS, and what Docker Desktop's own forwarder
-// does. Answering `undefined` is therefore the safe answer, and every question here fails to it.
+// does — measured too, on a real Docker Desktop, where a port published inside its WSL machine answers on the
+// Windows host at both bind addresses. Answering `undefined` is therefore the safe answer, and every question here
+// fails to it.
+
+import { engineIsRemote } from "@/container-client/proxy-route";
+import type { PodmanMachine } from "@/container-client/types/machine";
+import { createLogger } from "@/logger";
+
+import { connectionCommandScope } from "./commandScope";
+import type { HostClientFacade } from "./facade";
+
+const logger = createLogger("container-client.publishedPortHost");
 
 // The address a published port answers on when nothing is in the way — the machine running the engine, as reached
 // from itself.
 export const LOOPBACK_ADDRESS = "127.0.0.1";
-
-// One row of `podman machine list --format json`, in podman's own spelling and only the fields this reads.
-interface MachineListRow {
-  Name?: string;
-  Running?: boolean;
-  VMType?: string;
-  UserModeNetworking?: boolean;
-}
-
-export function machineListArgv(): string[] {
-  return ["machine", "list", "--format", "json"];
-}
 
 // Asking the kernel which source address it would use to leave the machine, from a container that shares the
 // MACHINE's own network namespace. A `connect` on a UDP socket sends nothing — it only resolves the route — so this
@@ -58,16 +55,12 @@ export function machineAddressArgv(imageTag: string): string[] {
 // The machine whose published ports stop at its own network, if this engine has one. `UserModeNetworking` is a
 // WSL-only flag in podman's vocabulary — it reads `false` on the machine types that relay by other means — so the
 // pair with `VMType` is the exact expression of "nothing carries this machine's ports out to its host".
-export function unrelayedMachineFrom(payload: string): string | undefined {
-  let rows: MachineListRow[];
-  try {
-    rows = JSON.parse(payload) as MachineListRow[];
-  } catch {
-    return undefined;
-  }
-  if (!Array.isArray(rows)) return undefined;
-  const machine = rows.find(
-    (row) => row?.Running === true && row?.VMType === "wsl" && !row?.UserModeNetworking && !!row?.Name,
+//
+// Explicitly `false`, never merely falsy: a listing that does not publish the flag at all is one nobody measured, and
+// this fails to the loopback bind that already ships rather than binding a machine interface on a guess.
+export function unrelayedMachine(machines: PodmanMachine[]): string | undefined {
+  const machine = machines.find(
+    (row) => row?.Running === true && row?.VMType === "wsl" && row?.UserModeNetworking === false && !!row?.Name,
   );
   return machine?.Name;
 }
@@ -83,18 +76,47 @@ export function machineAddressFrom(output: string): string | undefined {
   return found.at(-1);
 }
 
-// Ask the engine what machines it has, then ask that machine where it is. `exec` is the connection's own command
-// seam, so this travels wherever that connection does — over SSH for a remote engine, exactly like every other engine
-// command the session runs.
+// Where this connection's published ports answer, or `undefined` for the loopback the app already dials.
 //
-// Never throws. An engine with no `machine` command answers with an error, and an error here means "no machine in the
-// way", which is the topology that already works.
-export async function resolveMachineAddress(
-  exec: (args: string[]) => Promise<string>,
-  imageTag: string,
-): Promise<string | undefined> {
-  const listing = await exec(machineListArgv()).catch(() => "");
-  if (!unrelayedMachineFrom(listing)) return undefined;
-  const answer = await exec(machineAddressArgv(imageTag)).catch(() => "");
-  return machineAddressFrom(answer);
+// Asked only of a REMOTE engine, and not because a local one cannot live inside a machine: a local machine-backed
+// connection runs its engine commands THROUGH the machine (`podman machine ssh <scope> podman …`), so the question
+// would reach a podman inside the guest, which has no machines of its own and answers with none. It costs a round
+// trip to be told nothing.
+//
+// Never throws. An engine with no machines — every docker one, since the dialect answers those with none at all —
+// means "nothing in the way", which is the topology that already works.
+export async function publishedPortAddress(host: HostClientFacade, imageTag: string): Promise<string | undefined> {
+  if (!engineIsRemote(host.HOST)) return undefined;
+  const machines = await host.getPodmanMachines().catch((error) => {
+    logger.debug("the engine could not be asked for its machines", error);
+    return [];
+  });
+  const machine = unrelayedMachine(machines);
+  if (!machine) {
+    logger.debug("the engine publishes on its own host");
+    return undefined;
+  }
+  const scope = await connectionCommandScope(host);
+  const argv = machineAddressArgv(imageTag);
+  // Both answers are logged, because "the machine would not say" and "the machine has no address" look identical
+  // from the outside and the difference decides whether a session is dialling the right address or nothing at all.
+  const answer = await runEngine(host, argv, scope).catch((error) => {
+    logger.debug(`the engine refused \`${argv.join(" ")}\``, error);
+    return "";
+  });
+  const address = machineAddressFrom(answer);
+  logger.debug(
+    address
+      ? `the engine runs inside ${machine}, reachable at ${address}`
+      : `${machine} did not answer with an address: ${answer.slice(0, 200)}`,
+  );
+  return address;
+}
+
+async function runEngine(host: HostClientFacade, argv: string[], scope: string | undefined): Promise<string> {
+  const result = scope
+    ? await host.runScopeCommand(host.PROGRAM, argv, scope)
+    : await host.runHostCommand(host.PROGRAM, argv);
+  if (!result.success) throw new Error(result.stderr?.trim() || `engine command failed: ${argv[0]}`);
+  return (result.stdout ?? "").trim();
 }

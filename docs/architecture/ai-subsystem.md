@@ -221,10 +221,12 @@ BOTH bind addresses, with `netstat` on the host finding nothing — so a forward
 hop short of the container. What the host DOES reach is the machine's own address, so the pair is bound to it and the
 forward is pointed there; it is a NARROWER bind than the loopback one it replaces, since the machine's own loopback
 stops answering too. **The question belongs to the CONNECTION and is answered there** —
-`container-client/runtimes/publishedPortHost.ts`, beside the podman dialects and the podman-machine transport that
-already resolve a connection's machine; it was written inside the AI subsystem, which had that package asking podman
-about machines on its own. It decides by asking the engine: a machine that is running, is `wsl`, and reports
-`UserModeNetworking: false` — podman's own words for "nothing carries this machine's ports out to its host". Every
+`container-client/runtimes/publishedPortHost.ts`, which asks the podman dialect for the connection's machines
+(`getPodmanMachines`, routed through the scope for a remote engine) instead of running a listing of its own; it was
+written inside the AI subsystem, which had that package asking podman about machines and parsing its rows. It picks a
+machine that is running, is `wsl`, and reports `UserModeNetworking: false` — podman's own words for "nothing carries
+this machine's ports out to its host". Explicitly `false`: a listing too old to publish the flag is a topology nobody
+measured, and `machine inspect` publishes the flag but NOT `VMType`, so the pair only exists on the listing. Every
 other topology relays and keeps the loopback bind and dial it has today, which is what makes `undefined` the safe
 answer — and for **Docker Desktop that is now measured, not assumed**: a port published inside its WSL machine appears
 on the Windows host at both bind addresses (`netstat` there finds `127.0.0.1:<port>` for a loopback publish and
@@ -250,7 +252,10 @@ because a second window doing that would drive the same conversation's file as t
 
 Env files are written privately under `~/.local/share/container-desktop/agent/`, never passed in argv.
 A **scoped** engine (WSL, Lima, a podman machine) runs every command through the scope wrapper, and the
-workspace path is translated with `resolveGuestPath` before it is mounted.
+workspace path is translated with `resolveGuestPath` before it is mounted. **Which scope is the CONNECTION's answer**
+(`container-client/runtimes/commandScope.ts` — the transport says whether commands are wrapped at all, the settings say
+in what): it used to arrive as a start option nothing in the app ever filled, so a remote session's engine commands ran
+against a LOCAL engine unless a test handed the scope in.
 
 **User mapping.** Rootless podman maps the invoking user to container root, so the image's `agent` user
 (uid 1001) needs `--userns keep-id:uid=1001,gid=1001` or the bind-mounted workspace is effectively read-only;
@@ -849,6 +854,7 @@ then failed from inside a store.
 | `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
 | `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |
 | `container-client/runtimes/publishedPortHost.ts` | where a port this engine publishes actually answers — the machine hop, as connection knowledge |
+| `container-client/runtimes/commandScope.ts`, `proxy-route.ts` | which scope a connection wraps its commands in; whether its engine is on another machine at all |
 | `pi-agent-host/src/envFile.ts` | the environment for an engine that could not be handed a file |
 | `ai-system/adapters/sessionStorageServer.ts`, `core/sessionStorageOps.ts` | the app's half of the conversation store, and what it will act on |
 | `pi-agent-host/src/sessionStorage{,Channel,Worker}.ts` | pi's storage port over a blocking round trip: the port, the shared window, the thread that owns the socket |

@@ -20,7 +20,8 @@ vi.mock("@/ai-system/adapters/piBridgeClient", () => ({
   createPiBridgeClient: (...args: unknown[]) => createPiBridgeClient(...args),
 }));
 vi.mock("@/web-app/domain/engineHost", () => ({
-  resolveConnectionHost: async () => ({ PROGRAM: "podman" }),
+  // A connection on THIS machine: it wraps no command in a scope, which is the answer the store asks it for.
+  resolveConnectionHost: async () => ({ PROGRAM: "podman", isScoped: () => false }),
 }));
 
 const READY: BridgeEvent = {

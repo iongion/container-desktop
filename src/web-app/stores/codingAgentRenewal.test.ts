@@ -45,7 +45,8 @@ vi.mock("@/ai-system/adapters/piBridgeClient", () => ({
   createPiBridgeClient: (...args: unknown[]) => createPiBridgeClient(...args),
 }));
 vi.mock("@/web-app/domain/engineHost", () => ({
-  resolveConnectionHost: async () => ({ PROGRAM: "podman" }),
+  // A connection on THIS machine: it wraps no command in a scope, which is the answer the store asks it for.
+  resolveConnectionHost: async () => ({ PROGRAM: "podman", isScoped: () => false }),
 }));
 // The real one builds a Blueprint toaster against a window these tests install and remove themselves.
 vi.mock("@/web-app/Notification", () => ({ Notification: { show: vi.fn() } }));

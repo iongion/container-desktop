@@ -13,9 +13,10 @@ import { upstreamModelApi } from "@/ai-system/core/piAgentEnv";
 import type { ProviderKind } from "@/ai-system/core/providers";
 import type { DefaultSessionCandidate } from "@/ai-system/core/sessionLaunchers";
 import type { AIAuthSettings } from "@/ai-system/core/types";
+import { engineIsRemote } from "@/container-client/proxy-route";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
-import { LOOPBACK_ADDRESS, resolveMachineAddress } from "@/container-client/runtimes/publishedPortHost";
-import { ContainerEngineHost } from "@/container-client/types/engine";
+import { LOOPBACK_ADDRESS } from "@/container-client/runtimes/publishedPortHost";
+import type { ContainerEngineHost } from "@/container-client/types/engine";
 import { createLogger } from "@/logger";
 import {
   AGENT_ENV_DIR_IN_IMAGE,
@@ -123,58 +124,16 @@ export function sessionsMount(guestSessionsPath: string): string {
   return `${guestSessionsPath}:${SESSIONS_DIR_IN_IMAGE}`;
 }
 
-// The engine hosts that run their engine on a machine sharing no filesystem with this app. `resolveGuestPath` returns a
-// local path UNCHANGED for these on purpose — over SSH the workspace folder is one the remote machine already has — so
-// a directory this app created here does not exist on the machine that would mount it. The Build studio draws the same
-// line for a build context, and for the same reason.
-const REMOTE_ENGINE_HOSTS: ReadonlySet<ContainerEngineHost> = new Set([
-  ContainerEngineHost.PODMAN_REMOTE,
-  ContainerEngineHost.DOCKER_REMOTE,
-  ContainerEngineHost.APPLE_REMOTE,
-]);
-
-// Whether the engine runs on another machine, reached over SSH. A host nothing is known about is treated as this
-// machine's, which is what every connection did before either of the two answers below existed.
-export function engineIsRemote(engineHost: ContainerEngineHost | undefined): boolean {
-  return !!engineHost && REMOTE_ENGINE_HOSTS.has(engineHost);
-}
-
 // Whether a path this machine made can be mounted by that engine at all. False keeps the conversations where pi puts
 // them, which is what every connection did before this mount existed: asking a remote engine for a path it has never
 // seen makes the ENGINE create it, owned by root, and pi meets that as EACCES on the first turn.
+//
+// It is the remote engines that share no filesystem with this app, and `resolveGuestPath` returns a local path
+// UNCHANGED for them on purpose — over SSH the workspace folder is one the remote machine already has — so a directory
+// this app created here does not exist on the machine that would mount it. The Build studio draws the same line for a
+// build context, and for the same reason.
 export function engineSharesAppFilesystem(engineHost: ContainerEngineHost | undefined): boolean {
   return !engineIsRemote(engineHost);
-}
-
-// Where a port this engine publishes will answer, asked of the engine over the same seam every other engine command
-// travels — so for a remote connection the questions are asked ON that machine. `undefined` means the loopback the app
-// already dials, which is every engine that runs its containers itself and every machine that relays its own ports.
-//
-// Asked only for a REMOTE engine, and not because a local one cannot live inside a machine: a local machine-backed
-// connection runs its engine commands THROUGH the machine (`podman machine ssh <scope> podman …`), so this question
-// reaches a podman inside the guest, which has no machines of its own and answers `[]`. It costs a round trip to be
-// told nothing.
-export async function engineMachineAddress(
-  host: HostClientFacade,
-  scope: string | undefined,
-  imageTag: string,
-): Promise<string | undefined> {
-  const address = await resolveMachineAddress(async (args) => {
-    try {
-      const answer = await run(host, args, scope);
-      // Both answers are logged, because "no machine" and "could not ask" look identical from the outside and the
-      // difference decides whether a session is dialling the right address or nothing at all.
-      logger.debug(`the engine answered \`${args.join(" ")}\` with: ${answer.slice(0, 200)}`);
-      return answer;
-    } catch (error) {
-      logger.debug(`the engine refused \`${args.join(" ")}\``, error);
-      throw error;
-    }
-  }, imageTag);
-  logger.debug(
-    address ? `the engine runs inside a machine reachable at ${address}` : "the engine publishes on its own host",
-  );
-  return address;
 }
 
 export function userMappingArgv(mapping: PiAgentSessionSpec["userMapping"]): string[] {

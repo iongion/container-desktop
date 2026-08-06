@@ -24,6 +24,9 @@ export interface PiLoginContainerSpec {
   bridgeToken: string;
   // pi's OWN provider id, because the container asks pi for the provider by pi's name.
   piProviderId: string;
+  // Deliberately left empty by the store, unlike a session's: this container is dialled at `127.0.0.1:<hostPort>`
+  // with no forward, so routing it through a connection's scope would create it on another machine and then dial
+  // nothing here. Filling it in means opening a forward first, exactly as the session's bridge does.
   scope?: string;
   // Set for a refresh run: the env file carries the stored credential, substituted by the vault's owning realm.
   carriesStoredCredential?: boolean;

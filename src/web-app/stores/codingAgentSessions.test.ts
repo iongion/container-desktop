@@ -32,11 +32,23 @@ vi.mock("@/ai-system/adapters/piBridgeClient", () => ({
   createPiBridgeClient: (...args: unknown[]) => createPiBridgeClient(...args),
 }));
 // The connection the session starts on, swapped per test: whether a directory this machine made can be mounted at all
-// depends on the engine host.
-let engineHost: { PROGRAM: string; HOST: ContainerEngineHost } = {
-  PROGRAM: "podman",
-  HOST: ContainerEngineHost.PODMAN_NATIVE,
-};
+// depends on the engine host, and so does where a port it publishes answers.
+//
+// It answers the two questions the store asks of EVERY connection — which scope its engine commands run through, and
+// which machines its engine has — because those are the connection's answers, not a caller's. A remote connection with
+// no scope is one no forward could be aimed at, which is a session that cannot be started.
+function connection(host: ContainerEngineHost, scope?: string) {
+  return {
+    PROGRAM: "podman",
+    HOST: host,
+    isScoped: () => !!scope,
+    getSettings: async () => ({ controller: scope ? { scope } : undefined }),
+    // None: this engine publishes where the app already dials. The machine hop is measured in the connection layer's
+    // own tests; here the point is that it is ASKED.
+    getPodmanMachines: async () => [],
+  };
+}
+let engineHost: ReturnType<typeof connection> = connection(ContainerEngineHost.PODMAN_NATIVE);
 vi.mock("@/web-app/domain/engineHost", () => ({
   resolveConnectionHost: async () => engineHost,
 }));
@@ -127,7 +139,7 @@ describe("useCodingAgentStore conversations directory", () => {
   beforeEach(() => {
     // A stray flag would send both paths through the scripted bridge, which mounts nothing.
     vi.stubEnv("CONTAINER_DESKTOP_MOCK", "");
-    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_NATIVE };
+    engineHost = connection(ContainerEngineHost.PODMAN_NATIVE);
     createPiBridgeClient.mockReturnValue(fakeClient());
     installBridge();
     useCodingAgentStore.setState({
@@ -188,9 +200,9 @@ describe("useCodingAgentStore conversations directory", () => {
   // have the ENGINE create it, as root, and pi would fail with EACCES on the first turn. So the pair is SERVED the
   // directory instead: it publishes a socket, and this app answers pi's reads and writes over it.
   it("serves the conversations to a remote engine instead of mounting them", async () => {
-    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+    engineHost = connection(ContainerEngineHost.PODMAN_REMOTE, "win11");
 
-    await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
+    await useCodingAgentStore.getState().start(START);
 
     expect(startedSpec().sessionsPath).toBeUndefined();
     expect(startedSpec().storageHostPort).toBeGreaterThan(0);
@@ -211,10 +223,10 @@ describe("useCodingAgentStore conversations directory", () => {
   // Without a directory there is nothing to answer WITH, and a store that accepted calls it could not serve would fail
   // every turn. pi keeps its own default instead, which is the behaviour that shipped before any of this existed.
   it("serves nothing when the host could not resolve a directory", async () => {
-    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+    engineHost = connection(ContainerEngineHost.PODMAN_REMOTE, "win11");
     installBridge({ agentSessionsDir: undefined });
 
-    await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
+    await useCodingAgentStore.getState().start(START);
 
     expect(startedSpec().storageHostPort).toBeUndefined();
     expect(servedConversations).not.toHaveBeenCalled();
@@ -224,9 +236,9 @@ describe("useCodingAgentStore conversations directory", () => {
   // Both forwards die with the session, and the store stops answering. A socket left serving would keep a path into
   // the user's history open for containers that no longer exist.
   it("stops serving the conversations when the session stops", async () => {
-    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+    engineHost = connection(ContainerEngineHost.PODMAN_REMOTE, "win11");
 
-    await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
+    await useCodingAgentStore.getState().start(START);
     // Two `ssh -NL` children: the bridge, and the conversation store.
     expect(spawned).toHaveBeenCalledTimes(2);
 
@@ -239,9 +251,9 @@ describe("useCodingAgentStore conversations directory", () => {
   // A remote connection whose scope names no entry in `~/.ssh/config` cannot be forwarded to, and a session that
   // "started" would then own containers on the remote that nothing can ever talk to.
   it("refuses a remote session it has no way to reach, instead of starting one", async () => {
-    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+    engineHost = connection(ContainerEngineHost.PODMAN_REMOTE, "not-in-my-ssh-config");
 
-    await useCodingAgentStore.getState().start({ ...START, scope: "not-in-my-ssh-config" });
+    await useCodingAgentStore.getState().start(START);
 
     expect(useCodingAgentStore.getState().status).toBe("error");
     expect(useCodingAgentStore.getState().error).toContain("not-in-my-ssh-config");
@@ -251,9 +263,9 @@ describe("useCodingAgentStore conversations directory", () => {
   // all — which is why an assistant session on an SSH connection could not exist. The forward is what makes that port
   // answer here, and it must die exactly when the session does.
   it("reaches a remote pair through a forward, and takes it down with the session", async () => {
-    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+    engineHost = connection(ContainerEngineHost.PODMAN_REMOTE, "win11");
 
-    await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
+    await useCodingAgentStore.getState().start(START);
 
     // The BRIDGE's forward specifically: a served session opens a second one for the conversation store, and the two
     // are told apart by which remote port they aim at.

@@ -111,6 +111,20 @@ function forwardIsUp(port) {
   }
 }
 
+// Whether THIS target's engine keeps its containers in a machine that carries nothing out to its own host — asked of
+// the remote directly, outside the app, so it can say what the app's answer is supposed to be. podman on Windows says
+// yes (a running `wsl` machine reporting `UserModeNetworking: false`); a native remote and every docker one say no.
+function remoteHasUnrelayedMachine() {
+  if (ENGINE !== "podman") return false;
+  try {
+    return JSON.parse(onRemote("podman machine list --format json") || "[]").some(
+      (row) => row?.Running === true && row?.VMType === "wsl" && row?.UserModeNetworking === false,
+    );
+  } catch {
+    return false;
+  }
+}
+
 // Where that forward actually points, read off the same process table. `<local>:<destination>:<port>` is one argument
 // of `ssh -NL`, so the destination is what sits between the two ports.
 function forwardDestination(port) {
@@ -170,10 +184,25 @@ describe("a real session on a connection reached over SSH", () => {
     await browser.execute(() => {
       window.location.hash = "#/screens/ai/assistant";
     });
-    await $('[data-screen="ai.assistant"]').waitForExist({
-      timeout: 45000,
-      timeoutMsg: "the Assistant screen never mounted",
-    });
+    // Seen once, and unexplained: the renderer came back, the store seam was there, and this screen still never
+    // mounted — while the identical spec passed on the run before and the run after, with an empty app log and no
+    // container or process left over either time. So the timeout says what the window ACTUALLY held, because a
+    // re-run is what that failure otherwise costs.
+    try {
+      await $('[data-screen="ai.assistant"]').waitForExist({ timeout: 45000 });
+    } catch {
+      const seen = await browser
+        .execute(() => ({
+          hash: window.location.hash,
+          screens: Array.from(document.querySelectorAll("[data-screen]")).map((node) =>
+            node.getAttribute("data-screen"),
+          ),
+        }))
+        .catch((failure) => ({ hash: `unreadable: ${failure}`, screens: [] }));
+      throw new Error(
+        `the Assistant screen never mounted — the window is at ${seen.hash} showing [${seen.screens.join(", ")}]`,
+      );
+    }
 
     // A connection the app knows about is not a connection it has CONNECTED: the app brings one up on demand, so this
     // asks for it the same way the header's connection manager does. Never fatal — an SSH host that refuses is the
@@ -248,15 +277,12 @@ describe("a real session on a connection reached over SSH", () => {
           () => done(read()),
           (failure) => done({ ...read(), reason: String(failure) }),
         );
-    }, {
-      ...lmStudioStartOptions({
-        connectionId: target.id,
-        workspacePath: REMOTE_WORKSPACE,
-        model: model.id,
-        appVersion: APP_VERSION,
-      }),
-      scope: SSH_HOST,
-    });
+    }, lmStudioStartOptions({
+      connectionId: target.id,
+      workspacePath: REMOTE_WORKSPACE,
+      model: model.id,
+      appVersion: APP_VERSION,
+    }));
     sessionSpec = started.spec ?? {};
     localPort = started.localPort;
     if (started.status !== "ready") return;
@@ -304,7 +330,16 @@ describe("a real session on a connection reached over SSH", () => {
     assert.ok(forwardIsUp(localPort), `no ssh forward for 127.0.0.1:${localPort} in this machine's process table`);
   });
 
+  // Nothing told the start which scope to run its engine commands through — the app asks the CONNECTION, whose
+  // controller scope IS this ssh host. This spec used to hand the scope in itself, which made it the only way a remote
+  // session could be started at all: the app filled that option nowhere, so a user's remote start ran every engine
+  // command against a LOCAL engine and built the pair on the wrong machine.
   it("built the container on the REMOTE machine, not on this one", () => {
+    assert.equal(
+      sessionSpec.scope,
+      SSH_HOST,
+      `the session ran its engine commands through ${sessionSpec.scope || "this machine"}, not ${SSH_HOST}`,
+    );
     assert.ok(runningOnRemote(sessionSpec.agentContainerName), `${sessionSpec.agentContainerName} is not on ${SSH_HOST}`);
   });
 
@@ -313,6 +348,16 @@ describe("a real session on a connection reached over SSH", () => {
   // bound to the machine's address and the forward points at it. A native remote publishes on its own loopback and
   // nothing changes. Either way the destination must be where the pair actually published.
   it("points the forward at the address the pair published on", () => {
+    // Asked of the remote itself first, or this asserts nothing: `machineAddress ?? "127.0.0.1"` passes just as well
+    // when the app answered `undefined` for a machine that DOES need the hop, which is the regression that would put
+    // the forward one hop short of the container again.
+    if (remoteHasUnrelayedMachine()) {
+      assert.match(
+        sessionSpec.machineAddress ?? "",
+        /^\d{1,3}(\.\d{1,3}){3}$/,
+        `${SSH_HOST}'s engine lives in a machine that carries no port out to it, but the pair published on ${sessionSpec.machineAddress ?? "the remote's loopback"}`,
+      );
+    }
     const [destination, port] = forwardDestination(localPort);
     assert.equal(Number(port), sessionSpec.hostPort, `the forward carries ${port}, not the pair's ${sessionSpec.hostPort}`);
     assert.equal(
