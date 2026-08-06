@@ -1119,9 +1119,16 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     try {
       set((state) => ({ startLog: [...state.startLog, `attaching to ${spec.agentContainerName}`] }));
       // Same reach as a fresh start: a remote pair's published port is forwarded here before anything dials it.
-      bridge = await reachBridge(spec, host.HOST, (reason) => get().reportBridgeLost(reason));
-      storeTunnel = await serveConversations(spec, host.HOST, (reason) => get().reportBridgeLost(reason));
-      const client = createPiBridgeClient({ url: bridge.url, token: spec.bridgeToken });
+      // Same as `start`: a forward that dies while the client is still dialling ends the attach with the forward's own
+      // reason, rather than with the socket error that dialling nothing produces.
+      let carrier: string | undefined;
+      const carrierLost = (reason: string) => {
+        carrier = reason;
+        get().reportBridgeLost(reason);
+      };
+      bridge = await reachBridge(spec, host.HOST, carrierLost);
+      storeTunnel = await serveConversations(spec, host.HOST, carrierLost);
+      const client = createPiBridgeClient({ url: bridge.url, token: spec.bridgeToken, abandoned: () => carrier });
       client.onEvent((event) => get().applyBridgeEvent(event));
       observeProviderStream(() => get().client);
       // Published before the socket is dialled, for the same reason `start` does it: the session announces itself
@@ -1302,11 +1309,24 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
 
       // A pair on a remote engine published its bridge on ITS loopback, so the port is forwarded here first and the
       // local end is what gets dialled. A pair on this machine needs none of that.
-      bridge = await reachBridge(running, host.HOST, (reason) => get().reportBridgeLost(reason));
+      //
+      // What carries the dial is remembered, because losing it mid-start is not something to keep dialling through:
+      // the forward dies, and every one of the client's forty attempts then goes to a local port with nothing behind
+      // it before the start fails with a socket error that names none of this.
+      let carrier: string | undefined;
+      const carrierLost = (reason: string) => {
+        carrier = reason;
+        get().reportBridgeLost(reason);
+      };
+      bridge = await reachBridge(running, host.HOST, carrierLost);
       // BEFORE the bridge client connects: that connection is what builds the container's session, whose first act is
       // a storage call it blocks on. A store dialled after would look like a model that never answered.
-      storeTunnel = await serveConversations(running, host.HOST, (reason) => get().reportBridgeLost(reason));
-      const client = createPiBridgeClient({ url: bridge.url, token: running.bridgeToken });
+      storeTunnel = await serveConversations(running, host.HOST, carrierLost);
+      const client = createPiBridgeClient({
+        url: bridge.url,
+        token: running.bridgeToken,
+        abandoned: () => carrier,
+      });
       client.onEvent((event) => get().applyBridgeEvent(event));
       observeProviderStream(() => get().client);
       // In the store BEFORE the socket is dialled, because the session announces itself DURING connect: pi's

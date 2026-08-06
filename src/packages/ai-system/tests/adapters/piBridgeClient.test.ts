@@ -118,6 +118,33 @@ describe("createPiBridgeClient", () => {
     expect(created).toBe(3);
   });
 
+  // The retry above exists for a bridge that is not listening YET. It is worthless once the forward carrying the dial
+  // has died: measured on a real remote run, the app spent ten seconds and forty attempts on a local port with
+  // nothing behind it, then reported "bridge socket error" — the symptom — while it had been holding the cause
+  // ("the ssh forward … exited after 3 attempts (code 255)") for seventeen seconds already.
+  it("stops dialling, with the reason, when what carries the connection has died", async () => {
+    let created = 0;
+    let forward: string | undefined;
+    const client = createPiBridgeClient({
+      url: "ws://127.0.0.1:1/",
+      token: "tok",
+      socketFactory: () => {
+        created += 1;
+        const { socket } = fakeSocket();
+        setTimeout(() => {
+          forward = "the ssh forward for the assistant's bridge exited after 3 attempts";
+          socket.onerror?.(new Error("ECONNRESET"));
+        }, 0);
+        return socket;
+      },
+      connectRetry: { attempts: 40, delayMs: 1 },
+      abandoned: () => forward,
+    });
+
+    await expect(client.connect()).rejects.toThrow(/ssh forward .* exited after 3 attempts/);
+    expect(created).toBe(1);
+  });
+
   it("does not reconnect when the socket drops after it was ready", async () => {
     let created = 0;
     const { socket } = fakeSocket();

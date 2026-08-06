@@ -22,6 +22,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { reloadApp } from "../support/appReload.js";
 import { configureLmStudioProvider, lmStudioStartOptions, loadedModel } from "../support/lmstudioSession.js";
 import { appModeReason, firstReason, remoteEngineReason, skipSuite, targetReason } from "../support/prerequisites.js";
 
@@ -169,25 +170,17 @@ describe("a real session on a connection reached over SSH", () => {
     if (!model) return skipSuite(this, "LM Studio has nothing loaded — the start form needs a model to pick");
 
     // Written before the renderer reads it, then reloaded so the app's bootstrap picks the connection up the same way
-    // it picks up one the user configured.
+    // it picks up one the user configured. Through `reloadApp`, which waits for the NEW document: waiting for a seam
+    // alone was satisfied by the old one, so the hash set below was discarded by the reload that followed it and the
+    // app booted into its default route instead — this spec's "the Assistant screen never mounted".
     seedRemoteConnection();
-    await browser.execute(() => {
-      window.location.reload();
-    });
-    // The renderer blocks on window.Preloaded and then boots; navigating into that window loses the hash and the
-    // screen never mounts. The dev store seam is published at the end of bootstrap, so it is what "back" means.
-    await browser.waitUntil(
-      async () =>
-        await browser.execute(() => !!window.__cdCodingAgentStore && !!window.MessageBus && !!window.AI).catch(() => false),
-      { timeout: 90000, interval: 1000, timeoutMsg: "the renderer never came back after the reload" },
-    );
+    await reloadApp();
     await browser.execute(() => {
       window.location.hash = "#/screens/ai/assistant";
     });
-    // Seen once, and unexplained: the renderer came back, the store seam was there, and this screen still never
-    // mounted — while the identical spec passed on the run before and the run after, with an empty app log and no
-    // container or process left over either time. So the timeout says what the window ACTUALLY held, because a
-    // re-run is what that failure otherwise costs.
+    // If this ever times out again, it says what the window ACTUALLY held — including the boot fallback's own text,
+    // which is the difference between "the app is on another screen" and "the app never started". A re-run is what
+    // that question otherwise costs, and the app's log cannot answer it: a boot that failed never installed the sink.
     try {
       await $('[data-screen="ai.assistant"]').waitForExist({ timeout: 45000 });
     } catch {
@@ -197,10 +190,11 @@ describe("a real session on a connection reached over SSH", () => {
           screens: Array.from(document.querySelectorAll("[data-screen]")).map((node) =>
             node.getAttribute("data-screen"),
           ),
+          text: (document.getElementById("root")?.textContent ?? "").trim().slice(0, 300),
         }))
-        .catch((failure) => ({ hash: `unreadable: ${failure}`, screens: [] }));
+        .catch((failure) => ({ hash: `unreadable: ${failure}`, screens: [], text: "" }));
       throw new Error(
-        `the Assistant screen never mounted — the window is at ${seen.hash} showing [${seen.screens.join(", ")}]`,
+        `the Assistant screen never mounted — the window is at ${seen.hash} showing [${seen.screens.join(", ")}]: ${seen.text}`,
       );
     }
 

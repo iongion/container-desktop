@@ -30,6 +30,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { reloadApp } from "../support/appReload.js";
 import {
   MODEL as CLOUD_MODEL,
   openRouterStartOptions,
@@ -228,22 +229,13 @@ describe("the provider-shape contract against real containers", () => {
     const blocked = await firstReason([() => appModeReason("real")]);
     if (blocked) return skipSuite(this, blocked);
     seedProviders();
-    // The renderer loads user settings once, at boot; a reload is what makes the seed above reach the drawer.
-    // A sentinel marks THIS document, so the wait below ends on the new one rather than after a fixed pause:
-    // a reload that outlasts a guessed delay leaves the OLD dom on screen, every query matches it, and the
-    // reload then wipes what was just found — which surfaces much later as a null element in an innocent step.
+    // The renderer loads user settings once, at boot; a reload is what makes the seed above reach the drawer. The
+    // sentinel that tells the new document from the old one is `reloadApp`'s now — this spec had its own copy, and
+    // the spec that did NOT have one lost a hash to exactly the race it describes.
     await browser.execute(() => {
-      window.__cdPreReload = true;
       window.location.hash = "#/screens/ai/assistant";
-      window.location.reload();
     });
-    await browser.waitUntil(
-      async () =>
-        await browser.execute(
-          () => window.__cdPreReload !== true && typeof window.__cdCodingAgentStore !== "undefined",
-        ),
-      { timeout: 60000, interval: 500, timeoutMsg: "the renderer never came back up after the settings reload" },
-    );
+    await reloadApp();
     await browser.execute(() => {
       window.location.hash = "#/screens/ai/assistant";
     });

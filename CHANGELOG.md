@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A session on a remote engine survives an SSH forward the remote refused. The app opened it three times, but all three attempts landed in the same instant — one more connection into the very burst being refused — so all three failed. They are spaced now, the way every other burst-refused SSH command in the app already is
+- A session that cannot be reached says why. When the forward carrying it died, the app went on dialling a local port with nothing behind it for ten seconds and then reported "bridge socket error" — the symptom of a cause it had been holding the whole time. It now stops at the first refusal and reports what actually died
 - An assistant session on a remote or WSL connection now runs its engine commands where that connection lives. The scope came from a start option nothing in the app ever filled, so every command ran against a LOCAL engine — the pair was built on the wrong machine and the forward could not be aimed at all. It is now asked of the connection itself
 - Starting an assistant session can no longer hang forever. When the agent container accepted the connection but never finished its handshake, nothing timed out and nothing failed — the start simply waited, with one line in the log and no end to it. It now gives up with that reason
 - A container action the assistant chose now reaches the container it named. The engine reports a container's name with a leading slash, so a model that copied it out of a listing had every inspect, start, stop, restart, pause and remove answered "no such container" for a container that was plainly there — the operation quietly did nothing and the model was told so

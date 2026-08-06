@@ -106,6 +106,10 @@ export function createPiBridgeClient(options: {
   socketFactory?: (url: string) => WebSocketLike;
   connectRetry?: { attempts: number; delayMs: number };
   readyTimeoutMs?: number;
+  // Why there is no longer anything to dial, when the caller knows. The retry below is for a bridge that is not
+  // listening YET; a forward that has died is not a wait, and continuing to dial it spends the whole retry budget to
+  // report a socket error for a cause the caller was already holding.
+  abandoned?: () => string | undefined;
 }): PiBridgeClient {
   const listeners = new Set<(event: BridgeEvent) => void>();
   let socket: WebSocketLike | undefined;
@@ -183,6 +187,13 @@ export function createPiBridgeClient(options: {
           const failed = (error: Error) => {
             if (ready || done) return;
             settled();
+            // Nothing left to reach: say why, once, instead of spending the rest of the budget proving that a local
+            // port with nothing behind it stays refused.
+            const gone = options.abandoned?.();
+            if (gone) {
+              reject(new Error(gone));
+              return;
+            }
             if (attempt >= attempts) {
               reject(error);
               return;

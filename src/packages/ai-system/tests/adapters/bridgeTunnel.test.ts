@@ -113,7 +113,13 @@ describe("openBridgeTunnel", () => {
 
     await openBridgeTunnel(
       { spawn, localPort: 41999 },
-      { credentials, remotePort: 43117, onLost: lost, retry: { attempts: 3, graceMs: 5000 }, now: () => clock },
+      {
+        credentials,
+        remotePort: 43117,
+        onLost: lost,
+        retry: { attempts: 3, graceMs: 5000, delayMs: 5 },
+        now: () => clock,
+      },
     );
     clock += 200;
     spawned[0].emit("exit", { code: 255 });
@@ -121,6 +127,43 @@ describe("openBridgeTunnel", () => {
 
     // Re-opened, and nothing was reported as lost: the session never noticed.
     expect(lost).not.toHaveBeenCalled();
+  });
+
+  // What made those attempts worthless: they all landed in the same instant. `ssh` exits 255 because the remote's
+  // sshd is refusing a BURST, and re-opening synchronously from the exit handler is one more connection into that
+  // same burst — measured on a real run, three attempts within milliseconds, all three refused, after which the
+  // session dialled a local port nothing was listening on for ten seconds and reported a socket error.
+  it("waits before opening it again, instead of dialling into the same burst", async () => {
+    const spawned = [fakeProcess(), fakeProcess()];
+    let index = 0;
+    const spawn = vi.fn(async () => spawned[index++]);
+
+    await openBridgeTunnel(
+      { spawn, localPort: 41999 },
+      { credentials, remotePort: 43117, retry: { attempts: 3, graceMs: 5000, delayMs: 20 }, now: () => 1000 },
+    );
+    spawned[0].emit("exit", { code: 255 });
+
+    expect(spawn).toHaveBeenCalledTimes(1);
+    await vi.waitUntil(() => spawn.mock.calls.length === 2, { timeout: 500 });
+  });
+
+  // A session that was stopped while a re-open was waiting must not bring a forward up behind it: the pair is gone,
+  // and the child would hold a local port for the rest of the app's life.
+  it("does not open it again once the session has stopped", async () => {
+    const spawned = [fakeProcess(), fakeProcess()];
+    let index = 0;
+    const spawn = vi.fn(async () => spawned[index++]);
+
+    const tunnel = await openBridgeTunnel(
+      { spawn, localPort: 41999 },
+      { credentials, remotePort: 43117, retry: { attempts: 3, graceMs: 5000, delayMs: 20 }, now: () => 1000 },
+    );
+    spawned[0].emit("exit", { code: 255 });
+    tunnel.stop();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    expect(spawn).toHaveBeenCalledTimes(1);
   });
 
   it("gives up saying so when every attempt is refused", async () => {
@@ -134,7 +177,13 @@ describe("openBridgeTunnel", () => {
 
     await openBridgeTunnel(
       { spawn, localPort: 41999 },
-      { credentials, remotePort: 43117, onLost: lost, retry: { attempts: 2, graceMs: 5000 }, now: () => 1000 },
+      {
+        credentials,
+        remotePort: 43117,
+        onLost: lost,
+        retry: { attempts: 2, graceMs: 5000, delayMs: 5 },
+        now: () => 1000,
+      },
     );
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await vi.waitUntil(() => made.length === attempt + 1, { timeout: 500 });
