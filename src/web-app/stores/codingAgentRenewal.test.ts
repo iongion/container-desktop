@@ -15,6 +15,12 @@ import { type ProviderRefreshResult, useProviderLoginStore } from "@/web-app/sto
 const startPiAgentSession = vi.fn(async (..._args: unknown[]) => ({ hostPort: 45871 }));
 const stopPiAgentSession = vi.fn(async () => {});
 const createPiBridgeClient = vi.fn();
+// What a running pair answers when the app dials back into it: its own port, token and model.
+const attachPiAgentSession = vi.fn(async (..._args: unknown[]) => ({
+  hostPort: 45871,
+  bridgeToken: "bridge-token-1",
+  modelId: "anthropic/claude-sonnet-4",
+}));
 
 vi.mock("@/ai-system/adapters/piAgentContainer", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/ai-system/adapters/piAgentContainer")>()),
@@ -30,6 +36,7 @@ vi.mock("@/ai-system/adapters/piAgentContainer", async (importOriginal) => ({
     return startPiAgentSession(host, spec, envFile, options);
   },
   stopPiAgentSession: () => stopPiAgentSession(),
+  attachPiAgentSession: (...args: unknown[]) => attachPiAgentSession(...args),
 }));
 vi.mock("@/ai-system/adapters/piBridgeClient", () => ({
   createPiBridgeClient: (...args: unknown[]) => createPiBridgeClient(...args),
@@ -146,6 +153,50 @@ describe("useCodingAgentStore credential renewal", () => {
     await useCodingAgentStore.getState().start(START);
 
     expect(useCodingAgentStore.getState().startLog).toContain("renewed the anthropic sign-in");
+  });
+
+  // Continuing a pair that outlived the app is the one path where the credential is certain to be OLDER than the
+  // session: nothing renewed it while the app was closed, and attaching writes no env file to freeze a new one into.
+  it("renews a sign-in that lapsed while the app was closed, and hands it to the gateway already standing", async () => {
+    const rotate = answerRotationWith({ refreshed: true, expiresAt: NOW + TEN_MINUTES, accessToken: "rotated-1" });
+    const client = fakeClient();
+    createPiBridgeClient.mockReturnValue(client);
+
+    await useCodingAgentStore.getState().attachSession(START);
+
+    expect(rotate).toHaveBeenCalledWith("anthropic");
+    // The gateway's env file was written when the pair was BUILT, so the bridge is the only way in.
+    expect(client.setGatewayCredential).toHaveBeenCalledWith("rotated-1");
+  });
+
+  it("arms a renewal the closed app could not have left behind", async () => {
+    const rotate = answerRotationWith(
+      { refreshed: true, expiresAt: NOW + TEN_MINUTES, accessToken: "rotated-1" },
+      { refreshed: true, expiresAt: NOW + 2 * TEN_MINUTES, accessToken: "rotated-2" },
+    );
+    const client = fakeClient();
+    createPiBridgeClient.mockReturnValue(client);
+
+    await useCodingAgentStore.getState().attachSession(START);
+    expect(rotate).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(TEN_MINUTES - RENEWAL_MARGIN_MS + 1_000);
+
+    expect(rotate).toHaveBeenCalledTimes(2);
+    expect(client.setGatewayCredential).toHaveBeenLastCalledWith("rotated-2");
+  });
+
+  it("carries a session whose sign-in is beyond renewal rather than refusing it", async () => {
+    answerRotationWith({ refreshed: false, mustSignInAgain: true, reason: "invalid_grant" });
+    const client = fakeClient();
+    createPiBridgeClient.mockReturnValue(client);
+
+    await useCodingAgentStore.getState().attachSession(START);
+
+    // Unlike start, there is already a conversation here and it is worth reading — so it says so and attaches.
+    expect(Notification.show).toHaveBeenCalled();
+    expect(client.connect).toHaveBeenCalled();
+    expect(useCodingAgentStore.getState().status).not.toBe("error");
   });
 
   it("refuses to start on a sign-in that can no longer be renewed", async () => {

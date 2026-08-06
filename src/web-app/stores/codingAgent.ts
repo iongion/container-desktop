@@ -134,6 +134,24 @@ function scheduleCredentialRenewal(
   );
 }
 
+// Keep an expiring sign-in usable before the session leans on it. Both ways into a session need this, and for the
+// same reason — a lapsed token surfaces as a 401 on the first turn — but they can do different things about it, so
+// this reports and the caller decides. A provider that names no credential has nothing to rotate.
+async function rotateSessionCredential(
+  providerId: string | undefined,
+  log: (line: string) => void,
+): Promise<{ mustSignInAgain: boolean; accessToken?: string; expiresAt?: number }> {
+  if (!providerId) return { mustSignInAgain: false };
+  const rotation = await useProviderLoginStore.getState().refreshCredential(providerId);
+  if (rotation.mustSignInAgain) return { mustSignInAgain: true };
+  if (rotation.refreshed) log(`renewed the ${providerId} sign-in`);
+  return {
+    mustSignInAgain: false,
+    ...(rotation.accessToken ? { accessToken: rotation.accessToken } : {}),
+    ...(rotation.expiresAt ? { expiresAt: rotation.expiresAt } : {}),
+  };
+}
+
 type HostRequestEvent = Extract<BridgeEvent, { type: "host_request" }>;
 
 // Session UI an extension drives outside the transcript: footer statuses, composer widgets, the window title
@@ -860,6 +878,18 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       await get().start(options);
       return;
     }
+    // The same rotation `start` does, for the same reason: a sign-in that lapsed while the app was closed would
+    // otherwise surface as a 401 on the first turn of a session the user just asked to continue. It costs nothing
+    // unless the provider actually has a renewable sign-in — a keyless or key-only one is answered without a
+    // container. Unlike `start` this does not refuse: the pair is up and its conversation is worth reading even
+    // when the credential behind it is beyond renewal, so it says so and carries on.
+    const rotation = await rotateSessionCredential(options.providerId, (line) =>
+      set((state) => ({ startLog: [...state.startLog, line] })),
+    );
+    if (rotation.mustSignInAgain) {
+      Notification.show({ message: t("The assistant's sign-in expired — sign in again."), intent: Intent.WARNING });
+    }
+
     const host = await resolveConnectionHost(options.connectionId);
     if (!host) {
       set({ status: "error", error: `no engine host for connection ${options.connectionId}` });
@@ -905,6 +935,18 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       // DURING connect, and every handler for that reads the client back out of here.
       set({ client, spec, connectionId: options.connectionId, sessionModel: spec.modelId });
       await client.connect();
+      // The gateway froze its token into an env file when the pair was BUILT, and attaching cannot rewrite that
+      // file — so a credential renewed just now reaches the running gateway over the bridge instead, the same way
+      // a scheduled renewal does mid-session.
+      if (rotation.accessToken) {
+        await client
+          .setGatewayCredential(rotation.accessToken)
+          .catch((error) => logger.error("the renewed credential did not reach the gateway", error));
+      }
+      // A deadline the app was closed through left no timer behind; this is where the session gets one again.
+      if (options.providerId && rotation.expiresAt) {
+        scheduleCredentialRenewal(options.providerId, rotation.expiresAt, () => get().client);
+      }
       await get().publishTheme();
       await get().publishSystemContext();
     } catch (error) {
@@ -944,16 +986,15 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // A keyless local provider names none, and has nothing to rotate.
     const credentialProvider = options.providerId;
     if (credentialProvider) {
-      const rotation = await useProviderLoginStore.getState().refreshCredential(credentialProvider);
+      const rotation = await rotateSessionCredential(credentialProvider, (line) =>
+        set((state) => ({ startLog: [...state.startLog, line] })),
+      );
       if (rotation.mustSignInAgain) {
         set({
           status: "error",
           error: `${credentialProvider}: the stored sign-in can no longer be renewed — sign in again`,
         });
         return;
-      }
-      if (rotation.refreshed) {
-        set((state) => ({ startLog: [...state.startLog, `renewed the ${credentialProvider} sign-in`] }));
       }
       // A credential with a deadline gets a renewal scheduled before it; a permanent key reports none and gets none.
       if (rotation.expiresAt) {
