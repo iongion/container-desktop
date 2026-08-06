@@ -59,6 +59,10 @@ export const FS: IFileDiscoverySystem = {
     return await fs.writeFileSync(location, contents, { encoding: "utf-8" });
   },
 
+  async appendTextFile(location: string, contents: string) {
+    fs.appendFileSync(location, contents, { encoding: "utf-8" });
+  },
+
   async writePrivateTextFile(location: string, contents: string) {
     fs.writeFileSync(location, contents, { encoding: "utf-8", mode: 0o600 });
     // `mode` only applies when writeFileSync CREATES the file; harden a pre-existing loose file too.

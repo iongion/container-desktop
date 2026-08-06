@@ -102,6 +102,7 @@ export function createFileSystem(invoke: WailsInvoke): IFileDiscoverySystem {
     // (FsService.WritePrivateTextFile), matching the Node impl. Best-effort on Windows (no unix mode).
     writePrivateTextFile: (location: string, contents: string) =>
       invoke("fs_write_private_text_file", { path: location, contents }),
+    appendTextFile: (location: string, contents: string) => invoke("fs_append_text_file", { path: location, contents }),
     isFilePresent: (filePath: string) => invoke("fs_is_file_present", { path: filePath }),
     mkdir: (location: string, options?: any) =>
       invoke("fs_mkdir", { path: location, recursive: options?.recursive ?? true }),

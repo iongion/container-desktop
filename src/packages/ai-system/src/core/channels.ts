@@ -24,6 +24,13 @@ export const AI_CHANNELS = {
   // ENGINE, owned by root, and the session then fails with EACCES on its first turn. Holds no secret, so it is a
   // sibling of the protected agent directory rather than inside it.
   agentSessionsDir: "ai:agent:sessions-dir",
+  // invoke({ localPort, bridgeToken }) → { ok }. Serve that same directory to a pair that cannot MOUNT it, because its
+  // engine runs where this filesystem does not exist. The store lives in this host so the conversations never leave
+  // the user's machine; the container asks for them over its own socket, and only the directory above is reachable.
+  agentSessionsServe: "ai:agent:sessions-serve",
+  // invoke() → { ok }. Stop serving. Called when the session stops, and idempotent: a start that failed halfway tears
+  // down through the same path as a session the user ended.
+  agentSessionsUnserve: "ai:agent:sessions-unserve",
   // invoke({ provider, fileName, bridgeToken, bridgePort }) → { path }. The one-shot auth container's env file for a
   // REFRESH run: it carries the stored credential, put in host-side, because the web view cannot read one out of the
   // vault. Same protected directory and same guard as the two above.

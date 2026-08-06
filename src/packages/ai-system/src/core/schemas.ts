@@ -448,6 +448,13 @@ export const invokeSchemas = {
   // Nothing to describe: the host owns where its data lives, and a caller that could name the directory could aim
   // the mount anywhere.
   [AI_CHANNELS.agentSessionsDir]: empty,
+  // The port is on THIS machine — loopback for a local engine, the local end of the session's ssh forward for a remote
+  // one — so a caller can only ever aim the store at something reachable here. The token is the session's own bridge
+  // token, because that socket carries the user's whole history and is the same trust boundary as the bridge.
+  [AI_CHANNELS.agentSessionsServe]: z
+    .object({ localPort: z.number().int().min(1).max(65535), bridgeToken: z.string().min(1).max(512) })
+    .strict(),
+  [AI_CHANNELS.agentSessionsUnserve]: empty,
   [AI_CHANNELS.changesStatus]: empty,
   [AI_CHANNELS.changesDiff]: empty,
   [AI_CHANNELS.projectContextSnapshot]: empty,
@@ -816,6 +823,8 @@ export const responseSchemas = {
   [AI_CHANNELS.agentGatewayEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.agentEnvFile]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.agentSessionsDir]: z.object({ path: z.string().min(1).max(4096) }).strict(),
+  [AI_CHANNELS.agentSessionsServe]: ok,
+  [AI_CHANNELS.agentSessionsUnserve]: ok,
   [AI_CHANNELS.authRefreshEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.changesStatus]: workspaceChangeStatusSchema,
   [AI_CHANNELS.changesDiff]: workspaceDiffSchema,

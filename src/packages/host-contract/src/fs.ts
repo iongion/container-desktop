@@ -40,4 +40,9 @@ export interface IFileDiscoverySystem extends IFileSystem {
   lstat(location: string): Promise<FileSystemStat>;
   realPath(location: string): Promise<string>;
   isPathWithin(root: string, location: string): Promise<boolean>;
+  // Append to an existing file, creating it when absent. DISTINCT from writeTextFile because the difference is not
+  // convenience: an append-only log — the assistant's conversations are one JSONL line per entry — read whole,
+  // concatenated and rewritten on every entry costs the square of its own length, which a conversation reaches
+  // within one session.
+  appendTextFile(location: string, contents: string): Promise<void>;
 }

@@ -99,6 +99,25 @@ pub fn fs_write_text_file(path: String, contents: String) -> Result<(), String> 
     std::fs::write(&path, contents).map_err(|e| e.to_string())
 }
 
+/// Append to a file, creating it when absent — the Rust side of IFileDiscoverySystem.appendTextFile. The assistant's
+/// conversations are append-only JSONL, one line per entry, and rewriting the whole file per entry costs the square
+/// of its length. Carries the same agent-secret refusal as every other write: nothing web-view-reachable may touch
+/// the directory holding the provider key.
+#[tauri::command]
+pub fn fs_append_text_file(path: String, contents: String) -> Result<(), String> {
+    refuse_agent_secret(Path::new(&path))?;
+    if let Some(parent) = Path::new(&path).parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    file.write_all(contents.as_bytes()).map_err(|e| e.to_string())
+}
+
 /// Like fs_write_text_file but hardens the file to owner-only — the Rust side of IFileSystem.writePrivateTextFile
 /// (AI credentials / permissions / knowledge, which must never be world-readable). The file is created 0o600 and
 /// chmod'ed 0o600. On Windows there is no unix mode, so the hardening is best-effort and the write still succeeds.

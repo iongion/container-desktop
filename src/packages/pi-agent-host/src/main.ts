@@ -12,6 +12,12 @@ import { parseUpstreamAuthScheme, startGateway } from "@/pi-agent-host/gateway";
 import { reasoningFromEnv } from "@/pi-agent-host/modelRegistrations";
 import { attachBridgeConnection } from "@/pi-agent-host/server";
 import { createPiSession, parseModelApi } from "@/pi-agent-host/session";
+import {
+  installPiSessionStorage,
+  type PiSessionStorage,
+  piSessionStorageOver,
+  workerSessionStorageTransport,
+} from "@/pi-agent-host/sessionStorage";
 
 const logger = createLogger("pi-agent-host.main");
 
@@ -46,8 +52,30 @@ function argValue(flag: string): string | undefined {
   return index === -1 ? undefined : process.argv[index + 1];
 }
 
+// The conversations belong on the user's machine even when the engine runs somewhere this container's filesystem
+// cannot be mounted from. Installed BEFORE the first session exists, because pi resolves the store once per
+// `SessionManager` and one built earlier would keep the filesystem.
+async function installConversationStore(token: string): Promise<PiSessionStorage | undefined> {
+  const port = Number(process.env.CD_SESSION_STORAGE_PORT);
+  if (!Number.isInteger(port) || port <= 0) return undefined;
+  const transport = workerSessionStorageTransport({
+    port,
+    token,
+    // Beside this bundle in the image. Resolved from the module's own URL rather than an absolute path, so the two
+    // files travel together and a relocated `/opt/cd-agent` needs no second edit.
+    workerPath: new URL("./session-storage-worker.mjs", import.meta.url),
+  });
+  const storage = piSessionStorageOver(transport);
+  await installPiSessionStorage(storage);
+  logger.info(`conversations are served by the app over port ${port}`);
+  // Returned as well as installed: pi resolves the store itself for everything it reads and writes, but `/import`
+  // writes a file pi is then asked to read, and that write is ours.
+  return storage;
+}
+
 async function runAgent(): Promise<void> {
   const token = required("CD_BRIDGE_TOKEN");
+  const sessionStorage = await installConversationStore(token);
   const port = Number(process.env.CD_BRIDGE_PORT ?? "8787");
   const server = new WebSocketServer({ host: "0.0.0.0", port });
   logger.info(`agent bridge listening on ${port}`);
@@ -70,6 +98,8 @@ async function runAgent(): Promise<void> {
       // Set only when the app mounted a directory for the conversations. Absent, pi keeps defaulting them under the
       // agent dir — the plugin volume — which is the behaviour this replaces.
       sessionDir: process.env.CD_SESSION_DIR,
+      // Absent for a mounted directory, where pi's own default store is already the right place.
+      ...(sessionStorage ? { sessionStorage } : {}),
       gatewayUrl: required("CD_GATEWAY_URL"),
       gatewayToken: token,
       modelId: required("CD_MODEL_ID"),

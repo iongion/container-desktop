@@ -31,13 +31,30 @@ The mount is shaped like the WORKSPACE mount, translated by the same `resolveGue
 onto the container's `agent` user. Measured against the real image, `:U` changes nothing here except making podman chown
 the user's whole history on every start.
 
-**A remote (SSH) engine keeps pi's own default, and nothing is ever synced.** A remote engine mounts paths from ITS
-machine — `resolveGuestPath` is the identity there by design, since the workspace folder is one the remote already has —
-so `engineSharesAppFilesystem` withholds the mount and that connection's conversations stay where pi puts them. Bringing
-them anywhere is NOT this app's business: a copy between two places is two writers, and reconciliation, conflict rules
-and timestamps are exactly what the design refuses. What would put a remote engine's history on the user's machine is an
-`fs` port on pi's `SessionManager` (its own harness layer already has one) reached over the bridge that already carries
-the workspace file operations — an upstream contribution, not a fork and not a sync.
+**A remote (SSH) engine is SERVED the same directory instead, and nothing is ever synced.** A remote engine mounts paths
+from ITS machine — `resolveGuestPath` is the identity there by design, since the workspace folder is one the remote
+already has — so `engineSharesAppFilesystem` withholds the mount. What replaces it is a storage RPC, not a copy: pi's
+`SessionManager` gained a synchronous `SessionStorage` port (our own upstream patch, `support/agent-image/pi-patch`), the
+container is installed with one that asks the app, and every read and write lands in the same
+`<userData>/assistant-sessions` a local engine mounts. **One writer, one location, nothing reconciled** — the two modes
+are exclusive by construction, since a pair either mounts the directory or asks for it.
+
+The container asks over a **second published port** (`PI_SESSION_STORAGE_CONTAINER_PORT`), dialled by the app the same
+direction as the bridge and, for a remote engine, through a second `ssh -NL` forward. It has to be a second socket: pi's
+port is synchronous — `appendMessage` returns an entry id, `create`/`open` touch the store in their constructors — so the
+container's main thread BLOCKS on every call, and an answer arriving on a socket that thread is reading is an immediate
+deadlock. A worker thread owns this one and hands bytes back through a `SharedArrayBuffer` with `Atomics.wait`, in
+window-sized chunks (`sessionStorageChannel.ts`) so a long conversation crosses without either side buffering it whole.
+
+The agent container is the untrusted world, so the app confines what it will act on: `resolveSessionStoragePath`
+(`core/sessionStorageOps.ts`) accepts the conversations directory and the `*.jsonl` files directly inside it, and
+refuses everything else with a reason — structurally, never by normalizing a traversal into something plausible. The
+confinement is on the APP side deliberately: a check made inside the container is a check plugin code could edit out.
+`readTextLines` carries pi's byte cap instead of its laziness, because a round trip per line would be one blocking call
+per entry in the file; `appendTextFile` is a real host capability (`IFileDiscoverySystem`) because rewriting an
+append-only JSONL per entry costs the square of its length.
+
+Cost, plainly: one blocking round trip per session append, a handful per turn.
 
 Three worlds, two of them containers:
 
@@ -174,7 +191,8 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
 3. write the **agent** env file — deliberately *without* the key: bridge token and port, the gateway URL, the
    model id, `/workspace`, the agent dir — and run `<image> --mode agent` with
    `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, the plugin volume, and — where the engine can see this
-   machine's filesystem — the conversations mount;
+   machine's filesystem — the conversations mount, or where it cannot, a second published port for the conversation
+   store the app answers on;
 4. connect the WebSocket client and publish the app's theme palette **before** the first plugin frame, so no
    component paints in pi's colours and then flashes to the app's.
 
@@ -396,6 +414,7 @@ request validated against the Zod schema in `core/schemas.ts`, and its response 
 | provider keys | `ai:key:{has,set,clear}` | live |
 | the agent pair's private env files | `ai:agent:{gateway-env,env-file}` | live — the key is substituted natively, never in this realm |
 | the conversations' directory | `ai:agent:sessions-dir` | live — resolved AND created host-side, so the engine never makes it as root |
+| serving that directory to a pair that cannot mount it | `ai:agent:sessions-{serve,unserve}` | live — one session at a time, confined to that directory and `*.jsonl` |
 | model discovery | `ai:models:{list,cancel}` | live |
 | one model's facts | `ai:model:window` | live — the provider probe ([below](#what-the-app-knows-about-a-model)) |
 | web search, run for the agent | `ai:web:search` | live — refused while the user's own switch is off |
@@ -727,7 +746,8 @@ probe with the short name. **An image built for one engine does not exist for th
   own provider listing** from a loopback stub in OpenRouter's shape, so the shipped probe runs for real with no
   network and no key.
 - **Real containers, no app** — `support/pi-plugins-probe.mjs` and `support/pi-bridge-probe.mjs` run the built
-  image directly; `support/pi-upstream-shape-probe.mjs` runs it once per upstream against a body-recording stub,
+  image directly; `support/pi-session-storage-probe.mjs` is the conversation store's own proof — a real pair asks THIS
+  machine for its history, the JSONL lands here, and the container's own filesystem stays empty; `support/pi-upstream-shape-probe.mjs` runs it once per upstream against a body-recording stub,
   which is the only way to see what pi actually sends through the gateway.
 - **Real model, real engine** — `yarn test:smoke:tauri --spec webdriver/smoke/pi-container-live.smoke.js` drives a non-mock app and a real
   OpenRouter model through the container toolset, creating and removing its own throwaway container.
@@ -775,6 +795,9 @@ then failed from inside a store.
 | `pi-agent-host/src/toolOutput.ts` | reading back a truncated tool's full output, path-validated against pi's own shape |
 | `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
 | `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |
+| `ai-system/adapters/sessionStorageServer.ts`, `core/sessionStorageOps.ts` | the app's half of the conversation store, and what it will act on |
+| `pi-agent-host/src/sessionStorage{,Channel,Worker}.ts` | pi's storage port over a blocking round trip: the port, the shared window, the thread that owns the socket |
+| `pi-bridge/src/sessionStorage.ts` | that store's wire contract — its own protocol and its own socket |
 | `ai-system/core/{piSessionView,piToolCards,piApprovals,piAIState,uiRequests,engineOpDispatch}.ts` | pure projection, card resolution, policy, routing, dispatch |
 | `ai-system/core/piContextReport.ts` | the session's reports → the context and usage panels' shapes |
 | `ai-system/adapters/sessionWorkspace.ts` | which folder host-side workspace access acts on: the session's, not Settings' |

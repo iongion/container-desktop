@@ -44,6 +44,10 @@ export interface IAI {
   // This realm cannot name it: where the app keeps its data is the host's to know, and a directory the engine has to
   // create instead belongs to root.
   agentSessionsDir: () => Promise<{ path: string }>;
+  // Serve that directory to a pair that cannot mount it. The port is the local end the container's store answers on;
+  // the token is the session's own, because this socket carries the whole history.
+  serveAgentSessions: (request: { localPort: number; bridgeToken: string }) => Promise<{ ok: boolean }>;
+  stopServingAgentSessions: () => Promise<{ ok: boolean }>;
   // The one-shot auth container's env file for a refresh run. The stored credential is put in host-side, the same way
   // the gateway's is — this realm names the provider and never sees the secret.
   writeAuthRefreshEnv: (request: {
@@ -130,6 +134,8 @@ export function createAIClient(transport: AIClientTransport) {
     writeAgentGatewayEnv: (request) => invoke(AI_CHANNELS.agentGatewayEnv, request),
     writeAgentEnvFile: (fileName, contents) => invoke(AI_CHANNELS.agentEnvFile, { fileName, contents }),
     agentSessionsDir: () => invoke(AI_CHANNELS.agentSessionsDir),
+    serveAgentSessions: (request) => invoke(AI_CHANNELS.agentSessionsServe, request),
+    stopServingAgentSessions: () => invoke(AI_CHANNELS.agentSessionsUnserve),
     writeAuthRefreshEnv: (request) => invoke(AI_CHANNELS.authRefreshEnv, request),
     getWorkspaceChangeStatus: () => invoke(AI_CHANNELS.changesStatus),
     getWorkspaceDiff: () => invoke(AI_CHANNELS.changesDiff),

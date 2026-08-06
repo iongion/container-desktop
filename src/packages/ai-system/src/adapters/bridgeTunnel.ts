@@ -45,6 +45,9 @@ export interface BridgeTunnelSpec {
   // Called when the forward dies under a live session. Every frame after that goes nowhere, so the caller reports the
   // session as lost rather than leaving a transcript that has silently stopped receiving.
   onLost?: (reason: string) => void;
+  // What this forward carries, in the words the reason string uses. A pair has two sockets reached this same way — the
+  // bridge and the conversation store — and a reason naming the wrong one sends the reader to the wrong place.
+  label?: string;
 }
 
 const LOOPBACK = "127.0.0.1";
@@ -62,7 +65,7 @@ export async function openBridgeTunnel(deps: BridgeTunnelDeps, spec: BridgeTunne
   child.on?.("exit", (payload) => {
     if (stopped) return;
     stopped = true;
-    const reason = `the ssh forward for the assistant's bridge exited (${JSON.stringify(payload ?? {})})`;
+    const reason = `the ssh forward for ${spec.label ?? "the assistant's bridge"} exited (${JSON.stringify(payload ?? {})})`;
     logger.warn(reason);
     spec.onLost?.(reason);
   });

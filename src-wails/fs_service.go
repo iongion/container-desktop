@@ -78,6 +78,22 @@ func (s *FsService) WriteTextFile(req WriteTextFileRequest) error {
 	return os.WriteFile(req.Path, []byte(req.Contents), 0o644)
 }
 
+// AppendTextFile appends to a file, creating it when absent — the Go side of IFileDiscoverySystem.appendTextFile,
+// mirroring host/fs.rs fs_append_text_file. The assistant's conversations are append-only JSONL, one line per entry,
+// and rewriting the whole file per entry costs the square of its length.
+func (s *FsService) AppendTextFile(req WriteTextFileRequest) error {
+	if err := refuseAgentSecret(req.Path); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(req.Path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteString(req.Contents)
+	return err
+}
+
 // WritePrivateTextFile writes 0600 owner-only (AI credentials), mirroring host.rs
 // fs_write_private_text_file. Best-effort mode on Windows (no unix perms).
 func (s *FsService) WritePrivateTextFile(req WriteTextFileRequest) error {

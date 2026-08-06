@@ -105,6 +105,10 @@ export interface CreatePiSessionOptions {
   // `agentDir` — which is the plugin volume, so the history lives and dies with a container the user did not think
   // they were storing it in.
   sessionDir?: string;
+  // The store `sessionDir` lives in, when it is not this container's filesystem. Import has to write through the SAME
+  // store pi will read the file back from: writing it here with `node:fs` and reading it from the user's machine finds
+  // nothing at all. Absent means the filesystem, which is what a mounted directory is.
+  sessionStorage?: { writeTextFile(path: string, contents: string): void };
   gatewayUrl: string;
   // The shared secret between the agent and gateway containers. pi sends it as the provider's bearer
   // token, which is exactly what the gateway authorizes on — the real provider key never comes here.
@@ -513,7 +517,10 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   // sessions rather than in the workspace: an import is not a change to the user's project.
   const importSession = async (fileName: string, contents: string) => {
     const target = join(runtime.session.sessionManager.getSessionDir(), sanitizeSessionFileName(fileName));
-    await writeFile(target, contents, "utf8");
+    // Through the session's own store, not `node:fs`: pi reads this path back through that store, so a conversation
+    // kept on the user's machine must be written there too. On a mounted directory the two are the same place.
+    if (options.sessionStorage) options.sessionStorage.writeTextFile(target, contents);
+    else await writeFile(target, contents, "utf8");
     const { cancelled } = await replace("import", () => runtime.importFromJsonl(target, cwd));
     if (cancelled) throw new Error("an extension cancelled the import");
   };

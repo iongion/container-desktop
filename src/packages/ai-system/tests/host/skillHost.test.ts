@@ -30,6 +30,11 @@ function fakeFs(seed: Record<string, Entry>) {
     writeTextFile: async (location, contents) => {
       entries.set(location, { kind: "file", text: contents, modifiedMs: Date.now() });
     },
+    appendTextFile: async (location, contents) => {
+      const existing = entries.get(location);
+      const text = existing?.kind === "file" ? (existing.text ?? "") : "";
+      entries.set(location, { kind: "file", text: text + contents, modifiedMs: Date.now() });
+    },
     writePrivateTextFile: async (location, contents) => {
       entries.set(location, { kind: "file", text: contents, modifiedMs: Date.now() });
     },

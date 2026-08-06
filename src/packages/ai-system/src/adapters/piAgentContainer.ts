@@ -17,15 +17,13 @@ import type { AIAuthSettings } from "@/ai-system/core/types";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { ContainerEngineHost } from "@/container-client/types/engine";
 import { createLogger } from "@/logger";
+import { SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
 import type { PiModelReasoning } from "@/pi-bridge/protocol";
+import { PI_SESSION_STORAGE_CONTAINER_PORT } from "@/pi-bridge/sessionStorage";
 
 const logger = createLogger("ai.piAgentContainer");
 
 const AGENT_DIR_IN_IMAGE = "/home/agent/.pi/agent";
-// Where the conversations are mounted, and deliberately NOT under the agent dir: that directory IS the plugin volume,
-// which is what tied a user's history to a container's volume in the first place. Kept outside it, the volume holds only
-// SETUP — settings, packages, trust — and the conversations live wherever the mount points.
-export const SESSIONS_DIR_IN_IMAGE = "/home/agent/.cd/sessions";
 const BRIDGE_PORT_IN_IMAGE = 8787;
 export const GATEWAY_PORT_IN_IMAGE = 8788;
 // The uid/gid of the `agent` user baked into the image. Rootless podman maps the invoking host user to
@@ -47,6 +45,11 @@ export interface PiAgentSessionSpec {
   // the plugin volume, so a stopped pair or an unreachable engine takes the history with it. Present, they are mounted
   // like the workspace and outlive every container.
   sessionsPath?: string;
+  // The alternative to that mount, for an engine that cannot see this machine's filesystem: the port on THIS machine
+  // that the container's conversation store answers on, so pi's session files are read and written here over the
+  // storage RPC. Exclusive with `sessionsPath` — a pair either mounts the directory or asks for it, never both, or
+  // two writers would share one file.
+  storageHostPort?: number;
   hostPort: number;
   bridgeToken: string;
   networkName: string;
@@ -186,6 +189,12 @@ export function agentRunArgv(
     spec.networkName,
     "--publish",
     `127.0.0.1:${spec.hostPort}:${BRIDGE_PORT_IN_IMAGE}`,
+    // The conversation store's own socket, published exactly as the bridge is. A second port rather than a second
+    // channel on the first: pi's storage calls block the container's main thread, so their answers must arrive on a
+    // socket that thread is not the one reading.
+    ...(spec.storageHostPort
+      ? ["--publish", `127.0.0.1:${spec.storageHostPort}:${PI_SESSION_STORAGE_CONTAINER_PORT}`]
+      : []),
     "--volume",
     `${guestWorkspacePath}:/workspace`,
     "--volume",
@@ -317,6 +326,10 @@ export interface AttachedPiAgentSession {
   // from the same field, so one cannot be there without the other. A pair built before the mount existed reports
   // nothing, and its history is still in the plugin volume.
   sessionsDir?: string;
+  // The port THIS machine published for the pair's conversation store, when that pair was built to ask for its
+  // history rather than mount it. Adopting one means serving that store again: the container's session is blocked on
+  // the first storage call, so a pair adopted without it would hang on its first turn instead of failing.
+  storageHostPort?: number;
 }
 
 // One inspection asked for as JSON, so the two things that matter arrive in one call and neither is scraped out of a
@@ -354,11 +367,17 @@ export function attachedPiAgentSessionFrom(payload: string): AttachedPiAgentSess
   if (!bridgeToken || !Number.isInteger(hostPort) || hostPort <= 0) return undefined;
   const modelId = env.get("CD_MODEL_ID");
   const sessionsDir = env.get("CD_SESSION_DIR");
+  // Read from the PUBLISHED port, not from the env var: the env only says the container listens, while what the app
+  // has to dial is the mapping the engine actually made. A pair whose storage port is no longer published cannot be
+  // served, whatever its environment claims.
+  const storageHostPort = Number(inspected?.ports?.[`${PI_SESSION_STORAGE_CONTAINER_PORT}/tcp`]?.[0]?.HostPort);
+  const servesStorage = env.get("CD_SESSION_STORAGE_PORT") && Number.isInteger(storageHostPort) && storageHostPort > 0;
   return {
     hostPort,
     bridgeToken,
     ...(modelId ? { modelId } : {}),
     ...(sessionsDir ? { sessionsDir } : {}),
+    ...(servesStorage ? { storageHostPort } : {}),
   };
 }
 
@@ -532,10 +551,15 @@ export async function startPiAgentSession(
       // holds — and the same var name the gateway's own env file uses for the same value.
       `CD_UPSTREAM_BASE_URL=${spec.upstreamBaseUrl}`,
       `CD_MODEL_ID=${spec.modelId}`,
-      // Present only when the conversations directory was actually mounted. Absent, the container leaves pi to default
-      // its session dir under the agent dir, which is today's behaviour — so the var is the one signal that history
-      // belongs somewhere that outlives this container.
-      ...(spec.sessionsPath ? [`CD_SESSION_DIR=${SESSIONS_DIR_IN_IMAGE}`] : []),
+      // Present when the conversations reach this machine at all — mounted, or served over the storage RPC. Absent,
+      // the container leaves pi to default its session dir under the agent dir, which is the plugin volume, so the
+      // var is the one signal that history belongs somewhere that outlives this container. It names the same path
+      // either way: under the RPC nothing of it exists on the container's own disk, and that is precisely why the
+      // path can be the app's own choice rather than the remote machine's.
+      ...(spec.sessionsPath || spec.storageHostPort ? [`CD_SESSION_DIR=${SESSIONS_DIR_IN_IMAGE}`] : []),
+      // Set ONLY for the RPC. It is what makes the container install a storage port instead of touching its own
+      // filesystem, so the two cases cannot both be live in one pair.
+      ...(spec.storageHostPort ? [`CD_SESSION_STORAGE_PORT=${PI_SESSION_STORAGE_CONTAINER_PORT}`] : []),
       // Omitted entirely when the provider did not say, so the container can tell "unknown" from "zero".
       ...(spec.contextWindow ? [`CD_MODEL_CONTEXT_WINDOW=${spec.contextWindow}`] : []),
       ...(spec.maxOutputTokens ? [`CD_MODEL_MAX_OUTPUT_TOKENS=${spec.maxOutputTokens}`] : []),

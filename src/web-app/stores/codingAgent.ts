@@ -433,6 +433,9 @@ export interface CodingAgentState {
   // The `ssh -NL` forward a session on a REMOTE engine is reached through. Absent for every pair on this machine,
   // which is dialled directly. Held here because it must die exactly when the session does.
   bridgeTunnel?: BridgeTunnel;
+  // The second forward, for the socket a remote pair's conversation store answers on. Its own handle rather than a
+  // field on the first: they are two `ssh -NL` children, and one dying does not take the other with it.
+  conversationsTunnel?: BridgeTunnel;
   chrome: CodingAgentChrome;
   // pi components, painted as ANSI line frames. Separate from the chrome because they are drawn, not
   // described: the app has no say in what a plugin's component looks like, only where it goes.
@@ -709,22 +712,27 @@ async function readSessionsDir(): Promise<string | undefined> {
 // How to reach a pair's bridge. A pair on THIS machine publishes on our own loopback and is dialled directly; a pair on
 // a remote engine published on ITS loopback, so a local forward is opened and the local end is dialled instead.
 // Everything after this point — the client, the events, the host requests — is identical either way.
-async function reachBridge(
-  spec: PiAgentSessionSpec,
-  engineHost: ContainerEngineHost | undefined,
-  onLost: (reason: string) => void,
-): Promise<{ url: string; tunnel?: BridgeTunnel }> {
-  if (!engineIsRemote(engineHost)) return { url: `ws://127.0.0.1:${spec.hostPort}/` };
-  const scope = spec.scope ?? "";
+// The `~/.ssh/config` entry a remote connection's scope names. Requiring one is the app's own contract, not a new
+// one — resolving a remote's credentials goes through the same list everywhere else.
+async function sshEntryFor(scope: string, what: string) {
   const entry = (await getAvailableSSHConnections()).find(
     (host) => host.Name === scope || host.ConfigHost === scope || host.Host === scope,
   );
   if (!entry) {
-    throw new Error(
-      `no SSH host in your config matches ${scope || "this connection"}, so its bridge cannot be reached`,
-    );
+    throw new Error(`no SSH host in your config matches ${scope || "this connection"}, so ${what} cannot be reached`);
   }
-  const tunnel = await openBridgeTunnel(
+  return entry;
+}
+
+// One published port on a remote engine's machine, made to answer here. Shared by the bridge and by the conversation
+// store, which are two sockets on the same pair reached exactly the same way.
+async function forwardRemotePort(
+  entry: Awaited<ReturnType<typeof sshEntryFor>>,
+  remotePort: number,
+  onLost: (reason: string) => void,
+  label: string,
+): Promise<BridgeTunnel> {
+  return await openBridgeTunnel(
     {
       spawn: (launcher, args) => Command.ExecuteStreaming(launcher, args),
       localPort: pickHostPort(),
@@ -732,9 +740,52 @@ async function reachBridge(
       // and a spawn is not a shell, so the name has to be exact.
       launcher: useAppStore.getState().osType === OperatingSystem.Windows ? "ssh.exe" : "ssh",
     },
-    { credentials: credentialsFromSSHHost(entry), remotePort: spec.hostPort, onLost },
+    { credentials: credentialsFromSSHHost(entry), remotePort, onLost, label },
   );
+}
+
+async function reachBridge(
+  spec: PiAgentSessionSpec,
+  engineHost: ContainerEngineHost | undefined,
+  onLost: (reason: string) => void,
+): Promise<{ url: string; tunnel?: BridgeTunnel }> {
+  if (!engineIsRemote(engineHost)) return { url: `ws://127.0.0.1:${spec.hostPort}/` };
+  const entry = await sshEntryFor(spec.scope ?? "", "its bridge");
+  const tunnel = await forwardRemotePort(entry, spec.hostPort, onLost, "the assistant's bridge");
   return { url: `ws://127.0.0.1:${tunnel.localPort}/`, tunnel };
+}
+
+// Serve the user's conversations to a pair that could not MOUNT them. The store lives in the host realm — it owns the
+// fs ports and the directory — so this resolves which local port answers for the container's socket and hands that
+// over; nothing of the history passes through this store.
+//
+// Ordered before the bridge client connects, deliberately: the container's session is built when the bridge
+// connection arrives and blocks on its very first storage call, so a store dialled afterwards reads as a hung model.
+// Never fatal, and tolerant of a bridge that has no such method: a session that was never served has nothing to
+// stop, and a teardown that threw here would leave the pair running. `window.AI?.x()` guards only the object, which is
+// exactly the trap this replaces.
+async function stopServingConversations(): Promise<void> {
+  try {
+    await window.AI?.stopServingAgentSessions?.();
+  } catch (error) {
+    logger.debug("the conversation store was already stopped", error);
+  }
+}
+
+async function serveConversations(
+  spec: PiAgentSessionSpec,
+  engineHost: ContainerEngineHost | undefined,
+  onLost: (reason: string) => void,
+): Promise<BridgeTunnel | undefined> {
+  if (!spec.storageHostPort || !window.AI?.serveAgentSessions) return undefined;
+  if (!engineIsRemote(engineHost)) {
+    await window.AI.serveAgentSessions({ localPort: spec.storageHostPort, bridgeToken: spec.bridgeToken });
+    return undefined;
+  }
+  const entry = await sshEntryFor(spec.scope ?? "", "its conversation store");
+  const tunnel = await forwardRemotePort(entry, spec.storageHostPort, onLost, "the assistant's conversation store");
+  await window.AI.serveAgentSessions({ localPort: tunnel.localPort, bridgeToken: spec.bridgeToken });
+  return tunnel;
 }
 
 // Why a row could not be launched, in the words the start form already uses for the same problems.
@@ -1009,6 +1060,9 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       bridgeToken: attached.bridgeToken,
       pluginVolumeName: ASSISTANT_PLUGIN_VOLUME,
       ...(sessionsPath ? { sessionsPath } : {}),
+      // A pair BUILT to ask for its conversations must be answered again, or its next turn blocks on a storage call
+      // nobody is listening for. The port is the one the engine actually published, read back off the container.
+      ...(attached.storageHostPort ? { storageHostPort: attached.storageHostPort } : {}),
       connectionId: options.connectionId,
       sessionKind: "default",
       upstreamBaseUrl: options.upstreamBaseUrl,
@@ -1022,10 +1076,12 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
     };
     let bridge: { url: string; tunnel?: BridgeTunnel } | undefined;
+    let storeTunnel: BridgeTunnel | undefined;
     try {
       set((state) => ({ startLog: [...state.startLog, `attaching to ${spec.agentContainerName}`] }));
       // Same reach as a fresh start: a remote pair's published port is forwarded here before anything dials it.
       bridge = await reachBridge(spec, host.HOST, (reason) => get().reportBridgeLost(reason));
+      storeTunnel = await serveConversations(spec, host.HOST, (reason) => get().reportBridgeLost(reason));
       const client = createPiBridgeClient({ url: bridge.url, token: spec.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));
       // Published before the socket is dialled, for the same reason `start` does it: the session announces itself
@@ -1036,6 +1092,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         connectionId: options.connectionId,
         sessionModel: spec.modelId,
         bridgeTunnel: bridge.tunnel,
+        conversationsTunnel: storeTunnel,
       });
       await client.connect();
       // The gateway froze its token into an env file when the pair was BUILT, and attaching cannot rewrite that
@@ -1054,8 +1111,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       await get().publishSystemContext();
     } catch (error) {
       logger.error("attaching to the running assistant session failed", error);
-      // The forward was opened for a socket that never came up; nothing else will ever use it.
+      // The forwards were opened for sockets that never came up, and a store left serving would keep answering for a
+      // pair this app is no longer talking to.
       bridge?.tunnel?.stop();
+      storeTunnel?.stop();
+      await stopServingConversations();
       set((state) => ({
         status: "error",
         error: (error as Error).message,
@@ -1068,8 +1128,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   },
 
   async start(options) {
-    // A session arriving replaces the last one: its forward held a local port, and nothing else will use it.
+    // A session arriving replaces the last one: its forwards held local ports, and nothing else will use them. BOTH of
+    // them — a pair reached over SSH has two, and the one nobody remembered to stop is a port held for the rest of the
+    // app's life, invisible until they run out.
     get().bridgeTunnel?.stop();
+    get().conversationsTunnel?.stop();
     set(freshSessionState(options));
     const suffix = randomUUID().slice(0, 8);
     // Mock mode has no engine to run a container on, so the far end of the socket is scripted instead. Only
@@ -1142,11 +1205,18 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // Asked for before the pair is built, because it is a mount: the conversations come from this machine, so they
     // are readable with the pair stopped and survive every rebuild of it. Only where the engine can actually see this
     // filesystem — a remote engine mounts paths from ITS machine, so pi keeps its own default there.
-    const sessionsPath = engineSharesAppFilesystem(host.HOST) ? await readSessionsDir() : undefined;
+    // One question, two answers. The conversations belong on this machine either way; what differs is HOW the pair
+    // reaches them. An engine that can see this filesystem gets the directory MOUNTED — readable with the pair
+    // stopped, surviving every rebuild of it. An engine that cannot (a remote one mounts paths from ITS machine, so a
+    // directory created here does not exist there) gets it SERVED instead, over a socket the pair publishes. Neither
+    // is possible when the host could not give us a directory at all, and pi then keeps its own default.
+    const conversations = await readSessionsDir();
+    const shared = conversations && engineSharesAppFilesystem(host.HOST);
     const spec: PiAgentSessionSpec = {
       imageTag: agentImageTag(options.appVersion),
       workspacePath: options.workspacePath,
-      ...(sessionsPath ? { sessionsPath } : {}),
+      ...(shared ? { sessionsPath: conversations } : {}),
+      ...(conversations && !shared ? { storageHostPort: pickHostPort() } : {}),
       hostPort: pickHostPort(),
       bridgeToken: randomUUID(),
       ...(options.sessionKind === "default"
@@ -1177,6 +1247,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
     };
     let bridge: { url: string; tunnel?: BridgeTunnel } | undefined;
+    let storeTunnel: BridgeTunnel | undefined;
     try {
       set((state) => ({ startLog: [...state.startLog, `starting ${spec.agentContainerName}`] }));
       // The provider key lives in the OS keychain, which the renderer cannot read, so the host composes and writes
@@ -1198,13 +1269,22 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       // A pair on a remote engine published its bridge on ITS loopback, so the port is forwarded here first and the
       // local end is what gets dialled. A pair on this machine needs none of that.
       bridge = await reachBridge(running, host.HOST, (reason) => get().reportBridgeLost(reason));
+      // BEFORE the bridge client connects: that connection is what builds the container's session, whose first act is
+      // a storage call it blocks on. A store dialled after would look like a model that never answered.
+      storeTunnel = await serveConversations(running, host.HOST, (reason) => get().reportBridgeLost(reason));
       const client = createPiBridgeClient({ url: bridge.url, token: running.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));
       // In the store BEFORE the socket is dialled, because the session announces itself DURING connect: pi's
       // `ready` lands while that promise is still pending, and every handler for it reads the client back out of
       // here. Setting it afterwards silently dropped the resource read that `ready` triggers, which is what left
       // a real session with an empty palette — and answered pi's own commands with "Unknown command".
-      set({ client, spec: running, connectionId: options.connectionId, bridgeTunnel: bridge.tunnel });
+      set({
+        client,
+        spec: running,
+        connectionId: options.connectionId,
+        bridgeTunnel: bridge.tunnel,
+        conversationsTunnel: storeTunnel,
+      });
       await client.connect();
       // Before the first plugin component can render: a component that draws once with pi's built-in
       // palette and only then hears about the app's would flash the wrong colours.
@@ -1214,8 +1294,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       await get().publishSystemContext();
     } catch (error) {
       logger.error("coding agent start failed", error);
-      // The forward was opened for a socket that never came up; nothing else will ever use it.
+      // The forwards were opened for sockets that never came up, and a store left serving would keep answering for a
+      // pair that does not exist.
       bridge?.tunnel?.stop();
+      storeTunnel?.stop();
+      await stopServingConversations();
       set((state) => ({
         status: "error",
         error: (error as Error).message,
@@ -1320,12 +1403,16 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   },
 
   async stop() {
-    const { client, spec, connectionId, bridgeTunnel } = get();
+    const { client, spec, connectionId, bridgeTunnel, conversationsTunnel } = get();
     cancelCredentialRenewal();
     client?.close();
     // Before the pair goes: a forward left running holds a local port for the rest of the app's life, and the next
     // session picks a different one — so the leak is invisible until the ports run out.
     bridgeTunnel?.stop();
+    conversationsTunnel?.stop();
+    // The conversations were served to THIS pair. Left running, the socket would answer for containers that no longer
+    // exist — and the next session's store could not take the handle.
+    await stopServingConversations();
     // Whatever this session's workspace target built — above all a disposable sandbox container, which exists for
     // this run and nothing else. Released before the pair goes, and never fatal: the session is ending either way.
     if (spec?.executionTarget && spec.agentContainerName) {
@@ -1342,6 +1429,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       status: "idle",
       client: undefined,
       bridgeTunnel: undefined,
+      conversationsTunnel: undefined,
       spec: undefined,
       connectionId: undefined,
       chrome: emptyCodingAgentChrome(),

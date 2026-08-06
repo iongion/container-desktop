@@ -199,6 +199,7 @@ The image itself is verified without the GUI — build it, then run a probe agai
 yarn cli agent-image --engine podman   # or --engine docker; per-engine, not shared
 node support/pi-plugins-probe.mjs      # plugin management in a real container
 node support/pi-bridge-probe.mjs       # the bridge + data path in a real container
+node support/pi-session-storage-probe.mjs   # a real pair's conversations, kept on THIS machine
 node support/pi-upstream-shape-probe.mjs   # what pi puts on the wire per upstream
 ```
 
@@ -283,5 +284,5 @@ yarn test:run      # includes support/cli/**/*.test.ts
 | Vitest config                  | [`vitest.config.mts`](../vitest.config.mts)                                   |
 | AI UI specs (pi bridge)        | [`webdriver/specs/`](../webdriver/specs) — `extension-ui`, `pi-tool-cards`, `pi-surfaces`, `pi-plugins`, `pi-container-tools`, `pi-model-chip`, `pi-model-reasoning`, `pi-turn-facts`, `pi-session-points`, `assistant-*` |
 | Live AI (real model + engine)  | [`webdriver/smoke/pi-container-live.smoke.js`](../webdriver/smoke/pi-container-live.smoke.js) |
-| Real-container probes          | [`support/pi-plugins-probe.mjs`](../support/pi-plugins-probe.mjs) · [`support/pi-bridge-probe.mjs`](../support/pi-bridge-probe.mjs) · [`support/pi-upstream-shape-probe.mjs`](../support/pi-upstream-shape-probe.mjs) |
+| Real-container probes          | [`support/pi-plugins-probe.mjs`](../support/pi-plugins-probe.mjs) · [`support/pi-bridge-probe.mjs`](../support/pi-bridge-probe.mjs) · [`support/pi-upstream-shape-probe.mjs`](../support/pi-upstream-shape-probe.mjs) · [`support/pi-session-storage-probe.mjs`](../support/pi-session-storage-probe.mjs) |
 | AI mock fixtures               | [`src/packages/ai-system/src/testing/aiMocks.ts`](../src/packages/ai-system/src/testing/aiMocks.ts) |

@@ -19,6 +19,7 @@ function fakeFiles(seed: Record<string, { kind: FileSystemStat["kind"]; text?: s
       return entry.text;
     },
     writeTextFile: async () => {},
+    appendTextFile: async () => {},
     writePrivateTextFile: async () => {},
     isFilePresent: async (location) => entries.has(location),
     mkdir: async () => undefined,

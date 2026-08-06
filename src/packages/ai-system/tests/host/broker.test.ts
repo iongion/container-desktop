@@ -63,6 +63,8 @@ function makeBroker(options?: {
   skillHost?: SkillHost;
   projectContextHost?: ProjectContextHost;
   agentSessionsDir?: () => Promise<string>;
+  serveAgentSessions?: (request: { localPort: number; bridgeToken: string }) => Promise<void>;
+  stopServingAgentSessions?: () => void;
 }) {
   const handlers = new Map<string, (event: any, payload: any) => any>();
   const sent: Array<{ event: any; channel: string; payload: any }> = [];
@@ -114,6 +116,8 @@ function makeBroker(options?: {
     buildSkillInvocationPrompt: ({ body }) => `PROMPT:${body}`,
     projectContextHost: options?.projectContextHost,
     agentSessionsDir: options?.agentSessionsDir,
+    serveAgentSessions: options?.serveAgentSessions,
+    stopServingAgentSessions: options?.stopServingAgentSessions,
     logger,
   });
   broker.register();
@@ -252,6 +256,52 @@ describe("AIBroker conversations directory", () => {
   it("fails loudly on a runtime that can resolve no directory", async () => {
     const broker = makeBroker();
     await expect(broker.invoke(AI_CHANNELS.agentSessionsDir)).rejects.toThrow(/unavailable/i);
+  });
+
+  // The OTHER route to the same directory, for a pair whose engine cannot see this filesystem: it publishes a socket
+  // and this host answers pi's session reads and writes over it, so the conversations still never leave the machine.
+  it("serves the conversations on the port the caller reached the pair through", async () => {
+    const serveAgentSessions = vi.fn(async () => {});
+    const broker = makeBroker({ serveAgentSessions });
+
+    expect(await broker.invoke(AI_CHANNELS.agentSessionsServe, { localPort: 43900, bridgeToken: "tok" })).toEqual({
+      ok: true,
+    });
+    expect(serveAgentSessions).toHaveBeenCalledWith({ localPort: 43900, bridgeToken: "tok" });
+  });
+
+  it("refuses an unauthorized sender, which would otherwise be handed the whole history", async () => {
+    const serveAgentSessions = vi.fn(async () => {});
+    const broker = makeBroker({ serveAgentSessions });
+
+    await expect(
+      broker.invoke(AI_CHANNELS.agentSessionsServe, { localPort: 43900, bridgeToken: "tok" }, { allowed: false }),
+    ).rejects.toThrow(/unauthorized/i);
+    expect(serveAgentSessions).not.toHaveBeenCalled();
+  });
+
+  // The caller is about to start a session whose every storage call BLOCKS. "Nobody is answering" has to fail here,
+  // where it is legible, rather than as a model that never replied.
+  it("fails loudly on a runtime that cannot serve them", async () => {
+    const broker = makeBroker();
+    await expect(
+      broker.invoke(AI_CHANNELS.agentSessionsServe, { localPort: 43900, bridgeToken: "tok" }),
+    ).rejects.toThrow(/unavailable/i);
+  });
+
+  // Runs on every stop, including one tearing down a start that failed before anything was served.
+  it("stops serving without complaint when nothing was being served", async () => {
+    const broker = makeBroker();
+    expect(await broker.invoke(AI_CHANNELS.agentSessionsUnserve)).toEqual({ ok: true });
+  });
+
+  it("stops the store the session was served by", async () => {
+    const stopServingAgentSessions = vi.fn();
+    const broker = makeBroker({ stopServingAgentSessions });
+
+    await broker.invoke(AI_CHANNELS.agentSessionsUnserve);
+
+    expect(stopServingAgentSessions).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -132,6 +132,7 @@ pub fn run() {
             host::platform::get_user_data_path,
             host::fs::fs_read_text_file,
             host::fs::fs_write_text_file,
+            host::fs::fs_append_text_file,
             host::fs::fs_write_private_text_file,
             host::fs::fs_is_file_present,
             host::fs::fs_mkdir,

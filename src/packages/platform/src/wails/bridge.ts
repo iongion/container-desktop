@@ -57,6 +57,7 @@ const COMMAND_TO_METHOD: Record<string, string> = {
   // FsService (built).
   fs_read_text_file: "main.FsService.ReadTextFile",
   fs_write_text_file: "main.FsService.WriteTextFile",
+  fs_append_text_file: "main.FsService.AppendTextFile",
   fs_write_private_text_file: "main.FsService.WritePrivateTextFile",
   fs_is_file_present: "main.FsService.IsFilePresent",
   fs_mkdir: "main.FsService.Mkdir",

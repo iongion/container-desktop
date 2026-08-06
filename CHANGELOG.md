@@ -71,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Your conversations with the assistant are kept on your own machine: they stay readable with nothing running, survive every rebuild of the agent, and no longer live inside the container volume they used to disappear with
 
-- Groundwork for keeping the conversations of a session on a REMOTE engine on your own machine: the agent image now carries a storage seam in the agent library, so where a conversation is written is something the app can answer instead of something the container decides. Nothing changes yet — the filesystem is still the default
+- A session on a REMOTE engine keeps its conversations on your own machine too. That machine cannot see this one's disk, so the agent asks for its history instead of mounting it, and every conversation lands in the same folder a local session uses — one place, whichever connection you started on, and nothing is ever copied or synced between the two. The agent may only touch that folder's own conversation files, and nothing else on your machine
 
 - An assistant session can run on a connection reached over SSH. The agent's bridge is published on the machine running the engine, so the app forwards it here and talks to the local end — before this, a session on a remote connection was offered, built its containers and then answered nothing. A connection whose scope names no entry in your SSH config now says so instead of starting
 

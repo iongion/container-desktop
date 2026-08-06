@@ -15,6 +15,8 @@ import { createProjectContextHost } from "@/ai-system/host/projectContextHost";
 import { createSkillHost } from "@/ai-system/host/skillHost";
 import { buildAgentPrompt, buildSkillInvocationPrompt } from "@/template/prompts";
 import "@/template/templateRegistry.vite";
+import type { WebSocketLike } from "@/ai-system/adapters/piBridgeClient";
+import { type SessionStorageService, serveSessionConversations } from "@/ai-system/adapters/sessionStorageServer";
 import type { ProviderTransport } from "@/ai-system/core/types";
 import type { IHostCapabilities } from "@/host-contract/capabilities";
 import type { IFileDiscoverySystem, IPath } from "@/host-contract/fs";
@@ -80,6 +82,9 @@ export async function createAISystem<TEvent = unknown>(
   // refused because the gateway's env file carries the provider key, and a user's conversations must stay readable —
   // with no container running and no engine reachable, which is the whole point of mounting them from here.
   const sessionsDir = await deps.path.join(deps.userDataDir, "assistant-sessions");
+  // The conversations served over the storage RPC, when a session asked for it. Held here because only one session
+  // serves at a time and the handle has to outlive the request that started it.
+  let conversationStore: SessionStorageService | undefined;
   const permissionsPath = await deps.path.join(deps.userDataDir, "ai-permissions.json");
   const skillTrustPath = await deps.path.join(deps.userDataDir, "ai-skill-trust.json");
   const projectContextPath = await deps.path.join(deps.userDataDir, "ai-project-context.json");
@@ -168,6 +173,28 @@ export async function createAISystem<TEvent = unknown>(
     agentSessionsDir: async () => {
       await deps.fs.mkdir(sessionsDir, { recursive: true });
       return sessionsDir;
+    },
+    // The same directory, SERVED rather than mounted, for a connection whose engine cannot see this filesystem. One
+    // session at a time: a second start replaces the first, because the store belongs to whichever session is running
+    // and a leftover socket answering for a dead pair would be a live path into the user's history.
+    serveAgentSessions: async (request) => {
+      conversationStore?.stop();
+      await deps.fs.mkdir(sessionsDir, { recursive: true });
+      conversationStore = serveSessionConversations({
+        fs: deps.fs,
+        path: deps.path,
+        sessionsRoot: sessionsDir,
+        localPort: request.localPort,
+        bridgeToken: request.bridgeToken,
+        connect: (url) => new WebSocket(url) as unknown as WebSocketLike,
+      });
+      // Awaited, so a store that cannot be reached fails the START rather than the session's first turn — the
+      // container blocks on that call, and a silent non-answer there reads as a hung model.
+      await conversationStore.ready;
+    },
+    stopServingAgentSessions: () => {
+      conversationStore?.stop();
+      conversationStore = undefined;
     },
     skillHost,
     buildSkillInvocationPrompt,

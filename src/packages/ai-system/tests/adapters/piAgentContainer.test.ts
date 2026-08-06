@@ -14,12 +14,12 @@ import {
   hostAliasArgv,
   networkCreateArgv,
   pluginVolumeMount,
-  SESSIONS_DIR_IN_IMAGE,
   startPiAgentSession,
   stopPiAgentSession,
   userMappingArgv,
 } from "@/ai-system/adapters/piAgentContainer";
 import { ContainerEngineHost } from "@/container-client/types/engine";
+import { SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
 
 const spec: PiAgentSessionSpec = {
   imageTag: "container-desktop/pi-agent:6.1.0",
@@ -97,6 +97,18 @@ describe("agentRunArgv", () => {
 
   it("adds nothing when no sessions directory is given, so today's behaviour is untouched", () => {
     expect(agentRunArgv(spec, "/home/me/project", "/tmp/env").join(" ")).not.toContain(SESSIONS_DIR_IN_IMAGE);
+  });
+
+  // The OTHER way to the same directory, for an engine that cannot see this filesystem: the pair publishes a socket
+  // and the app answers pi's session reads and writes over it. A second published port, never a second mount.
+  it("publishes the conversation store's port on loopback when the pair is to be served", () => {
+    const served: PiAgentSessionSpec = { ...spec, storageHostPort: 43900 };
+    expect(agentRunArgv(served, "/home/me/project", "/tmp/env")).toContain("127.0.0.1:43900:8789");
+  });
+
+  it("publishes nothing extra for a pair that mounts its conversations", () => {
+    const sessions = "/home/me/.local/share/container-desktop/sessions";
+    expect(agentRunArgv(unmapped, "/home/me/project", "/tmp/env", sessions).join(" ")).not.toContain(":8789");
   });
 
   // The plugin volume's `:U` does NOT belong here. It exists for a named volume left owned by an earlier mapping; this
@@ -790,6 +802,34 @@ describe("attachedPiAgentSessionFrom", () => {
       bridgeToken: "tok-abc",
       modelId: "qwen/qwen3-4b",
     });
+  });
+
+  // A pair BUILT to ask for its conversations has to be answered again after an attach, or its next turn blocks on a
+  // storage call nobody is listening for.
+  it("reports the conversation store's port when the pair both declares and publishes one", () => {
+    const served = attachedPiAgentSessionFrom(
+      inspection({
+        ports: {
+          "8787/tcp": [{ HostIp: "127.0.0.1", HostPort: "43521" }],
+          "8789/tcp": [{ HostIp: "127.0.0.1", HostPort: "43900" }],
+        },
+        env: ["CD_BRIDGE_TOKEN=tok-abc", "CD_SESSION_STORAGE_PORT=8789"],
+      }),
+    );
+    expect(served).toMatchObject({ storageHostPort: 43900 });
+  });
+
+  it("reports no store when the port is no longer published, whatever the environment claims", () => {
+    // Read off the MAPPING and not the env var: the env only says the container listens, while what the app has to
+    // dial is what the engine actually published.
+    const served = attachedPiAgentSessionFrom(
+      inspection({ env: ["CD_BRIDGE_TOKEN=tok-abc", "CD_SESSION_STORAGE_PORT=8789"] }),
+    );
+    expect(served).not.toHaveProperty("storageHostPort");
+  });
+
+  it("reports no store for a pair that never asked for one", () => {
+    expect(attachedPiAgentSessionFrom(inspection())).not.toHaveProperty("storageHostPort");
   });
 
   // Whether the pair's conversations are mounted from the host is not something the app may assume about a container

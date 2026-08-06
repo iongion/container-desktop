@@ -64,6 +64,11 @@ export interface AIBrokerDeps<TEvent = unknown> {
   // runtime with no data directory to offer supplies none, and the channel then refuses instead of naming a path
   // nobody made: an engine asked to bind-mount a missing source creates it as root, and pi fails on the first turn.
   agentSessionsDir?: () => Promise<string>;
+  // Serve that same directory to a pair whose engine cannot see this filesystem. Held by the runtime rather than the
+  // renderer because it needs the fs ports, and because one session serves at a time: the handle it returns is what
+  // the unserve channel stops.
+  serveAgentSessions?: (request: { localPort: number; bridgeToken: string }) => Promise<void>;
+  stopServingAgentSessions?: () => void;
   skillHost?: SkillHost;
   buildSkillInvocationPrompt?: (context: {
     command: string;
@@ -270,6 +275,25 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
           throw new Error("AI: a directory for the assistant's conversations is unavailable on this runtime");
         }
         return { path: await deps.agentSessionsDir() };
+      }),
+    );
+    // Serving that directory instead of mounting it. Refused rather than silently ignored: a caller that asked for it
+    // is about to start a session whose every storage call blocks, so "nobody is answering" has to fail here.
+    onInvoke(AI_CHANNELS.agentSessionsServe, (event, request) =>
+      guarded(event, async () => {
+        if (!deps.serveAgentSessions) {
+          throw new Error("AI: serving the assistant's conversations is unavailable on this runtime");
+        }
+        await deps.serveAgentSessions(request);
+        return { ok: true };
+      }),
+    );
+    // Idempotent, and never an error: it runs on every stop, including one tearing down a start that failed before
+    // anything was served.
+    onInvoke(AI_CHANNELS.agentSessionsUnserve, (event) =>
+      guarded(event, async () => {
+        deps.stopServingAgentSessions?.();
+        return { ok: true };
       }),
     );
     onInvoke(AI_CHANNELS.changesStatus, (event) =>

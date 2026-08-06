@@ -4,13 +4,14 @@
 on. The app needs a seam there: a session started on a REMOTE engine must be able to write to the user's own machine,
 and there is no other way in — the harness layer of pi has such a port, the coding-agent layer has none.
 
-These files ARE that seam, compiled from pi's own sources — the session store, the storage port, and the package entry that publishes it:
+These files ARE that seam, compiled from pi's own sources — the session store, the session runtime, the storage port, and the package entry that publishes it:
 
 | | |
 |---|---|
 | Upstream branch | `feat/session-storage-port-0.83.0` in the pi checkout (`temp/pi`), exported to `.scratch/pi-gui-coding-agent/upstream/0001-session-storage-port.patch`. `feat/session-storage-port` is the same commit on `main` |
 | Built from | tag `v0.83.0` — **the version the Dockerfile pins**, so the emitted files drop into that published tree |
-| What they add | `SessionStorage` (a synchronous port), `nodeSessionStorage` (the filesystem, which stays the default), `setSessionStorage()`, every direct fs call in `session-manager.js` routed through it, and all of it exported from the package entry — pi's `exports` map publishes `.` only, so a consumer cannot reach a deep path |
+| What they add | `SessionStorage` (a synchronous port), `nodeSessionStorage` (the filesystem, which stays the default), `setSessionStorage()`, every direct fs call in `session-manager.js` AND `agent-session-runtime.js` routed through it, and all of it exported from the package entry — pi's `exports` map publishes `.` only, so a consumer cannot reach a deep path |
+| Why the runtime too | its fs calls are all about a SESSION file or the session directory. Left on the filesystem, `importFromJsonl` checks for — and copies to — a path `SessionManager` then reads through the storage, so `/import` could only fail; and the fork/clone guard reports "this session has not been saved yet" for a session that IS saved, just not there |
 | Proven | pi's own `test/session-manager` suite passes on that branch, plus a suite driving `SessionManager` over an in-memory storage |
 
 It is deliberately NOT a fork: one upstream-tracking commit, no features of ours, and the moment a pi release carries
@@ -26,7 +27,8 @@ cd temp/pi
 git checkout -b feat/session-storage-port-<version> v<version>
 git cherry-pick <the storage-port commit>
 cd packages/coding-agent && npx vitest --run test/session-manager && npx tsgo -p tsconfig.build.json
-cp dist/core/session-{manager,storage}.js ../../../support/agent-image/pi-patch/core/
+cp dist/core/{session-manager,session-storage,agent-session-runtime}.js ../../../support/agent-image/pi-patch/core/
+cp dist/core/session-storage.d.ts ../../../support/agent-image/pi-patch/core/
 cp dist/index.js ../../../support/agent-image/pi-patch/index.js
 ```
 
@@ -38,3 +40,6 @@ podman run --rm --workdir /opt/cd-agent --entrypoint node container-desktop/pi-a
 ```
 
 The pinned version appears in `support/agent-image/Dockerfile` four times — three `npm install` lines and the guard — so change all four, then rebuild: `yarn cli agent-image --engine podman`.
+
+Then prove the seam actually carries a conversation, which the reachability check above does not:
+`node support/pi-session-storage-probe.mjs` (add `--engine docker` for the other image).

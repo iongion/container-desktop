@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AttachedPiAgentSession } from "@/ai-system/adapters/piAgentContainer";
-import { SESSIONS_DIR_IN_IMAGE } from "@/ai-system/adapters/piAgentContainer";
 import type { PiBridgeClient } from "@/ai-system/adapters/piBridgeClient";
 import { emptyPiSessionView } from "@/ai-system/core/piSessionView";
 import { ContainerEngineHost } from "@/container-client/types/engine";
+import { SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
@@ -79,12 +79,17 @@ const START = {
 const HOST_SESSIONS_DIR = "/home/me/.local/share/container-desktop/assistant-sessions";
 
 let askedForSessionsDir = vi.fn(async () => ({ path: HOST_SESSIONS_DIR }));
+// Serving the conversations to a pair that cannot MOUNT them, and the stop that must follow.
+let servedConversations = vi.fn(async (_request: { localPort: number; bridgeToken: string }) => ({ ok: true }));
+let stoppedServingConversations = vi.fn(async () => ({ ok: true }));
 // The `ssh -NL` child a remote session is reached through, and the kill that must follow it.
 const killed = vi.fn();
 const spawned = vi.fn(async (_launcher: string, _args: string[]) => ({ kill: killed, on: () => {} }));
 
 function installBridge(overrides: Record<string, unknown> = {}) {
   askedForSessionsDir = vi.fn(async () => ({ path: HOST_SESSIONS_DIR }));
+  servedConversations = vi.fn(async (_request: { localPort: number; bridgeToken: string }) => ({ ok: true }));
+  stoppedServingConversations = vi.fn(async () => ({ ok: true }));
   // The exec seam the forward is spawned through, and the SSH config it is aimed at. Globals, because that is how the
   // shells expose them to the renderer.
   (globalThis as { Command?: unknown }).Command = { ExecuteStreaming: spawned };
@@ -106,6 +111,8 @@ function installBridge(overrides: Record<string, unknown> = {}) {
       modelWindow: vi.fn(async () => ({})),
       writeAgentEnvFile: vi.fn(async () => ({ path: "/protected/agent.env" })),
       agentSessionsDir: askedForSessionsDir,
+      serveAgentSessions: servedConversations,
+      stopServingAgentSessions: stoppedServingConversations,
       getProjectContext: vi.fn(async () => undefined),
       ...overrides,
     },
@@ -113,7 +120,7 @@ function installBridge(overrides: Record<string, unknown> = {}) {
 }
 
 function startedSpec() {
-  return startPiAgentSession.mock.calls[0][1] as { sessionsPath?: string };
+  return startPiAgentSession.mock.calls[0][1] as { sessionsPath?: string; storageHostPort?: number };
 }
 
 describe("useCodingAgentStore conversations directory", () => {
@@ -130,6 +137,10 @@ describe("useCodingAgentStore conversations directory", () => {
       startLog: [],
       view: emptyPiSessionView("pi-session"),
       error: undefined,
+      // A forward left in the store by the previous case would be torn down by this one's start, which makes every
+      // count in here a count of somebody else's session.
+      bridgeTunnel: undefined,
+      conversationsTunnel: undefined,
     });
   });
 
@@ -174,16 +185,55 @@ describe("useCodingAgentStore conversations directory", () => {
 
   // A remote engine runs on a machine that has never seen this directory, and its path translation is deliberately the
   // identity — over SSH the workspace path is one the remote already has. Asking it to mount a path from here would
-  // have the ENGINE create it, as root, and pi would fail with EACCES on the first turn of a session that works today.
-  it("mounts nothing on a remote engine, whose machine never had this directory", async () => {
+  // have the ENGINE create it, as root, and pi would fail with EACCES on the first turn. So the pair is SERVED the
+  // directory instead: it publishes a socket, and this app answers pi's reads and writes over it.
+  it("serves the conversations to a remote engine instead of mounting them", async () => {
     engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
 
     await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
 
     expect(startedSpec().sessionsPath).toBeUndefined();
+    expect(startedSpec().storageHostPort).toBeGreaterThan(0);
+    expect(servedConversations).toHaveBeenCalledTimes(1);
     expect(useCodingAgentStore.getState().status).toBe("ready");
-    // Not even asked for: a directory created here would be for nothing.
-    expect(askedForSessionsDir).not.toHaveBeenCalled();
+  });
+
+  // The two are exclusive by construction: a pair that mounts the directory and also answered for it would be two
+  // writers on one file.
+  it("does not serve a local engine, which mounts the directory instead", async () => {
+    await useCodingAgentStore.getState().start(START);
+
+    expect(startedSpec().sessionsPath).toBe(HOST_SESSIONS_DIR);
+    expect(startedSpec().storageHostPort).toBeUndefined();
+    expect(servedConversations).not.toHaveBeenCalled();
+  });
+
+  // Without a directory there is nothing to answer WITH, and a store that accepted calls it could not serve would fail
+  // every turn. pi keeps its own default instead, which is the behaviour that shipped before any of this existed.
+  it("serves nothing when the host could not resolve a directory", async () => {
+    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+    installBridge({ agentSessionsDir: undefined });
+
+    await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
+
+    expect(startedSpec().storageHostPort).toBeUndefined();
+    expect(servedConversations).not.toHaveBeenCalled();
+    expect(useCodingAgentStore.getState().status).toBe("ready");
+  });
+
+  // Both forwards die with the session, and the store stops answering. A socket left serving would keep a path into
+  // the user's history open for containers that no longer exist.
+  it("stops serving the conversations when the session stops", async () => {
+    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+
+    await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
+    // Two `ssh -NL` children: the bridge, and the conversation store.
+    expect(spawned).toHaveBeenCalledTimes(2);
+
+    await useCodingAgentStore.getState().stop();
+
+    expect(stoppedServingConversations).toHaveBeenCalled();
+    expect(killed).toHaveBeenCalledTimes(2);
   });
 
   // A remote connection whose scope names no entry in `~/.ssh/config` cannot be forwarded to, and a session that
@@ -205,7 +255,13 @@ describe("useCodingAgentStore conversations directory", () => {
 
     await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
 
-    const [launcher, argv] = spawned.mock.calls[0] as unknown as [string, string[]];
+    // The BRIDGE's forward specifically: a served session opens a second one for the conversation store, and the two
+    // are told apart by which remote port they aim at.
+    const forwards = spawned.mock.calls as unknown as [string, string[]][];
+    const [launcher, argv] = forwards.find(([, args]) => args.join(" ").includes(":127.0.0.1:45871")) as [
+      string,
+      string[],
+    ];
     expect(launcher).toBe("ssh");
     // The remote end is the port the pair published; the local end is what the client dialled.
     expect(argv.join(" ")).toMatch(/-NL 127\.0\.0\.1:\d+:127\.0\.0\.1:45871/);
