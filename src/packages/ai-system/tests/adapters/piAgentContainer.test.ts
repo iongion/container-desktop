@@ -7,8 +7,6 @@ import {
   defaultSessionFrom,
   defaultSessionNames,
   engineSharesAppFilesystem,
-  envVolumeCreateArgv,
-  envWriteArgv,
   findDefaultSession,
   networkCreateArgv,
   pluginVolumeMount,
@@ -148,36 +146,7 @@ describe("agentRunArgv", () => {
   });
 });
 
-// Getting that environment INTO the volume, with no shell and no file on either machine: the contents travel as
-// stdin, which the exec seam forwards to the remote command without them ever appearing in argv. Argv is what the
-// bridge token must stay out of — it authorises the socket AND the proxy a turn's inference is signed through.
-describe("the carried environment's own commands", () => {
-  const carried: PiAgentSessionSpec = { ...spec, envVolumeName: "container-desktop-env-1a2b" };
-
-  it("creates the volume it will be carried in", () => {
-    expect(envVolumeCreateArgv(carried)).toEqual(["volume", "create", "container-desktop-env-1a2b"]);
-  });
-
-  it("writes it with stdin alone — no shell, no redirect, nothing with a space in it", () => {
-    const argv = envWriteArgv(carried);
-    expect(argv.slice(0, 2)).toEqual(["run", "--rm"]);
-    // Without `--interactive` the engine gives the container no stdin at all and `tee` writes an empty file.
-    expect(argv).toContain("--interactive");
-    expect(argv).toContain("container-desktop-env-1a2b:/cd-env");
-    // `tee` rather than `sh -c "cat > …"`: a redirect inside an argument is executed by the REMOTE shell, which would
-    // write the engine's own output to a file on that machine instead.
-    expect(argv).toContain("--entrypoint");
-    expect(argv).toContain("tee");
-    expect(argv.at(-1)).toBe(AGENT_ENV_FILE_IN_IMAGE);
-    for (const argument of argv) expect(argument).not.toMatch(/\s/u);
-  });
-
-  // A fresh volume belongs to root, and the image runs as `agent`. The writer is the one container that needs to be
-  // root; what it leaves behind is world-readable inside a volume only this session's own container mounts.
-  it("writes as the user that owns a new volume", () => {
-    expect(envWriteArgv(carried).join(" ")).toContain("--user 0");
-  });
-
+describe("the pair's mounts", () => {
   // The plugin volume's `:U` does NOT belong here. It exists for a named volume left owned by an earlier mapping; this
   // is a directory the app creates under the user's own uid, and keep-id already maps that uid to the container's agent
   // user. Measured against the real image: with keep-id the container reads a host file as 1001 and its writes land
@@ -295,6 +264,30 @@ describe("startPiAgentSession", () => {
     expect((commands[1][1] as string[])[0]).toBe("network");
     expect((commands[2][1] as string[]).join(" ")).toContain(spec.agentContainerName);
     expect(result.agentContainerId).toBe("container-id-abc");
+  });
+
+  // A SCOPED engine that still reads this filesystem — WSL, Lima, a podman machine — runs its CLI inside the guest,
+  // and `--env-file` is read by that client. The workspace and the conversations have always been translated for it;
+  // the env file was not, which is the one case where the file exists and is unreadable anyway.
+  it("names the env file the way a scoped engine's own client will see it", async () => {
+    const host = fakeHost({
+      resolveGuestPath: vi.fn(async (hostPath: string) => hostPath.replace(/^C:\\/u, "/mnt/c/").replace(/\\/gu, "/")),
+      runScopeCommand: vi.fn(async (_program: string, args: string[]) => ({
+        pid: 1,
+        code: 0,
+        success: true,
+        stdout: args[0] === "run" ? "container-id-abc\n" : "",
+        stderr: "",
+      })),
+    });
+
+    await startPiAgentSession(host, { ...spec, scope: "Ubuntu" }, async () => "C:\\Users\\me\\agent.env");
+
+    const scoped = (host as unknown as { runScopeCommand: { mock: { calls: unknown[][] } } }).runScopeCommand.mock
+      .calls;
+    const argv = scoped.find((call) => (call[1] as string[])[0] === "run")?.[1] as string[];
+    expect(argv).toContain("/mnt/c/Users/me/agent.env");
+    expect(argv.join(" ")).not.toContain("C:\\");
   });
 
   // A reusable session's name is deterministic, so a container the user stopped still holds it, and `run` answers a

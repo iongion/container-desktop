@@ -252,7 +252,12 @@ because a second window doing that would drive the same conversation's file as t
 
 Env files are written privately under `~/.local/share/container-desktop/agent/`, never passed in argv.
 A **scoped** engine (WSL, Lima, a podman machine) runs every command through the scope wrapper, and the
-workspace path is translated with `resolveGuestPath` before it is mounted. **Which scope is the CONNECTION's answer**
+workspace path is translated with `resolveGuestPath` before it is mounted — **as is the env file's own path**, for the
+same reason: `--env-file` is read by that engine's CLIENT, which runs inside the guest, so naming this machine's path
+there is the one case where the file exists and is unreadable anyway. The carried path is the container's own and is
+never translated. How an environment TRAVELS is one module for both containers
+(`ai-system/adapters/containerEnvironment.ts`): a file where the client reads this filesystem, a volume written by
+`tee` over stdin where it cannot. **Which scope is the CONNECTION's answer**
 (`container-client/runtimes/commandScope.ts` — the transport says whether commands are wrapped at all, the settings say
 in what): it used to arrive as a start option nothing in the app ever filled, so a remote session's engine commands ran
 against a LOCAL engine unless a test handed the scope in.
@@ -528,7 +533,25 @@ credential revision.
 ("Sign in with OpenRouter") beside the credential actions in Settings → AI. pi loads each flow through a
 bundler-opaque specifier so its `node:http` callback server and `node:crypto` PKCE never reach a bundle, so the
 flow cannot run in the web view at all: it runs in a **one-shot login container** (`cd-login-<id>`, `--mode login`),
-which mounts nothing, joins no session network and publishes only its bridge to loopback. `AuthInteraction` travels
+which mounts nothing, joins no session network and publishes only its bridge to loopback.
+
+**It runs on the connection the user chose, and is reached the way a session is.** Nothing about a connection is this
+store's to answer for: the scope its commands are wrapped in, whether its engine keeps its containers in a machine, and
+whether its client can read this machine's filesystem are all asked of the connection at the moment of use — so a
+remote sign-in binds where a port published there actually answers, carries its environment into a volume over the
+engine's own stdin, and has its bridge forwarded here with `ssh -NL` before anything dials it. It used to run through
+`runHostCommand` whatever the user had selected and dial `127.0.0.1`, so a machine whose only engine is remote could not
+sign in at all. The container, its environment volume and the forward are released on every path out, including a throw.
+
+**A RENEWAL is the one thing that cannot travel**, and the boundary is the credential rather than the container: the env
+file it needs holds the stored credential, and the realm that owns the vault substitutes that while WRITING and answers
+only the path — never the contents — so there is nothing for the renderer to carry over an engine's stdin. It therefore
+runs on a connected engine that shares this filesystem, whichever one that is (a rotation's product is a credential in
+this machine's keychain, the same one whoever performed the exchange), and refuses with that reason when there is none.
+`startPiLoginContainer` refuses the combination outright rather than carrying the bare placeholder to a container that
+could only fail the exchange as a rejected token.
+
+`AuthInteraction` travels
 as its own frames — `auth_prompt`, `auth_prompt_closed`, `auth_event` — and the browser completes the sign-in, so
 the paste prompt pi races its callback against is what finishes it here (a callback server inside a container is a
 browser on another machine, which is the case pi designed that prompt for).
@@ -853,6 +876,8 @@ then failed from inside a store.
 | `pi-agent-host/src/toolOutput.ts` | reading back a truncated tool's full output, path-validated against pi's own shape |
 | `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
 | `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |
+| `ai-system/adapters/containerEnvironment.ts` | how an environment REACHES a container — a file its client can read, or a volume carried over the engine's own stdin |
+| `web-app/domain/remoteReach.ts` | making a port published on another machine answer here: one `ssh -NL` for the bridge, the conversation store and a sign-in alike |
 | `container-client/runtimes/publishedPortHost.ts` | where a port this engine publishes actually answers — the machine hop, as connection knowledge |
 | `container-client/runtimes/commandScope.ts`, `proxy-route.ts` | which scope a connection wraps its commands in; whether its engine is on another machine at all |
 | `pi-agent-host/src/envFile.ts` | the environment for an engine that could not be handed a file |

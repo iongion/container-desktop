@@ -60,6 +60,10 @@ async function boot() {
     // bridge client instead of installing real packages into a real container.
     const { installPluginStoreProbe } = await import("@/web-app/stores/pluginStore");
     installPluginStoreProbe();
+    // DEV-only: window.__cdProviderLoginStore, so the remote sign-in spec can start one on a chosen connection and
+    // abandon it before anything is written to the user's keychain.
+    const { installProviderLoginProbe } = await import("@/web-app/stores/providerLogin");
+    installProviderLoginProbe();
     // MOCK-only: bring up the scripted pi session so the Assistant, its cards and the approval gate are usable
     // without an engine. The real app has no session until one is started deliberately; this stands in for that.
     const { isMockMode } = await import("@/container-client/mock/mode");

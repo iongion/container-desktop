@@ -1,3 +1,9 @@
+import {
+  carryEnvIntoVolume,
+  containerEnvArgv,
+  envVolumeRemoveArgv,
+  isExistingNameError,
+} from "@/ai-system/adapters/containerEnvironment";
 import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
 import {
   type AiSessionKind,
@@ -18,12 +24,7 @@ import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { LOOPBACK_ADDRESS } from "@/container-client/runtimes/publishedPortHost";
 import type { ContainerEngineHost } from "@/container-client/types/engine";
 import { createLogger } from "@/logger";
-import {
-  AGENT_ENV_DIR_IN_IMAGE,
-  AGENT_ENV_FILE_IN_IMAGE,
-  PI_BRIDGE_PORT_IN_IMAGE,
-  SESSIONS_DIR_IN_IMAGE,
-} from "@/pi-bridge/image";
+import { PI_BRIDGE_PORT_IN_IMAGE, SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
 import type { PiModelReasoning } from "@/pi-bridge/protocol";
 import { PI_SESSION_STORAGE_CONTAINER_PORT } from "@/pi-bridge/sessionStorage";
 
@@ -205,47 +206,11 @@ export function agentRunArgv(
     ...specLabelArgv(spec, "agent"),
     // One environment, two ways in. A file for an engine whose client can read this machine's filesystem; the same
     // contents in a session volume for one whose cannot, named so the container loads it itself.
-    ...(spec.envVolumeName
-      ? [
-          "--volume",
-          `${spec.envVolumeName}:${AGENT_ENV_DIR_IN_IMAGE}:ro`,
-          "--env",
-          `CD_ENV_FILE=${AGENT_ENV_FILE_IN_IMAGE}`,
-        ]
-      : ["--env-file", envFilePath]),
+    ...containerEnvArgv(spec, envFilePath),
     ...userMappingArgv(spec.userMapping),
     spec.imageTag,
     "--mode",
     "agent",
-  ];
-}
-
-// The volume the agent's environment is carried in. Unlabelled, deliberately: it is created and removed inside one
-// start, and a label exists so a resource can be FOUND again later.
-export function envVolumeCreateArgv(spec: PiAgentSessionSpec): string[] {
-  return ["volume", "create", spec.envVolumeName ?? ""];
-}
-
-// Writing it with `tee` and stdin: no shell, no redirect, and nothing in the argv with a space in it. A redirect
-// inside an argument (`sh -c "cat > …"`) would be executed by the REMOTE shell — every argument of a remote engine's
-// command is joined by ssh and re-split over there — and the contents themselves must never be in argv at all, since
-// the bridge token authorises both the socket and the proxy a turn's inference is signed through.
-//
-// `--user 0` because a volume is created owned by root and the image runs as `agent`; what it writes is readable
-// inside a volume that only this session's own container mounts.
-export function envWriteArgv(spec: PiAgentSessionSpec): string[] {
-  return [
-    "run",
-    "--rm",
-    "--interactive",
-    "--user",
-    "0",
-    "--volume",
-    `${spec.envVolumeName ?? ""}:${AGENT_ENV_DIR_IN_IMAGE}`,
-    "--entrypoint",
-    "tee",
-    spec.imageTag,
-    AGENT_ENV_FILE_IN_IMAGE,
   ];
 }
 
@@ -473,13 +438,6 @@ async function freeSessionNames(host: HostClientFacade, spec: PiAgentSessionSpec
   });
 }
 
-// The engines' several ways of saying "that name is taken". Everything else a create can fail with — an exhausted
-// address pool above all — has to travel, because the caller's next command fails for a reason that reads nothing
-// like the real one.
-function isExistingNameError(error: unknown): boolean {
-  return /already exists|already in use|already used/i.test(`${(error as Error)?.message ?? error}`);
-}
-
 export async function startPiAgentSession(
   host: HostClientFacade,
   spec: PiAgentSessionSpec,
@@ -508,7 +466,14 @@ export async function startPiAgentSession(
   const agentEnv = composeAgentEnv(spec, modelApi);
   // One composition, delivered the only way each engine can take it: a file this app writes and the engine's client
   // reads, or — where that client is on another machine — the same text carried into a session volume over stdin.
-  const agentEnvFile = spec.envVolumeName ? await carryAgentEnv(host, spec, agentEnv) : await writeEnvFile(agentEnv);
+  //
+  // The written file goes through the SAME translation the workspace and the conversations do. `--env-file` is read by
+  // the client, and a SCOPED engine's client runs inside the guest, where this machine's path is not the path: it is
+  // the one case where the file exists and is still unreadable. The carried path is already the container's own and
+  // must not be translated.
+  const agentEnvFile = spec.envVolumeName
+    ? await carryEnvIntoVolume((args, input) => run(host, args, spec.scope, input), spec, agentEnv)
+    : await toGuestPath(await writeEnvFile(agentEnv));
   let hostPort = spec.hostPort;
   for (let attempt = 1; ; attempt++) {
     try {
@@ -526,19 +491,6 @@ export async function startPiAgentSession(
       hostPort = pickHostPort();
     }
   }
-}
-
-// Into a volume the agent container mounts, over the engine's own stdin. Answers the path the container will read it
-// at, so the caller cannot tell this apart from a file having been written.
-async function carryAgentEnv(host: HostClientFacade, spec: PiAgentSessionSpec, contents: string): Promise<string> {
-  await run(host, envVolumeCreateArgv(spec), spec.scope).catch((error) => {
-    // Session-scoped, so an existing one is this session's own leftovers — and it is overwritten in the next step.
-    if (!isExistingNameError(error)) throw error;
-    logger.debug("the environment volume already existed", error);
-    return "";
-  });
-  await run(host, envWriteArgv(spec), spec.scope, contents);
-  return AGENT_ENV_FILE_IN_IMAGE;
 }
 
 // The agent's whole environment, in the app's one format. Composed apart from how it travels, so a file and a volume
@@ -595,7 +547,7 @@ export async function stopPiAgentSession(host: HostClientFacade, spec: PiAgentSe
   // This session's environment, and nothing else's: it holds the bridge token, so it goes with the container that
   // was authorised by it rather than waiting for the next start to overwrite it.
   if (spec.envVolumeName) {
-    await run(host, ["volume", "rm", "--force", spec.envVolumeName], spec.scope).catch((error) => {
+    await run(host, envVolumeRemoveArgv(spec), spec.scope).catch((error) => {
       logger.debug("removing the environment volume failed", error);
       return "";
     });

@@ -4,7 +4,7 @@
 import { Intent } from "@blueprintjs/core";
 import { create } from "zustand";
 
-import { type BridgeTunnel, openBridgeTunnel } from "@/ai-system/adapters/bridgeTunnel";
+import type { BridgeTunnel } from "@/ai-system/adapters/bridgeTunnel";
 import type { ModelWindow } from "@/ai-system/adapters/modelWindow";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
@@ -59,10 +59,7 @@ import { isMockMode } from "@/container-client/mock/mode";
 import { engineIsRemote } from "@/container-client/proxy-route";
 import { connectionCommandScope } from "@/container-client/runtimes/commandScope";
 import { publishedPortAddress } from "@/container-client/runtimes/publishedPortHost";
-import { getAvailableSSHConnections } from "@/container-client/shared";
-import { credentialsFromSSHHost } from "@/container-client/ssh-args";
 import type { ContainerEngineHost } from "@/container-client/types/engine";
-import { OperatingSystem } from "@/container-client/types/os";
 import { t } from "@/i18n";
 import { createLogger } from "@/logger";
 import { agentImageTag } from "@/pi-bridge/image";
@@ -80,6 +77,7 @@ import { getHostRuntime } from "@/platform/provider";
 import { randomUUID } from "@/utils/randomUUID";
 import { connectedConnections } from "@/web-app/components/ConnectionSelect.logic";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import { forwardPublishedPort } from "@/web-app/domain/remoteReach";
 import { PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import { resolveCodingAgentStart } from "@/web-app/screens/AI/startSession";
@@ -731,49 +729,22 @@ async function readSessionsDir(): Promise<string | undefined> {
 // How to reach a pair's bridge. A pair on THIS machine publishes on our own loopback and is dialled directly; a pair on
 // a remote engine published on ITS loopback, so a local forward is opened and the local end is dialled instead.
 // Everything after this point — the client, the events, the host requests — is identical either way.
-// The `~/.ssh/config` entry a remote connection's scope names. Requiring one is the app's own contract, not a new
-// one — resolving a remote's credentials goes through the same list everywhere else.
-async function sshEntryFor(scope: string, what: string) {
-  const entry = (await getAvailableSSHConnections()).find(
-    (host) => host.Name === scope || host.ConfigHost === scope || host.Host === scope,
-  );
-  if (!entry) {
-    throw new Error(`no SSH host in your config matches ${scope || "this connection"}, so ${what} cannot be reached`);
-  }
-  return entry;
-}
-
-// One published port on a remote engine's machine, made to answer here. Shared by the bridge and by the conversation
-// store, which are two sockets on the same pair reached exactly the same way.
-async function forwardRemotePort(
-  entry: Awaited<ReturnType<typeof sshEntryFor>>,
-  remotePort: number,
-  onLost: (reason: string) => void,
-  label: string,
-  remoteHost?: string,
-): Promise<BridgeTunnel> {
-  return await openBridgeTunnel(
-    {
-      spawn: (launcher, args) => Command.ExecuteStreaming(launcher, args),
-      localPort: pickHostPort(),
-      // The OS the app is running ON, from the same place every screen reads it. Windows ships OpenSSH as `ssh.exe`,
-      // and a spawn is not a shell, so the name has to be exact.
-      launcher: useAppStore.getState().osType === OperatingSystem.Windows ? "ssh.exe" : "ssh",
-    },
-    { credentials: credentialsFromSSHHost(entry), remotePort, onLost, label, remoteHost },
-  );
-}
-
 async function reachBridge(
   spec: PiAgentSessionSpec,
   engineHost: ContainerEngineHost | undefined,
   onLost: (reason: string) => void,
 ): Promise<{ url: string; tunnel?: BridgeTunnel }> {
   if (!engineIsRemote(engineHost)) return { url: `ws://127.0.0.1:${spec.hostPort}/` };
-  const entry = await sshEntryFor(spec.scope ?? "", "its bridge");
   // The forward's far end is the remote's own loopback, or — where the engine runs inside a machine — that machine's
   // address, which is what the remote can reach and where the pair was told to publish.
-  const tunnel = await forwardRemotePort(entry, spec.hostPort, onLost, "the assistant's bridge", spec.machineAddress);
+  const tunnel = await forwardPublishedPort({
+    scope: spec.scope,
+    what: "its bridge",
+    label: "the assistant's bridge",
+    remotePort: spec.hostPort,
+    remoteHost: spec.machineAddress,
+    onLost,
+  });
   return { url: `ws://127.0.0.1:${tunnel.localPort}/`, tunnel };
 }
 
@@ -804,14 +775,14 @@ async function serveConversations(
     await window.AI.serveAgentSessions({ localPort: spec.storageHostPort, bridgeToken: spec.bridgeToken });
     return undefined;
   }
-  const entry = await sshEntryFor(spec.scope ?? "", "its conversation store");
-  const tunnel = await forwardRemotePort(
-    entry,
-    spec.storageHostPort,
+  const tunnel = await forwardPublishedPort({
+    scope: spec.scope,
+    what: "its conversation store",
+    label: "the assistant's conversation store",
+    remotePort: spec.storageHostPort,
+    remoteHost: spec.machineAddress,
     onLost,
-    "the assistant's conversation store",
-    spec.machineAddress,
-  );
+  });
   await window.AI.serveAgentSessions({ localPort: tunnel.localPort, bridgeToken: spec.bridgeToken });
   return tunnel;
 }

@@ -4,19 +4,34 @@
 // It is its own store rather than part of the coding-agent one because it runs BEFORE a session can exist: signing in
 // is how a provider gets the credential a session needs, so it can neither borrow the session's container nor its
 // socket. The container it starts mounts nothing and is removed on every path out of here.
+//
+// **It runs on the connection the user chose, remote included.** Nothing about a connection is this store's to answer
+// for: the scope its commands are wrapped in, whether its engine is on another machine, and where a port it publishes
+// actually lands are all asked of the connection at the moment of use — and where that lands somewhere else, the
+// bridge is forwarded here exactly as a session's is. Before that it ran the container through the LOCAL engine
+// whatever the user had chosen, and dialled `127.0.0.1` at a port only that local engine had published, so a user
+// whose only engine is remote could not sign in at all.
+//
+// A RENEWAL is the one exception, and it is a boundary rather than a shortcut: the file it needs carries the stored
+// credential, written by the realm that owns the vault, which answers with a PATH and never with contents. There is
+// nothing for this realm to carry over an engine's stdin, so a renewal can only run where a file this machine wrote
+// can be read.
 
 import { create } from "zustand";
-import { pickHostPort } from "@/ai-system/adapters/piAgentContainer";
+import { engineSharesAppFilesystem, pickHostPort } from "@/ai-system/adapters/piAgentContainer";
 import { createPiLoginClient, type PiLoginClient } from "@/ai-system/adapters/piLoginClient";
 import {
   type PiLoginContainerSpec,
   removePiLoginContainer,
   startPiLoginContainer,
 } from "@/ai-system/adapters/piLoginContainer";
-import { assistantContainerName } from "@/ai-system/adapters/sessionNaming";
+import { assistantContainerName, assistantEnvVolumeName } from "@/ai-system/adapters/sessionNaming";
 import { loginCredentialVerdict, providerLoginOffer } from "@/ai-system/core/piAuth";
 import { isMockMode } from "@/container-client/mock/mode";
-import type { HostClientFacade } from "@/container-client/runtimes/facade";
+import { engineIsRemote } from "@/container-client/proxy-route";
+import { connectionCommandScope } from "@/container-client/runtimes/commandScope";
+import { publishedPortAddress } from "@/container-client/runtimes/publishedPortHost";
+import type { Connection } from "@/container-client/types/connection";
 import { createLogger } from "@/logger";
 import { agentImageTag, PI_BRIDGE_PORT_IN_IMAGE } from "@/pi-bridge/image";
 import { piProviderIdFor } from "@/pi-bridge/modelBaseline";
@@ -25,6 +40,7 @@ import { encodeProviderCredential } from "@/pi-bridge/providerCredential";
 import { randomUUID } from "@/utils/randomUUID";
 import { connectedConnections, pickActiveConnection } from "@/web-app/components/ConnectionSelect.logic";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import { forwardPublishedPort } from "@/web-app/domain/remoteReach";
 import { PROJECT_VERSION } from "@/web-app/Environment";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
@@ -81,11 +97,129 @@ export interface ProviderLoginState {
   reset(): void;
 }
 
-function engineForLogin(): { connectionId: string; name: string } | undefined {
+// What a login container has to be able to reach. A SIGN-IN needs nothing of this machine — its environment is the
+// bridge token and the port, which travel to any engine — so it runs on whichever connection the user chose. A
+// RENEWAL needs the file the vault's owning realm wrote HERE, and only an engine that can read this filesystem can be
+// handed one; carrying it is not an option, because that realm answers with a path and never with contents.
+type LoginEngineNeed = "any-connection" | "reads-this-filesystem";
+
+const NO_ENGINE_REASON: Record<LoginEngineNeed, string> = {
+  "any-connection": "connect a container engine first — the sign-in runs in a container",
+  "reads-this-filesystem":
+    "renewing a sign-in needs a container engine on this machine — a stored credential cannot be handed to a remote one",
+};
+
+function engineForLogin(need: LoginEngineNeed): Connection | undefined {
   const app = useAppStore.getState();
-  const items = connectedConnections(app.connections, useResourceStore.getState().activeRuntime);
-  const chosen = pickActiveConnection(items, undefined, app.userSettings?.connector?.default);
-  return chosen ? { connectionId: chosen.id, name: chosen.name } : undefined;
+  const items = connectedConnections(
+    app.connections,
+    useResourceStore.getState().activeRuntime,
+    need === "reads-this-filesystem" ? (connection) => engineSharesAppFilesystem(connection.host) : undefined,
+  );
+  return pickActiveConnection(items, undefined, app.userSettings?.connector?.default);
+}
+
+// A login container, running and reachable — everything between "one has to exist" and "it is gone".
+interface LoginRun {
+  client: PiLoginClient;
+  // Why the socket stopped carrying anything, when a forward under it died. An outcome that fails afterwards fails
+  // for THIS reason rather than for the closed socket that dialling nothing produces.
+  carrierLost(): string | undefined;
+  // Everything this run brought up, taken down in the order that leaves nothing holding a port. Called on every path
+  // out, including a throw.
+  release(): Promise<void>;
+}
+
+interface LoginRunRequest {
+  spec: PiLoginContainerSpec;
+  // This run's own short name, the one its container is already called after. The volume that may carry its
+  // environment is named from the same one, so the two can never belong to different runs.
+  runScope: string;
+  need: LoginEngineNeed;
+  // How the environment reaches an engine that can read this machine's filesystem. Never called for one that cannot:
+  // that environment is carried into a volume over the engine's own stdin instead.
+  writeEnvFile: (contents: string) => Promise<string>;
+  note: (line: string) => void;
+}
+
+async function openLoginRun(request: LoginRunRequest): Promise<LoginRun | { unavailable: string }> {
+  const { spec, need, writeEnvFile, note } = request;
+  // Mock mode has no engine to run a container on, so the far end of the socket is scripted instead — the same
+  // substitution the session makes. DEV-gated and dynamically imported, so a production build never links it.
+  if (isMockMode() && import.meta.env.ENVIRONMENT !== "production") {
+    const { createMockPiLoginClient } = await import("@/ai-system/testing/mockPiLoginClient");
+    const client = createMockPiLoginClient();
+    return {
+      client,
+      carrierLost: () => undefined,
+      release: async () => client.close(),
+    };
+  }
+
+  const engine = engineForLogin(need);
+  if (!engine) return { unavailable: NO_ENGINE_REASON[need] };
+  const host = await resolveConnectionHost(engine.id);
+  if (!host) return { unavailable: `no engine host for connection ${engine.id}` };
+
+  // Everything about WHERE this runs is the connection's answer, asked at the moment of use: the scope its commands
+  // are wrapped in, whether a published port lands on the engine's own host or inside a machine, and whether the
+  // engine's client can read a file this app wrote.
+  const remote = engineIsRemote(host.HOST);
+  const machineAddress = await publishedPortAddress(host, spec.imageTag);
+  const placed: PiLoginContainerSpec = {
+    ...spec,
+    scope: await connectionCommandScope(host),
+    ...(machineAddress ? { machineAddress } : {}),
+    ...(remote ? { envVolumeName: assistantEnvVolumeName(request.runScope) } : {}),
+  };
+
+  let carrier: string | undefined;
+  let tunnel: { localPort: number; stop: () => void } | undefined;
+  const release = async () => {
+    tunnel?.stop();
+    tunnel = undefined;
+    await removePiLoginContainer(host, placed);
+  };
+  // The removal covers the START too, not only what follows it. `run --detach` can CREATE the container and still
+  // fail — a refused port binding is the common one — and the engine leaves it behind in `Created`, holding the name.
+  // Measured: two such orphans on this machine from runs whose removal only began once the start had returned.
+  try {
+    note(`starting ${placed.containerName} on ${engine.name}`);
+    await startPiLoginContainer(host, placed, writeEnvFile);
+    // A container on another machine publishes on THAT machine, so the port is forwarded here before anything dials
+    // it — the same reach a session's bridge takes, and the reason a sign-in can happen on a remote connection at all.
+    if (remote) {
+      tunnel = await forwardPublishedPort({
+        scope: placed.scope,
+        what: "the sign-in",
+        label: "the sign-in's bridge",
+        remotePort: placed.hostPort,
+        remoteHost: placed.machineAddress,
+        onLost: (reason) => {
+          carrier = reason;
+          note(reason);
+        },
+      });
+    }
+    const client = createPiLoginClient({
+      url: `ws://127.0.0.1:${tunnel?.localPort ?? placed.hostPort}/`,
+      token: placed.bridgeToken,
+    });
+    return {
+      client,
+      carrierLost: () => carrier,
+      release: async () => {
+        client.close();
+        await release();
+      },
+    };
+  } catch (error) {
+    // Whatever got as far as existing: a container the engine created but could not start, one that is up while the
+    // forward it needs could not be opened, and the forward itself. Left alone, each holds a port on a machine that
+    // may not be this one.
+    await release();
+    throw error;
+  }
 }
 
 // The env file carries the bridge token, which authorises the whole socket, so it is written by the host into the same
@@ -135,32 +269,21 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
     };
 
     const note = (line: string) => set((state) => ({ log: [...state.log, line] }));
-    let client: PiLoginClient | undefined;
-    // The host that STARTED the container, kept for the removal: resolving one again at the end could answer with a
-    // different engine — the connection list is live — and the container would be left standing on the first.
-    let startedOn: HostClientFacade | undefined;
+    let run: LoginRun | undefined;
     try {
-      // Mock mode has no engine to run a container on, so the far end of the socket is scripted instead — the same
-      // substitution the session makes. DEV-gated and dynamically imported, so a production build never links it.
-      if (isMockMode() && import.meta.env.ENVIRONMENT !== "production") {
-        const { createMockPiLoginClient } = await import("@/ai-system/testing/mockPiLoginClient");
-        client = createMockPiLoginClient();
-      } else {
-        const engine = engineForLogin();
-        if (!engine) {
-          set({ status: "error", message: "connect a container engine first — the sign-in runs in a container" });
-          return { stored: false, reason: "no connected container engine" };
-        }
-        const host = await resolveConnectionHost(engine.connectionId);
-        if (!host) {
-          set({ status: "error", message: `no engine host for connection ${engine.connectionId}` });
-          return { stored: false, reason: "no engine host" };
-        }
-        note(`starting ${spec.containerName} on ${engine.name}`);
-        await startPiLoginContainer(host, spec, (contents) => writeLoginEnvFile(`${suffix}-login.env`, contents));
-        startedOn = host;
-        client = createPiLoginClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
+      const opened = await openLoginRun({
+        spec,
+        runScope: `login-${suffix}`,
+        need: "any-connection",
+        writeEnvFile: (contents) => writeLoginEnvFile(`${suffix}-login.env`, contents),
+        note,
+      });
+      if ("unavailable" in opened) {
+        set({ status: "error", message: opened.unavailable });
+        return { stored: false, reason: opened.unavailable };
       }
+      run = opened;
+      const client = run.client;
 
       client.onEvent((event) => {
         if (event.type === "auth_prompt") {
@@ -189,8 +312,11 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
       set({ status: "waiting", client });
       const outcome = await client.login(spec.piProviderId);
       if (!outcome.ok) {
-        set({ status: "refused", prompt: undefined, message: outcome.error });
-        return { stored: false, reason: outcome.error };
+        // A forward that died took the socket with it, so "the container closed the connection" is the symptom and
+        // the forward's own exit is the cause. Say the cause.
+        const reason = run.carrierLost() ?? outcome.error;
+        set({ status: "refused", prompt: undefined, message: reason });
+        return { stored: false, reason };
       }
       const verdict = loginCredentialVerdict(outcome.credential, Date.now());
       if (!verdict.storable) {
@@ -205,16 +331,15 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
       set({ status: "stored", prompt: undefined, authUrl: undefined, message: undefined });
       return { stored: true };
     } catch (error) {
-      const message = (error as Error).message;
+      const message = run?.carrierLost() ?? (error as Error).message;
       logger.error("provider sign-in failed", error);
       set({ status: "error", prompt: undefined, message });
       return { stored: false, reason: message };
     } finally {
-      client?.close();
       set({ client: undefined });
-      // Removed whatever happened: it holds a published port and keeps listening, so leaving one behind costs the
-      // next sign-in its port and the engine a container nobody owns.
-      if (startedOn) await removePiLoginContainer(startedOn, spec);
+      // Released whatever happened: the container holds a published port and keeps listening, and a forward under it
+      // holds a local port and an SSH connection, so leaving either behind costs the next sign-in its port.
+      await run?.release();
     }
   },
 
@@ -222,6 +347,12 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
   // the container reads it from its own env file — substituted by the vault's owning realm — decides whether it is
   // near expiry, exchanges it through pi's own flow, and answers with the rotation, which is stored exactly the way a
   // sign-in's is. A provider holding a permanent key answers `unchanged` and costs one short-lived container.
+  //
+  // Unlike a sign-in this cannot run just anywhere, and the reason is that same file: the vault's realm answers with a
+  // PATH, so there is nothing here to carry into a volume, and only an engine that can read this machine's filesystem
+  // can be handed one. The connection it lands on is therefore not the user's choice but the first connected engine
+  // that qualifies — which is sound because a rotation's product is a credential in THIS machine's keychain, the same
+  // one whichever engine performed the exchange.
   async refreshCredential(providerId): Promise<ProviderRefreshResult> {
     const offer = providerLoginOffer(providerId);
     if (!offer) return { refreshed: false };
@@ -238,21 +369,16 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
       piProviderId: piProviderIdFor(providerId),
       carriesStoredCredential: true,
     };
-    let client: PiLoginClient | undefined;
-    let startedOn: HostClientFacade | undefined;
+    let run: LoginRun | undefined;
     try {
-      if (isMockMode() && import.meta.env.ENVIRONMENT !== "production") {
-        const { createMockPiLoginClient } = await import("@/ai-system/testing/mockPiLoginClient");
-        client = createMockPiLoginClient();
-      } else {
-        const engine = engineForLogin();
-        if (!engine) return { refreshed: false, reason: "no connected container engine" };
-        const host = await resolveConnectionHost(engine.connectionId);
-        if (!host) return { refreshed: false, reason: "no engine host" };
+      const opened = await openLoginRun({
+        spec,
+        runScope: `login-${suffix}`,
+        need: "reads-this-filesystem",
         // The env file is composed HOST-side for this one, because it carries the stored credential: the realm that
         // owns the vault substitutes it while writing and answers only the path. So the contents this adapter would
         // have composed are not used — the file is asked for by provider instead.
-        await startPiLoginContainer(host, spec, async () => {
+        writeEnvFile: async () => {
           const { path } = await bridge.writeAuthRefreshEnv({
             provider: providerId,
             fileName: `${suffix}-refresh.env`,
@@ -260,12 +386,13 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
             bridgePort: PI_BRIDGE_PORT_IN_IMAGE,
           });
           return path;
-        });
-        startedOn = host;
-        client = createPiLoginClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
-      }
-      await client.connect();
-      const outcome = await client.refresh(spec.piProviderId);
+        },
+        note: (line) => logger.debug(line),
+      });
+      if ("unavailable" in opened) return { refreshed: false, reason: opened.unavailable };
+      run = opened;
+      await run.client.connect();
+      const outcome = await run.client.refresh(spec.piProviderId);
       if (!outcome.ok) return { refreshed: false, reason: outcome.error, mustSignInAgain: !!outcome.invalidGrant };
       if ("unchanged" in outcome) {
         return { refreshed: false, ...(outcome.expiresAt ? { expiresAt: outcome.expiresAt } : {}) };
@@ -279,8 +406,7 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
       logger.error("refreshing the provider credential failed", error);
       return { refreshed: false, reason: message };
     } finally {
-      client?.close();
-      if (startedOn) await removePiLoginContainer(startedOn, spec);
+      await run?.release();
     }
   },
 
@@ -317,3 +443,12 @@ export const useProviderLoginStore = create<ProviderLoginState>()((set, get) => 
     });
   },
 }));
+
+// DEV-only handle for the WebDriver smoke spec, mirroring window.__cdCodingAgentStore: a sign-in cannot be driven to
+// completion by a spec — it ends in the user's own browser — so what a spec drives is the half BEFORE that, which is
+// the half this app owns: the container lands on the chosen connection, its bridge is reached from here, and pi's flow
+// speaks back over it.
+export function installProviderLoginProbe(): void {
+  (globalThis as { __cdProviderLoginStore?: typeof useProviderLoginStore }).__cdProviderLoginStore =
+    useProviderLoginStore;
+}
