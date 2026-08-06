@@ -1,4 +1,3 @@
-import { LOOPBACK_ADDRESS, resolveMachineAddress } from "@/ai-system/adapters/engineMachine";
 import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
 import {
   type AiSessionKind,
@@ -15,6 +14,7 @@ import type { ProviderKind } from "@/ai-system/core/providers";
 import type { DefaultSessionCandidate } from "@/ai-system/core/sessionLaunchers";
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
+import { LOOPBACK_ADDRESS, resolveMachineAddress } from "@/container-client/runtimes/publishedPortHost";
 import { ContainerEngineHost } from "@/container-client/types/engine";
 import { createLogger } from "@/logger";
 import {
@@ -62,7 +62,8 @@ export interface PiAgentSessionSpec {
   // The address the pair's published sockets must answer on, when the engine's own host is not where they land. An
   // engine running inside a machine publishes into THAT machine's network: measured on a real WSL one, nothing
   // published there reaches the Windows host running it, so the bridge is bound to the machine's own address instead —
-  // which the host does reach, and which is a narrower bind than the loopback it replaces (`adapters/engineMachine`).
+  // which the host does reach, and which is a narrower bind than the loopback it replaces
+  // (`container-client/runtimes/publishedPortHost`).
   // Absent — every engine that publishes where the app already dials — is the loopback bind that has always shipped.
   machineAddress?: string;
   bridgeToken: string;
@@ -584,46 +585,47 @@ async function carryAgentEnv(host: HostClientFacade, spec: PiAgentSessionSpec, c
 // The agent's whole environment, in the app's one format. Composed apart from how it travels, so a file and a volume
 // can never carry different things.
 function composeAgentEnv(spec: PiAgentSessionSpec, modelApi: string): string {
-  return (
-    [
-      `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
-      `CD_BRIDGE_PORT=${PI_BRIDGE_PORT_IN_IMAGE}`,
-      `CD_MODEL_API=${modelApi}`,
-      // The upstream's own base URL, so pi speaks to it in the shape it wants rather than the shape it infers from our
-      // own endpoint (`piUpstreamCompat`). NOT a credential — catalogue data, and nothing in this container can use it
-      // without a key it has no way to get.
-      `CD_UPSTREAM_BASE_URL=${spec.upstreamBaseUrl}`,
-      `CD_MODEL_ID=${spec.modelId}`,
-      // Present when the conversations reach this machine at all — mounted, or served over the storage RPC. Absent,
-      // the container leaves pi to default its session dir under the agent dir, which is the plugin volume, so the
-      // var is the one signal that history belongs somewhere that outlives this container. It names the same path
-      // either way: under the RPC nothing of it exists on the container's own disk, and that is precisely why the
-      // path can be the app's own choice rather than the remote machine's.
-      ...(spec.sessionsPath || spec.storageHostPort ? [`CD_SESSION_DIR=${SESSIONS_DIR_IN_IMAGE}`] : []),
-      // Set ONLY for the RPC. It is what makes the container install a storage port instead of touching its own
-      // filesystem, so the two cases cannot both be live in one pair.
-      ...(spec.storageHostPort ? [`CD_SESSION_STORAGE_PORT=${PI_SESSION_STORAGE_CONTAINER_PORT}`] : []),
-      // Omitted entirely when the provider did not say, so the container can tell "unknown" from "zero".
-      ...(spec.contextWindow ? [`CD_MODEL_CONTEXT_WINDOW=${spec.contextWindow}`] : []),
-      ...(spec.maxOutputTokens ? [`CD_MODEL_MAX_OUTPUT_TOKENS=${spec.maxOutputTokens}`] : []),
-      // Each rate is omitted when the provider published none, so the container can tell an unpriced model from a
-      // free one and pi's own zeroes stand only where they are true.
-      ...(spec.pricing?.input ? [`CD_MODEL_COST_INPUT=${spec.pricing.input}`] : []),
-      ...(spec.pricing?.output ? [`CD_MODEL_COST_OUTPUT=${spec.pricing.output}`] : []),
-      ...(spec.pricing?.cacheRead ? [`CD_MODEL_COST_CACHE_READ=${spec.pricing.cacheRead}`] : []),
-      ...(spec.pricing?.cacheWrite ? [`CD_MODEL_COST_CACHE_WRITE=${spec.pricing.cacheWrite}`] : []),
-      // The capability is the flag; the efforts and the model that cannot stop reasoning are detail beside it. All
-      // three are omitted for a model nobody published reasoning for, which is what keeps pi's `false` honest.
-      ...(spec.reasoning ? ["CD_MODEL_REASONING=1"] : []),
-      ...(spec.reasoning?.levels?.length ? [`CD_MODEL_REASONING_LEVELS=${spec.reasoning.levels.join(",")}`] : []),
-      ...(spec.reasoning?.mandatory ? ["CD_MODEL_REASONING_MANDATORY=1"] : []),
-      // The FLAG only: the workspace toolset exists for this session. Where its operations land is the app's to
-      // resolve, and a container that knew the target could do nothing with it but leak it.
-      ...(spec.executionTarget ? ["CD_WORKSPACE_TOOLS=1"] : []),
-      "CD_WORKSPACE=/workspace",
-      `CD_AGENT_DIR=${AGENT_DIR_IN_IMAGE}`,
-    ].join("\n") + "\n"
-  );
+  const lines = [
+    `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
+    `CD_BRIDGE_PORT=${PI_BRIDGE_PORT_IN_IMAGE}`,
+    `CD_MODEL_API=${modelApi}`,
+    // The upstream's own base URL, so pi speaks to it in the shape it wants rather than the shape it infers from our
+    // own endpoint (`piUpstreamCompat`). NOT a credential — catalogue data, and nothing in this container can use it
+    // without a key it has no way to get.
+    `CD_UPSTREAM_BASE_URL=${spec.upstreamBaseUrl}`,
+    `CD_MODEL_ID=${spec.modelId}`,
+    // Present when the conversations reach this machine at all — mounted, or served over the storage RPC. Absent,
+    // the container leaves pi to default its session dir under the agent dir, which is the plugin volume, so the
+    // var is the one signal that history belongs somewhere that outlives this container. It names the same path
+    // either way: under the RPC nothing of it exists on the container's own disk, and that is precisely why the
+    // path can be the app's own choice rather than the remote machine's.
+    ...(spec.sessionsPath || spec.storageHostPort ? [`CD_SESSION_DIR=${SESSIONS_DIR_IN_IMAGE}`] : []),
+    // Set ONLY for the RPC. It is what makes the container install a storage port instead of touching its own
+    // filesystem, so the two cases cannot both be live in one pair.
+    ...(spec.storageHostPort ? [`CD_SESSION_STORAGE_PORT=${PI_SESSION_STORAGE_CONTAINER_PORT}`] : []),
+    // Omitted entirely when the provider did not say, so the container can tell "unknown" from "zero".
+    ...(spec.contextWindow ? [`CD_MODEL_CONTEXT_WINDOW=${spec.contextWindow}`] : []),
+    ...(spec.maxOutputTokens ? [`CD_MODEL_MAX_OUTPUT_TOKENS=${spec.maxOutputTokens}`] : []),
+    // Each rate is omitted when the provider published none, so the container can tell an unpriced model from a
+    // free one and pi's own zeroes stand only where they are true.
+    ...(spec.pricing?.input ? [`CD_MODEL_COST_INPUT=${spec.pricing.input}`] : []),
+    ...(spec.pricing?.output ? [`CD_MODEL_COST_OUTPUT=${spec.pricing.output}`] : []),
+    ...(spec.pricing?.cacheRead ? [`CD_MODEL_COST_CACHE_READ=${spec.pricing.cacheRead}`] : []),
+    ...(spec.pricing?.cacheWrite ? [`CD_MODEL_COST_CACHE_WRITE=${spec.pricing.cacheWrite}`] : []),
+    // The capability is the flag; the efforts and the model that cannot stop reasoning are detail beside it. All
+    // three are omitted for a model nobody published reasoning for, which is what keeps pi's `false` honest.
+    ...(spec.reasoning ? ["CD_MODEL_REASONING=1"] : []),
+    ...(spec.reasoning?.levels?.length ? [`CD_MODEL_REASONING_LEVELS=${spec.reasoning.levels.join(",")}`] : []),
+    ...(spec.reasoning?.mandatory ? ["CD_MODEL_REASONING_MANDATORY=1"] : []),
+    // The FLAG only: the workspace toolset exists for this session. Where its operations land is the app's to
+    // resolve, and a container that knew the target could do nothing with it but leak it.
+    ...(spec.executionTarget ? ["CD_WORKSPACE_TOOLS=1"] : []),
+    "CD_WORKSPACE=/workspace",
+    `CD_AGENT_DIR=${AGENT_DIR_IN_IMAGE}`,
+  ];
+  // Trailing newline: this is a file `--env-file` parses line by line, and the last line needs terminating like the
+  // rest.
+  return `${lines.join("\n")}\n`;
 }
 
 export async function stopPiAgentSession(host: HostClientFacade, spec: PiAgentSessionSpec): Promise<void> {

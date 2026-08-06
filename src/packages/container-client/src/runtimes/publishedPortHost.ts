@@ -1,5 +1,12 @@
 // Where a port published by this engine actually answers.
 //
+// This is CONNECTION knowledge, and it lives with the rest of it. It was written inside the AI subsystem, which
+// meant that package asking podman about machines and parsing podman's own rows — a second machine-aware path
+// beside the podman dialects and the podman-machine transport, which already resolve a connection's machine and
+// how to reach it. A caller supplies the exec seam and the image to probe with, so nothing about a session or an
+// agent reaches in here. Consolidating the listing below with the dialect's own `getPodmanMachineInspect` is the
+// remaining step; `UserModeNetworking` is published by `machine list`, which is why this still asks for it.
+//
 // An engine that runs its containers itself publishes on the loopback of the machine running it, which is what the
 // bridge dials and what `ssh -NL` forwards for a remote one. podman on Windows does not: its engine lives inside a
 // WSL machine, a network realm of its own, and a port published there never appears on the Windows host — measured

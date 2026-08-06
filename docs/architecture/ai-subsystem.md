@@ -220,10 +220,16 @@ machine, which is a network realm of its own: a port published there never appea
 BOTH bind addresses, with `netstat` on the host finding nothing — so a forward to the remote's own loopback lands one
 hop short of the container. What the host DOES reach is the machine's own address, so the pair is bound to it and the
 forward is pointed there; it is a NARROWER bind than the loopback one it replaces, since the machine's own loopback
-stops answering too. `adapters/engineMachine.ts` decides this by asking the engine: a machine that is running, is
-`wsl`, and reports `UserModeNetworking: false` — podman's own words for "nothing carries this machine's ports out to
-its host". Every other topology relays and keeps the loopback bind and dial it has today, which is what makes
-`undefined` the safe answer. The address comes from a throwaway container in the MACHINE's own network namespace,
+stops answering too. **The question belongs to the CONNECTION and is answered there** —
+`container-client/runtimes/publishedPortHost.ts`, beside the podman dialects and the podman-machine transport that
+already resolve a connection's machine; it was written inside the AI subsystem, which had that package asking podman
+about machines on its own. It decides by asking the engine: a machine that is running, is `wsl`, and reports
+`UserModeNetworking: false` — podman's own words for "nothing carries this machine's ports out to its host". Every
+other topology relays and keeps the loopback bind and dial it has today, which is what makes `undefined` the safe
+answer — and for **Docker Desktop that is now measured, not assumed**: a port published inside its WSL machine appears
+on the Windows host at both bind addresses (`netstat` there finds `127.0.0.1:<port>` for a loopback publish and
+`0.0.0.0:<port>` for the other, with the instrument verified against `:22` first), and an `ssh -NL` from this machine
+to the remote's own loopback carried a request through to the container, which logged the bytes. The address comes from a throwaway container in the MACHINE's own network namespace,
 asking the kernel which source address it would use; not from `podman machine ssh`, which prints its answer and then
 never exits over a non-interactive SSH session.
 
@@ -842,7 +848,7 @@ then failed from inside a store.
 | `pi-agent-host/src/toolOutput.ts` | reading back a truncated tool's full output, path-validated against pi's own shape |
 | `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
 | `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |
-| `ai-system/adapters/engineMachine.ts` | where a port this engine publishes actually answers — the machine hop |
+| `container-client/runtimes/publishedPortHost.ts` | where a port this engine publishes actually answers — the machine hop, as connection knowledge |
 | `pi-agent-host/src/envFile.ts` | the environment for an engine that could not be handed a file |
 | `ai-system/adapters/sessionStorageServer.ts`, `core/sessionStorageOps.ts` | the app's half of the conversation store, and what it will act on |
 | `pi-agent-host/src/sessionStorage{,Channel,Worker}.ts` | pi's storage port over a blocking round trip: the port, the shared window, the thread that owns the socket |

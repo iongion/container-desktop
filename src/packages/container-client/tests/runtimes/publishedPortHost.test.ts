@@ -6,7 +6,7 @@ import {
   machineListArgv,
   resolveMachineAddress,
   unrelayedMachineFrom,
-} from "@/ai-system/adapters/engineMachine";
+} from "@/container-client/runtimes/publishedPortHost";
 
 // podman on Windows runs its engine inside a WSL machine, and that machine is a network realm of its own: a port
 // published there does not appear on the Windows host at all. Measured on a real one — `netstat` on the host finds

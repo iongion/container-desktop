@@ -9,7 +9,7 @@
 // upgrade over a long-lived socket. This is a plain `ssh -NL` child process, spawned through the same exec seam every
 // other engine command uses, and killed with the session.
 
-import { LOOPBACK_ADDRESS } from "@/ai-system/adapters/engineMachine";
+import { LOOPBACK_ADDRESS } from "@/container-client/runtimes/publishedPortHost";
 import { buildSSHTunnelArgs, type SSHClientConnection } from "@/container-client/ssh-args";
 import { createLogger } from "@/logger";
 
@@ -45,7 +45,7 @@ export interface BridgeTunnelSpec {
   remotePort: number;
   // Where that port answers, as reached FROM the remote. Its own loopback for an engine that runs the containers
   // itself; the machine's own address for one whose engine lives inside a machine, because a port published there
-  // never appears on the host running it (`adapters/engineMachine`).
+  // never appears on the host running it (`container-client/runtimes/publishedPortHost`).
   remoteHost?: string;
   // Called when the forward dies under a live session. Every frame after that goes nowhere, so the caller reports the
   // session as lost rather than leaving a transcript that has silently stopped receiving.
