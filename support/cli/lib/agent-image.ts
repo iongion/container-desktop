@@ -50,5 +50,10 @@ export async function bundleAgentHost(options: { root: string; outDir: string })
     },
   });
   await cp(path.join(options.root, "support/agent-image/Dockerfile"), path.join(options.outDir, "Dockerfile"));
+  // pi's session store compiled with a storage port, which the image copies over the published files. Part of the build
+  // CONTEXT rather than the bundle: it replaces files inside pi's own package, where esbuild has no say.
+  await cp(path.join(options.root, "support/agent-image/pi-patch"), path.join(options.outDir, "pi-patch"), {
+    recursive: true,
+  });
   return outfile;
 }
