@@ -26,11 +26,11 @@ export interface AssistantLauncherProps {
   onCreate: () => void;
 }
 
-// The verb follows the state, because they mean different things to the user: continuing costs nothing, resuming
-// starts containers that still hold the conversation, and starting builds them.
+// Two verbs, because there are only two things a user is choosing between: go back to the conversation they have, or
+// begin one they do not. A stopped pair still holds its conversation, so continuing is what it is — the containers it
+// takes to get there are the app's problem, and the row already says which state it is in.
 function actionLabel(row: SessionLauncher, t: (key: string) => string): string {
-  if (row.action === "continue") return t("Continue");
-  return row.action === "resume" ? t("Resume") : t("Start");
+  return row.action === "continue" ? t("Continue") : t("Start");
 }
 
 function stateLabel(row: SessionLauncher, t: (key: string) => string): string {
@@ -106,8 +106,7 @@ export const AssistantLauncher: React.FC<AssistantLauncherProps> = ({
             </span>
             <Button
               size="small"
-              intent={row.action === "resume" ? Intent.NONE : Intent.PRIMARY}
-              variant={row.action === "resume" ? "outlined" : "solid"}
+              intent={Intent.PRIMARY}
               text={actionLabel(row, t)}
               loading={starting === row.connectionId}
               onClick={() => onLaunch(row)}

@@ -27,7 +27,9 @@ describe("sessionLaunchers", () => {
     expect(sessionLaunchers({ connections: [podman] })).toEqual([]);
   });
 
-  it("names the verb after the state: continue what runs, resume what stopped", () => {
+  // The state is still told apart — the row says which it is — but the VERB is not, because the difference costs the
+  // user nothing: a rebuilt pair finds its conversation in the volume, so continuing means the same thing either way.
+  it("offers one verb for a session that exists, whether its containers are up or stopped", () => {
     const rows = sessionLaunchers({
       connections: [podman, docker],
       configured: {
@@ -41,7 +43,7 @@ describe("sessionLaunchers", () => {
     });
     expect(rows.map((row) => [row.connectionId, row.state, row.action])).toEqual([
       ["podman-1", "running", "continue"],
-      ["docker-1", "stopped", "resume"],
+      ["docker-1", "stopped", "continue"],
     ]);
   });
 

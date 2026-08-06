@@ -476,9 +476,10 @@ export interface CodingAgentState {
   // Which connection's session is being brought up, so its row alone shows the wait.
   launching?: string;
   refreshLaunchers(): Promise<void>;
-  // Bring up the session a launcher row stands for. Continue, Resume and Start differ only in what the user is told:
-  // all three end at the same reusable containers, and a stopped pair is REBUILT rather than restarted — its
-  // conversation lives in the plugin volume, not in the container, so nothing is lost by it.
+  // Bring up the session a launcher row stands for. Continue and Start differ only in what the user is told: both end
+  // at the same reusable containers, and a stopped pair is REBUILT rather than restarted — its conversation lives in
+  // the plugin volume, not in the container, so nothing is lost by it. That is also why a stopped pair needs no verb
+  // of its own: with nothing at stake in the difference, there is nothing for the user to weigh.
   launchSession(row: SessionLauncher): Promise<void>;
   // Drop a session's configuration. Its containers are left alone: they are the user's to remove, in the Containers
   // screen where every other container is removed.

@@ -14,8 +14,11 @@ export interface DefaultSessionCandidate {
 }
 
 export type SessionLauncherState = "running" | "stopped" | "absent";
-// Continue what is already running, resume what stopped with its conversation intact, start what is not there.
-export type SessionLauncherAction = "continue" | "resume" | "start";
+// Continue the session that exists, start the one that does not. Whether its containers happen to be up or merely
+// stopped is the engine's business, not something the user should have to hold a second verb for: both mean "take me
+// back to my conversation", and both do. The STATE is still kept apart, because bringing a stopped pair up is real
+// work that has to happen before it can be dialled.
+export type SessionLauncherAction = "continue" | "start";
 
 export interface SessionLauncher {
   connectionId: string;
@@ -51,7 +54,7 @@ function stateOf(candidate: DefaultSessionCandidate | undefined): SessionLaunche
 
 const ACTIONS: Record<SessionLauncherState, SessionLauncherAction> = {
   running: "continue",
-  stopped: "resume",
+  stopped: "continue",
   absent: "start",
 };
 
