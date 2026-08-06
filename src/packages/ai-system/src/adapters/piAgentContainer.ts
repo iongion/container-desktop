@@ -15,6 +15,7 @@ import { isLoopbackProviderHost, type ProviderKind } from "@/ai-system/core/prov
 import type { DefaultSessionCandidate } from "@/ai-system/core/sessionLaunchers";
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
+import { ContainerEngineHost } from "@/container-client/types/engine";
 import { createLogger } from "@/logger";
 import type { PiModelReasoning } from "@/pi-bridge/protocol";
 
@@ -100,12 +101,32 @@ export function pluginVolumeMount(spec: PiAgentSessionSpec, agentDir: string): s
   return `${spec.pluginVolumeName}:${agentDir}${suffix}`;
 }
 
-// The conversations mount takes the same `:U` as the plugin volume, and for the same reason: under rootless podman's
-// keep-id a mount created on an earlier mapping stays owned by the old uid, and pi fails with EACCES on the FIRST TURN
-// rather than at startup — which reads as a broken model, not a broken mount.
-export function sessionsMount(spec: PiAgentSessionSpec, guestSessionsPath: string): string {
-  const suffix = spec.userMapping.kind === "keep-id" ? ":U" : "";
-  return `${guestSessionsPath}:${SESSIONS_DIR_IN_IMAGE}${suffix}`;
+// The conversations mount is shaped like the WORKSPACE mount, not like the plugin volume: both are host directories,
+// and podman's `:U` belongs to the volume case — a named volume created under an earlier mapping stays owned by the old
+// uid. A directory this app creates under the user's own uid has no such history, and keep-id already maps that uid to
+// the container's `agent` user. Measured against the real image: with keep-id the container reads a host file as 1001
+// and its writes land back owned by the user, `:U` or not — so the flag only makes podman chown the user's entire
+// history on every start.
+export function sessionsMount(guestSessionsPath: string): string {
+  return `${guestSessionsPath}:${SESSIONS_DIR_IN_IMAGE}`;
+}
+
+// The engine hosts that run their engine on a machine sharing no filesystem with this app. `resolveGuestPath` returns a
+// local path UNCHANGED for these on purpose — over SSH the workspace folder is one the remote machine already has — so
+// a directory this app created here does not exist on the machine that would mount it. The Build studio draws the same
+// line for a build context, and for the same reason.
+const REMOTE_ENGINE_HOSTS: ReadonlySet<ContainerEngineHost> = new Set([
+  ContainerEngineHost.PODMAN_REMOTE,
+  ContainerEngineHost.DOCKER_REMOTE,
+  ContainerEngineHost.APPLE_REMOTE,
+]);
+
+// Whether a path this machine made can be mounted by that engine at all. False keeps the conversations where pi puts
+// them, which is what every connection did before this mount existed: asking a remote engine for a path it has never
+// seen makes the ENGINE create it, owned by root, and pi meets that as EACCES on the first turn. A host nothing is
+// known about keeps the mount, so only a KNOWN remote withholds it.
+export function engineSharesAppFilesystem(engineHost: ContainerEngineHost | undefined): boolean {
+  return !engineHost || !REMOTE_ENGINE_HOSTS.has(engineHost);
 }
 
 export function userMappingArgv(mapping: PiAgentSessionSpec["userMapping"]): string[] {
@@ -164,7 +185,7 @@ export function agentRunArgv(
     `${guestWorkspacePath}:/workspace`,
     "--volume",
     pluginVolumeMount(spec, AGENT_DIR_IN_IMAGE),
-    ...(guestSessionsPath ? ["--volume", sessionsMount(spec, guestSessionsPath)] : []),
+    ...(guestSessionsPath ? ["--volume", sessionsMount(guestSessionsPath)] : []),
     ...specLabelArgv(spec, "agent"),
     "--env-file",
     envFilePath,
@@ -286,6 +307,11 @@ export interface AttachedPiAgentSession {
   // The model the pair was started with, as its own environment records it. The session says what it is actually
   // answering with when it announces itself; this is what fills the spec until then.
   modelId?: string;
+  // The conversations directory the pair was BUILT with, as a path inside the container. Its presence is the proof
+  // that this pair mounts its history from the host at all — `CD_SESSION_DIR` and the second `--volume` are emitted
+  // from the same field, so one cannot be there without the other. A pair built before the mount existed reports
+  // nothing, and its history is still in the plugin volume.
+  sessionsDir?: string;
 }
 
 // One inspection asked for as JSON, so the two things that matter arrive in one call and neither is scraped out of a
@@ -322,7 +348,13 @@ export function attachedPiAgentSessionFrom(payload: string): AttachedPiAgentSess
   const bridgeToken = env.get("CD_BRIDGE_TOKEN");
   if (!bridgeToken || !Number.isInteger(hostPort) || hostPort <= 0) return undefined;
   const modelId = env.get("CD_MODEL_ID");
-  return { hostPort, bridgeToken, ...(modelId ? { modelId } : {}) };
+  const sessionsDir = env.get("CD_SESSION_DIR");
+  return {
+    hostPort,
+    bridgeToken,
+    ...(modelId ? { modelId } : {}),
+    ...(sessionsDir ? { sessionsDir } : {}),
+  };
 }
 
 // Adopt the pair that is already up. `run` would refuse — the names are taken — and taking them back would mean

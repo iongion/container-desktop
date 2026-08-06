@@ -62,6 +62,7 @@ function makeBroker(options?: {
   ) => Promise<ListedModel[]>;
   skillHost?: SkillHost;
   projectContextHost?: ProjectContextHost;
+  agentSessionsDir?: () => Promise<string>;
 }) {
   const handlers = new Map<string, (event: any, payload: any) => any>();
   const sent: Array<{ event: any; channel: string; payload: any }> = [];
@@ -112,6 +113,7 @@ function makeBroker(options?: {
     skillHost: options?.skillHost,
     buildSkillInvocationPrompt: ({ body }) => `PROMPT:${body}`,
     projectContextHost: options?.projectContextHost,
+    agentSessionsDir: options?.agentSessionsDir,
     logger,
   });
   broker.register();
@@ -218,6 +220,38 @@ describe("AIBroker agent gateway environment", () => {
       /unauthorized/i,
     );
     expect(broker.keyStore.files()).toEqual([]);
+  });
+});
+
+// The conversations are the user's, so they are mounted from a directory on THIS machine instead of pi's default
+// inside the agent volume. The renderer cannot name that directory: the host owns its own data location, and it is
+// also the only realm that can CREATE it in time — a bind-mount whose source does not exist is created by the ENGINE,
+// owned by root, and the session then fails with EACCES on its first turn rather than at startup.
+describe("AIBroker conversations directory", () => {
+  it("answers with the directory the host resolved and created", async () => {
+    const agentSessionsDir = vi.fn(async () => "/data/assistant-sessions");
+    const broker = makeBroker({ agentSessionsDir });
+
+    expect(await broker.invoke(AI_CHANNELS.agentSessionsDir)).toEqual({ path: "/data/assistant-sessions" });
+    expect(agentSessionsDir).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses an unauthorized sender", async () => {
+    const agentSessionsDir = vi.fn(async () => "/data/assistant-sessions");
+    const broker = makeBroker({ agentSessionsDir });
+
+    await expect(broker.invoke(AI_CHANNELS.agentSessionsDir, undefined, { allowed: false })).rejects.toThrow(
+      /unauthorized/i,
+    );
+    // Nothing is created for a sender the transport did not authorise.
+    expect(agentSessionsDir).not.toHaveBeenCalled();
+  });
+
+  // A runtime with no data directory to offer must say so. Answering with a path nobody created would put the
+  // creation back on the engine, which is the failure this channel exists to avoid.
+  it("fails loudly on a runtime that can resolve no directory", async () => {
+    const broker = makeBroker();
+    await expect(broker.invoke(AI_CHANNELS.agentSessionsDir)).rejects.toThrow(/unavailable/i);
   });
 });
 

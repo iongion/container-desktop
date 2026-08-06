@@ -65,3 +65,19 @@ export async function loadedContextLength(model) {
     return undefined;
   }
 }
+
+// Whichever model this server currently HAS loaded, for a spec whose subject is not the model. Naming one in the spec
+// file would pin it to whatever happened to be resident the day it was written, and a spec that skips because a
+// different model is loaded reads as missing coverage. Answers undefined when nothing is loaded, which is a SKIP.
+export async function loadedModel() {
+  try {
+    const response = await fetch(`${LM_STUDIO_BASE_URL.replace(/\/v\d+\/?$/, "")}/api/v0/models`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return undefined;
+    const entry = (await response.json()).data?.find((item) => item.loaded_context_length > 0);
+    return entry ? { id: entry.id, contextLength: entry.loaded_context_length } : undefined;
+  } catch {
+    return undefined;
+  }
+}

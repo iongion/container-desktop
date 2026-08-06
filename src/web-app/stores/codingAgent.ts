@@ -8,6 +8,7 @@ import type { ModelWindow } from "@/ai-system/adapters/modelWindow";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   attachPiAgentSession,
+  engineSharesAppFilesystem,
   findDefaultSession,
   GATEWAY_PORT_IN_IMAGE,
   gatewayUpstreamUrl,
@@ -674,6 +675,25 @@ async function writeAgentEnvFile(name: string, contents: string): Promise<string
   return path;
 }
 
+// Where this machine keeps the user's conversations, asked of the HOST because only the host knows where the app's
+// data lives — and because the directory has to EXIST before the engine mounts it: a bind-mount with a missing source
+// is created by the engine and owned by root, which pi meets as EACCES on the first turn rather than at startup.
+//
+// Never fatal. A runtime that cannot answer leaves pi defaulting the conversations under the agent dir — the plugin
+// volume — which is exactly the behaviour that shipped before this directory existed. A session is worth more than
+// where its transcript lands.
+async function readSessionsDir(): Promise<string | undefined> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge?.agentSessionsDir) return undefined;
+  try {
+    const { path } = await bridge.agentSessionsDir();
+    return path.trim() || undefined;
+  } catch (error) {
+    logger.warn("the host could not provide a directory for the conversations", error);
+    return undefined;
+  }
+}
+
 // Why a row could not be launched, in the words the start form already uses for the same problems.
 function launchProblem(problems: readonly string[]): string {
   if (problems.includes("missing-key")) return t("This inference source needs an API key. Add it in Settings → AI.");
@@ -931,6 +951,10 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       });
       return;
     }
+    // Attaching mounts nothing: the pair is built, and its mounts are fixed. So the spec may claim a conversations
+    // directory only for a pair that reports one — the app resolves the same directory it would have mounted, and
+    // says nothing at all about a pair whose history is still in the volume.
+    const sessionsPath = attached.sessionsDir ? await readSessionsDir() : undefined;
     // The pair's OWN facts win where it has them — the model it is running, the socket it publishes — and the rest is
     // what this connection's session was configured with.
     const spec: PiAgentSessionSpec = {
@@ -940,6 +964,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       hostPort: attached.hostPort,
       bridgeToken: attached.bridgeToken,
       pluginVolumeName: ASSISTANT_PLUGIN_VOLUME,
+      ...(sessionsPath ? { sessionsPath } : {}),
       connectionId: options.connectionId,
       sessionKind: "default",
       upstreamBaseUrl: options.upstreamBaseUrl,
@@ -1057,9 +1082,14 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         return;
       }
     }
+    // Asked for before the pair is built, because it is a mount: the conversations come from this machine, so they
+    // are readable with the pair stopped and survive every rebuild of it. Only where the engine can actually see this
+    // filesystem — a remote engine mounts paths from ITS machine, so pi keeps its own default there.
+    const sessionsPath = engineSharesAppFilesystem(host.HOST) ? await readSessionsDir() : undefined;
     const spec: PiAgentSessionSpec = {
       imageTag: agentImageTag(options.appVersion),
       workspacePath: options.workspacePath,
+      ...(sessionsPath ? { sessionsPath } : {}),
       hostPort: pickHostPort(),
       bridgeToken: randomUUID(),
       ...(options.sessionKind === "default"

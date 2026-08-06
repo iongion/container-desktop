@@ -18,6 +18,12 @@ export const AI_CHANNELS = {
   // invoke({ fileName, contents }) → { path }. The AGENT container's env file, written into the same protected
   // directory as the gateway's so one guard covers both. Carries the bridge token, never a provider key.
   agentEnvFile: "ai:agent:env-file", // invoke(AgentGatewayEnvRequest) → { path }
+  // invoke() → { path }. The directory on THIS machine that the agent container mounts its conversations from, so a
+  // user's history outlives the pair instead of living in the plugin volume. The host both resolves it — this realm
+  // cannot know the app's data location — and CREATES it: a bind-mount whose source is missing is created by the
+  // ENGINE, owned by root, and the session then fails with EACCES on its first turn. Holds no secret, so it is a
+  // sibling of the protected agent directory rather than inside it.
+  agentSessionsDir: "ai:agent:sessions-dir",
   // invoke({ provider, fileName, bridgeToken, bridgePort }) → { path }. The one-shot auth container's env file for a
   // REFRESH run: it carries the stored credential, put in host-side, because the web view cannot read one out of the
   // vault. Same protected directory and same guard as the two above.

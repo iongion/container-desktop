@@ -7,6 +7,7 @@ import {
   defaultSessionFrom,
   defaultSessionNames,
   egressNetworkName,
+  engineSharesAppFilesystem,
   findDefaultSession,
   gatewayRunArgv,
   gatewayUpstreamUrl,
@@ -18,6 +19,7 @@ import {
   stopPiAgentSession,
   userMappingArgv,
 } from "@/ai-system/adapters/piAgentContainer";
+import { ContainerEngineHost } from "@/container-client/types/engine";
 
 const spec: PiAgentSessionSpec = {
   imageTag: "container-desktop/pi-agent:6.1.0",
@@ -77,7 +79,6 @@ describe("agentRunArgv", () => {
   // volume, so history that a stopped pair — or an unavailable engine — takes with it. Mounted like the workspace and
   // through the same translation, they live wherever the workspace comes from instead. It also completes the split the
   // owner asked for: with conversations elsewhere, the plugin volume holds only setup.
-  // A mapping of `none` here so these two assert the PATH; the `:U` suffix has its own case below.
   const unmapped: PiAgentSessionSpec = { ...spec, userMapping: { kind: "none" } };
 
   it("mounts a sessions directory when one is given, outside the plugin volume", () => {
@@ -98,12 +99,16 @@ describe("agentRunArgv", () => {
     expect(agentRunArgv(spec, "/home/me/project", "/tmp/env").join(" ")).not.toContain(SESSIONS_DIR_IN_IMAGE);
   });
 
-  // Same trap as the plugin volume: under rootless podman's keep-id a mount created on an earlier mapping stays owned
-  // by the old uid, and pi fails with EACCES on the FIRST TURN rather than at startup.
-  it("carries podman's ownership fix on the sessions mount under keep-id", () => {
+  // The plugin volume's `:U` does NOT belong here. It exists for a named volume left owned by an earlier mapping; this
+  // is a directory the app creates under the user's own uid, and keep-id already maps that uid to the container's agent
+  // user. Measured against the real image: with keep-id the container reads a host file as 1001 and its writes land
+  // back owned by the user with or without the flag — so `:U` would only make podman chown the user's whole history on
+  // every start. The workspace mount, the same kind of mount under the same mapping, has never carried it either.
+  it("mounts the conversations like the workspace, with no ownership rewrite of the user's own directory", () => {
     const kept: PiAgentSessionSpec = { ...spec, userMapping: { kind: "keep-id" } };
     const argv = agentRunArgv(kept, "/home/me/project", "/tmp/env", "/home/me/sessions");
-    expect(argv).toContain(`/home/me/sessions:${SESSIONS_DIR_IN_IMAGE}:U`);
+    expect(argv).toContain(`/home/me/sessions:${SESSIONS_DIR_IN_IMAGE}`);
+    expect(argv.join(" ")).not.toContain(`${SESSIONS_DIR_IN_IMAGE}:U`);
   });
 
   it("mounts the plugin volume at the pi agent dir", () => {
@@ -125,6 +130,35 @@ describe("agentRunArgv", () => {
   // podman and docker alike), so every no-egress session start failed until it moved to `network create`.
   it("never hands the agent's run a network-create flag", () => {
     expect(agentRunArgv({ ...spec, egress: false }, "/w", "/tmp/env")).not.toContain("--internal");
+  });
+});
+
+// Whether a directory this machine made can be mounted by the engine at all. It decides whether the conversations are
+// mounted from here or left where pi puts them, and getting it wrong is not harmless: an engine asked to bind-mount a
+// path its own machine has never seen CREATES it, as root, and pi then fails with EACCES on the first turn.
+describe("engineSharesAppFilesystem", () => {
+  it("says no for a remote host, which shares no filesystem with this app", () => {
+    // `resolveGuestPath` returns a local path unchanged for these, deliberately: over SSH the workspace path is one
+    // the REMOTE machine already has. A path the app invented here is not.
+    expect(engineSharesAppFilesystem(ContainerEngineHost.PODMAN_REMOTE)).toBe(false);
+    expect(engineSharesAppFilesystem(ContainerEngineHost.DOCKER_REMOTE)).toBe(false);
+    expect(engineSharesAppFilesystem(ContainerEngineHost.APPLE_REMOTE)).toBe(false);
+  });
+
+  it("says yes for this machine and for a guest that mounts it", () => {
+    // A scoped guest (WSL, Lima, a machine) runs the engine inside a VM that mounts the host filesystem, and the path
+    // is translated for it — which is exactly how the workspace already gets there.
+    expect(engineSharesAppFilesystem(ContainerEngineHost.PODMAN_NATIVE)).toBe(true);
+    expect(engineSharesAppFilesystem(ContainerEngineHost.DOCKER_NATIVE)).toBe(true);
+    expect(engineSharesAppFilesystem(ContainerEngineHost.PODMAN_VIRTUALIZED_WSL)).toBe(true);
+    expect(engineSharesAppFilesystem(ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA)).toBe(true);
+    expect(engineSharesAppFilesystem(ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR)).toBe(true);
+  });
+
+  // A facade composed before the field existed, or a fixture that names no host, keeps the behaviour every connection
+  // had: the local mount. Only a host KNOWN to be remote withholds it.
+  it("says yes for a host it was told nothing about", () => {
+    expect(engineSharesAppFilesystem(undefined)).toBe(true);
   });
 });
 
@@ -756,6 +790,20 @@ describe("attachedPiAgentSessionFrom", () => {
       bridgeToken: "tok-abc",
       modelId: "qwen/qwen3-4b",
     });
+  });
+
+  // Whether the pair's conversations are mounted from the host is not something the app may assume about a container
+  // it did not build in this run: `CD_SESSION_DIR` and the `--volume` are emitted together from the same field, so the
+  // env is the proof. A pair built before the mount existed reports nothing, and nothing is what it has.
+  it("reports the conversations directory the pair was built with", () => {
+    const payload = inspection({
+      env: ["CD_BRIDGE_TOKEN=tok-abc", `CD_SESSION_DIR=${SESSIONS_DIR_IN_IMAGE}`],
+    });
+    expect(attachedPiAgentSessionFrom(payload)?.sessionsDir).toBe(SESSIONS_DIR_IN_IMAGE);
+  });
+
+  it("reports no conversations directory for a pair whose history is still in the volume", () => {
+    expect(attachedPiAgentSessionFrom(inspection())).not.toHaveProperty("sessionsDir");
   });
 
   // A token is opaque and may carry the separator itself; splitting on every "=" would truncate it silently.

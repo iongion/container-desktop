@@ -14,10 +14,30 @@ suggest, and conflating them is a documented source of wrong conclusions:
 | **Connection** (local engine, machine, WSL, SSH) | the root — a container and a volume exist on ONE engine only | the user's |
 | **pi-agent engine** — the pair `cd-agent-*` + `cd-gateway-*` | one per connection | disposable; recreating it under the same deterministic names costs nothing |
 | **`cd-agent-plugins` volume** — pi's agent dir | ONE fixed name, no per-session suffix, so it is per-ENGINE | outlives every container and every image rebuild |
-| **Conversation** (pi's *session*) — an entry tree in that volume | MANY per connection | until the user removes it |
+| **Conversation** (pi's *session*) — an entry tree of JSONL | MANY per connection | until the user removes it |
 
-A connection is coupled to its **pi-agent engine**, not to one conversation. Conversations are per-connection only
-because a volume is an engine object — they do not float between engines.
+A connection is coupled to its **pi-agent engine**, not to one conversation.
+
+**Conversations come from this machine, not from the volume.** `<userData>/assistant-sessions` is bind-mounted at
+`/home/agent/.cd/sessions` — outside the agent dir, or it would be back inside the volume — and pi is pointed at it with
+`CD_SESSION_DIR`. So history survives every rebuild of the pair, is readable with nothing running, and the volume holds
+only SETUP: settings, packages, trust. The HOST resolves and creates that directory (`ai:agent:sessions-dir`), because
+the renderer cannot know where the app's data lives and because a bind-mount whose source is missing is created by the
+ENGINE as root — which pi meets as EACCES on the first turn. It is a sibling of the protected `agent/` directory, never
+inside it: that one is unreadable from the web view by design, and a user's history must not be.
+
+The mount is shaped like the WORKSPACE mount, translated by the same `resolveGuestPath`, and deliberately carries no
+`:U`: that flag belongs to a named volume left owned by an earlier mapping, while keep-id already maps the invoking user
+onto the container's `agent` user. Measured against the real image, `:U` changes nothing here except making podman chown
+the user's whole history on every start.
+
+**A remote (SSH) engine keeps pi's own default, and nothing is ever synced.** A remote engine mounts paths from ITS
+machine — `resolveGuestPath` is the identity there by design, since the workspace folder is one the remote already has —
+so `engineSharesAppFilesystem` withholds the mount and that connection's conversations stay where pi puts them. Bringing
+them anywhere is NOT this app's business: a copy between two places is two writers, and reconciliation, conflict rules
+and timestamps are exactly what the design refuses. What would put a remote engine's history on the user's machine is an
+`fs` port on pi's `SessionManager` (its own harness layer already has one) reached over the bridge that already carries
+the workspace file operations — an upstream contribution, not a fork and not a sync.
 
 Three worlds, two of them containers:
 
@@ -145,15 +165,16 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
 
 0. free the two names this spec is about to ask for. The reusable session's names are deterministic, so a pair the
    user stopped — or half a pair a crash left — still holds them, and `run` answers a name in use with a conflict;
-   removing them IS "rebuilt under the same names", and it costs nothing because the conversation lives in the plugin
-   volume. A pair still RUNNING is refused instead: continuing that one is `attachPiAgentSession`;
+   removing them IS "rebuilt under the same names", and it costs nothing because the conversation is not in these
+   containers. A pair still RUNNING is refused instead: continuing that one is `attachPiAgentSession`;
 1. create a session-scoped network (`cd-agent-net-<id>`; a pre-existing one is not an error);
 2. write the **gateway** env file — upstream base URL, **the provider key**, the bridge token — and run
    `<image> --mode gateway` on that network. The renderer never handles that key: it composes the file with
    `KEYCHAIN_SECRET_PLACEHOLDER` and the realm owning the vault substitutes it while writing (below);
 3. write the **agent** env file — deliberately *without* the key: bridge token and port, the gateway URL, the
    model id, `/workspace`, the agent dir — and run `<image> --mode agent` with
-   `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, and the plugin volume;
+   `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, the plugin volume, and — where the engine can see this
+   machine's filesystem — the conversations mount;
 4. connect the WebSocket client and publish the app's theme palette **before** the first plugin frame, so no
    component paints in pi's colours and then flashes to the app's.
 
@@ -203,9 +224,11 @@ image rebuild. `projectTrusted` starts **false** and follows the user's own trus
 TRUST the project, which would let a project nobody vouched for have packages written into the user's workspace. The
 decision lives in the agent dir (`ProjectTrustStore`, so nothing is written into the project to record it) and reaches
 pi through `setProjectTrusted` at construction and on every `/trust` write. The install drawer offers the project
-scope only while that answer is yes, and says why when it is not. **pi owns session persistence** (its own JSONL entry tree); the GUI
-transcript is a projection of the event stream, which is why the app has no session store of its own on this
-path.
+scope only while that answer is yes, and says why when it is not. **pi owns session persistence** — its own JSONL entry
+tree, written to `CD_SESSION_DIR` when the app mounted one and to pi's default under the agent dir otherwise. The GUI
+transcript is a projection of the event stream, which is why the app has no session store of its own on this path, and
+why it must not become one: the turn stream is display-shaped (no entry id, no parentId, no timestamp), so a store built
+from events would lose the branching fidelity `forkFrom` and `/resume` are defined on.
 
 `initTheme()` is called for a narrow reason: pi's own components read a module-global theme that *throws*
 until initialised, so a plugin building a `Markdown` or `SelectList` would crash on first render. The app's own
@@ -363,6 +386,7 @@ request validated against the Zod schema in `core/schemas.ts`, and its response 
 | status / diagnostics | `ai:status`, `ai:diagnostics` | live |
 | provider keys | `ai:key:{has,set,clear}` | live |
 | the agent pair's private env files | `ai:agent:{gateway-env,env-file}` | live — the key is substituted natively, never in this realm |
+| the conversations' directory | `ai:agent:sessions-dir` | live — resolved AND created host-side, so the engine never makes it as root |
 | model discovery | `ai:models:{list,cancel}` | live |
 | one model's facts | `ai:model:window` | live — the provider probe ([below](#what-the-app-knows-about-a-model)) |
 | web search, run for the agent | `ai:web:search` | live — refused while the user's own switch is off |

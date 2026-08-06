@@ -445,6 +445,9 @@ export const invokeSchemas = {
       contents: z.string().min(1).max(65536),
     })
     .strict(),
+  // Nothing to describe: the host owns where its data lives, and a caller that could name the directory could aim
+  // the mount anywhere.
+  [AI_CHANNELS.agentSessionsDir]: empty,
   [AI_CHANNELS.changesStatus]: empty,
   [AI_CHANNELS.changesDiff]: empty,
   [AI_CHANNELS.projectContextSnapshot]: empty,
@@ -812,6 +815,7 @@ export const responseSchemas = {
   [AI_CHANNELS.keyClear]: ok,
   [AI_CHANNELS.agentGatewayEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.agentEnvFile]: z.object({ path: z.string().min(1).max(4096) }).strict(),
+  [AI_CHANNELS.agentSessionsDir]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.authRefreshEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.changesStatus]: workspaceChangeStatusSchema,
   [AI_CHANNELS.changesDiff]: workspaceDiffSchema,

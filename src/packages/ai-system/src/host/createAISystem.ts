@@ -76,6 +76,10 @@ export async function createAISystem<TEvent = unknown>(
     deps.mock && import.meta.env.ENVIRONMENT !== "production" ? await import("@/ai-system/testing/aiMocks") : null;
   const mocks = mockModule ? mockModule.createMockAIDeps() : null;
 
+  // A SIBLING of the protected `agent/` directory, never inside it: every web-view-reachable read of that one is
+  // refused because the gateway's env file carries the provider key, and a user's conversations must stay readable —
+  // with no container running and no engine reachable, which is the whole point of mounting them from here.
+  const sessionsDir = await deps.path.join(deps.userDataDir, "assistant-sessions");
   const permissionsPath = await deps.path.join(deps.userDataDir, "ai-permissions.json");
   const skillTrustPath = await deps.path.join(deps.userDataDir, "ai-skill-trust.json");
   const projectContextPath = await deps.path.join(deps.userDataDir, "ai-project-context.json");
@@ -158,6 +162,13 @@ export async function createAISystem<TEvent = unknown>(
     // a connection's containers passes undefined, and a workspace call then fails rather than acting here.
     createExecutionSelector: deps.createExecutionSelector,
     permissionsStore,
+    // Created on demand rather than at composition: an app that never starts a session should leave no directory
+    // behind, and one deleted between two sessions is made again instead of failing the second. Creating it HERE is
+    // what keeps the engine from creating it as root when it mounts it.
+    agentSessionsDir: async () => {
+      await deps.fs.mkdir(sessionsDir, { recursive: true });
+      return sessionsDir;
+    },
     skillHost,
     buildSkillInvocationPrompt,
     projectContextHost,

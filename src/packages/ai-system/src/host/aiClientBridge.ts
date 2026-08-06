@@ -40,6 +40,10 @@ export interface IAI {
   // The AGENT container's env file, into the same protected directory. It carries the bridge token, so it belongs
   // behind the same guard rather than in a second directory the web view could read it out of.
   writeAgentEnvFile: (fileName: string, contents: string) => Promise<{ path: string }>;
+  // The directory on this machine the agent mounts its conversations from, created by the host before it answers.
+  // This realm cannot name it: where the app keeps its data is the host's to know, and a directory the engine has to
+  // create instead belongs to root.
+  agentSessionsDir: () => Promise<{ path: string }>;
   // The one-shot auth container's env file for a refresh run. The stored credential is put in host-side, the same way
   // the gateway's is — this realm names the provider and never sees the secret.
   writeAuthRefreshEnv: (request: {
@@ -125,6 +129,7 @@ export function createAIClient(transport: AIClientTransport) {
     clearKey: (provider) => invoke(AI_CHANNELS.keyClear, { provider }),
     writeAgentGatewayEnv: (request) => invoke(AI_CHANNELS.agentGatewayEnv, request),
     writeAgentEnvFile: (fileName, contents) => invoke(AI_CHANNELS.agentEnvFile, { fileName, contents }),
+    agentSessionsDir: () => invoke(AI_CHANNELS.agentSessionsDir),
     writeAuthRefreshEnv: (request) => invoke(AI_CHANNELS.authRefreshEnv, request),
     getWorkspaceChangeStatus: () => invoke(AI_CHANNELS.changesStatus),
     getWorkspaceDiff: () => invoke(AI_CHANNELS.changesDiff),

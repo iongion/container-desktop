@@ -60,6 +60,10 @@ export interface AIBrokerDeps<TEvent = unknown> {
   // The public-web search the agent asks the app to run. Absent ⇒ this runtime cannot pin a destination, and the
   // tool is refused rather than offered.
   webSearcher?: (query: string) => Promise<{ text: string }>;
+  // Resolves — and creates — the directory on this machine the agent container mounts its conversations from. A
+  // runtime with no data directory to offer supplies none, and the channel then refuses instead of naming a path
+  // nobody made: an engine asked to bind-mount a missing source creates it as root, and pi fails on the first turn.
+  agentSessionsDir?: () => Promise<string>;
   skillHost?: SkillHost;
   buildSkillInvocationPrompt?: (context: {
     command: string;
@@ -257,6 +261,16 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     // own right — so it belongs behind the same guard rather than in a second directory the web view can read back.
     onInvoke(AI_CHANNELS.agentEnvFile, (event, request) =>
       guarded(event, async () => ({ path: await deps.keyStore.writeAgentEnvFile(request.fileName, request.contents) })),
+    );
+    // The conversations' own directory, which carries no secret and therefore lives OUTSIDE the protected agent
+    // directory — every web-view-reachable read of that one is refused, and the user's history has to stay readable.
+    onInvoke(AI_CHANNELS.agentSessionsDir, (event) =>
+      guarded(event, async () => {
+        if (!deps.agentSessionsDir) {
+          throw new Error("AI: a directory for the assistant's conversations is unavailable on this runtime");
+        }
+        return { path: await deps.agentSessionsDir() };
+      }),
     );
     onInvoke(AI_CHANNELS.changesStatus, (event) =>
       guarded(event, () => {
