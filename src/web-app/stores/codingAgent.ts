@@ -28,7 +28,6 @@ import {
   defaultSessionNamesFor,
 } from "@/ai-system/adapters/sessionNaming";
 import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
-import type { DefaultSessionCandidate } from "@/ai-system/core/defaultSession";
 import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import {
@@ -45,6 +44,7 @@ import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import type { ProviderKind } from "@/ai-system/core/providers";
 import type { SessionView } from "@/ai-system/core/sessionEvents";
 import { sessionExportHtml, sessionHtmlFilename } from "@/ai-system/core/sessionExportHtml";
+import type { DefaultSessionCandidate } from "@/ai-system/core/sessionLaunchers";
 import { type SessionLauncher, sessionLaunchers } from "@/ai-system/core/sessionLaunchers";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
@@ -691,7 +691,7 @@ function freshSessionState(options: StartCodingAgentOptions): Partial<CodingAgen
 
 // Record what a connection's reusable session was launched with, so the row survives the app and reads the same next
 // time. Merged rather than replaced: another connection's session is none of this one's business.
-async function writeDefaultSession(connectionId: string, config: AIDefaultSessionConfig): Promise<void> {
+export async function writeDefaultSession(connectionId: string, config: AIDefaultSessionConfig): Promise<void> {
   const settings = useAppStore.getState().userSettings.ai;
   await useAppStore.getState().setGlobalUserSettings({
     ai: { ...settings, defaultSessions: { ...(settings?.defaultSessions ?? {}), [connectionId]: config } },

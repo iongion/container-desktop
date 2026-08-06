@@ -5,8 +5,13 @@
 // so there is always something to click rather than a form to complete. Pure, so the launcher's behaviour is settled
 // here rather than in a component.
 
-import type { DefaultSessionCandidate } from "./defaultSession";
 import type { AIDefaultSessionConfig } from "./types";
+
+export interface DefaultSessionCandidate {
+  connectionId: string;
+  complete: boolean;
+  running: boolean;
+}
 
 export type SessionLauncherState = "running" | "stopped" | "absent";
 // Continue what is already running, resume what stopped with its conversation intact, start what is not there.

@@ -1,4 +1,4 @@
-import { Callout } from "@blueprintjs/core";
+import { Callout, Checkbox } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +13,8 @@ export function ReviewStep() {
   const target = useProvisioningStore((s) => s.target);
   const plan = useProvisioningStore((s) => s.plan);
   const preparePlan = useProvisioningStore((s) => s.preparePlan);
+  const setupAssistant = useProvisioningStore((s) => s.setupAssistant);
+  const setSetupAssistant = useProvisioningStore((s) => s.setSetupAssistant);
 
   useEffect(() => {
     preparePlan();
@@ -49,6 +51,13 @@ export function ReviewStep() {
       {plan.estimatedMinutes ? (
         <p className="PWizSub">{t("Estimated time: about {{n}} minutes.", { n: plan.estimatedMinutes })}</p>
       ) : null}
+
+      <Checkbox
+        className="PWizAssistantCheck"
+        checked={setupAssistant}
+        onChange={(e) => setSetupAssistant(e.currentTarget.checked)}
+        label={t("Also set up the assistant on this engine")}
+      />
     </div>
   );
 }

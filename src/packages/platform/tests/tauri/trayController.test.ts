@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { projectTrayMenu } from "@/platform/tauri/trayController";
+import { TRAY_QUIT_ID } from "@/platform/trayMenu";
 
 const oneEngine = {
   connections: [
@@ -27,6 +28,23 @@ describe("projectTrayMenu", () => {
     );
     expect(items[0]).toEqual({ label: "Connecting…", enabled: false }); // disabled, no id
     expect(registry.size).toBe(2); // only the always-present Open main window + Quit are clickable
+  });
+
+  it("gives Quit the same id whatever else is in the menu, so the native side can answer it alone", () => {
+    // Positional ids are only meaningful to the registry minted beside them. Quit has to keep working when the
+    // native menu and this realm's registry disagree — which is exactly when it is needed — so it is not positional.
+    const empty = projectTrayMenu({ connections: [] }, { performAction: vi.fn(), showApp: vi.fn(), quit: vi.fn() });
+    const full = projectTrayMenu(oneEngine as any, {
+      performAction: vi.fn(),
+      showApp: vi.fn(),
+      quit: vi.fn(),
+    });
+    const quitId = (menu: { items: any[] }) => menu.items.find((item) => item.label === "Quit")?.id;
+    expect(quitId(empty)).toBe(TRAY_QUIT_ID);
+    expect(quitId(full)).toBe(TRAY_QUIT_ID);
+    // …and it does not consume a positional slot, so the menus either side of it keep counting from where they were.
+    expect(empty.items.find((item) => item.label === "Open main window")?.id).toBe("tray:0");
+    expect(full.items.find((item) => item.label === "Open main window")?.id).toMatch(/^tray:\d+$/);
   });
 
   it("one engine → header + Running/Stopped submenus + Open/Quit, with closures registered by id", () => {

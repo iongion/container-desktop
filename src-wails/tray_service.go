@@ -47,6 +47,10 @@ type trayUpdateArgs struct {
 
 const trayActionEvent = "tray://action"
 
+// trayQuitID mirrors TRAY_QUIT_ID in src/packages/platform/src/trayMenu.ts. Quit is answered here rather than in
+// the webview, because the state it has to work in is the one where the webview cannot answer anything.
+const trayQuitID = "tray:quit"
+
 // Update (re)builds the native tray menu from the projected node tree, creating the SystemTray on first call.
 func (s *TrayService) Update(args trayUpdateArgs) {
 	s.mu.Lock()
@@ -88,6 +92,12 @@ func buildTrayMenu(menu *application.Menu, nodes []trayMenuNode) {
 			if node.ID != "" {
 				id := node.ID // capture per item — the click emits this id back to the webview
 				item.OnClick(func(*application.Context) {
+					// Every other item is a message to the webview, which is right while it can read its mail.
+					// Quit is the one that has to survive a webview that cannot — so it never leaves this side.
+					if id == trayQuitID {
+						application.Get().Quit()
+						return
+					}
 					emitToRenderer(nil, trayActionEvent, id)
 				})
 			}

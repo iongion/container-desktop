@@ -21,7 +21,17 @@ export interface TrayMenuItem {
   enabled?: boolean;
   click?: () => void;
   submenu?: TrayMenuItem[];
+  // A well-known id the native side recognises on its own, instead of the positional one the projection mints.
+  // Only Quit carries one, and the reason is below.
+  id?: string;
 }
+
+// Quit is the one item that cannot afford to be a message to the webview. Every other tray click is answered by
+// invoking a closure that lives in the renderer's realm — fine while it is healthy, and nothing at all when it is
+// wedged, reloading, or holding a registry built from a different menu than the one the native side is showing.
+// That state leaves a menu that still opens, still lists Quit, and cannot close the app. So this id is stable and
+// each shell's native side acts on it directly.
+export const TRAY_QUIT_ID = "tray:quit";
 
 type Item = TrayMenuItem;
 
@@ -208,6 +218,6 @@ export function buildTrayMenuTemplate(data: TrayMenuData, handlers: TrayMenuHand
 
   items.push({ type: "separator" });
   items.push({ label: i18n.t("Open main window"), click: () => onShowApp() });
-  items.push({ label: i18n.t("Quit"), click: () => onQuit() });
+  items.push({ id: TRAY_QUIT_ID, label: i18n.t("Quit"), click: () => onQuit() });
   return items;
 }

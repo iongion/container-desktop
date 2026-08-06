@@ -9,10 +9,10 @@ import {
   defaultScope,
   egressNetworkOf,
 } from "@/ai-system/adapters/sessionNaming";
-import type { DefaultSessionCandidate } from "@/ai-system/core/defaultSession";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import { composeGatewayEnv, gatewayBaseUrl, upstreamModelApi } from "@/ai-system/core/piAgentEnv";
 import { isLoopbackProviderHost, type ProviderKind } from "@/ai-system/core/providers";
+import type { DefaultSessionCandidate } from "@/ai-system/core/sessionLaunchers";
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";

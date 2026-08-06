@@ -122,6 +122,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       />
       <PopoverNext
         usePortal
+        // The menu is summoned by a header that deliberately stays above the wizard, so it has to travel with it:
+        // a portal carries no stacking of its own and would otherwise paint under the overlay, leaving a caret that
+        // opens an invisible menu.
+        portalClassName="AppHeaderPopoverAboveWizard"
         placement="bottom-end"
         content={
           <Menu>
@@ -130,12 +134,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               text={t("Assistant")}
               href={pathTo("/screens/ai/assistant")}
               data-action="ai-screen-assistant"
+              onClick={wizardOpen ? closeWizard : undefined}
             />
             <MenuItem
               icon={IconNames.CUBE_ADD}
               text={t("Plugins")}
               href={pathTo("/screens/ai/plugins")}
               data-action="ai-screen-plugins"
+              onClick={wizardOpen ? closeWizard : undefined}
             />
           </Menu>
         }

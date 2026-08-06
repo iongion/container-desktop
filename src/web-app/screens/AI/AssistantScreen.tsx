@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/i18n";
-import { createLogger } from "@/logger";
+
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { AssistantSession } from "@/web-app/components/ai/AssistantSession";
 import { EngineCell } from "@/web-app/components/EngineCell";
@@ -25,8 +25,6 @@ import "./AssistantScreen.css";
 
 export const ID = "ai.assistant";
 
-// TEMPORARY: timing for the cold-arrival investigation.
-const timingLogger = createLogger("web-app.assistantTiming");
 export const Title = i18n.t("Assistant");
 
 export interface ScreenProps extends AppScreenProps {}
@@ -51,8 +49,6 @@ const SessionSummary: React.FC = () => {
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  // TEMPORARY: holds the first-render timestamp for the timing above.
-  const renderedAt = useRef<number | undefined>(undefined);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const status = useCodingAgentStore((state) => state.status);
   const error = useCodingAgentStore((state) => state.error);
@@ -68,18 +64,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const root = rootRef.current;
     requestAnimationFrame(() => root?.querySelector<HTMLTextAreaElement>(".AIComposerInput")?.focus());
   }, [ready]);
-
-  // TEMPORARY timing: when this screen's first render runs, and when the browser next paints after it. The gap
-  // between them is what "the UI is stuck" actually measures. Remove once the cold-arrival cost is attributed.
-  if (typeof performance !== "undefined" && !renderedAt.current) {
-    renderedAt.current = performance.now();
-    requestAnimationFrame(() => {
-      timingLogger.warn(
-        `[timing] Assistant first render → paint: ${Math.round(performance.now() - (renderedAt.current ?? 0))}ms ` +
-          `(${Math.round(renderedAt.current ?? 0)}ms after this renderer started)`,
-      );
-    });
-  }
 
   return (
     <div className="AppScreen AssistantScreen" data-screen={ID} ref={rootRef}>

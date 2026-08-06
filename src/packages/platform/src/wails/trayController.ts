@@ -35,6 +35,8 @@ export function projectTrayMenu(
     onQuit: actions.quit,
   });
   const registry = new Map<string, () => void>();
+  // Counted separately from the registry so a well-known id (Quit) cannot shift the positional ones.
+  let next = 0;
   const walk = (items: any[]): TrayMenuNode[] =>
     items.map((item) => {
       if (item.type === "separator") {
@@ -44,7 +46,9 @@ export function projectTrayMenu(
       if (item.submenu) {
         node.items = walk(item.submenu);
       } else if (typeof item.click === "function") {
-        const id = `tray:${registry.size}`;
+        // An item that named itself keeps that name — Go answers it without this realm. Everything else is
+        // positional and only means anything to the registry built in the same pass.
+        const id = typeof item.id === "string" ? item.id : `tray:${next++}`;
         registry.set(id, item.click);
         node.id = id;
       }
