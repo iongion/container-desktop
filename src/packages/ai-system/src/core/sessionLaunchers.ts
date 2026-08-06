@@ -9,14 +9,13 @@ import type { AIDefaultSessionConfig } from "./types";
 
 export interface DefaultSessionCandidate {
   connectionId: string;
-  complete: boolean;
   running: boolean;
 }
 
 export type SessionLauncherState = "running" | "stopped" | "absent";
-// Continue the session that exists, start the one that does not. Whether its containers happen to be up or merely
+// Continue the session that exists, start the one that does not. Whether its container happens to be up or merely
 // stopped is the engine's business, not something the user should have to hold a second verb for: both mean "take me
-// back to my conversation", and both do. The STATE is still kept apart, because bringing a stopped pair up is real
+// back to my conversation", and both do. The STATE is still kept apart, because bringing a stopped container up is real
 // work that has to happen before it can be dialled.
 export type SessionLauncherAction = "continue" | "start";
 
@@ -45,10 +44,9 @@ export interface SessionLauncherInput {
   workspaceRoot?: string;
 }
 
-// Half a pair cannot serve a session, and nothing removes it for the user any more, so it reads as absent: starting
-// rebuilds it under the same names.
+// Nothing found means nothing to adopt, which reads as absent: starting builds it under the same name.
 function stateOf(candidate: DefaultSessionCandidate | undefined): SessionLauncherState {
-  if (!candidate?.complete) return "absent";
+  if (!candidate) return "absent";
   return candidate.running ? "running" : "stopped";
 }
 

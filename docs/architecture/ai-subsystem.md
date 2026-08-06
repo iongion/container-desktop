@@ -12,7 +12,7 @@ suggest, and conflating them is a documented source of wrong conclusions:
 | | Scope | Lifetime |
 | --- | --- | --- |
 | **Connection** (local engine, machine, WSL, SSH) | the root — a container and a volume exist on ONE engine only | the user's |
-| **pi-agent engine** — the pair `cd-agent-*` + `cd-gateway-*` | one per connection | disposable; recreating it under the same deterministic names costs nothing |
+| **pi-agent engine** — the container `cd-agent-*` | one per connection | disposable; recreating it under the same deterministic name costs nothing |
 | **`cd-agent-plugins` volume** — pi's agent dir | ONE fixed name, no per-session suffix, so it is per-ENGINE | outlives every container and every image rebuild |
 | **Conversation** (pi's *session*) — an entry tree of JSONL | MANY per connection | until the user removes it |
 
@@ -61,8 +61,7 @@ Three worlds, two of them containers:
 | World | What runs there | Trust |
 | ----- | --------------- | ----- |
 | **Renderer** (webview) | the transcript, cards, dialogs, ANSI surfaces, the composer; the AI broker; the engine ports | explicitly trusted — there is no process boundary inside it |
-| **Agent container** (`cd-agent-<id>`) | the pi session, its plugins and their code, the app's `pi-agent-host` entry | untrusted enough that the provider key never enters it |
-| **Gateway container** (`cd-gateway-<id>`) | an authenticating reverse proxy that holds the provider key | holds the credential; plugin code cannot reach it |
+| **Agent container** (`cd-agent-<id>`) | the pi session, its plugins and their code, the app's `pi-agent-host` entry, the provider proxy pi posts inference to | untrusted enough that the provider key never enters it — literally: nothing there holds one |
 | **Login container** (`cd-login-<id>`) | one provider sign-in — pi's own OAuth flow, which needs a Node realm | one-shot, mounts nothing, removed on every path out |
 
 The agent's own file tools see the container's filesystem. The **workspace toolset** (`readFile`, `listDirectory`,
@@ -101,11 +100,11 @@ flowchart TB
   end
   subgraph agent["Container: cd-agent-* (the app's pi-agent-host)"]
     host["WebSocket bridge server"]:::component
+    proxy["provider proxy — 127.0.0.1<br/>pi's baseUrl, carried over the bridge"]:::component
     pi["pi AgentSession<br/>+ 3 inline extensions"]:::component
     vol[("cd-agent-plugins volume<br/>~/.pi/agent")]:::external
     ws[("/workspace — host bind-mount")]:::external
   end
-  gw["Container: cd-gateway-*<br/>holds the provider key"]:::container
   prov[(Provider — cloud or local)]:::external
 
   ui --> store
@@ -115,8 +114,9 @@ flowchart TB
   pi --- vol
   pi --- ws
   store --> broker --> ops
-  pi -.->|"inference, bearer = bridge token"| gw
-  gw -.->|"bearer = the real key"| prov
+  pi -.->|"inference, bearer = bridge token"| proxy
+  proxy -.->|"over the bridge"| store
+  broker -.->|"bearer = the real key, attached natively"| prov
 
   classDef component fill:#85bbf0,color:#000,stroke:#5d82a8;
   classDef container fill:#438dd5,color:#fff,stroke:#2e6295;
@@ -135,7 +135,7 @@ it carries no extension UI, and extension UI plus render frames is most of what 
 | Package | Runs in | Contains |
 | ------- | ------- | -------- |
 | **`@/pi-bridge`** | both | the wire contract only — `protocol.ts` (version 1, commands, events, host methods), `codec.ts`, `image.ts` (`agentImageTag`). No Node, no DOM, so both ends import the same types |
-| **`@/pi-agent-host`** | the container (Node 24) | the bridge server, the pi session and its three inline extensions, the virtual terminal + surface registry, the plugin service, the gateway. **Excluded from the renderer graph** — bundled separately by esbuild into the image |
+| **`@/pi-agent-host`** | the container (Node 24) | the bridge server, the pi session and its three inline extensions, the virtual terminal + surface registry, the plugin service, the provider proxy. **Excluded from the renderer graph** — bundled separately by esbuild into the image |
 | **`@/ai-system`** | the renderer | `core/` (pure protocol + policy) → `adapters/` (impure infra) → `host/` (the broker), plus `ui/core/` (framework-free view logic) and `testing/` |
 
 `@/ai-system/core/` stays dependency-free: no `@/platform`, `@/i18n`, `@/web-app`, `react`, `node:*`,
@@ -150,13 +150,15 @@ One version constant (`PI_BRIDGE_PROTOCOL_VERSION = 1`) and three directions.
 **Renderer → container** (`BridgeCommand`): `hello` (token + version), `prompt` (with pi's `steer` /
 `followUp` streaming behavior), `abort`, `host_response`, `surface_input` / `surface_resize`, `set_theme`,
 the plugin verbs (`plugins_list` / `_install` / `_remove` / `_update` / `_check_updates` / `_set_enabled`),
-`resources_list`, `session_reload`, and `read_tool_output` (below).
+`resources_list`, `session_reload`, `read_tool_output` (below), and `provider_stream` — one frame of an inference answer,
+whose `response` frame is ignored the way `surface_input`'s is, because it is a stream frame and not a request.
 
 **Container → renderer** (`BridgeEvent`): `ready`, `response` (settles a command), the turn stream
 (`assistant_delta` / `assistant_end` / `tool_start` / `tool_update` / `tool_end` / `turn_end` / `idle` /
 `error` / `retry_start` / `retry_end`), plugin data (`entry` from `appendEntry`, `custom_message` from `sendMessage`), rendering
-(`surface_frame` / `surface_closed`), plugin management (`plugin_progress`, `plugins_changed`), and
-`host_request`.
+(`surface_frame` / `surface_closed`), plugin management (`plugin_progress`, `plugins_changed`), `host_request`, and the
+inference pair `provider_request` / `provider_cancel`. Inference is NOT a `host_request`: that settles once with a value,
+and an answer here is a stream of unknown length the transcript renders as it arrives.
 
 **Container → renderer → container** (`host_request` / `host_response`): the reverse call. Its `method` is one
 of nine extension-UI members (`select` · `confirm` · `input` · `editor` · `notify` · `setStatus` ·
@@ -180,24 +182,22 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
 `useCodingAgentStore.start()` (`web-app/stores/codingAgent.ts`) drives `startPiAgentSession`
 (`adapters/piAgentContainer.ts`) against the connection's `HostClientFacade`:
 
-0. free the two names this spec is about to ask for. The reusable session's names are deterministic, so a pair the
-   user stopped — or half a pair a crash left — still holds them, and `run` answers a name in use with a conflict;
-   removing them IS "rebuilt under the same names", and it costs nothing because the conversation is not in these
-   containers. A pair still RUNNING is refused instead: continuing that one is `attachPiAgentSession`;
+0. free the name this spec is about to ask for. The reusable session's name is deterministic, so a container the user
+   stopped — or one a crash left — still holds it, and `run` answers a name in use with a conflict; removing it IS
+   "rebuilt under the same name", and it costs nothing because the conversation is not in that container. One still
+   RUNNING is refused instead: continuing that one is `attachPiAgentSession`;
 1. create a session-scoped network (`cd-agent-net-<id>`; a pre-existing one is not an error);
-2. write the **gateway** env file — upstream base URL, **the provider key**, the bridge token — and run
-   `<image> --mode gateway` on that network. The renderer never handles that key: it composes the file with
-   `KEYCHAIN_SECRET_PLACEHOLDER` and the realm owning the vault substitutes it while writing (below);
-3. write the **agent** env file — deliberately *without* the key: bridge token and port, the gateway URL, the
-   model id, `/workspace`, the agent dir — and run `<image> --mode agent` with
-   `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, the plugin volume, and — where the engine can see this
-   machine's filesystem — the conversations mount, or where it cannot, a second published port for the conversation
-   store the app answers on;
+2. write the **agent** env file — the bridge token and port, the model id and its facts, the upstream's base URL as
+   catalogue data, `/workspace`, the agent dir. **No credential, on any path**: there is no second file and no second
+   container, because a turn's inference is signed by the app (below);
+3. run `<image> --mode agent` with `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, the plugin volume, and —
+   where the engine can see this machine's filesystem — the conversations mount, or where it cannot, a second published
+   port for the conversation store the app answers on;
 4. connect the WebSocket client and publish the app's theme palette **before** the first plugin frame, so no
    component paints in pi's colours and then flashes to the app's.
 
-**Reaching the bridge.** A pair publishes on `127.0.0.1:<port>` of the machine running the ENGINE, so on a remote (SSH)
-connection the app's own loopback answers nothing — a session there was offered, built its containers and then never
+**Reaching the bridge.** The container publishes on `127.0.0.1:<port>` of the machine running the ENGINE, so on a remote
+(SSH) connection the app's own loopback answers nothing — a session there was offered, built its container and then never
 dialled. `reachBridge` (`stores/codingAgent.ts`) forwards that port with `ssh -NL` for a remote engine
 (`adapters/bridgeTunnel.ts`, spawned through the same exec seam every engine command uses) and dials the local end;
 everything after it — the client, the events, the host requests — is identical either way. The forward dies with the
@@ -226,9 +226,10 @@ not at startup.
 worse. A collision surfaces as `failed to bind host port … address already in use` in the start log.
 
 **Egress** is on by default (a coding agent needs package managers). `egress: false` creates the agent's network
-`--internal` — an internal bridge has no gateway address, so nothing on it reaches the internet or this machine —
-and attaches the gateway to a second `…-egress` network so inference still works. The agent keeps its published
-bridge port either way; both networks are removed on stop.
+`--internal` — an internal bridge has no gateway address, so nothing on it reaches the internet or this machine.
+Inference is unaffected: it arrives on the PUBLISHED bridge port, which the app dials INWARDS, and a published port
+answers on an internal network (measured, both engines). So `egress: false` is total isolation rather than an asymmetry
+between two containers, and there is no second network to create or reap.
 
 ## The agent container
 
@@ -236,10 +237,12 @@ bridge port either way; both networks are removed on stop.
 bridge connection, queueing frames that arrive while it is still starting. `createPiSession` (`session.ts`) assembles pi's
 `createAgentSessionServices` with **three inline extensions**:
 
-- **the gateway provider** — `registerProvider("container-desktop-gateway", { baseUrl: <gateway>, apiKey:
-  <bridge token>, api: <the upstream's wire shape>, models: [<the one model>] })`, where the shape comes from
-  `CD_MODEL_API` (`openai-completions`, or `anthropic-messages` for an Anthropic upstream). pi therefore never reads
-  `~/.pi/auth.json` and never learns a real key. Registration is queued by the extension runtime and flushed
+- **the provider** — `registerProvider("container-desktop-gateway", { baseUrl: <the container's own loopback proxy>,
+  apiKey: <bridge token>, api: <the upstream's wire shape>, models: [<the one model>] })`, where the shape comes from
+  `CD_MODEL_API` (`openai-completions`, or `anthropic-messages` for an Anthropic upstream) and the base follows from it
+  (`providerProxyBaseUrl`). pi therefore never reads `~/.pi/auth.json` and never learns a real key. The id's VALUE is
+  frozen — pi records `model.provider` in every conversation it has written, and its own dialect detection reads it — so
+  it still names a gateway container that no longer exists. Registration is queued by the extension runtime and flushed
   by `createAgentSessionServices`, which is why services are built here rather than calling the low-level
   `createAgentSession`;
 - **the permission gate** — `pi.on("tool_call", …)` asks the app for a verdict on **every** tool call and
@@ -265,15 +268,23 @@ keys pi's own writer does, at session start and on every `set_theme`. A plugin's
 paints in the same colours as everything else the app hands it. If pi ever renames those keys, its components fall
 back to pi's built-in theme, which is where they were before, and nothing throws.
 
-**The gateway** (`gateway.ts`) is the same image with `--mode gateway`. It authorizes on
-`Authorization: Bearer <bridge token>`, strips the caller's credentials and every hop-by-hop header, substitutes
-the real key, and forwards. Response `content-encoding`/`content-length`/`transfer-encoding` are dropped —
-`fetch` already decoded the body, so echoing them makes the client try to gunzip plain text. An upstream
-failure answers **502 without echoing the error**, which would contain the signed request headers.
+**The provider proxy** (`providerProxy.ts`) is what pi's `baseUrl` points at: an HTTP server on the container's OWN
+loopback, never published, so nothing outside the container can reach it. It authorizes on the bridge token (in either
+header, because the Anthropic SDK signs `x-api-key`), strips the caller's credential and every hop-by-hop header, and
+carries the request to the APP over the bridge. The answer streams back as frames — one head, the body in chunks, then
+end or error — and the same encoding/length headers are dropped on the way back, for the same reason: the app's transport
+already decoded the body.
 
-This is a practical reading of "keys never enter the container": the key lives in *a* container, just not one
-plugin code can reach — no shared filesystem, no exec, no env. Host-local models keep working because the
-gateway can forward to `host.containers.internal`.
+**Why the bridge and not a listener on the user's machine.** Measured, on this machine: a host listener bound to
+`127.0.0.1` is unreachable from a rootless-podman container — the connection arrives on the machine's own LAN address, so
+the bind would have to be `0.0.0.0` — and an `--internal` network blocks the host as well as the internet. The bridge has
+none of those problems: it is already published, already forwarded with `ssh -NL` for a remote engine, and a published
+port answers on an internal network. It also needs no new native code, because `ProviderTransport` already exists in both
+shells.
+
+So "the key never enters the container" is now literal rather than a practical reading: the key never leaves the realm
+that owns the vault, no file carries one, and a host-local model server needs no container-visible alias — the app dials
+`127.0.0.1` from its own realm.
 
 ## Container tools and `engine_op`
 
@@ -412,7 +423,7 @@ request validated against the Zod schema in `core/schemas.ts`, and its response 
 | ----- | -------- | ----- |
 | status / diagnostics | `ai:status`, `ai:diagnostics` | live |
 | provider keys | `ai:key:{has,set,clear}` | live |
-| the agent pair's private env files | `ai:agent:{gateway-env,env-file}` | live — the key is substituted natively, never in this realm |
+| the agent container's private env file | `ai:agent:env-file` | live — it carries the bridge token and no credential at all |
 | the conversations' directory | `ai:agent:sessions-dir` | live — resolved AND created host-side, so the engine never makes it as root |
 | serving that directory to a pair that cannot mount it | `ai:agent:sessions-{serve,unserve}` | live — one session at a time, confined to that directory and `*.jsonl` |
 | model discovery | `ai:models:{list,cancel}` | live |
@@ -420,6 +431,7 @@ request validated against the Zod schema in `core/schemas.ts`, and its response 
 | web search, run for the agent | `ai:web:search` | live — refused while the user's own switch is off |
 | the permission record | `ai:permissions:{list,add,remove}` | live |
 | container operations | `ai:engine:op` | live — the agent's `engine_op` lands here |
+| one inference request, made for the session | `ai:provider:{request,cancel}` + the `ai:provider:stream` push | live — the key is resolved natively, per request |
 | skills | `ai:skills:*` | live |
 | project context | `ai:project-context:*` | live |
 | workspace changes | `ai:changes:{status,diff}` | live |
@@ -458,10 +470,10 @@ folder as this app sees it, which is what the app's own git status reads) or one
   aggregated model ids split by `parseAggregatedModelId`).
 
 **Inference** runs entirely on pi's own provider layer: the renderer hands `start()` an endpoint, a model id and
-the provider it came from, and everything after that is the gateway — there is no AI-SDK dependency left in the
-app. Two things travel with the provider, both derived from its catalog kind in `core/piAgentEnv.ts`: the **wire
-shape** pi speaks (`CD_MODEL_API`, plus the gateway base URL that shape's client expects — the Anthropic SDK
-builds its own `/v1`) and the **credential shape** the gateway signs (`CD_UPSTREAM_KIND` /
+the provider it came from, and everything after that is the app's own native transport — there is no AI-SDK dependency
+left in the app. Two things travel with the provider, both derived from its catalog kind in `core/piAgentEnv.ts`: the **wire
+shape** pi speaks (`CD_MODEL_API`, from which the container composes the base URL that shape's client expects — the
+Anthropic SDK builds its own `/v1`) and the **credential shape** the app signs (`CD_UPSTREAM_KIND` /
 `CD_UPSTREAM_AUTH_SCHEME` / `…_HEADER_NAME` / `…_USERNAME`, mirroring `providerTransport`'s
 `authenticatedHeaders`: Anthropic is `x-api-key`, a keyless local server is nothing at all).
 **Discovery** is live and provider-specific: `adapters/localModels.ts` `listModels` paginates
@@ -485,7 +497,7 @@ pi's name for the auth method ("Anthropic (Claude Pro/Max)"). There is no list o
 in a permanent user-controlled key, stored as itself; anthropic, openai-codex, github-copilot, kimi-coding, xai and
 radius end in an access token with a refresh token beside it, stored WHOLE as a one-line tagged envelope
 (`pi-bridge/providerCredential.ts`) in the same vault slot — a key already in a keychain does not change meaning, and
-the gateway reads the access token out of whichever it is handed. The one shape still refused is a token that expires
+the app reads the access token out of whichever it is handed. The one shape still refused is a token that expires
 with nothing to renew it.
 
 **Renewing a sign-in.** The exchange runs pi's own `OAuthAuth.refresh` in the same one-shot container a sign-in runs
@@ -493,11 +505,11 @@ in (`auth_refresh`), for two reasons: the flow code cannot load in a web view, a
 `getKey` refuses in that realm by design, so the container reads it from `CD_CREDENTIAL`, substituted into a private
 env file by the realm that owns the vault (`ai:auth:refresh-env` → `keyStore.writeSecretFile`). The container answers
 with the rotation, or `unchanged` plus the expiry it read, and the app stores a rotation exactly the way it stores a
-sign-in. A session renews **before** its gateway env file freezes the access token, and again on a timer before the
-stored expiry; the renewed token reaches a RUNNING gateway through the agent container
-(`gateway_credential` → `POST /__cd/credential`), because the gateway sits on the pair's `--internal` network with no
-published port and the agent is the only thing that can reach it. A spent refresh token is reported as "sign in
-again" rather than surfacing as a 401 mid-turn.
+sign-in. A session renews **before** it starts, and again on a timer before the stored expiry. **Nothing has to be
+delivered afterwards**: inference resolves the credential from the vault on every request, so a rotation takes effect on
+the very next turn — of a running session, and of one adopted from a container whose own environment was frozen when it
+was built. A transient failure is retried inside the margin rather than dropping the chain, and a spent refresh token is
+reported as "sign in again" rather than surfacing as a 401 mid-turn.
 
 Keys never live in `user-settings.json`. They are keychain-backed per shell, and the two shells differ in a way
 that is a real security difference:
@@ -507,11 +519,12 @@ that is a real security difference:
 | **Tauri** | native, in Rust ([`provider_transport.rs`](../../src-tauri/src/provider_transport.rs)) | in Rust — the plaintext key never enters the JavaScript realm |
 | **Wails** | the webview's `fetch` ([`fetchProviderTransport.ts`](../../src/packages/platform/src/providerTransport/fetchProviderTransport.ts)) | in the webview realm, so it depends on provider CORS and streaming |
 
-Both send the key onward to the gateway container when a session starts, so the difference is about the
-discovery/diagnostics path, not the session.
+Both are what a SESSION's inference goes through as well, so the difference now reaches the session too: on Tauri a
+turn is signed in Rust, on Wails in the webview realm.
 
 **The credential never crosses into the web view — not even to reach the container.** Tauri's keychain
-deliberately refuses `getKey` there, which is why the gateway env file is not written by the renderer at all:
+deliberately refuses `getKey` there, which is why the one file that still carries one is not written by the renderer at
+all:
 
 - the host composes it with `KEYCHAIN_SECRET_PLACEHOLDER` in place of the key (`core/piAgentEnv.ts`, the one
   composer and one file format), and calls `keyStore.writeSecretFile(provider, fileName, contents)`;
@@ -531,7 +544,7 @@ restricted to its fixed origin).
 
 ## What the app knows about a model
 
-**Only the app can ask.** The gateway forwards the completions API and nothing else, so LM Studio's
+**Only the app can ask.** A session's inference is the completions API and nothing else, so LM Studio's
 `/api/v0/models` and llama.cpp's `/props` are unreachable from inside the container — and the OpenAI-shaped
 `/models` listing every provider serves carries an id and nothing more. A number a server would reject is worse
 than no number, so a fact nobody published stays absent and the panels say "unknown".
@@ -630,8 +643,8 @@ which is the half the user sees (`detail` reaches only the Notification Center).
 shown after it, naming the model the session now has. A session's very FIRST pick cannot be warned about at all —
 nothing has reported a prompt yet, and inventing a number to compare would be the fiction this avoids.
 
-**The gateway hides the upstream from pi, so the app names it.** pi decides the wire dialect per model from
-`model.provider` and `model.baseUrl` (`detectCompat`) — ours are `container-desktop-gateway` and a container-internal
+**Our own endpoint hides the upstream from pi, so the app names it.** pi decides the wire dialect per model from
+`model.provider` and `model.baseUrl` (`detectCompat`) — ours are a fixed provider id and a container-loopback
 URL, so **every** upstream reads to pi as plain OpenAI: the system prompt goes as role `developer`, `store: false` is
 sent, `max_completion_tokens` is used where the server wants `max_tokens`, and a thinking level travels as
 `reasoning_effort` where the server wants an object of its own. The developer role and the thinking shape are both
@@ -648,13 +661,13 @@ custom endpoint pointed at one of these hosts is read exactly as the catalogue e
 | DeepSeek | `thinking: {type}` + `reasoning_effort`, no `store`, no `developer` role, and a reasoning field on every replayed assistant message |
 | GLM (z.ai / bigmodel) | `thinking: {type}` alone, `max_tokens` for the cap, no `store`, no `developer` role |
 | OpenRouter | `reasoning: {effort}`, the `developer` role only for the `openai/` and `anthropic/` models that take one, and Anthropic-style cache markers for `anthropic/` |
-| anything else | nothing — pi's reading of that host is already what it gives our gateway, and a guess would be worse |
+| anything else | nothing — pi's reading of that host is already what it gives our endpoint, and a guess would be worse |
 
 Anthropic upstreams are told nothing at all: pi's Anthropic client takes no dialect from a URL (its only special case
 is `github-copilot`) and its compat has three unrelated fields, so the registration withholds the OpenAI set when the
 session speaks `anthropic-messages`. **One URL-keyed behaviour is beyond `compat`'s reach**, and it is the only one:
 `prompt_cache_key` is sent when the base URL literally contains `api.openai.com`, outside `detectCompat` and so not
-overridable. A real OpenAI upstream therefore loses that cache-routing hint behind the gateway — a cost and latency
+overridable. A real OpenAI upstream therefore loses that cache-routing hint behind our endpoint — a cost and latency
 matter, not a correctness one. The only lever pi offers is `PI_CACHE_RETENTION=long`, which also asks OpenAI for 24h
 retention, so it is a decision about billing rather than a fix.
 
@@ -737,7 +750,7 @@ probe with the short name. **An image built for one engine does not exist for th
   undersized-window arithmetic — hermetic in Vitest, no mocks of what the repo does not own.
 - **Container-side, TDD** — every `pi-agent-host` module has a spec: session, host RPC, permission gate,
   container tools + catalogue, model registrations, surfaces, tool surfaces, virtual terminal, UI context,
-  plugins, resources, gateway, events, theme.
+  plugins, resources, the provider proxy, events, theme.
 - **Never component tests** for React screens — UI is verified live.
 - **UI over WebDriver** (`webdriver/specs/`, mock app): `extension-ui` (T1) · `pi-tool-cards` (T2) ·
   `pi-surfaces` (T3) · `pi-plugins` (management) · `pi-container-tools` (the toolset over a driven bridge) ·
@@ -748,7 +761,7 @@ probe with the short name. **An image built for one engine does not exist for th
 - **Real containers, no app** — `support/pi-plugins-probe.mjs` and `support/pi-bridge-probe.mjs` run the built
   image directly; `support/pi-session-storage-probe.mjs` is the conversation store's own proof — a real pair asks THIS
   machine for its history, the JSONL lands here, and the container's own filesystem stays empty; `support/pi-upstream-shape-probe.mjs` runs it once per upstream against a body-recording stub,
-  which is the only way to see what pi actually sends through the gateway.
+  which is the only way to see what pi actually sends; it answers `provider_request` itself, so it needs no stub server.
 - **Real model, real engine** — `yarn test:smoke:tauri --spec webdriver/smoke/pi-container-live.smoke.js` drives a non-mock app and a real
   OpenRouter model through the container toolset, creating and removing its own throwaway container.
   `pi-lmstudio-live.smoke.js` is the **keyless** one: a real pair against the LM Studio server on the machine, which is
@@ -773,7 +786,7 @@ then failed from inside a store.
 | The thinking levels offered for a model | pi, resolved from the registration the app gave it; the app only says what the provider published |
 | A turn that produced no text | `piSessionView`, from pi's own stop reason, as a code the renderer translates |
 | Slash commands | the app's own catalogue for what the GUI performs; the session's `resources_list` for pi's own commands and its plugins' — under pi's names, with a reason on the ones this architecture cannot honour |
-| Diagnostics | two independent answers: the app's own provider probe, and the session's own through the gateway |
+| Diagnostics | two independent answers: the app's own provider probe, and the session's own along the path a turn takes |
 | Plugins screen | the session's plugin service over the bridge |
 
 ## Source map
@@ -782,16 +795,19 @@ then failed from inside a store.
 | ---- | ---- |
 | `pi-bridge/src/protocol.ts` | the wire contract — commands, events, host methods, surface slots, theme palette |
 | `pi-bridge/src/{codec,image}.ts` | frame encode/decode; the agent image tag |
-| `pi-bridge/src/upstreamCompat.ts` | what the real upstream wants on the wire, which the gateway hides from pi's own detection |
-| `pi-agent-host/src/{main,server}.ts` | the container entry (agent or gateway) and the bridge connection |
+| `pi-bridge/src/upstreamCompat.ts` | what the real upstream wants on the wire, which our own endpoint hides from pi's own detection |
+| `pi-bridge/src/providerEndpoint.ts` | where pi posts inference and the shape it speaks there — both ends need it |
+| `pi-agent-host/src/{main,server}.ts` | the container entry (agent or login) and the bridge connection |
 | `pi-agent-host/src/session.ts` | the pi session — provider, extensions, TUI, surfaces, resources |
 | `pi-agent-host/src/{permissionGate,containerTools,containerToolCatalogue}.ts` | the inline extensions' substance |
 | `pi-agent-host/src/{systemContext,webSearchTool}.ts` | the app's project prose as system prompt; the app-performed web search |
-| `pi-agent-host/src/{piCommands,reports,providerCheck}.ts` | pi's own commands; the usage/context reports; the through-the-gateway probe |
-| `pi-agent-host/src/{modelRegistrations,sessionControls}.ts` | the models this gateway is registered with and the app's view of one as pi's config; the session's settings and its thinking levels |
+| `pi-agent-host/src/{piCommands,reports,providerCheck}.ts` | pi's own commands; the usage/context reports; the session's own provider probe |
+| `pi-agent-host/src/{modelRegistrations,sessionControls}.ts` | the models this container is registered with and the app's view of one as pi's config; the session's settings and its thinking levels |
 | `pi-agent-host/src/{hostRpc,events}.ts` | reverse-call correlation with fallbacks; pi event → bridge event |
 | `pi-agent-host/src/{guiTui,virtualTerminal,surfaces,toolSurfaces,uiContext,piTheme}.ts` | T1 + T3: the extension UI context and ANSI rendering |
-| `pi-agent-host/src/{plugins,resources,gateway}.ts` | package management, contributed resources, the credential proxy |
+| `pi-agent-host/src/{plugins,resources}.ts` | package management, contributed resources |
+| `pi-agent-host/src/providerProxy.ts` | the endpoint pi posts inference to, carried to the app over the bridge |
+| `ai-system/core/providerProxyOps.ts` | what the app will forward for it, and what it refuses |
 | `pi-agent-host/src/toolOutput.ts` | reading back a truncated tool's full output, path-validated against pi's own shape |
 | `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
 | `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |

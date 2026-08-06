@@ -75,7 +75,7 @@ export const PI_BUILTIN_COMMANDS: readonly Builtin[] = [
   { name: "clone", description: "Duplicate the current session at the current position", runsIn: "session" },
   { name: "tree", description: "Navigate session tree (switch branches)", runsIn: "session" },
   { name: "trust", description: "Save project trust decision for future sessions", runsIn: "session" },
-  // Provider auth is the APP's: it owns the settings, the keychain and the gateway's env file. The agent never
+  // Provider auth is the APP's: it owns the settings and the keychain, and signs every request itself. The agent never
   // holds a credential, which is why the agent is not where you configure one.
   { name: "login", description: "Configure provider authentication", argumentHint: "<provider>", runsIn: "app" },
   { name: "logout", description: "Remove provider authentication", runsIn: "app" },

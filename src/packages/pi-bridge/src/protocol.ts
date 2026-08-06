@@ -142,9 +142,9 @@ export interface SessionContextReport {
   compacted: boolean;
 }
 
-// Whether the SESSION can reach the model — asked from inside the container, through the gateway, which is the only
-// place the answer means what the diagnostics drawer claims. `status` is the upstream's own, so a rejected credential
-// (401) reads differently from a gateway that could not reach it at all (502).
+// Whether the SESSION can reach the model — asked from inside the container, through the same path a turn takes, which
+// is the only place the answer means what the diagnostics drawer claims. `status` is the upstream's own, so a rejected
+// credential (401) reads differently from the app not reaching it at all (502).
 export interface SessionProviderCheck {
   reachable: boolean;
   status?: number;
@@ -266,7 +266,7 @@ export interface PiScopedModels {
 }
 
 // One model the session may be pointed at, as the APP knows it. The app composes these because it is the only side
-// that can ask a provider what a model's budget and rates are — the gateway forwards the completions API and
+// that can ask a provider what a model's budget and rates are — the session forwards the completions API and
 // nothing else, so LM Studio's `/api/v0/models` and llama.cpp's `/props` are unreachable from the container. An
 // absent number still means unknown: pi needs one for its compaction maths, but the report says what the provider
 // published, never the fallback.
@@ -362,7 +362,7 @@ export type BridgeCommand =
   // handlers take it.
   | { id: string; type: "run_command"; name: string; args: string }
   | { id: string; type: "session_reload" }
-  // Probe the model through the gateway, from inside the container. The app's own provider check cannot answer for
+  // Probe the model the way a turn does, from inside the container. The app's own provider check cannot answer for
   // the session: different realm, different network, different credential.
   | { id: string; type: "check_provider" }
   // Read back the file pi wrote when it truncated a tool's output. The path travels from the tool result's
@@ -393,10 +393,9 @@ export type BridgeCommand =
   // design, so the container reads it from the env file the vault's owning realm substituted it into. No
   // interaction: a refresh asks the user nothing.
   | { id: string; type: "auth_refresh"; provider: string }
-  // Replace the credential the SESSION's gateway signs with. Routed through this socket because the gateway sits on
-  // the pair's `--internal` network with no published port — the agent container is the only thing that can reach it,
-  // which is exactly the isolation worth keeping. Sent when the app has renewed an expiring sign-in mid-session.
-  | { id: string; type: "gateway_credential"; credential: string };
+  // One frame of the answer to a `provider_request`. A command rather than an event because it travels app → container,
+  // and its `response` frame is ignored the way `surface_input`'s is: this is a stream frame, not a request.
+  | { id: string; type: "provider_stream"; requestId: string; event: ProviderProxyStreamEvent };
 
 // What a provider login asks the user, in pi's own vocabulary (`AuthPrompt` minus its AbortSignal, which cannot
 // cross a socket — a withdrawn prompt travels as `auth_prompt_closed` instead). `secret` masks what is typed;
@@ -424,7 +423,7 @@ export type PiAuthEvent =
 
 // The three fields of pi's `OAuthCredential` this app keeps. pi's own shape carries provider extras through an
 // index signature; they are deliberately dropped, because these three are what an exchange needs — the access token
-// the gateway signs with, the refresh token the next exchange uses, and when the first stops being valid.
+// a request is signed with, the refresh token the next exchange uses, and when the first stops being valid.
 export interface PiOAuthCredential {
   access: string;
   refresh: string;
@@ -442,6 +441,34 @@ export type PiAuthRefreshOutcome =
   // it is absent for a permanent key, which never lapses.
   | { ok: true; unchanged: true; expiresAt?: number }
   | { ok: false; error: string; invalidGrant?: boolean };
+
+// One inference request pi made, carried to the app because the app is the only side that can sign it: the provider
+// key lives in the OS keychain and is attached natively, so it enters neither this container nor the web view.
+//
+// It travels on the BRIDGE rather than to a listener on the user's machine, and that is a measured choice: the bridge
+// is already published, already forwarded over `ssh -NL` for a remote engine, and reachable on an `--internal`
+// network, while a host-side listener needs a LAN-visible bind to be reachable from a rootless-podman container at all.
+export interface ProviderProxyRequest {
+  requestId: string;
+  method: string;
+  // What pi's client asked for, e.g. `/v1/chat/completions`. The APP joins it onto the upstream's base URL, because
+  // the app is the side that knows what the upstream is — this container is told the URL only so pi can read the
+  // dialect off it (`piUpstreamCompat`), never so it can dial it.
+  path: string;
+  headers: Record<string, string>;
+  // base64, and absent for a request that has no body. A frame is JSON text and a request body is opaque bytes.
+  body?: string;
+}
+
+// The answer, in the order it arrives: one `head`, then the body as it streams, then exactly one of `end` or `error`.
+// Chunked because an inference response IS a stream — a turn that only rendered once the last byte landed would lose
+// the whole point of the transcript.
+export type ProviderProxyStreamEvent =
+  | { kind: "head"; status: number; statusText: string; headers: Record<string, string> }
+  // base64, for the same reason the request body is.
+  | { kind: "chunk"; data: string }
+  | { kind: "end" }
+  | { kind: "error"; message: string };
 
 // pi's ProgressEvent, split the way it reads: `action` is what is being done, `phase` how far along it is.
 export type PluginProgressAction = "install" | "remove" | "update" | "clone" | "pull";
@@ -519,7 +546,13 @@ export type BridgeEvent =
   // The flow withdrew that prompt — pi aborts its manual-paste prompt the moment the loopback callback wins the
   // race. Without this the app would keep asking for a code the login no longer needs.
   | { type: "auth_prompt_closed"; promptId: string }
-  | { type: "auth_event"; event: PiAuthEvent };
+  | { type: "auth_event"; event: PiAuthEvent }
+  // pi wants inference. Its own event rather than a `host_request`: a `host_request` settles once with a value, and an
+  // answer here is a stream of unknown length that a turn renders as it arrives.
+  | { type: "provider_request"; request: ProviderProxyRequest }
+  // pi dropped its client before the answer finished — an aborted turn. Without this the app keeps pulling from the
+  // provider, and the user is billed for tokens nothing will ever read.
+  | { type: "provider_cancel"; requestId: string };
 
 export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "hello",
@@ -547,7 +580,7 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "auth_prompt_answer",
   "auth_cancel",
   "auth_refresh",
-  "gateway_credential",
+  "provider_stream",
 ]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
@@ -577,6 +610,8 @@ export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "auth_prompt",
   "auth_prompt_closed",
   "auth_event",
+  "provider_request",
+  "provider_cancel",
 ]);
 
 export class BridgeProtocolError extends Error {

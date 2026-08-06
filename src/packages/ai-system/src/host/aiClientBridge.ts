@@ -28,17 +28,9 @@ export interface IAI {
   hasKey: (provider: string) => Promise<boolean>;
   setKey: (provider: string, key: string, opts?: { allowDegraded?: boolean }) => Promise<{ ok: true }>;
   clearKey: (provider: string) => Promise<{ ok: true }>;
-  // Ask the host to write the coding agent gateway's private env file, with the provider key read from the
-  // keychain host-side. Answers the file's path; the key never crosses this boundary.
-  writeAgentGatewayEnv: (request: {
-    provider: string;
-    fileName: string;
-    baseUrl: string;
-    bridgeToken: string;
-    gatewayPort: number;
-  }) => Promise<{ path: string }>;
-  // The AGENT container's env file, into the same protected directory. It carries the bridge token, so it belongs
-  // behind the same guard rather than in a second directory the web view could read it out of.
+  // The agent container's env file, into the protected agent directory. It carries the bridge token, so it belongs
+  // behind the same guard rather than in a directory the web view could read it out of. No session file carries a
+  // provider credential any more: the app signs inference itself.
   writeAgentEnvFile: (fileName: string, contents: string) => Promise<{ path: string }>;
   // The directory on this machine the agent mounts its conversations from, created by the host before it answers.
   // This realm cannot name it: where the app keeps its data is the host's to know, and a directory the engine has to
@@ -48,8 +40,8 @@ export interface IAI {
   // the token is the session's own, because this socket carries the whole history.
   serveAgentSessions: (request: { localPort: number; bridgeToken: string }) => Promise<{ ok: boolean }>;
   stopServingAgentSessions: () => Promise<{ ok: boolean }>;
-  // The one-shot auth container's env file for a refresh run. The stored credential is put in host-side, the same way
-  // the gateway's is — this realm names the provider and never sees the secret.
+  // The one-shot auth container's env file for a refresh run, and the ONE file a credential is still substituted into:
+  // pi's own flow code needs the stored credential to exchange it. This realm names the provider and never sees it.
   writeAuthRefreshEnv: (request: {
     provider: string;
     fileName: string;
@@ -92,6 +84,19 @@ export interface IAI {
   // One public-web query on the agent's behalf. Throws when the runtime cannot search or the user has web search
   // turned off — the caller turns that into the reason the agent reads.
   runWebSearch: (query: string) => Promise<{ text: string }>;
+  // One INFERENCE request on the session's behalf, with the provider key attached in the realm that owns the vault.
+  // Settles once the request is accepted; the answer arrives on the `ai:provider:stream` push channel, because an
+  // inference response is a stream and an invoke settles once.
+  runProviderRequest: (request: {
+    requestId: string;
+    providerId?: string;
+    method: string;
+    path: string;
+    headers: Record<string, string>;
+    body?: string;
+  }) => Promise<{ ok: true }>;
+  // pi dropped its client mid-answer. Stops the app pulling bytes the user is billed for and nothing will read.
+  cancelProviderRequest: (requestId: string) => Promise<{ ok: true }>;
   listPermissions: () => Promise<PermissionsSnapshot>;
   addPermission: (list: PermissionsList, rule: PermissionRule) => Promise<PermissionsSnapshot>;
   removePermission: (list: PermissionsList, key: string) => Promise<PermissionsSnapshot>;
@@ -131,7 +136,6 @@ export function createAIClient(transport: AIClientTransport) {
     hasKey: (provider) => invoke(AI_CHANNELS.keyHas, { provider }),
     setKey: (provider, key, opts) => invoke(AI_CHANNELS.keySet, { provider, key, allowDegraded: opts?.allowDegraded }),
     clearKey: (provider) => invoke(AI_CHANNELS.keyClear, { provider }),
-    writeAgentGatewayEnv: (request) => invoke(AI_CHANNELS.agentGatewayEnv, request),
     writeAgentEnvFile: (fileName, contents) => invoke(AI_CHANNELS.agentEnvFile, { fileName, contents }),
     agentSessionsDir: () => invoke(AI_CHANNELS.agentSessionsDir),
     serveAgentSessions: (request) => invoke(AI_CHANNELS.agentSessionsServe, request),
@@ -156,6 +160,8 @@ export function createAIClient(transport: AIClientTransport) {
     runWorkspaceOp: (request) => invoke(AI_CHANNELS.workspaceOp, request),
     releaseWorkspaceTargets: (runId) => invoke(AI_CHANNELS.workspaceRelease, { runId }),
     runWebSearch: (query) => invoke(AI_CHANNELS.webSearch, { query }),
+    runProviderRequest: (request) => invoke(AI_CHANNELS.providerRequest, request),
+    cancelProviderRequest: (requestId) => invoke(AI_CHANNELS.providerCancel, { requestId }),
     // The user-managed allow/reject record — managed from Settings → AI permissions.
     listPermissions: () => invoke(AI_CHANNELS.permissionsList),
     addPermission: (list, rule) => invoke(AI_CHANNELS.permissionsAdd, { list, rule }),
@@ -176,7 +182,7 @@ export interface AIBusTransport {
 }
 
 export function createAIBus(transport: AIBusTransport) {
-  const SUBSCRIBABLE = new Set<AIPushChannel>([AI_CHANNELS.skillsChanged]);
+  const SUBSCRIBABLE = new Set<AIPushChannel>([AI_CHANNELS.skillsChanged, AI_CHANNELS.providerStream]);
   return {
     subscribe(channel, callback) {
       if (!SUBSCRIBABLE.has(channel)) {

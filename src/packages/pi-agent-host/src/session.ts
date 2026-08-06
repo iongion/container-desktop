@@ -21,7 +21,6 @@ import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import { createLogger } from "@/logger";
 import { createContainerToolsExtension } from "@/pi-agent-host/containerTools";
 import { mapAgentEvent, type PiAgentEvent } from "@/pi-agent-host/events";
-import { GATEWAY_CREDENTIAL_PATH } from "@/pi-agent-host/gateway";
 import { GuiTui } from "@/pi-agent-host/guiTui";
 import { createHostRpc } from "@/pi-agent-host/hostRpc";
 import { createKnowledgeToolExtension, KNOWLEDGE_TOOL_NAME } from "@/pi-agent-host/knowledgeTool";
@@ -56,6 +55,7 @@ import type {
   PiSessionModel,
   PiSessionReplacement,
 } from "@/pi-bridge/protocol";
+import { providerProxyBaseUrl, type UpstreamModelApi } from "@/pi-bridge/providerEndpoint";
 
 const logger = createLogger("pi-agent-host.session");
 
@@ -64,19 +64,15 @@ const logger = createLogger("pi-agent-host.session");
 const DEFAULT_SURFACE_COLUMNS = 100;
 const DEFAULT_SURFACE_ROWS = 30;
 
-// One provider id for the gateway. Models are declared against it so pi never reads ~/.pi/auth.json and
-// never learns a real key: the gateway container owns the credential.
-export const GATEWAY_PROVIDER_ID = "container-desktop-gateway";
+// The one provider id this session's models are declared against, so pi never reads ~/.pi/auth.json and never learns a
+// real key. The VALUE is frozen: pi records `model.provider` in every conversation it has ever written, and pi's own
+// dialect detection reads it, so changing the string would orphan the user's existing sessions to no purpose. It names
+// a gateway container that no longer exists — inference goes over the bridge now.
+export const CD_PROVIDER_ID = "container-desktop-gateway";
 
 // pi's ProviderConfigInput.streamSimple, kept loose here so the test can inject a canned generator
 // without reconstructing pi-ai's Context and Model types.
 export type PiStreamFn = (...args: never[]) => AsyncGenerator<unknown>;
-
-// The wire shape pi speaks to the gateway. The gateway proxies bytes, so this has to be the UPSTREAM's shape:
-// an OpenAI-completions request can never satisfy Anthropic's /v1/messages endpoint.
-export type PiModelApi = "openai-completions" | "anthropic-messages";
-
-const MODEL_APIS: readonly PiModelApi[] = ["openai-completions", "anthropic-messages"];
 
 // The name a chosen file is written under inside the container. `basename` alone already refuses a traversal, and
 // the rest is trimmed to what a session file may be called: the app picked the file, but a file name is not a
@@ -87,15 +83,6 @@ export function sanitizeSessionFileName(fileName: string): string {
     .replace(/^[.-]+/, "");
   const named = base || "imported.jsonl";
   return named.endsWith(".jsonl") ? named : `${named}.jsonl`;
-}
-
-// Absent ⇒ OpenAI completions, which is what every other provider family speaks.
-export function parseModelApi(value: string | undefined): PiModelApi {
-  if (!value) return "openai-completions";
-  if (!MODEL_APIS.includes(value as PiModelApi)) {
-    throw new Error(`CD_MODEL_API must be one of ${MODEL_APIS.join(", ")}`);
-  }
-  return value as PiModelApi;
 }
 
 export interface CreatePiSessionOptions {
@@ -109,17 +96,16 @@ export interface CreatePiSessionOptions {
   // store pi will read the file back from: writing it here with `node:fs` and reading it from the user's machine finds
   // nothing at all. Absent means the filesystem, which is what a mounted directory is.
   sessionStorage?: { writeTextFile(path: string, contents: string): void };
-  gatewayUrl: string;
-  // The shared secret between the agent and gateway containers. pi sends it as the provider's bearer
-  // token, which is exactly what the gateway authorizes on — the real provider key never comes here.
-  gatewayToken: string;
+  // The bridge token, which pi sends as its provider credential and the proxy authorises on. It is what the proxy has
+  // instead of a key: the real one is attached by the app, natively, and never enters this container.
+  providerToken: string;
   modelId: string;
-  // Which wire shape the upstream behind the gateway speaks. The app derives it from the provider's kind and
-  // sends it in the agent's env file; `gatewayUrl` is already the base that shape's client expects.
-  modelApi?: PiModelApi;
-  // WHERE that shape is spoken — the upstream's own base URL, which pi's compat detection would have read if the
-  // gateway were not standing in front of it (`piUpstreamCompat`). Not a credential: the URL is catalogue data, and
-  // nothing in this container can use it without the key the gateway holds.
+  // Which wire shape the upstream speaks. The app derives it from the provider's kind and sends it in the agent's env
+  // file; the base URL pi is registered with follows from it (`providerProxyBaseUrl`).
+  modelApi?: UpstreamModelApi;
+  // WHERE that shape is spoken — the upstream's own base URL, which pi's compat detection would have read if the proxy
+  // were not standing in front of it (`piUpstreamCompat`). Not a credential: the URL is catalogue data, and nothing in
+  // this container can use it without the key only the app can resolve.
   upstreamBaseUrl?: string;
   // What the PROVIDER said about this model's budget, when it publishes one. Absent means unknown — and unknown is
   // then REPORTED as unknown, rather than as the invented 128000/4096 every model used to be registered with.
@@ -136,7 +122,7 @@ export interface CreatePiSessionOptions {
   // The app's `--app-*` colours, so plugin components are painted in the theme the rest of the app is.
   // The renderer re-sends these whenever the engine or light/dark mode changes them.
   themePalette?: Partial<AppThemePalette>;
-  // Inline extensions loaded alongside the gateway and the permission gate. The hermetic suite drives
+  // Inline extensions loaded alongside the provider and the permission gate. The hermetic suite drives
   // the UI surface through one instead of putting a plugin file in the mounted volume.
   extraExtensions?: InlineExtension[];
   // Model-facing prose for the container toolset, keyed by tool name. Required rather than defaulted: the loader
@@ -153,10 +139,13 @@ export interface CreatePiSessionOptions {
 }
 
 export async function createPiSession(options: CreatePiSessionOptions): Promise<BridgeSessionHandle> {
-  const { cwd, agentDir, sessionDir, gatewayUrl, gatewayToken, modelId, emit, streamOverride } = options;
+  const { cwd, agentDir, sessionDir, providerToken, modelId, emit, streamOverride } = options;
+  // Where pi posts inference: this container's own loopback, in front of the bridge. Composed here rather than sent in
+  // the env file, because the port is never published and the app has no use for it.
+  const providerBaseUrl = providerProxyBaseUrl(options.modelApi ?? "openai-completions");
 
   // The models this session has been pointed at: the one the container was given, plus each one the user has since
-  // picked. One gateway reaches one upstream, so every model that upstream serves is reachable — but it is registered
+  // picked. One session reaches one upstream, so every model that upstream serves is reachable — but it is registered
   // when it is chosen, never in advance, because the app's picker reads a catalogue one level at a time and this set
   // exists to follow that, not to mirror a provider's whole listing.
   let registered: ModelRegistrations = new Map([
@@ -172,17 +161,17 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     ],
   ]);
 
-  // The gateway provider, exactly as pi is to register it. Built rather than written twice because a
-  // re-registration is validated ON ITS OWN before pi merges it (provider-composer's validateExtensionProvider), so
-  // sending only the models fails with `no "api" specified` — the merge never gets to supply the rest.
+  // The provider, exactly as pi is to register it. Built rather than written twice because a re-registration is
+  // validated ON ITS OWN before pi merges it (provider-composer's validateExtensionProvider), so sending only the
+  // models fails with `no "api" specified` — the merge never gets to supply the rest.
   //
   // It reads the CURRENT set each time: a session replacement builds fresh services and runs the extension again, so
   // the conversation that takes over is born knowing every model this container has been pointed at — including the
   // one it is running, which would otherwise not be registered for the session that inherited it.
-  const gatewayProviderConfig = () => ({
+  const cdProviderConfig = () => ({
     // baseUrl is required: the provider composer validates it when defining custom models.
-    baseUrl: gatewayUrl,
-    apiKey: gatewayToken,
+    baseUrl: providerBaseUrl,
+    apiKey: providerToken,
     api: options.modelApi ?? "openai-completions",
     ...(streamOverride ? { streamSimple: streamOverride as never } : {}),
     // Named, not passed by reference: `map` would hand `piModelConfig` the array index as its second argument.
@@ -191,13 +180,13 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     ),
   });
 
-  // The inline extension registers the gateway provider. Its registration is queued by the extension
-  // runtime and flushed by createAgentSessionServices — the low-level createAgentSession does NOT flush
-  // it, which is why services are built here rather than calling createAgentSession directly.
-  const gatewayExtension: InlineExtension = {
-    name: "container-desktop-gateway",
+  // The inline extension registers that provider. Its registration is queued by the extension runtime and flushed by
+  // createAgentSessionServices — the low-level createAgentSession does NOT flush it, which is why services are built
+  // here rather than calling createAgentSession directly.
+  const providerExtension: InlineExtension = {
+    name: CD_PROVIDER_ID,
     factory: (pi: ExtensionAPI) => {
-      pi.registerProvider(GATEWAY_PROVIDER_ID, gatewayProviderConfig());
+      pi.registerProvider(CD_PROVIDER_ID, cdProviderConfig());
     },
   };
 
@@ -229,7 +218,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
       settingsManager,
       resourceLoaderOptions: {
         extensionFactories: [
-          gatewayExtension,
+          providerExtension,
           createPermissionGateExtension(rpc),
           // The container toolset. It registers tools only — each call still passes the permission gate above,
           // because the gate handles every tool_call regardless of who registered the tool.
@@ -261,11 +250,11 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
         ],
       },
     });
-    await services.modelRuntime.setRuntimeApiKey(GATEWAY_PROVIDER_ID, gatewayToken, { allowNetwork: false });
+    await services.modelRuntime.setRuntimeApiKey(CD_PROVIDER_ID, providerToken, { allowNetwork: false });
 
-    const model = services.modelRuntime.getModel(GATEWAY_PROVIDER_ID, modelId);
+    const model = services.modelRuntime.getModel(CD_PROVIDER_ID, modelId);
     if (!model) {
-      throw new Error(`gateway model ${modelId} was not registered — the provider flush did not happen`);
+      throw new Error(`model ${modelId} was not registered — the provider flush did not happen`);
     }
     const created = await createAgentSessionFromServices({
       services,
@@ -420,7 +409,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   // options: a resumed conversation can carry a model change pi resolved for itself.
   const modelLabel = (session: AgentSession) => {
     const model = session.model;
-    return model ? `${model.provider}/${model.id}` : `${GATEWAY_PROVIDER_ID}/${modelId}`;
+    return model ? `${model.provider}/${model.id}` : `${CD_PROVIDER_ID}/${modelId}`;
   };
 
   await attach(runtime.session);
@@ -452,7 +441,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     // A replaced session is holding nothing: the replay is history, not a turn in flight.
     emit({ type: "idle" });
     publishReports();
-    // A resumed or imported session can carry a `model_change` entry naming a model this gateway does not register,
+    // A resumed or imported session can carry a `model_change` entry naming a model this container does not register,
     // and pi then falls back to ours WITHOUT failing. Silence there would leave the user believing they are talking
     // to the model the transcript was written with.
     if (runtime.modelFallbackMessage) emit({ type: "error", message: runtime.modelFallbackMessage });
@@ -489,7 +478,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   const scopedModels = createScopedModels({
     session: () => runtime.session,
     services: () => runtime.services,
-    providerId: GATEWAY_PROVIDER_ID,
+    providerId: CD_PROVIDER_ID,
   });
 
   // Point the conversation at a model, registering it the first time this session is asked for it. pi swaps the model
@@ -503,9 +492,9 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     registered = withModelRegistration(registered, model);
     // The re-registration carries the WHOLE provider config: pi validates an incoming registration on its own before
     // merging it (validateExtensionProvider), so sending only the models fails with `no "api" specified`.
-    runtime.services.modelRuntime.registerProvider(GATEWAY_PROVIDER_ID, gatewayProviderConfig());
-    const chosen = runtime.services.modelRuntime.getModel(GATEWAY_PROVIDER_ID, model.id);
-    if (!chosen) throw new Error(`gateway model ${model.id} was not registered — the provider flush did not happen`);
+    runtime.services.modelRuntime.registerProvider(CD_PROVIDER_ID, cdProviderConfig());
+    const chosen = runtime.services.modelRuntime.getModel(CD_PROVIDER_ID, model.id);
+    if (!chosen) throw new Error(`model ${model.id} was not registered — the provider flush did not happen`);
     await runtime.session.setModel(chosen);
     // Both reports describe the model that is answering, so a switch that did not republish them would leave the
     // panels describing the model of the last turn.
@@ -563,19 +552,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
       systemContext.set(text);
     },
     checkProvider() {
-      return checkSessionProvider({ gatewayUrl, gatewayToken });
-    },
-    // The app renewed an expiring sign-in and the gateway is still signing with the old access token. Signed with the
-    // bridge token, like every other call this container makes to the gateway — the real credential is the gateway's
-    // alone, and this hands it the new one without restarting the pair.
-    async setGatewayCredential(credential: string) {
-      const url = `${gatewayUrl.replace(/\/+$/, "").replace(/\/v1$/, "")}${GATEWAY_CREDENTIAL_PATH}`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { authorization: `Bearer ${gatewayToken}`, "content-type": "application/json" },
-        body: JSON.stringify({ credential }),
-      });
-      if (!response.ok) throw new Error(`the gateway refused the renewed credential: HTTP ${response.status}`);
+      return checkSessionProvider({ providerBaseUrl, providerToken });
     },
     selectModel,
     // One of pi's own commands, by pi's own name. The dispatcher answers with a value, never a throw: the palette

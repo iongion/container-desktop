@@ -12,3 +12,8 @@ export function agentImageTag(version: string): string {
 // paths crossing that RPC are all under this root, which is what makes confining them a structural check rather
 // than a comparison against a host path the container was never told.
 export const SESSIONS_DIR_IN_IMAGE = "/home/agent/.cd/sessions";
+
+// The bridge the container listens on. Declared here beside the image's other facts because BOTH ends need it and
+// neither may own it: the app publishes it, the container binds it, and it was written out three times before — which is
+// how the provider proxy came to be given a port the conversation store already had.
+export const PI_BRIDGE_PORT_IN_IMAGE = 8787;

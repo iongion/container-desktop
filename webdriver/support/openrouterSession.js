@@ -2,9 +2,9 @@
 // configured in settings, and `start` is handed a provider ID and no credential at all.
 //
 // Why this exists: the live specs used to pass `upstreamApiKey` straight into the session spec, which was the second
-// producer of a credential-bearing gateway env file and the only reason a key could travel through the renderer at
+// only reason a key could ever travel through the renderer at
 // all. That field is gone. Naming the provider is now the only way to ask for a credential — the HOST resolves it and
-// composes the gateway's env file from the vault — so a spec that wants a real model has to do what a user does.
+// reads the vault natively per request — so a spec that wants a real model has to do what a user does.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -59,7 +59,7 @@ export async function seedOpenRouterProvider(browser, { model }) {
 }
 
 // The options a live session starts with once the key is in the keychain. No credential: `providerId` is what makes
-// the host write the gateway's env file from the vault.
+// the app sign a turn from the vault.
 export function openRouterStartOptions({ connectionId, workspacePath, model, appVersion = "6.0.0" }) {
   return {
     connectionId,

@@ -200,8 +200,6 @@ const started = await run([
   "--env",
   `CD_SESSION_DIR=${SESSIONS_DIR_IN_IMAGE}`,
   "--env",
-  "CD_GATEWAY_URL=http://127.0.0.1:1/v1",
-  "--env",
   "CD_MODEL_ID=probe/model",
   image,
   "--mode",

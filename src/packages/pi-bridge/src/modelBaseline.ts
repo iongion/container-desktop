@@ -2,7 +2,7 @@
 //
 // pi ships generated per-model data for 37 providers — the window, the completion cap, the rates, and whether the
 // model reasons and how hard (`providers/data/*.json`, reached through `piProviderCatalogue`). Until now none of it
-// reached us: `piModelConfig` registers under a synthetic gateway id, so pi's composer finds no base layer and every
+// reached us: `piModelConfig` registers under our own synthetic provider id, so pi's composer finds no base layer and every
 // number the app had not probed fell back to `PI_FALLBACK_CONTEXT_WINDOW` and a zero price.
 //
 // This is the FLOOR, never the answer. A live probe asks a running server what it will actually accept — an LM Studio
@@ -10,7 +10,7 @@
 // layers the two: this underneath, the provider's own reply on top.
 //
 // Only the FACTS travel. pi's minimax entry speaks `anthropic-messages` while our own minimax provider is
-// OpenAI-shaped, so inheriting `api` would hand an Anthropic field to an OpenAI upstream; `baseUrl` is the gateway's
+// OpenAI-shaped, so inheriting `api` would hand an Anthropic field to an OpenAI upstream; `baseUrl` is the proxy's
 // business and `compat` is `piUpstreamCompat`'s. A model's window, price and reasoning are properties of the MODEL,
 // which is why they carry across a different endpoint serving it.
 

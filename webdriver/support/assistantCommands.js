@@ -82,9 +82,9 @@ async function runningConnections(browser) {
 }
 
 // Bring the Assistant up with a session behind it, because there is no command palette without one. The session is
-// keyless and provider-less on purpose: with no providerId the host composes no gateway env file from the keychain,
+// keyless and provider-less on purpose: with no providerId nothing is read from the keychain at all,
 // so nothing is read from the OS keyring and a run costs the operator's account nothing. `scheme: "none"` is what
-// makes the gateway sign neither an api-key nor a bearer, which is what a local server wants.
+// makes the app sign neither an api-key nor a bearer, which is what a local server wants.
 export async function openAssistant(browser) {
   await waitReady(browser);
   await browser.execute(() => {

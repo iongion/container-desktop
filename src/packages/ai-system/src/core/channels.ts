@@ -12,12 +12,10 @@ export const AI_CHANNELS = {
   keyHas: "ai:key:has", // invoke({ provider }) → boolean
   keySet: "ai:key:set", // invoke({ provider, key, allowDegraded? }) → { ok: true }
   keyClear: "ai:key:clear", // invoke({ provider }) → { ok: true }
-  // Write the coding agent gateway's private env file, with the provider key read from the OS keychain and
-  // put in host-side. The renderer cannot read that key — only ask for the file that carries it.
-  agentGatewayEnv: "ai:agent:gateway-env",
-  // invoke({ fileName, contents }) → { path }. The AGENT container's env file, written into the same protected
-  // directory as the gateway's so one guard covers both. Carries the bridge token, never a provider key.
-  agentEnvFile: "ai:agent:env-file", // invoke(AgentGatewayEnvRequest) → { path }
+  // invoke({ fileName, contents }) → { path }. The agent container's env file, written into the protected agent
+  // directory: it carries the bridge token, which authorises the whole socket, so it belongs behind the same guard as
+  // anything else in there. It never carries a provider credential — nothing does any more.
+  agentEnvFile: "ai:agent:env-file",
   // invoke() → { path }. The directory on THIS machine that the agent container mounts its conversations from, so a
   // user's history outlives the pair instead of living in the plugin volume. The host both resolves it — this realm
   // cannot know the app's data location — and CREATES it: a bind-mount whose source is missing is created by the
@@ -75,6 +73,17 @@ export const AI_CHANNELS = {
   // One public-web query, run for the agent. It executes here because the app owns the address-pinned fetch and
   // the user's own web-search switch — which this refuses on while it is off.
   webSearch: "ai:web:search", // invoke({ query }) → { text }
+  // invoke({ requestId, providerId?, method, path, headers, body? }) → { ok }. One INFERENCE request, made for the
+  // session. It executes here because the provider key lives in the OS keychain and is attached natively — the agent
+  // container never holds one, and neither does this realm. The upstream is the provider the USER configured, resolved
+  // from settings here rather than named by the caller.
+  providerRequest: "ai:provider:request",
+  // invoke({ requestId }) → { ok }. pi dropped its client mid-answer. Without this the app keeps pulling from the
+  // provider and the user is billed for tokens nothing will read.
+  providerCancel: "ai:provider:cancel",
+  // The answer, as it arrives: one head, the body in chunks, then end or error. A PUSH channel because an inference
+  // response is a stream of unknown length, and an invoke settles once.
+  providerStream: "ai:provider:stream",
   // The knowledge bank has no channel: its entries ship inside the agent image, so the session's own
   // `searchKnowledge` tool answers from there without asking the app for anything.
 } as const;
@@ -93,7 +102,7 @@ export type { AIDiagnosticsSnapshot };
 // Channel groupings derive from AI_CHANNELS (the independent constant), so the boundary schemas in
 // schemas.ts can be key-checked against them (`satisfies Record<AIInvokeChannel, …>`) with no import cycle.
 type AIChannel = (typeof AI_CHANNELS)[keyof typeof AI_CHANNELS];
-export type AIPushChannel = (typeof AI_CHANNELS)["skillsChanged"];
+export type AIPushChannel = (typeof AI_CHANNELS)["skillsChanged"] | (typeof AI_CHANNELS)["providerStream"];
 export type AIInvokeChannel = Exclude<AIChannel, AIPushChannel>;
 
 // Request/response shapes derive from those schemas — one source of truth, no hand-kept twin that can drift.

@@ -9,7 +9,6 @@ import {
   assistantLabels,
   assistantNetworkName,
   defaultScope,
-  egressNetworkOf,
 } from "@/ai-system/adapters/sessionNaming";
 
 describe("assistant resource names", () => {
@@ -17,7 +16,7 @@ describe("assistant resource names", () => {
   it("names every resource under one project", () => {
     const scope = defaultScope("podman-1");
     expect(assistantContainerName("agent", scope)).toBe("container-desktop-agent-default-podman-1");
-    expect(assistantContainerName("gateway", scope)).toBe("container-desktop-gateway-default-podman-1");
+    expect(assistantContainerName("login", scope)).toBe("container-desktop-login-default-podman-1");
     expect(assistantNetworkName(scope)).toBe("container-desktop-net-default-podman-1");
     for (const name of [assistantContainerName("agent", scope), assistantNetworkName(scope)]) {
       expect(name.startsWith(`${ASSISTANT_PROJECT}-`)).toBe(true);
@@ -36,12 +35,6 @@ describe("assistant resource names", () => {
 
   it("still tells apart two ids that fold to the same text", () => {
     expect(defaultScope("Podman 1")).not.toBe(defaultScope("podman 1"));
-  });
-
-  it("names the egress network after the one it accompanies", () => {
-    expect(egressNetworkOf("container-desktop-net-default-podman-1")).toBe(
-      "container-desktop-net-default-podman-1-egress",
-    );
   });
 
   // Renaming this volume would present pi with an empty agent directory: the user's installed plugins and every

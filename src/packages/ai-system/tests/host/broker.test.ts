@@ -4,7 +4,13 @@ import { AI_PERMISSIONS_VERSION, type PermissionsSnapshot } from "@/ai-system/co
 import type { AIKeyStore } from "@/ai-system/core/ports";
 import type { ResolvedProvider } from "@/ai-system/core/providers";
 import { normalizeAISettings } from "@/ai-system/core/settings";
-import type { AISettings, ListedModel } from "@/ai-system/core/types";
+import type {
+  AISettings,
+  ListedModel,
+  ProviderTransport,
+  ProviderTransportRequest,
+  ProviderTransportResponse,
+} from "@/ai-system/core/types";
 import { createAIBroker } from "@/ai-system/host/broker";
 import type { ProjectContextHost } from "@/ai-system/host/projectContextHost";
 import type { SkillHost } from "@/ai-system/host/skillHost";
@@ -65,6 +71,7 @@ function makeBroker(options?: {
   agentSessionsDir?: () => Promise<string>;
   serveAgentSessions?: (request: { localPort: number; bridgeToken: string }) => Promise<void>;
   stopServingAgentSessions?: () => void;
+  providerTransport?: ProviderTransport;
 }) {
   const handlers = new Map<string, (event: any, payload: any) => any>();
   const sent: Array<{ event: any; channel: string; payload: any }> = [];
@@ -93,7 +100,7 @@ function makeBroker(options?: {
     send: (event, channel, payload) => sent.push({ event, channel, payload }),
     senderId: (event) => event?.senderId ?? 1,
     isAllowedSender: (event) => event?.allowed === true,
-    providerTransport: {
+    providerTransport: options?.providerTransport ?? {
       request: vi.fn(async () => {
         throw new Error("unexpected provider request");
       }),
@@ -137,45 +144,11 @@ function makeBroker(options?: {
   };
 }
 
-// The coding agent's gateway container needs the provider key; the renderer cannot read it. So the broker
-// composes that env file host-side, which is the only place the keychain is readable.
-describe("AIBroker agent gateway environment", () => {
-  const request = {
-    provider: "openai",
-    fileName: "8f21ac-gateway.env",
-    baseUrl: "https://api.openai.com/v1",
-    bridgeToken: "tok",
-    gatewayPort: 8788,
-  };
-
-  it("puts the keychain key in the file and answers only its path", async () => {
-    const broker = makeBroker();
-    await broker.invoke(AI_CHANNELS.keySet, { provider: "openai", key: "sk-secret", allowDegraded: true });
-
-    const result = await broker.invoke(AI_CHANNELS.agentGatewayEnv, request);
-
-    expect(result).toEqual({ path: "/data/agent/8f21ac-gateway.env" });
-    // The broker NEVER reads the secret: it composes a placeholder and the realm that owns the vault
-    // substitutes it while writing. That is what lets this run in a web view whose getKey refuses outright.
-    expect(broker.keyStore.getKey).not.toHaveBeenCalled();
-    const [written] = broker.keyStore.files();
-    expect(written.fileName).toBe("8f21ac-gateway.env");
-    expect(written.contents).toContain("CD_UPSTREAM_API_KEY=sk-secret");
-    expect(written.contents).toContain("CD_UPSTREAM_BASE_URL=https://api.openai.com/v1");
-    expect(written.contents).toContain("CD_BRIDGE_TOKEN=tok");
-    expect(written.contents).toContain("CD_GATEWAY_PORT=8788");
-    // The credential SHAPE is derived host-side too, from the settings this host reads itself — the renderer
-    // never describes how a provider authenticates, only which one was picked.
-    expect(written.contents).toContain("CD_UPSTREAM_KIND=openai");
-    expect(written.contents).toContain("CD_UPSTREAM_AUTH_SCHEME=bearer");
-    // The answer must not carry the secret back across the boundary.
-    expect(JSON.stringify(result)).not.toContain("sk-secret");
-  });
-
-  // The AGENT's env file goes into the SAME protected directory as the gateway's. It used to be written to a second
-  // directory outside the fs guard, so the bridge token that authorises the whole socket was readable from the web
-  // view while the provider key beside it was not.
-  it("writes the agent's own env file into the same protected directory, with no secret to substitute", async () => {
+// The agent container's env file. It carries the bridge token, which authorises the whole socket, so it goes into the
+// same protected directory the app's own secrets do rather than one the web view can read back. No session file carries
+// a provider credential at all any more — the app signs inference itself, per request, from the vault.
+describe("AIBroker agent environment", () => {
+  it("writes the agent's env file into the protected directory, with no secret to substitute", async () => {
     const broker = makeBroker();
     const result = await broker.invoke(AI_CHANNELS.agentEnvFile, {
       fileName: "8f21ac.env",
@@ -186,43 +159,19 @@ describe("AIBroker agent gateway environment", () => {
     expect(written.contents).toContain("CD_BRIDGE_TOKEN=tok");
     // No provider credential belongs in the agent's container: plugin code runs there.
     expect(written.contents).not.toContain("CD_UPSTREAM_API_KEY");
+    // The broker NEVER reads a secret: on Tauri the vault refuses this realm outright, by design.
     expect(broker.keyStore.getKey).not.toHaveBeenCalled();
-  });
-
-  // A keyless local server (LM Studio, llama.cpp) is a first-class case, not a failure.
-  it("writes an empty key when the provider has none stored", async () => {
-    const broker = makeBroker();
-    await broker.invoke(AI_CHANNELS.agentGatewayEnv, request);
-    expect(broker.keyStore.files()[0].contents).toContain("CD_UPSTREAM_API_KEY=\n");
-  });
-
-  // The webview-realm keychain REFUSES to hand a secret to this realm — on Tauri the key is only ever resolved
-  // natively, so getKey throws rather than answering. A keyless provider has no secret to ask for, so reading
-  // one anyway is both pointless and fatal: it threw before the empty value it would have used, and every
-  // keyless session died at start with an error nowhere near the cause. Same rule as routeByAuthScheme.
-  it("composes a keyless provider's env without reading the keychain", async () => {
-    const broker = makeBroker();
-    broker.keyStore.getKey.mockRejectedValue(
-      new Error("AI: reading the provider key is not available in the web view"),
-    );
-
-    const result = await broker.invoke(AI_CHANNELS.agentGatewayEnv, {
-      ...request,
-      provider: "llamacpp",
-      baseUrl: "http://host.containers.internal:8080/v1",
-    });
-
-    expect(result).toEqual({ path: "/data/agent/8f21ac-gateway.env" });
-    expect(broker.keyStore.getKey).not.toHaveBeenCalled();
-    expect(broker.keyStore.files()[0].contents).toContain("CD_UPSTREAM_API_KEY=\n");
-    expect(broker.keyStore.files()[0].contents).toContain("CD_UPSTREAM_AUTH_SCHEME=none");
   });
 
   it("refuses an unauthorized sender", async () => {
     const broker = makeBroker();
-    await expect(broker.invoke(AI_CHANNELS.agentGatewayEnv, request, { allowed: false })).rejects.toThrow(
-      /unauthorized/i,
-    );
+    await expect(
+      broker.invoke(
+        AI_CHANNELS.agentEnvFile,
+        { fileName: "8f21ac.env", contents: "CD_BRIDGE_TOKEN=tok" },
+        { allowed: false },
+      ),
+    ).rejects.toThrow(/unauthorized/i);
     expect(broker.keyStore.files()).toEqual([]);
   });
 });
@@ -435,5 +384,253 @@ describe("AIBroker security and settings", () => {
     await expect(
       broker.invoke(AI_CHANNELS.modelsList, { providerId: "llamacpp", requestId: "models-consent" }),
     ).resolves.toEqual({ models: [{ id: "m1" }, { id: "m2" }] });
+  });
+});
+
+// Inference. The session asks over the bridge, the app performs it — because the provider key lives in the OS keychain
+// and is attached in the realm that owns it. Nothing here holds a credential; what it decides is where the container's
+// path may land, and how the answer gets back.
+describe("AIBroker inference for the session", () => {
+  const KEYLESS_LOCAL = {
+    defaultProvider: "llamacpp",
+    providers: { llamacpp: { model: "m", baseURL: "http://127.0.0.1:8080/v1", auth: { scheme: "none" as const } } },
+  };
+
+  function respondingTransport(chunks: string[], status = 200) {
+    const requests: ProviderTransportRequest[] = [];
+    const transport: ProviderTransport = {
+      request: vi.fn(async (request) => {
+        requests.push(request);
+        return {
+          status,
+          statusText: "OK",
+          headers: { "content-type": "text/event-stream" },
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              for (const chunk of chunks) controller.enqueue(new TextEncoder().encode(chunk));
+              controller.close();
+            },
+          }),
+        };
+      }),
+      dispose: vi.fn(),
+    };
+    return { transport, requests };
+  }
+
+  const frames = (sent: Array<{ channel: string; payload: any }>) =>
+    sent.filter(({ channel }) => channel === AI_CHANNELS.providerStream).map(({ payload }) => payload);
+
+  const decoded = (sent: Array<{ channel: string; payload: any }>) =>
+    frames(sent)
+      .filter(({ event }) => event.kind === "chunk")
+      .map(({ event }) => new TextDecoder().decode(Uint8Array.from(atob(event.data), (c) => c.charCodeAt(0))))
+      .join("");
+
+  it("streams the answer back as head, chunks and end", async () => {
+    const { transport, requests } = respondingTransport(["data: one\n\n", "data: two\n\n"]);
+    const broker = makeBroker({ init: KEYLESS_LOCAL, providerTransport: transport });
+
+    await expect(
+      broker.invoke(AI_CHANNELS.providerRequest, {
+        requestId: "pv-1",
+        method: "POST",
+        path: "/v1/chat/completions",
+        headers: { "content-type": "application/json" },
+        body: btoa('{"model":"m"}'),
+      }),
+    ).resolves.toEqual({ ok: true });
+    await vi.waitFor(() => expect(frames(broker.sent).at(-1)?.event.kind).toBe("end"));
+
+    expect(frames(broker.sent).map(({ event }) => event.kind)).toEqual(["head", "chunk", "chunk", "end"]);
+    expect(frames(broker.sent)[0].event).toMatchObject({ status: 200, statusText: "OK" });
+    expect(decoded(broker.sent)).toBe("data: one\n\ndata: two\n\n");
+    // The path the container named, joined onto the provider the USER configured — the container never names a host.
+    expect(requests[0].url).toBe("http://127.0.0.1:8080/v1/chat/completions");
+    expect(new TextDecoder().decode(requests[0].body)).toBe('{"model":"m"}');
+  });
+
+  // The invoke says only "accepted". Waiting for the whole answer would block the container's own request for the
+  // length of a turn, and the first chunk already proves it started.
+  it("settles the invoke without waiting for the answer", async () => {
+    let release: (() => void) | undefined;
+    const transport: ProviderTransport = {
+      request: vi.fn(
+        () =>
+          new Promise<ProviderTransportResponse>((resolve) => {
+            release = () => resolve({ status: 200, statusText: "OK", headers: {}, body: null });
+          }),
+      ),
+      dispose: vi.fn(),
+    };
+    const broker = makeBroker({ init: KEYLESS_LOCAL, providerTransport: transport });
+
+    await expect(
+      broker.invoke(AI_CHANNELS.providerRequest, {
+        requestId: "pv-1",
+        method: "GET",
+        path: "/v1/models",
+        headers: {},
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(frames(broker.sent)).toEqual([]);
+    release?.();
+  });
+
+  // An upstream that answered 401 is still an ANSWER: pi's own client reads the status and reports the refusal, which
+  // is more use to the user than "inference failed".
+  it("carries a refusing status through rather than turning it into a failure", async () => {
+    const { transport } = respondingTransport(['{"error":"no"}'], 401);
+    const broker = makeBroker({ init: KEYLESS_LOCAL, providerTransport: transport });
+
+    await broker.invoke(AI_CHANNELS.providerRequest, {
+      requestId: "pv-1",
+      method: "POST",
+      path: "/v1/chat/completions",
+      headers: {},
+    });
+    await vi.waitFor(() => expect(frames(broker.sent).at(-1)?.event.kind).toBe("end"));
+
+    expect(frames(broker.sent)[0].event).toMatchObject({ kind: "head", status: 401 });
+  });
+
+  // The container is the untrusted world, and the path is the one thing it chooses. A refusal has to reach it as the
+  // answer — pi is blocked on the stream — and be loud here, because nothing pi does produces one.
+  it("refuses a path that would leave the configured endpoint, and says so on the wire", async () => {
+    const { transport, requests } = respondingTransport([]);
+    const broker = makeBroker({
+      init: {
+        defaultProvider: "llamacpp",
+        providers: { llamacpp: { model: "m", baseURL: "https://openrouter.ai/api/v1", auth: { scheme: "none" } } },
+      },
+      providerTransport: transport,
+    });
+
+    await broker.invoke(AI_CHANNELS.providerRequest, {
+      requestId: "pv-1",
+      method: "POST",
+      path: "/v1/../../admin",
+      headers: {},
+    });
+    await vi.waitFor(() => expect(frames(broker.sent)).toHaveLength(1));
+
+    expect(frames(broker.sent)[0].event).toMatchObject({ kind: "error" });
+    expect(requests).toEqual([]);
+    expect(broker.logger.error).toHaveBeenCalled();
+  });
+
+  it("refuses a method inference never uses", async () => {
+    const { transport, requests } = respondingTransport([]);
+    const broker = makeBroker({ init: KEYLESS_LOCAL, providerTransport: transport });
+
+    await broker.invoke(AI_CHANNELS.providerRequest, {
+      requestId: "pv-1",
+      method: "DELETE",
+      path: "/v1/models",
+      headers: {},
+    });
+    await vi.waitFor(() => expect(frames(broker.sent)).toHaveLength(1));
+
+    expect(frames(broker.sent)[0].event).toMatchObject({ kind: "error" });
+    expect(requests).toEqual([]);
+  });
+
+  // A failure has to arrive as the answer. pi is blocked inside its provider client, and a turn that simply never
+  // received another byte reads as a model that stopped talking.
+  it("reports a transport failure as the answer", async () => {
+    const transport: ProviderTransport = {
+      request: vi.fn(async () => {
+        throw new Error("getaddrinfo ENOTFOUND api.example");
+      }),
+      dispose: vi.fn(),
+    };
+    const broker = makeBroker({ init: KEYLESS_LOCAL, providerTransport: transport });
+
+    await broker.invoke(AI_CHANNELS.providerRequest, {
+      requestId: "pv-1",
+      method: "POST",
+      path: "/v1/chat/completions",
+      headers: {},
+    });
+    await vi.waitFor(() => expect(frames(broker.sent)).toHaveLength(1));
+
+    expect(frames(broker.sent)[0].event).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("ENOTFOUND"),
+    });
+  });
+
+  // A cancelled turn must stop the app pulling bytes the user pays for. The abort is not a failure either — the
+  // container dropped its client on purpose and is no longer listening.
+  it("aborts a request the session cancelled, and reports nothing back", async () => {
+    let signal: AbortSignal | undefined;
+    const transport: ProviderTransport = {
+      request: vi.fn(
+        (_request, requestSignal) =>
+          new Promise<ProviderTransportResponse>((_resolve, reject) => {
+            signal = requestSignal;
+            requestSignal.addEventListener("abort", () => reject(new Error("aborted")));
+          }),
+      ),
+      dispose: vi.fn(),
+    };
+    const broker = makeBroker({ init: KEYLESS_LOCAL, providerTransport: transport });
+
+    await broker.invoke(AI_CHANNELS.providerRequest, {
+      requestId: "pv-1",
+      method: "POST",
+      path: "/v1/chat/completions",
+      headers: {},
+    });
+    await vi.waitFor(() => expect(signal).toBeDefined());
+    await expect(broker.invoke(AI_CHANNELS.providerCancel, { requestId: "pv-1" })).resolves.toEqual({ ok: true });
+
+    expect(signal?.aborted).toBe(true);
+    await vi.waitFor(() => expect(transport.request).toHaveBeenCalled());
+    expect(frames(broker.sent)).toEqual([]);
+  });
+
+  it("cancelling something it never had is not an error", async () => {
+    const broker = makeBroker({ init: KEYLESS_LOCAL });
+    await expect(broker.invoke(AI_CHANNELS.providerCancel, { requestId: "pv-nobody" })).resolves.toEqual({ ok: true });
+  });
+
+  it("refuses an unauthorized sender, like every other channel", async () => {
+    const broker = makeBroker({ init: KEYLESS_LOCAL });
+    await expect(
+      broker.invoke(
+        AI_CHANNELS.providerRequest,
+        { requestId: "pv-1", method: "POST", path: "/v1/chat/completions", headers: {} },
+        { allowed: false, senderId: 1 },
+      ),
+    ).rejects.toThrow(/unauthorized/i);
+  });
+
+  // Anything still streaming when the app closes is billed for as long as it runs, and there is nothing left to
+  // deliver it to.
+  it("aborts what is still in flight when it is disposed", async () => {
+    let signal: AbortSignal | undefined;
+    const transport: ProviderTransport = {
+      request: vi.fn(
+        (_request, requestSignal) =>
+          new Promise<ProviderTransportResponse>((_resolve, reject) => {
+            signal = requestSignal;
+            requestSignal.addEventListener("abort", () => reject(new Error("aborted")));
+          }),
+      ),
+      dispose: vi.fn(),
+    };
+    const broker = makeBroker({ init: KEYLESS_LOCAL, providerTransport: transport });
+
+    await broker.invoke(AI_CHANNELS.providerRequest, {
+      requestId: "pv-1",
+      method: "POST",
+      path: "/v1/chat/completions",
+      headers: {},
+    });
+    await vi.waitFor(() => expect(signal).toBeDefined());
+    broker.broker.dispose();
+
+    expect(signal?.aborted).toBe(true);
   });
 });

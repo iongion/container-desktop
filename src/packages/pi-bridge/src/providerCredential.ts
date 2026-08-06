@@ -2,7 +2,7 @@
 // keychain today must not change meaning. A sign-in that returns an expiring pair needs all three of its fields kept,
 // or the next exchange has nothing to exchange, so those are stored as a tagged one-line envelope instead.
 //
-// One line matters: the same value is substituted into the gateway's env file, and an env value cannot carry a
+// One line matters: the same value is substituted into the auth container's env file, and an env value cannot carry a
 // newline.
 
 import type { PiOAuthCredential } from "./protocol";

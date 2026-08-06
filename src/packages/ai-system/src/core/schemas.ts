@@ -383,6 +383,49 @@ const webSearchRequest = z.object({ query: z.string().trim().min(1).max(MAX_TITL
 // decision belongs there and not in this channel.
 const webSearchResult = z.object({ text: z.string().max(128 * 1024) }).strict();
 
+// One inference request the SESSION made, arriving from the agent container over the bridge. The container names a
+// method, a path and headers — never a host and never a credential: the upstream is resolved from the user's own
+// settings and the key is attached natively (`providerProxyOps` is what decides where the path can land).
+const providerRequestId = z.string().min(1).max(MAX_ID_CHARS);
+
+// Bounded ABOVE what a conversation costs: pi posts the whole context as one JSON document, and a long session with
+// tool results legitimately runs to megabytes. The transport's own request cap is the real ceiling.
+const MAX_PROVIDER_BODY_CHARS = 8 * 1024 * 1024;
+
+const providerProxyRequest = z
+  .object({
+    requestId: providerRequestId,
+    // Absent ⇒ the provider the user has configured, which is what every other channel here means by it.
+    providerId: optionalProvider,
+    method: z.string().min(1).max(16),
+    path: z.string().min(1).max(2_048),
+    headers: z.record(z.string(), z.string()),
+    // base64, because a frame is JSON text and a request body is opaque bytes.
+    body: z.string().max(MAX_PROVIDER_BODY_CHARS).optional(),
+  })
+  .strict();
+
+// The answer as it streams. `head` once, then `chunk` until `end` — or `error`, which is the same terminator with a
+// reason. Mirrors ProviderProxyStreamEvent, which is the container's view of the same frames.
+const providerStreamPush = z
+  .object({
+    requestId: providerRequestId,
+    event: z.discriminatedUnion("kind", [
+      z
+        .object({
+          kind: z.literal("head"),
+          status: z.number().int().min(100).max(599),
+          statusText: z.string().max(MAX_TITLE_CHARS),
+          headers: z.record(z.string(), z.string()),
+        })
+        .strict(),
+      z.object({ kind: z.literal("chunk"), data: z.string().max(MAX_PROVIDER_BODY_CHARS) }).strict(),
+      z.object({ kind: z.literal("end") }).strict(),
+      z.object({ kind: z.literal("error"), message: z.string().max(MAX_ENGINE_OP_ERROR_CHARS) }).strict(),
+    ]),
+  })
+  .strict();
+
 export const invokeSchemas = {
   [AI_CHANNELS.status]: empty,
   [AI_CHANNELS.diagnostics]: z.object({ providerId: optionalProvider }).strict(),
@@ -401,20 +444,6 @@ export const invokeSchemas = {
   [AI_CHANNELS.keyClear]: z.object({ provider }).strict(),
   // The file name is session-scoped, not a path: the host decides where its private agent directory is, so a
   // caller cannot aim this write anywhere else.
-  [AI_CHANNELS.agentGatewayEnv]: z
-    .object({
-      provider,
-      fileName: z
-        .string()
-        .trim()
-        .min(1)
-        .max(128)
-        .regex(/^[a-zA-Z0-9._-]+\.env$/, "AI: the gateway env file name must be a simple <name>.env"),
-      baseUrl: z.url().max(2048),
-      bridgeToken: z.string().trim().min(1).max(256),
-      gatewayPort: z.number().int().positive().max(65535),
-    })
-    .strict(),
   // The refresh run's env file. Same naming rule, and the credential is never described by the caller — only which
   // provider's it is.
   [AI_CHANNELS.authRefreshEnv]: z
@@ -482,6 +511,8 @@ export const invokeSchemas = {
   [AI_CHANNELS.workspaceOp]: workspaceOpRequest,
   [AI_CHANNELS.workspaceRelease]: workspaceReleaseRequest,
   [AI_CHANNELS.webSearch]: webSearchRequest,
+  [AI_CHANNELS.providerRequest]: providerProxyRequest,
+  [AI_CHANNELS.providerCancel]: z.object({ requestId: providerRequestId }).strict(),
   [AI_CHANNELS.permissionsList]: empty,
   [AI_CHANNELS.permissionsAdd]: z.object({ list: permissionsList, rule: permissionRule }).strict(),
   [AI_CHANNELS.permissionsRemove]: z
@@ -820,7 +851,6 @@ export const responseSchemas = {
   [AI_CHANNELS.keyHas]: z.boolean(),
   [AI_CHANNELS.keySet]: ok,
   [AI_CHANNELS.keyClear]: ok,
-  [AI_CHANNELS.agentGatewayEnv]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.agentEnvFile]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.agentSessionsDir]: z.object({ path: z.string().min(1).max(4096) }).strict(),
   [AI_CHANNELS.agentSessionsServe]: ok,
@@ -873,6 +903,8 @@ export const responseSchemas = {
   [AI_CHANNELS.workspaceOp]: hostOpResult,
   [AI_CHANNELS.workspaceRelease]: ok,
   [AI_CHANNELS.webSearch]: webSearchResult,
+  [AI_CHANNELS.providerRequest]: ok,
+  [AI_CHANNELS.providerCancel]: ok,
   [AI_CHANNELS.permissionsList]: permissionsSnapshot,
   [AI_CHANNELS.permissionsAdd]: permissionsSnapshot,
   [AI_CHANNELS.permissionsRemove]: permissionsSnapshot,
@@ -983,6 +1015,7 @@ export const sessionEventEnvelope = z
 
 export const pushSchemas = {
   [AI_CHANNELS.skillsChanged]: skillHostSnapshot,
+  [AI_CHANNELS.providerStream]: providerStreamPush,
 } satisfies Record<AIPushChannel, z.ZodType>;
 
 // Indexing a schema map by a generic channel yields a union of concrete schemas whose `.parse` output TS

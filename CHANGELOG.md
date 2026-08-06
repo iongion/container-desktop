@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A connection to a Windows machine over SSH can be established at all: the app looked for the engine with a command only a Unix shell has, so a Windows remote always reported the engine as missing however it was installed. It now asks the engine itself, and uses the path you configured when you gave one
 
-- A thinking level now reaches DeepSeek, GLM and OpenRouter in the shape each one actually wants, instead of OpenAI's — the session's own gateway made every provider look like OpenAI, which also sent those servers a system prompt under a role they do not have and an answer cap under a field they do not read
+- A thinking level now reaches DeepSeek, GLM and OpenRouter in the shape each one actually wants, instead of OpenAI's — the session's own endpoint made every provider look like OpenAI, which also sent those servers a system prompt under a role they do not have and an answer cap under a field they do not read
 - The assistant now actually receives your Project Rules and Memory — it used to confirm them in the UI and send the model nothing
 - Everything the app does on the agent's behalf acts on the folder the session mounted, not the one named in Settings: workspace changes, project rules and memory, and project skills
 - Public web search works for the assistant, or says why not — the setting used to promise something the session could not do
@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - pi's own slash commands are offered under pi's own names; the app no longer answers `/compact`, `/new`, `/session` or `/resume` with something adjacent of its own
 - A plugin's own commands appear in the palette — every one of them was silently dropped before it got there
 - pi's commands work outside demo mode: a real session announced them before the app was listening, so every one of them answered "Unknown command"
-- Diagnostics answer the question that matters: whether the SESSION can reach the model, through its gateway, and not only whether this app can
+- Diagnostics answer the question that matters: whether the SESSION can reach the model, along the path a turn takes, and not only whether this app can
 - A turn that has read your project's rules, an untrusted skill or a public web page no longer honours a remembered approval
 - The Wails backend no longer lets the web view read a provider key, which Tauri has always refused
 - A command a container image is too old to know now fails immediately with the reason, instead of hanging for thirty seconds
@@ -30,9 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Context panel follows a model change instead of going on describing the model the session was started with
 - A turn the model answered with nothing says so, in the transcript and in an exported one — it used to look exactly like a turn that never ran
 - Choosing a model with no room for the session says so at the moment you choose it, naming both numbers, instead of letting the next turn fail with the inference server's own message
-- The provider key has only one route to the gateway container: the app reads it from the OS keychain and writes the file itself, and there is no longer any field it could travel in from the web view
+- The provider key has no route into a container at all: the app reads it from the OS keychain and signs each request itself, and there is no field it could travel in from the web view
 - The agent's bridge token is protected like the provider key beside it: both env files now live in the one directory the web view cannot read back, instead of the token sitting in a second unguarded one
-- Starting a session with network access turned off works at all: the agent's own network is created internal and the gateway is given a routable one of its own, instead of handing the engine a flag `run` does not have
+- Starting a session with network access turned off works at all: the session's network is created internal, instead of handing the engine a flag `run` does not have
 - A session no longer fails because something else already holds the port it picked — the agent's bridge port is re-picked and tried again when the engine says it is in use
 - The Context panel says whether the budget reserved for the answer is the provider's published cap or the app's own default, instead of presenting one as the other
 - Estimated cost is a real number: the provider's published rates now reach the session, so a priced model reports what it charged instead of nothing
@@ -42,14 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A project you have not trusted can no longer have plugin settings written into it: pi's own default is to trust the project, and the assistant now starts it untrusted and follows your decision
 - A new conversation keeps your containers, your plugins and your workspace — starting one used to tear the pair down and build it again
 
-- Sessions using a cloud provider start again: the credential now reaches the gateway container without ever passing through the app's web view, and cannot be read back from it
+- Sessions using a cloud provider start again: the credential is resolved outside the app's web view and cannot be read back from it
 - A local model server session starts again — asking for a key a keyless provider never had used to stop it
 - The assistant shows that it is working from the moment you send, not only once the answer starts arriving
 - The workspace folder's own start log is styled again
 - The mock model list no longer offers a model that does not exist
-- The assistant can now use an Anthropic model: its gateway speaks Anthropic's own wire shape and signs the request the way Anthropic expects
-- A keyless local model server no longer stops the assistant's gateway from starting
-- The gateway now signs the upstream the way that provider's settings say — bearer token, API-key header, basic auth or a custom header
+- The assistant can now use an Anthropic model: the session speaks Anthropic's own wire shape and the request is signed the way Anthropic expects
+- A keyless local model server no longer stops the assistant from starting
+- The upstream is now signed the way that provider's settings say — bearer token, API-key header, basic auth or a custom header
 - The WebDriver tests are two suites again, told apart by what a failure is allowed to mean: `webdriver/specs/*.e2e.js` runs on the mock app only and is never gated, while `webdriver/smoke/*.smoke.js` is real integration with its own entry point (`yarn test:smoke:tauri`) — the two used to share one glob, so the real-integration specs ran against the mock app by default
 - A smoke spec whose machine, engine, agent image, provider key or loaded model is simply absent now reports SKIP with the command that fixes it, instead of failing: a powered-off VM used to read as five failing hosts
 - A Windows connection now says that reaching its containers needs WSL, instead of naming an execution target kind the app no longer has
@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Your conversations with the assistant are kept on your own machine: they stay readable with nothing running, survive every rebuild of the agent, and no longer live inside the container volume they used to disappear with
 
+- The provider key never leaves your machine, and never leaves the one place that can read it: a turn's inference is now signed by the app itself, from the OS keychain, per request. There is no longer a second container holding the key, no file with a credential in it for a session, and nothing to ship to a remote machine — which is what a session on a remote engine used to be unable to do at all
 - A session on a REMOTE engine keeps its conversations on your own machine too. That machine cannot see this one's disk, so the agent asks for its history instead of mounting it, and every conversation lands in the same folder a local session uses — one place, whichever connection you started on, and nothing is ever copied or synced between the two. The agent may only touch that folder's own conversation files, and nothing else on your machine
 
 - An assistant session can run on a connection reached over SSH. The agent's bridge is published on the machine running the engine, so the app forwards it here and talks to the local end — before this, a session on a remote connection was offered, built its containers and then answered nothing. A connection whose scope names no entry in your SSH config now says so instead of starting
@@ -81,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The assistant can look up the app's own built-in troubleshooting knowledge — curated podman, docker, WSL and SSH connection failures with the fix and the commands — as a search it makes when it needs one, not as prose in every prompt
 - The assistant can act on files and run commands in ANOTHER container, where you choose: one already running on the connection, picked from what is actually running with its image and id, or a disposable one created from an image and removed when the session ends. Chosen on the start form, off until you choose it, and every write or command asks first
 - Sign in to any provider pi carries a flow for — Anthropic, GitHub Copilot, Kimi, xAI, Radius, OpenAI Codex and OpenRouter — under that provider's own label: pi's own login runs in a one-shot container, the browser does the signing in, and what it returns goes to the OS keychain
-- A sign-in that expires is renewed for you, before it lapses and without interrupting the conversation — the exchange runs pi's own refresh in a throwaway container, and the renewed credential reaches a running session's gateway without restarting it
+- A sign-in that expires is renewed for you, before it lapses and without interrupting the conversation — the exchange runs pi's own refresh in a throwaway container, and a running session picks the renewal up on its next turn
 - Every provider pi ships is offered in the model picker — 37 of them, with names and model counts read from pi itself — behind their own heading, under the sources you already use
 - A provider the app was never set up for can be browsed and then added in one click: its endpoint comes from what pi publishes, and only the key is left to paste
 - Every model row in the picker says what it costs, how much room it has and whether it thinks, instead of an id alone
@@ -113,12 +114,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The AI screens are reachable again, from a menu on the header's AI button
 - The session's connection, workspace and container ride in the screen header; open the workspace folder, or open it as a VS Code workspace, from there
 - Start an assistant session from the app: pick the connection, the workspace folder, the model and whether it may reach the network
-- A local model server (LM Studio, llama.cpp) is now reachable from the agent's gateway container
+- A local model server (LM Studio, llama.cpp) is reachable for a session, on its own loopback address
 - A truncated command's full output can be opened from its card — the agent writes it inside the container, the app reads it back
 - The assistant now answers, runs tools and asks for approval in demo mode, with no container engine present
 - The assistant runs inside a container, streamed into the app over a token-authenticated bridge
 - `yarn cli agent-image` builds the local pi agent image from the shipped Dockerfile
-- Provider credentials stay in a separate gateway container; the agent container never receives a key
+- Provider credentials never enter a container at all; the app signs each request itself
 - The assistant runs on a containerized pi session instead of an in-app agent engine
 - pi extensions can ask you things through native dialogs, and show status entries and widgets around the composer
 - Every tool the assistant runs passes your permission settings first; a rejection blocks the call inside pi
@@ -186,6 +187,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- An assistant session is ONE container, not a pair. Inference travels the socket the app already has open to it, so the second container that used to hold the provider key is gone, along with its network and its env file
+- Turning network access off now means it: the session's container gets no route to the internet or to your machine at all, instead of the key-holding half being given a routable one. A turn still works, because the app dials INWARDS
+- A renewed sign-in takes effect on the next turn with nothing to deliver, including for a session started before it was renewed — and a renewal that fails on a busy engine is retried instead of silently ending every renewal after it
+- A local model server no longer has to be bound to the network for the assistant to reach it: the app dials it from its own realm, so LM Studio's default loopback bind is enough
 - The assistant speaks pi's vocabulary throughout: what the app used to call a thread is a **session**, because that is what pi calls it — pi's documentation now reads directly onto this app, with nothing to translate
 - A session is one conversation: the thread list, rename, delete, branch and compaction drawers are gone, replaced by pi's own `/resume`, `/name`, `/fork`, `/tree` and `/compact`
 - The access-profile and reasoning-level pickers are gone, with `/access` and `/reasoning`: a session takes both when it starts and neither can be changed afterwards, so the controls only ever looked live

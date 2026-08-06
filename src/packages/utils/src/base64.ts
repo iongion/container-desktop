@@ -21,3 +21,25 @@ export function fromBase64(value: string): string {
   }
   return new TextDecoder().decode(bytes);
 }
+
+// The same conversion for OPAQUE BYTES, which is a different question from the two above: a UTF-8 round trip corrupts
+// any codepoint a chunk boundary splits, and a stream is cut wherever the network cut it. Used for the inference bodies
+// crossing the bridge, for the same reason the native transport streams raw bytes rather than text.
+export function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+// The array's own buffer is named in the return type because a `BodyInit` will not take one that might be shared:
+// these bytes go straight into a request body.
+export function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}

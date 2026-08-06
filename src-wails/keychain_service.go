@@ -256,7 +256,7 @@ type KeychainWriteAgentFileRequest struct {
 // substitute. This is the agent container's own env file: it carries the bridge token but never a provider
 // credential.
 //
-// It lives beside the gateway's rather than in a directory of its own so ONE guard covers both — the bridge token
+// It lives beside the credential-bearing one rather than in a directory of its own so ONE guard covers both — the bridge token
 // is a secret too, and a second directory would have been outside fs_service.go's refusal. Deliberately separate
 // from WriteSecretFile, whose placeholder requirement is a fail-closed check worth keeping.
 func (s *KeychainService) WriteAgentFile(req KeychainWriteAgentFileRequest) (string, error) {

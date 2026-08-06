@@ -1,5 +1,5 @@
 // Pure provider resolution. Decides which provider, base URL, model, and whether a key is required. Its
-// result drives model discovery, the app's own provider transport, and the coding agent's gateway env file.
+// result drives model discovery, the app's own provider transport, and the inference it signs for a session.
 
 import { z } from "zod";
 import providerCatalog from "@/resources/ai/provider-catalog.json";

@@ -241,10 +241,10 @@ pub async fn keychain_write_secret_file(
 /// Write a private (0600) file into the same protected agent directory, with NO secret to substitute. This is the
 /// agent container's own env file: it carries the bridge token but never a provider credential.
 ///
-/// It lives beside the gateway's rather than in a directory of its own so that ONE guard covers both — the bridge
-/// token is a secret too, and a second directory would have been outside `host::fs`'s refusal. Deliberately
+/// It lives beside the credential-bearing one rather than in a directory of its own so that ONE guard covers both — the
+/// bridge token is a secret too, and a second directory would have been outside `host::fs`'s refusal. Deliberately
 /// separate from keychain_write_secret_file, whose placeholder requirement is a fail-closed check worth keeping:
-/// loosening it to accept a body with no placeholder would let an unauthenticated gateway env file through.
+/// loosening it to accept a body with no placeholder would let an unauthenticated credential file through.
 #[tauri::command]
 pub async fn keychain_write_agent_file(file_name: String, contents: String) -> Result<String, String> {
     if !is_safe_agent_file_name(&file_name) {

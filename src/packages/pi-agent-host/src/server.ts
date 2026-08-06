@@ -5,6 +5,7 @@ import {
 } from "@/pi-agent-host/bridgeChannel";
 import type { HostResponse } from "@/pi-agent-host/hostRpc";
 import type { PluginService } from "@/pi-agent-host/plugins";
+import type { ProviderProxy } from "@/pi-agent-host/providerProxy";
 import { readToolOutput } from "@/pi-agent-host/toolOutput";
 import {
   type AppThemePalette,
@@ -34,11 +35,8 @@ export interface BridgeSessionHandle {
   // pi's `/import`. The app owns the file dialog and the host filesystem, so the JSONL arrives as text and the
   // session writes it where pi's importer can open it.
   importSession(fileName: string, contents: string): Promise<void>;
-  // Whether this session can reach the model, probed through the gateway from in here.
+  // Whether this session can reach the model, probed from in here through the proxy the turns themselves use.
   checkProvider(): Promise<SessionProviderCheck>;
-  // Hand the session's gateway a renewed credential. Only this container can reach it — the gateway has no published
-  // port — so a mid-session renewal travels through here rather than being dialed from the app.
-  setGatewayCredential(credential: string): Promise<void>;
   // Point the running session at a model, in place, registering it the first time this session is asked for it.
   // Answers with what pi ended up on rather than an echo.
   selectModel(model: PiModelRegistration): Promise<PiSessionModel>;
@@ -51,7 +49,9 @@ export interface BridgeSessionHandle {
 
 export function attachBridgeConnection(
   connection: BridgeConnection,
-  options: { token: string; session: BridgeSessionHandle },
+  // The proxy is the CONTAINER's, not this connection's: it binds a port once and answers every session the container
+  // runs. This connection is only how its frames travel.
+  options: { token: string; session: BridgeSessionHandle; providerProxy: ProviderProxy },
 ): AttachedBridgeConnection {
   const { token, session } = options;
 
@@ -87,8 +87,9 @@ export function attachBridgeConnection(
         return session.runCommand(command.name, command.args);
       case "check_provider":
         return session.checkProvider();
-      case "gateway_credential":
-        return session.setGatewayCredential(command.credential);
+      case "provider_stream":
+        options.providerProxy.deliver(command.requestId, command.event);
+        return;
       case "plugins_list":
         return session.plugins.list();
       case "plugins_install":

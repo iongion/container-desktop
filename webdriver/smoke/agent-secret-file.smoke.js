@@ -1,5 +1,9 @@
-// Proves the credential boundary the coding agent's gateway depends on: a provider key reaches the container's
-// env file WITHOUT ever entering the web view, and the web view cannot read it back.
+// Proves the credential boundary the one-shot auth container depends on: a stored provider credential reaches its env
+// file WITHOUT ever entering the web view, and the web view cannot read it back.
+//
+// It is the ONE file a credential is still substituted into — a session's own inference is signed natively, per
+// request, so nothing writes a key for it any more. pi's own flow code is what exchanges a refresh token, and it has to
+// be handed the credential to exchange.
 //
 // This is the path that was broken — the vault deliberately refuses getKey in this realm, so the host composes
 // the file with a placeholder and the realm that OWNS the vault substitutes it while writing.
@@ -21,7 +25,7 @@ let stored = {};
 let written = {};
 let readBack = {};
 
-describe("the agent gateway's credential boundary", () => {
+describe("the agent credential boundary", () => {
   before(async function agentSecretFile() {
     this.timeout(60000);
     // The mock app's key store is a fixture, so nothing it wrote would prove the native substitution this is about.
@@ -50,12 +54,11 @@ describe("the agent gateway's credential boundary", () => {
         const ready = useExisting ? Promise.resolve() : window.AI.setKey(provider, secret, { allowDegraded: true });
         ready
           .then(() =>
-            window.AI.writeAgentGatewayEnv({
+            window.AI.writeAuthRefreshEnv({
               provider,
-              fileName: "e2e-scratch-gateway.env",
-              baseUrl: "https://openrouter.ai/api/v1",
+              fileName: "e2e-scratch-refresh.env",
               bridgeToken: "e2e-bridge-token",
-              gatewayPort: 8788,
+              bridgePort: 8787,
             }),
           )
           .then(
@@ -98,18 +101,18 @@ describe("the agent gateway's credential boundary", () => {
       .catch(() => undefined);
   });
 
-  it("writes the gateway env with the stored secret substituted by the host", () => {
-    assert.equal(written.ok, true, `the gateway env was not written: ${written.reason}`);
+  it("writes the env with the stored credential substituted by the host", () => {
+    assert.equal(written.ok, true, `the auth env was not written: ${written.reason}`);
     const contents = readFileSync(written.path, "utf8");
     // Compared by SHAPE, never printed: a failure message must not leak the developer's own key.
-    const value = /^CD_UPSTREAM_API_KEY=(.*)$/m.exec(contents)?.[1] ?? "";
-    assert.ok(value.length > 0, "the stored secret did not reach the env file the container is given");
+    const value = /^CD_CREDENTIAL=(.*)$/m.exec(contents)?.[1] ?? "";
+    assert.ok(value.length > 0, "the stored credential did not reach the env file the container is given");
     if (!stored.has) {
       assert.equal(value, SECRET, "the substituted value is not the secret that was stored");
     }
     // The placeholder is an implementation detail of the boundary and must never survive into the file.
     assert.equal(contents.includes("__CD_KEYCHAIN_SECRET__"), false, "the placeholder was left unsubstituted");
-    assert.ok(contents.includes("CD_UPSTREAM_KIND=openai-compatible"), "the provider's wire shape is missing");
+    assert.ok(contents.includes("CD_BRIDGE_TOKEN=e2e-bridge-token"), "the bridge token is missing");
   });
 
   it("hardens the file to owner-only", () => {

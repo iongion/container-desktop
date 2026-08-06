@@ -51,19 +51,14 @@ describe("executionTarget", () => {
 describe("AI protocol boundary validation", () => {
   // The host places the file; the caller only names it. A name that could escape that directory is refused
   // at the boundary, not sanitized later.
-  it("refuses a gateway env file name that is a path", () => {
-    const valid = {
-      provider: "openrouter",
-      fileName: "8f21ac-gateway.env",
-      baseUrl: "https://openrouter.ai/api/v1",
-      bridgeToken: "tok",
-      gatewayPort: 8788,
-    };
-    expect(() => validateAIInvokeRequest(AI_CHANNELS.agentGatewayEnv, valid)).not.toThrow();
+  // The one channel a credential is still substituted into, so the file it names must be a NAME: the protected agent
+  // directory is where the app's own secrets live, and a path would write outside it.
+  it("refuses an auth env file name that is a path", () => {
+    const valid = { provider: "anthropic", fileName: "8f21ac-refresh.env", bridgeToken: "tok", bridgePort: 8787 };
+    expect(() => validateAIInvokeRequest(AI_CHANNELS.authRefreshEnv, valid)).not.toThrow();
     for (const fileName of ["../../evil.env", "/etc/passwd", "nested/dir.env", "no-extension"]) {
-      expect(() => validateAIInvokeRequest(AI_CHANNELS.agentGatewayEnv, { ...valid, fileName })).toThrow();
+      expect(() => validateAIInvokeRequest(AI_CHANNELS.authRefreshEnv, { ...valid, fileName })).toThrow();
     }
-    expect(() => validateAIInvokeRequest(AI_CHANNELS.agentGatewayEnv, { ...valid, baseUrl: "not a url" })).toThrow();
   });
 
   it("has a validator for every invoke channel", () => {
@@ -73,18 +68,18 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.keyHas]: { provider: "openai" },
       [AI_CHANNELS.keySet]: { provider: "openai", key: "secret" },
       [AI_CHANNELS.keyClear]: { provider: "openai" },
+      [AI_CHANNELS.providerRequest]: {
+        requestId: "pv-1",
+        method: "POST",
+        path: "/v1/chat/completions",
+        headers: { "content-type": "application/json" },
+      },
+      [AI_CHANNELS.providerCancel]: { requestId: "pv-1" },
       [AI_CHANNELS.authRefreshEnv]: {
         provider: "anthropic",
         fileName: "8f21ac-refresh.env",
         bridgeToken: "t",
         bridgePort: 8787,
-      },
-      [AI_CHANNELS.agentGatewayEnv]: {
-        provider: "openrouter",
-        fileName: "8f21ac-gateway.env",
-        baseUrl: "https://openrouter.ai/api/v1",
-        bridgeToken: "tok",
-        gatewayPort: 8788,
       },
       [AI_CHANNELS.agentEnvFile]: { fileName: "8f21ac.env", contents: "CD_BRIDGE_TOKEN=tok\nCD_BRIDGE_PORT=8787" },
       [AI_CHANNELS.agentSessionsDir]: undefined,
@@ -181,8 +176,9 @@ describe("AI protocol boundary validation", () => {
         encryption: { available: true, degraded: false },
         webSearchAvailable: true,
       },
-      [AI_CHANNELS.agentGatewayEnv]: { path: "/home/me/.local/share/container-desktop/agent/8f21ac-gateway.env" },
       [AI_CHANNELS.agentEnvFile]: { path: "/home/me/.config/container-desktop/agent/8f21ac.env" },
+      [AI_CHANNELS.providerRequest]: { ok: true },
+      [AI_CHANNELS.providerCancel]: { ok: true },
       [AI_CHANNELS.agentSessionsDir]: { path: "/home/me/.local/share/container-desktop/assistant-sessions" },
       [AI_CHANNELS.agentSessionsServe]: { ok: true },
       [AI_CHANNELS.agentSessionsUnserve]: { ok: true },

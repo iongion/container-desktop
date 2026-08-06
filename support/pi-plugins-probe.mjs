@@ -57,8 +57,6 @@ function startContainer() {
     "--env",
     `CD_BRIDGE_TOKEN=${token}`,
     "--env",
-    "CD_GATEWAY_URL=http://gateway.invalid:8788/v1",
-    "--env",
     "CD_MODEL_ID=probe-model",
     ...(engine === "podman" ? ["--userns", "keep-id:uid=1000,gid=1000"] : []),
     image,

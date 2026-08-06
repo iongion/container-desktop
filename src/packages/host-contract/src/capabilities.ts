@@ -33,7 +33,7 @@ export interface IKeychain {
   writeSecretFile(key: string, fileName: string, contents: string): Promise<string>;
   // Write a private file into the SAME protected directory, with no secret to substitute — the agent
   // container's own env file, which carries the bridge token but no provider credential. It lives beside the
-  // gateway's rather than in a second directory of its own, so one guard covers both: the web view may ask for
+  // app's own secrets rather than in a second directory of its own, so one guard covers both: the web view may ask for
   // it and learn its path, and cannot read either back.
   writeAgentEnvFile(fileName: string, contents: string): Promise<string>;
 }

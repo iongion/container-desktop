@@ -134,7 +134,7 @@ export interface ScopedModels {
 
 // The set pi cycles with Ctrl+P. Scoping nothing means it cycles everything available, which is pi's own default.
 //
-// Only the GATEWAY provider's models are listed: this session reaches exactly one upstream, so a model registered
+// Only THIS provider's models are listed: this session reaches exactly one upstream, so a model registered
 // under any other provider is one it could never answer with. That set is the models this session has actually been
 // pointed at — a provider's whole catalogue is never registered, so this list stays as short as the user's own use.
 export function createScopedModels(deps: {

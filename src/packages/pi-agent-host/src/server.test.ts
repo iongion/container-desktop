@@ -20,7 +20,6 @@ function harness(token = "tok") {
     runCommand: vi.fn(async () => ({ ok: true as const, data: { ran: true } })),
     importSession: vi.fn(async () => {}),
     checkProvider: vi.fn(async () => ({ reachable: true, status: 200 })),
-    setGatewayCredential: vi.fn(async () => undefined),
     selectModel: vi.fn(async (model: { id: string }) => ({ provider: "test", id: model.id })),
     plugins: {
       list: vi.fn(() => ({ configured: [{ source: "npm:@foo/bar", scope: "user" as const, filtered: false }] })),
@@ -39,14 +38,21 @@ function harness(token = "tok") {
     })),
     reload: vi.fn(async () => {}),
   };
+  const providerProxy = {
+    begin: vi.fn(() => "pv-1"),
+    deliver: vi.fn(),
+    abandon: vi.fn(),
+    failAll: vi.fn(),
+    inFlight: vi.fn(() => 0),
+  };
   const attached = attachBridgeConnection(
     {
       send: (frame) => sent.push(frame),
       close: (code, reason) => closed.push({ code, reason }),
     },
-    { token, session },
+    { token, session, providerProxy },
   );
-  return { sent, closed, session, attached };
+  return { sent, closed, session, providerProxy, attached };
 }
 
 const parsed = (frames: string[]) => frames.map((frame) => JSON.parse(frame));
@@ -204,6 +210,28 @@ describe("attachBridgeConnection", () => {
       encodeCommand({ id: "c2", type: "plugins_install", source: "npm:@foo/baz", scope: "user" }),
     );
     expect(parsed(h.sent)).toEqual([{ type: "response", id: "c2", success: false, error: "registry down" }]);
+  });
+
+  // One frame of an inference answer. It goes to the container's proxy, not to the session: the session is blocked
+  // inside pi's own provider client waiting for exactly these bytes.
+  it("routes a provider_stream frame to the proxy", async () => {
+    const h = harness();
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c2", type: "provider_stream", requestId: "pv-1", event: { kind: "chunk", data: "aGk=" } }),
+    );
+    expect(h.providerProxy.deliver).toHaveBeenCalledWith("pv-1", { kind: "chunk", data: "aGk=" });
+  });
+
+  // Nothing may reach the proxy before the peer has proved it is the app: an unauthenticated socket must not be able
+  // to feed bytes into a turn.
+  it("refuses a provider_stream frame before the handshake", async () => {
+    const h = harness();
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c1", type: "provider_stream", requestId: "pv-1", event: { kind: "end" } }),
+    );
+    expect(h.providerProxy.deliver).not.toHaveBeenCalled();
+    expect(parsed(h.sent)).toEqual([{ type: "response", id: "c1", success: false, error: "handshake required" }]);
   });
 
   it("emit() only reaches the client after the handshake", async () => {

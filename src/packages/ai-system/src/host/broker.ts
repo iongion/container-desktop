@@ -1,4 +1,5 @@
 import { fetchModelWindow, lmStudioModelState, loadLmStudioModel } from "@/ai-system/adapters/modelWindow";
+import { createProviderFetch } from "@/ai-system/adapters/providerFetch";
 import {
   AI_CHANNELS,
   type AIInvokeChannel,
@@ -13,7 +14,7 @@ import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
-import { composeAuthRefreshEnv, composeGatewayEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
+import { composeAuthRefreshEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
 import type {
   AIKeyStore,
   ExecutionSelector,
@@ -21,6 +22,7 @@ import type {
   ResolvedExecution,
   SandboxRunner,
 } from "@/ai-system/core/ports";
+import { resolveProviderProxyRequest } from "@/ai-system/core/providerProxyOps";
 import { type ResolvedProvider, resolveProvider } from "@/ai-system/core/providers";
 import { redactText } from "@/ai-system/core/redact";
 import { validateAIInvokeRequest } from "@/ai-system/core/schemas";
@@ -29,6 +31,7 @@ import type { AISettings, DiagnosticsBundle, EngineOps, ListedModel, ProviderTra
 import type { WorkspaceChangesPort } from "@/ai-system/core/workspaceChanges";
 import { dispatchWorkspaceOp } from "@/ai-system/core/workspaceOpDispatch";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
+import { base64ToBytes, bytesToBase64 } from "@/utils/base64";
 import { createDiagnosticsHost } from "./diagnosticsHost";
 import { createModelDiscoveryHost } from "./modelDiscoveryHost";
 import type { ProjectContextHost } from "./projectContextHost";
@@ -181,6 +184,85 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     if (!deps.skillHost) throw new Error("AI: the skills library is unavailable on this runtime");
     return deps.skillHost;
   };
+  // Inference in flight, so a cancelled turn stops pulling from the provider. Keyed by the container's own correlation
+  // id: the container is the only thing that can cancel one, and it knows them by that.
+  const providerRequests = new Map<string, AbortController>();
+
+  // One inference request, performed here and streamed back as push frames. Everything a provider request needs is
+  // already in place: `createProviderFetch` resolves the credential in the realm that owns the vault — Rust for Tauri —
+  // strips any credential header the caller sent, bounds the request and returns a STREAMING response. So this adds no
+  // transport of its own; it decides where the container's path may land and turns the body into frames.
+  const streamProviderRequest = async (
+    event: TEvent,
+    request: AIInvokeRequest<(typeof AI_CHANNELS)["providerRequest"]>,
+  ): Promise<void> => {
+    const { requestId } = request;
+    const push = (payload: AIPushPayload<(typeof AI_CHANNELS)["providerStream"]>): boolean => {
+      try {
+        deps.send(event, AI_CHANNELS.providerStream, payload);
+        return true;
+      } catch (error) {
+        // The sender has gone. Nothing can be delivered, so stop reading the provider rather than streaming into
+        // nowhere for the rest of the answer.
+        reportError("AI: delivering an inference frame failed", requestId, error);
+        return false;
+      }
+    };
+    const fail = (message: string) => push({ requestId, event: { kind: "error", message: redactText(message) } });
+    const controller = new AbortController();
+    providerRequests.set(requestId, controller);
+    try {
+      const resolved = await resolveProviderAccess(request.providerId);
+      const verdict = resolveProviderProxyRequest(request, resolved.baseURL);
+      if (!verdict.ok) {
+        // Loud: nothing pi does produces one of these, so a refusal means something in the container asked for
+        // somewhere it was never given — a defect, or plugin code trying its luck.
+        deps.logger?.error(`AI: refused an inference request: ${verdict.reason}`);
+        fail(verdict.reason);
+        return;
+      }
+      const response = await createProviderFetch(deps.providerTransport, resolved)(verdict.url, {
+        method: request.method,
+        headers: request.headers,
+        ...(request.body ? { body: base64ToBytes(request.body) } : {}),
+        signal: controller.signal,
+      });
+      if (
+        !push({
+          requestId,
+          event: {
+            kind: "head",
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+          },
+        })
+      ) {
+        controller.abort();
+        return;
+      }
+      const reader = response.body?.getReader();
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value?.length) continue;
+        if (!push({ requestId, event: { kind: "chunk", data: bytesToBase64(value) } })) {
+          controller.abort();
+          return;
+        }
+      }
+      push({ requestId, event: { kind: "end" } });
+    } catch (error) {
+      // A cancel is not a failure: the container dropped its client on purpose, and it is no longer listening.
+      if (controller.signal.aborted) return;
+      const message = describeError(error);
+      reportError("AI: an inference request failed", requestId, error);
+      fail(message);
+    } finally {
+      providerRequests.delete(requestId);
+    }
+  };
+
   const skillObservers = new Map<number | string, TEvent>();
   const observeSkills = (event: TEvent): void => {
     skillObservers.set(deps.senderId(event), event);
@@ -218,32 +300,6 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
       guarded(event, async () => {
         await deps.keyStore.clearKey(request.provider);
         return { ok: true };
-      }),
-    );
-    // The coding agent's gateway container needs the provider key, and the renderer cannot read it — the key
-    // lives in the OS keychain. So the env file that carries it is composed and written HERE, and the renderer
-    // only learns its path. A provider with no key stored yields an empty value, which is correct for a
-    // keyless local server.
-    onInvoke(AI_CHANNELS.agentGatewayEnv, (event, request) =>
-      guarded(event, async () => {
-        // The credential SHAPE is derived here too, from the settings this host reads itself — the renderer
-        // never describes how a provider authenticates, only which one it picked. `baseUrl` stays the caller's:
-        // it carries the engine's host-alias rewrite, which only the renderer knows.
-        const resolved = resolveProvider(await deps.getAISettings(), request.provider);
-        // The key is NEVER read here. This host can run in a web-view realm, where the vault deliberately
-        // refuses to hand over a secret at all — so the file is composed with a placeholder and the realm that
-        // owns the vault substitutes it while writing, answering only the path. That keeps one composer and one
-        // file format while the plaintext stays where it started.
-        const contents = composeGatewayEnv({
-          baseUrl: request.baseUrl,
-          apiKey: KEYCHAIN_SECRET_PLACEHOLDER,
-          bridgeToken: request.bridgeToken,
-          gatewayPort: request.gatewayPort,
-          providerKind: resolved.kind,
-          auth: resolved.auth,
-        });
-        const path = await deps.keyStore.writeSecretFile(request.provider, request.fileName, contents);
-        return { path };
       }),
     );
     // The one-shot auth container's env file for a refresh. Composed with the same placeholder the gateway's uses, so
@@ -294,6 +350,22 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
       guarded(event, async () => {
         deps.stopServingAgentSessions?.();
         return { ok: true };
+      }),
+    );
+    // One inference request the session made, forwarded with the credential attached natively. It is answered by PUSH
+    // frames rather than by this invoke: an inference response is a stream of unknown length, and a turn renders it as
+    // it arrives. The invoke settles as soon as the request has been accepted, so the container is never left waiting
+    // on an acknowledgement that the first chunk already implies.
+    onInvoke(AI_CHANNELS.providerRequest, (event, request) =>
+      guarded(event, async () => {
+        void streamProviderRequest(event, request);
+        return { ok: true } as const;
+      }),
+    );
+    onInvoke(AI_CHANNELS.providerCancel, (event, request) =>
+      guarded(event, async () => {
+        providerRequests.get(request.requestId)?.abort();
+        return { ok: true } as const;
       }),
     );
     onInvoke(AI_CHANNELS.changesStatus, (event) =>
@@ -483,6 +555,9 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
       unsubscribeSkills?.();
       deps.skillHost?.dispose();
       skillObservers.clear();
+      // Anything still streaming is billed for as long as it runs, and nothing is left to deliver it to.
+      for (const controller of providerRequests.values()) controller.abort();
+      providerRequests.clear();
       try {
         deps.providerTransport.dispose();
       } catch (error) {

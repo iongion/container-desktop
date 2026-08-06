@@ -12,8 +12,6 @@ import {
   engineIsRemote,
   engineSharesAppFilesystem,
   findDefaultSession,
-  GATEWAY_PORT_IN_IMAGE,
-  gatewayUpstreamUrl,
   pickHostPort,
   startPiAgentSession,
   stopPiAgentSession,
@@ -31,6 +29,7 @@ import {
   defaultSessionNamesFor,
 } from "@/ai-system/adapters/sessionNaming";
 import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
+import { AI_CHANNELS } from "@/ai-system/core/channels";
 import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
 import {
@@ -94,29 +93,37 @@ const logger = createLogger("web-app.codingAgent");
 // nothing to load into; every cloud provider loads nothing at all.
 const LOCAL_LOADABLE_PROVIDER = "lmstudio";
 
-// A session outlives an expiring sign-in, and the gateway signs with the access token it was started with. So the app
-// renews the credential just BEFORE it lapses and hands the new one to the gateway through the agent container — the
-// only thing that can reach it. Module-level because a timer is not state the UI renders, and one session at a time
-// means one timer.
+// A session outlives an expiring sign-in, so the app renews the credential just BEFORE it lapses. Nothing has to be
+// handed anywhere afterwards: inference reads the vault per request, natively, so the next turn signs with whatever the
+// rotation stored. Module-level because a timer is not state the UI renders, and one session at a time means one timer.
 const RENEWAL_MARGIN_MS = 60_000;
 let renewalTimer: ReturnType<typeof setTimeout> | undefined;
 // Which session's renewals are still wanted. Clearing the timeout is not enough on its own: an exchange already
 // running when the session stops answers into a callback no timer owns any more, and rescheduling from there arms
 // one nothing can cancel — a login container started every rotation, for a session that ended, until the app closes.
 let renewalGeneration = 0;
+// An exchange that neither renewed nor reported the sign-in beyond renewal failed transiently — the engine was busy,
+// the network blinked. Dropping the chain there would cost EVERY renewal after it, silently, and the session would 401
+// mid-turn once the stored token lapsed. So it is retried, inside the margin that still leaves the token valid, and
+// bounded: a provider that keeps refusing is said out loud rather than spinning a login container for the session's life.
+const RENEWAL_RETRY_MS = 120_000;
+const RENEWAL_RETRY_LIMIT = 3;
+let renewalFailures = 0;
 
 function cancelCredentialRenewal(): void {
   if (renewalTimer) clearTimeout(renewalTimer);
   renewalTimer = undefined;
   renewalGeneration += 1;
+  renewalFailures = 0;
 }
 
-function scheduleCredentialRenewal(
-  providerId: string,
-  expiresAt: number,
-  client: () => PiBridgeClient | undefined,
-): void {
-  cancelCredentialRenewal();
+function signInAgainNotice(): void {
+  Notification.show({ message: t("The assistant's sign-in expired — sign in again."), intent: Intent.WARNING });
+}
+
+function scheduleCredentialRenewal(providerId: string, expiresAt: number): void {
+  if (renewalTimer) clearTimeout(renewalTimer);
+  renewalGeneration += 1;
   const generation = renewalGeneration;
   const delay = expiresAt - Date.now() - RENEWAL_MARGIN_MS;
   if (!Number.isFinite(delay)) return;
@@ -125,20 +132,47 @@ function scheduleCredentialRenewal(
       void (async () => {
         const outcome = await useProviderLoginStore.getState().refreshCredential(providerId);
         if (generation !== renewalGeneration) return;
-        if (outcome.accessToken) {
-          await client()
-            ?.setGatewayCredential(outcome.accessToken)
-            .catch((error) => logger.error("the renewed credential did not reach the gateway", error));
-        }
         // Reschedule off what the exchange reported, so a provider with a short token is renewed as often as it needs.
-        if (outcome.expiresAt) scheduleCredentialRenewal(providerId, outcome.expiresAt, client);
-        else if (outcome.mustSignInAgain) {
-          Notification.show({ message: t("The assistant's sign-in expired — sign in again."), intent: Intent.WARNING });
+        if (outcome.expiresAt) {
+          renewalFailures = 0;
+          scheduleCredentialRenewal(providerId, outcome.expiresAt);
+          return;
         }
+        if (outcome.mustSignInAgain) {
+          signInAgainNotice();
+          return;
+        }
+        renewalFailures += 1;
+        if (renewalFailures >= RENEWAL_RETRY_LIMIT) {
+          signInAgainNotice();
+          return;
+        }
+        scheduleCredentialRenewal(providerId, Date.now() + RENEWAL_MARGIN_MS + RENEWAL_RETRY_MS);
       })();
     },
     Math.max(delay, 1_000),
   );
+}
+
+// The answer to an inference request, routed from the app's own transport back into the container that asked. One
+// subscription for the app's life: it reads the live client out of the store, so a frame arriving for a session that
+// has gone is dropped rather than delivered to its successor.
+let providerStreamSubscription: (() => void) | undefined;
+
+function observeProviderStream(client: () => PiBridgeClient | undefined): void {
+  if (providerStreamSubscription) return;
+  // Tolerant of a bridge without the channel, the same way the conversation store's teardown is: `window.AIBus?.x()`
+  // guards only the object, and a shell whose bus predates this channel would take the whole start down with it.
+  const bus = typeof window !== "undefined" ? window.AIBus : undefined;
+  if (typeof bus?.subscribe !== "function") {
+    logger.warn("this runtime has no AI bus, so inference cannot be answered");
+    return;
+  }
+  providerStreamSubscription = bus.subscribe(AI_CHANNELS.providerStream, (payload) => {
+    void client()
+      ?.providerStream(payload.requestId, payload.event)
+      .catch((error) => logger.error("an inference frame did not reach the session", error));
+  });
 }
 
 // Keep an expiring sign-in usable before the session leans on it. Both ways into a session need this, and for the
@@ -147,16 +181,13 @@ function scheduleCredentialRenewal(
 async function rotateSessionCredential(
   providerId: string | undefined,
   log: (line: string) => void,
-): Promise<{ mustSignInAgain: boolean; accessToken?: string; expiresAt?: number }> {
+): Promise<{ mustSignInAgain: boolean; expiresAt?: number }> {
   if (!providerId) return { mustSignInAgain: false };
   const rotation = await useProviderLoginStore.getState().refreshCredential(providerId);
   if (rotation.mustSignInAgain) return { mustSignInAgain: true };
   if (rotation.refreshed) log(`renewed the ${providerId} sign-in`);
-  return {
-    mustSignInAgain: false,
-    ...(rotation.accessToken ? { accessToken: rotation.accessToken } : {}),
-    ...(rotation.expiresAt ? { expiresAt: rotation.expiresAt } : {}),
-  };
+  // The token itself goes nowhere: it is in the vault, and that is where every turn reads it from.
+  return { mustSignInAgain: false, ...(rotation.expiresAt ? { expiresAt: rotation.expiresAt } : {}) };
 }
 
 type HostRequestEvent = Extract<BridgeEvent, { type: "host_request" }>;
@@ -644,21 +675,6 @@ function contributedResourcesFrom(answer: Partial<ContributedResources> | undefi
   };
 }
 
-// The gateway's env file carries the provider key, so the HOST composes and writes it: it reads the key from
-// the OS keychain, which is deliberately unreadable from here. Only the path comes back.
-async function writeGatewayEnvFile(providerId: string, fileName: string, spec: PiAgentSessionSpec): Promise<string> {
-  const bridge = typeof window !== "undefined" ? window.AI : undefined;
-  if (!bridge) throw new Error("the AI host bridge is unavailable, so the gateway cannot be given its key");
-  const { path } = await bridge.writeAgentGatewayEnv({
-    provider: providerId,
-    fileName,
-    baseUrl: gatewayUpstreamUrl(spec),
-    bridgeToken: spec.bridgeToken,
-    gatewayPort: GATEWAY_PORT_IN_IMAGE,
-  });
-  return path;
-}
-
 // What the provider says about this model — its budget, its rates, whether it reasons. Never fatal: a provider that
 // will not answer leaves all of it unknown, which the panels state plainly, and the session starts either way.
 async function readModelWindow(modelId: string, providerId?: string): Promise<ModelWindow> {
@@ -1072,7 +1088,6 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       egress: options.egress ?? true,
       ...(options.executionTarget ? { executionTarget: options.executionTarget } : {}),
       scope: options.scope,
-      hostAlias: host.PROGRAM === "podman" ? "host.containers.internal" : "host.docker.internal",
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
     };
     let bridge: { url: string; tunnel?: BridgeTunnel } | undefined;
@@ -1084,6 +1099,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       storeTunnel = await serveConversations(spec, host.HOST, (reason) => get().reportBridgeLost(reason));
       const client = createPiBridgeClient({ url: bridge.url, token: spec.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));
+      observeProviderStream(() => get().client);
       // Published before the socket is dialled, for the same reason `start` does it: the session announces itself
       // DURING connect, and every handler for that reads the client back out of here.
       set({
@@ -1095,17 +1111,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         conversationsTunnel: storeTunnel,
       });
       await client.connect();
-      // The gateway froze its token into an env file when the pair was BUILT, and attaching cannot rewrite that
-      // file — so a credential renewed just now reaches the running gateway over the bridge instead, the same way
-      // a scheduled renewal does mid-session.
-      if (rotation.accessToken) {
-        await client
-          .setGatewayCredential(rotation.accessToken)
-          .catch((error) => logger.error("the renewed credential did not reach the gateway", error));
-      }
+      // A rotation needs no delivery: inference reads the vault per request, so an adopted pair signs its next turn
+      // with whatever was just stored — even though its own environment was frozen when it was built.
       // A deadline the app was closed through left no timer behind; this is where the session gets one again.
       if (options.providerId && rotation.expiresAt) {
-        scheduleCredentialRenewal(options.providerId, rotation.expiresAt, () => get().client);
+        scheduleCredentialRenewal(options.providerId, rotation.expiresAt);
       }
       await get().publishTheme();
       await get().publishSystemContext();
@@ -1168,7 +1178,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       }
       // A credential with a deadline gets a renewal scheduled before it; a permanent key reports none and gets none.
       if (rotation.expiresAt) {
-        scheduleCredentialRenewal(credentialProvider, rotation.expiresAt, () => get().client);
+        scheduleCredentialRenewal(credentialProvider, rotation.expiresAt);
       }
     }
 
@@ -1221,11 +1231,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       bridgeToken: randomUUID(),
       ...(options.sessionKind === "default"
         ? defaultSessionNamesFor(options.connectionId)
-        : {
-            networkName: assistantNetworkName(suffix),
-            agentContainerName: assistantContainerName("agent", suffix),
-            gatewayContainerName: assistantContainerName("gateway", suffix),
-          }),
+        : { networkName: assistantNetworkName(suffix), agentContainerName: assistantContainerName("agent", suffix) }),
       pluginVolumeName: ASSISTANT_PLUGIN_VOLUME,
       connectionId: options.connectionId,
       sessionKind: options.sessionKind ?? "ephemeral",
@@ -1239,9 +1245,6 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       egress: options.egress ?? true,
       ...(options.executionTarget ? { executionTarget: options.executionTarget } : {}),
       scope: options.scope,
-      // Podman publishes host.containers.internal, docker host.docker.internal. The gateway reaches a provider
-      // running on this machine only through that alias — inside the container 127.0.0.1 is the container.
-      hostAlias: host.PROGRAM === "podman" ? "host.containers.internal" : "host.docker.internal",
       // Podman maps the invoking user to container root under rootless mode, so the agent user needs an
       // explicit mapping or the bind-mounted workspace is effectively read-only. Docker has no keep-id.
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
@@ -1250,18 +1253,9 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     let storeTunnel: BridgeTunnel | undefined;
     try {
       set((state) => ({ startLog: [...state.startLog, `starting ${spec.agentContainerName}`] }));
-      // The provider key lives in the OS keychain, which the renderer cannot read, so the host composes and writes
-      // the gateway's env file. This is now the ONLY producer of a credential-bearing one — naming a provider is
-      // what asks for it, and a caller that names none is telling us the endpoint is keyless.
-      const gatewayEnvFile = options.providerId
-        ? () => writeGatewayEnvFile(options.providerId as string, `${suffix}-gateway.env`, spec)
-        : undefined;
-      const started = await startPiAgentSession(
-        host,
-        spec,
-        (contents) => writeAgentEnvFile(`${suffix}.env`, contents),
-        { gatewayEnvFile },
-      );
+      // No credential-bearing file is written for a session any more, on any path: the container asks the app for
+      // inference, and the app reads the key from the vault per request. This one carries the bridge token and facts.
+      const started = await startPiAgentSession(host, spec, (contents) => writeAgentEnvFile(`${suffix}.env`, contents));
       // The port the agent ENDED UP on: a taken one is re-picked during the run, so dialing the port that was
       // asked for would reach nothing. The spec is corrected too, since stop() and the panels read it.
       const running: PiAgentSessionSpec = { ...spec, hostPort: started.hostPort };
@@ -1274,6 +1268,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       storeTunnel = await serveConversations(running, host.HOST, (reason) => get().reportBridgeLost(reason));
       const client = createPiBridgeClient({ url: bridge.url, token: running.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));
+      observeProviderStream(() => get().client);
       // In the store BEFORE the socket is dialled, because the session announces itself DURING connect: pi's
       // `ready` lands while that promise is still pending, and every handler for it reads the client back out of
       // here. Setting it afterwards silently dropped the resource read that `ready` triggers, which is what left
@@ -1482,6 +1477,26 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // whether the container gets an answer without ever bothering the user.
     if (event.type === "host_request") {
       void get().handleHostRequest(event);
+      return;
+    }
+    // Inference. The app performs it because the provider key is resolved natively, in the realm that owns the vault —
+    // the container holds none and neither does this one. The answer comes back on the push channel, not from here.
+    if (event.type === "provider_request") {
+      void window.AI.runProviderRequest(event.request).catch((error) => {
+        // The invoke settles on acceptance, so a rejection means the request never started. pi is blocked on it, so the
+        // refusal has to travel back as the answer.
+        logger.error("an inference request was refused", error);
+        void get().client?.providerStream(event.request.requestId, {
+          kind: "error",
+          message: (error as Error).message,
+        });
+      });
+      return;
+    }
+    if (event.type === "provider_cancel") {
+      void window.AI.cancelProviderRequest(event.requestId).catch((error) =>
+        logger.warn("cancelling an inference request failed", error),
+      );
       return;
     }
     // A surface frame is a paint, not transcript content: it replaces what that component last drew and
@@ -1791,10 +1806,14 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     const { client } = get();
     if (!client) return { ok: false, error: "there is no session to run a pi command in" };
     try {
-      // Which engine's image to rebuild: the pair's host alias is set from the engine at start, and podman is the
-      // only one given `host.containers.internal`. An image built for one engine does not exist for the other, so a
-      // rebuild command without the engine sends half the readers to the wrong one.
-      const engine = get().spec?.hostAlias === "host.containers.internal" ? "podman" : "docker";
+      // Which engine's image to rebuild. An image built for one engine does not exist for the other, so a rebuild
+      // command without the engine sends half the readers to the wrong one. Asked of the connection rather than
+      // inferred from the spec: the connection is what decides, and it can answer for itself.
+      const connectionId = get().connectionId;
+      const engine =
+        (connectionId ? (await resolveConnectionHost(connectionId))?.PROGRAM : undefined) === "docker"
+          ? "docker"
+          : "podman";
       return staleImageAware(name, await client.runCommand(name, args), engine);
     } catch (error) {
       // A lost socket or a container that predates the command: both are reasons, not crashes. `.message` was read

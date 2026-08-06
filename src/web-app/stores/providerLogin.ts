@@ -9,7 +9,6 @@ import { create } from "zustand";
 import { pickHostPort } from "@/ai-system/adapters/piAgentContainer";
 import { createPiLoginClient, type PiLoginClient } from "@/ai-system/adapters/piLoginClient";
 import {
-  PI_BRIDGE_PORT_IN_IMAGE,
   type PiLoginContainerSpec,
   removePiLoginContainer,
   startPiLoginContainer,
@@ -19,7 +18,7 @@ import { loginCredentialVerdict, providerLoginOffer } from "@/ai-system/core/piA
 import { isMockMode } from "@/container-client/mock/mode";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
-import { agentImageTag } from "@/pi-bridge/image";
+import { agentImageTag, PI_BRIDGE_PORT_IN_IMAGE } from "@/pi-bridge/image";
 import { piProviderIdFor } from "@/pi-bridge/modelBaseline";
 import type { PiAuthPrompt } from "@/pi-bridge/protocol";
 import { encodeProviderCredential } from "@/pi-bridge/providerCredential";

@@ -1,6 +1,6 @@
-// The one-shot container a provider sign-in runs in. Separate from the session pair on purpose: a login happens
-// BEFORE there is a credential, so there is no gateway to start, no model to register and no workspace to mount — and
-// nothing of the user's is exposed to it.
+// The one-shot container a provider sign-in runs in. Separate from the session's own on purpose: a login happens BEFORE
+// there is a credential, so there is no model to register and no workspace to mount — and nothing of the user's is
+// exposed to it.
 //
 // Its bridge port is PUBLISHED to loopback rather than the container being given the host's network, so the app can
 // dial it on every engine and platform the app supports — a podman machine and a Docker Desktop VM have their own
@@ -13,13 +13,9 @@ import { assistantLabelArgv } from "@/ai-system/adapters/sessionNaming";
 import { KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
+import { PI_BRIDGE_PORT_IN_IMAGE } from "@/pi-bridge/image";
 
 const logger = createLogger("ai.piLoginContainer");
-
-// The port the container's bridge binds inside the image. Exported because a refresh run's env file is composed
-// host-side, so the caller has to name the same port this adapter publishes to.
-export const PI_BRIDGE_PORT_IN_IMAGE = 8787;
-const BRIDGE_PORT_IN_IMAGE = PI_BRIDGE_PORT_IN_IMAGE;
 
 export interface PiLoginContainerSpec {
   imageTag: string;
@@ -39,7 +35,7 @@ export interface PiLoginContainerSpec {
 export function loginEnvFileContents(spec: PiLoginContainerSpec): string {
   return [
     `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
-    `CD_BRIDGE_PORT=${BRIDGE_PORT_IN_IMAGE}`,
+    `CD_BRIDGE_PORT=${PI_BRIDGE_PORT_IN_IMAGE}`,
     ...(spec.carriesStoredCredential ? [`CD_CREDENTIAL=${KEYCHAIN_SECRET_PLACEHOLDER}`] : []),
   ].join("\n");
 }
@@ -51,7 +47,7 @@ export function loginRunArgv(spec: PiLoginContainerSpec, envFilePath: string): s
     "--name",
     spec.containerName,
     "--publish",
-    `127.0.0.1:${spec.hostPort}:${BRIDGE_PORT_IN_IMAGE}`,
+    `127.0.0.1:${spec.hostPort}:${PI_BRIDGE_PORT_IN_IMAGE}`,
     // Grouped with the rest of what this app creates, and marked ephemeral: a sign-in container exists for one
     // exchange, so a boot that finds one is finding an orphan.
     ...assistantLabelArgv({ kind: "ephemeral", role: "login" }),

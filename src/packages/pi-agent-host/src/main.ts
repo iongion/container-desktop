@@ -8,16 +8,17 @@ import {
   knowledgeBankEntries,
   workspaceToolDescriptions,
 } from "@/pi-agent-host/containerToolDescriptions";
-import { parseUpstreamAuthScheme, startGateway } from "@/pi-agent-host/gateway";
 import { reasoningFromEnv } from "@/pi-agent-host/modelRegistrations";
+import { startProviderProxy } from "@/pi-agent-host/providerProxy";
 import { attachBridgeConnection } from "@/pi-agent-host/server";
-import { createPiSession, parseModelApi } from "@/pi-agent-host/session";
+import { createPiSession } from "@/pi-agent-host/session";
 import {
   installPiSessionStorage,
   type PiSessionStorage,
   piSessionStorageOver,
   workerSessionStorageTransport,
 } from "@/pi-agent-host/sessionStorage";
+import { parseUpstreamModelApi } from "@/pi-bridge/providerEndpoint";
 
 const logger = createLogger("pi-agent-host.main");
 
@@ -80,16 +81,40 @@ async function runAgent(): Promise<void> {
   const server = new WebSocketServer({ host: "0.0.0.0", port });
   logger.info(`agent bridge listening on ${port}`);
 
+  // Whichever bridge connection is live, for the frames the provider proxy has to send. There is only ever one, and it
+  // is assigned once the session behind it is built.
+  let attached: ReturnType<typeof attachBridgeConnection> | undefined;
+  let requests = 0;
+  // ONE proxy for the container, not one per connection: it binds a port, so a second bind would fail, and pi is
+  // registered against it before anything has dialled the bridge. A request arriving with no connection throws here
+  // and the proxy fails that request rather than blocking pi on an answer nothing will send.
+  const providerProxy = await startProviderProxy({
+    token,
+    newRequestId: () => `pv-${++requests}`,
+    transport: {
+      send: (request) => {
+        if (!attached) throw new Error("the app is not connected, so inference cannot be carried to it");
+        attached.emit({ type: "provider_request", request });
+      },
+      cancel: (requestId) => attached?.emit({ type: "provider_cancel", requestId }),
+    },
+  });
+
   server.on("connection", (socket) => {
     // Frames that arrive while the session is still being built are queued rather than dropped: the
     // client sends `hello` immediately on open and must not have to retry it.
     const pending: string[] = [];
-    let attached: ReturnType<typeof attachBridgeConnection> | undefined;
 
     socket.on("message", (data) => {
       const frame = data.toString();
       if (attached) void attached.handleFrame(frame);
       else pending.push(frame);
+    });
+    // Every request in flight is waiting on THIS socket. A session whose app has gone must fail them rather than leave
+    // pi blocked on a stream that will never produce another byte.
+    socket.on("close", () => {
+      attached = undefined;
+      providerProxy.proxy.failAll("the agent bridge closed");
     });
 
     void createPiSession({
@@ -100,11 +125,10 @@ async function runAgent(): Promise<void> {
       sessionDir: process.env.CD_SESSION_DIR,
       // Absent for a mounted directory, where pi's own default store is already the right place.
       ...(sessionStorage ? { sessionStorage } : {}),
-      gatewayUrl: required("CD_GATEWAY_URL"),
-      gatewayToken: token,
+      providerToken: token,
       modelId: required("CD_MODEL_ID"),
-      modelApi: parseModelApi(process.env.CD_MODEL_API),
-      // Absent for a session started before the app sent it: pi then reads our gateway as it always did, which is
+      modelApi: parseUpstreamModelApi(process.env.CD_MODEL_API),
+      // Absent for a session started before the app sent it: pi then reads our own endpoint as it always did, which is
       // the right answer for every upstream it would not have treated specially anyway.
       upstreamBaseUrl: process.env.CD_UPSTREAM_BASE_URL,
       // Absent when the provider did not publish one. Passing nothing is how the session says "unknown" rather than
@@ -126,7 +150,7 @@ async function runAgent(): Promise<void> {
       .then(async (session) => {
         attached = attachBridgeConnection(
           { send: (frame) => socket.send(frame), close: (code, reason) => socket.close(code, reason) },
-          { token, session },
+          { token, session, providerProxy: providerProxy.proxy },
         );
         for (const frame of pending.splice(0)) await attached.handleFrame(frame);
       })
@@ -137,24 +161,7 @@ async function runAgent(): Promise<void> {
   });
 }
 
-async function runGateway(): Promise<void> {
-  await startGateway(
-    {
-      upstreamBaseUrl: required("CD_UPSTREAM_BASE_URL"),
-      // NOT required: a keyless local server (LM Studio, llama.cpp) writes an empty key, and demanding one
-      // here killed the gateway container before it ever listened.
-      apiKey: process.env.CD_UPSTREAM_API_KEY ?? "",
-      bridgeToken: required("CD_BRIDGE_TOKEN"),
-      upstreamKind: process.env.CD_UPSTREAM_KIND,
-      authScheme: parseUpstreamAuthScheme(process.env.CD_UPSTREAM_AUTH_SCHEME),
-      authHeaderName: process.env.CD_UPSTREAM_AUTH_HEADER_NAME,
-      authUsername: process.env.CD_UPSTREAM_AUTH_USERNAME,
-    },
-    Number(process.env.CD_GATEWAY_PORT ?? "8788"),
-  );
-}
-
-// The third mode, and the shortest-lived: one provider sign-in, then the container is removed. It exists because
+// The second mode, and the shortest-lived: one provider sign-in, then the container is removed. It exists because
 // pi's login flows run a loopback callback server and derive PKCE with `node:crypto` — Node-only code the renderer
 // cannot load at all, by pi's own design.
 async function runLogin(): Promise<void> {
@@ -176,4 +183,4 @@ async function runLogin(): Promise<void> {
 }
 
 const mode = argValue("--mode") ?? "agent";
-await (mode === "gateway" ? runGateway() : mode === "login" ? runLogin() : runAgent());
+await (mode === "login" ? runLogin() : runAgent());

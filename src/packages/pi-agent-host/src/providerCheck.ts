@@ -1,10 +1,11 @@
 // Can THIS SESSION reach the model? Asked from inside the agent container, which is the only place that can answer
 // it: the app's own diagnostics dial the provider from the app's realm, over the app's network, with the app's
 // credential — and every one of those three differs from what a turn actually does. A loopback provider the app
-// reaches happily is unreachable from a container; a key the app holds is not the key the gateway signs with.
+// reaches happily is unreachable from a container.
 //
-// The probe is a model list through the gateway. It costs nothing, and a 200 proves the whole chain the app's own
-// check cannot see: agent → gateway → upstream, with the credential the gateway substitutes.
+// The probe is a model list through the provider proxy. It costs nothing, and a 200 proves the whole chain the app's
+// own check cannot see: pi → the proxy → the bridge → the app's native transport → the upstream, signed with the
+// credential only the app can resolve.
 
 import type { SessionProviderCheck } from "@/pi-bridge/protocol";
 
@@ -12,8 +13,8 @@ import type { SessionProviderCheck } from "@/pi-bridge/protocol";
 const CHECK_TIMEOUT_MS = 15_000;
 
 export interface ProviderCheckDeps {
-  gatewayUrl: string;
-  gatewayToken: string;
+  providerBaseUrl: string;
+  providerToken: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
@@ -27,18 +28,18 @@ export async function checkSessionProvider(deps: ProviderCheckDeps): Promise<Ses
   // Bound to the caller's realm on purpose: an unbound `fetch` handed on as a value loses `this` and some engines
   // refuse it outright.
   const fetchImpl = deps.fetchImpl ?? ((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init));
-  const url = `${deps.gatewayUrl.replace(/\/+$/, "")}/models`;
+  const url = `${deps.providerBaseUrl.replace(/\/+$/, "")}/models`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), deps.timeoutMs ?? CHECK_TIMEOUT_MS);
   try {
     const response = await fetchImpl(url, {
       method: "GET",
-      // pi signs the gateway with the bridge token, and so does this: the real credential is the gateway's alone.
-      headers: { authorization: `Bearer ${deps.gatewayToken}`, accept: "application/json" },
+      // pi signs the proxy with the bridge token, and so does this: the real credential is never in this container.
+      headers: { authorization: `Bearer ${deps.providerToken}`, accept: "application/json" },
       signal: controller.signal,
     });
     if (!response.ok) {
-      // 502 is the gateway saying the upstream failed; 401 is the upstream rejecting the credential the gateway
+      // 502 is the app saying it could not reach the upstream; 401 is the upstream rejecting the credential the app
       // signed with. Both are the answer, so the status travels rather than a single "unreachable".
       return { reachable: false, status: response.status };
     }

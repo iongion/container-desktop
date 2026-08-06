@@ -1,7 +1,7 @@
-// What the UPSTREAM wants on the wire, which our own gateway hides from pi.
+// What the UPSTREAM wants on the wire, which our own endpoint hides from pi.
 //
 // pi decides these per model from `model.provider` and `model.baseUrl` (`detectCompat`, pi-ai
-// `api/openai-completions.js`). Ours are `container-desktop-gateway` and a container-internal URL, so every
+// `api/openai-completions.js`). Ours are a fixed provider id and a container-loopback URL, so every
 // upstream reads to pi as plain OpenAI: the system prompt goes as role `developer`, `store: false` is sent,
 // `max_completion_tokens` is used where the server wants `max_tokens`, and a thinking level travels as
 // `reasoning_effort` where the server wants an object of its own. None of that bit while no model reasoned; the
@@ -14,7 +14,7 @@
 // catalogue entry, and nothing has to be kept in step with a provider id.
 //
 // Only the upstreams this app can be pointed at are here. Everything else answers `undefined`: pi's own reading of
-// that host is already what it gives our gateway, and a guess would be worse than its default.
+// that host is already what it gives our endpoint, and a guess would be worse than its default.
 
 // pi's `OpenAICompletionsCompat`, narrowed to the fields we have a reason to set. A field pi never reads without
 // another one being true (`sessionAffinityFormat`, which needs `sendSessionAffinityHeaders`) is left out rather

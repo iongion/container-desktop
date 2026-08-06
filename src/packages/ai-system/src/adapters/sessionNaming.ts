@@ -22,7 +22,7 @@ export const ASSISTANT_PROJECT = "container-desktop";
 // `default` is the session a connection REUSES — the one the user is asked about once and that outlives the app.
 // `ephemeral` is created for a single run and swept at the next boot.
 export type AiSessionKind = "default" | "ephemeral";
-export type AiSessionRole = "agent" | "gateway" | "login";
+export type AiSessionRole = "agent" | "login";
 
 export interface AiSessionIdentity {
   kind: AiSessionKind;
@@ -74,25 +74,17 @@ export function assistantNetworkName(scope: string): string {
   return `${ASSISTANT_PROJECT}-net-${scope}`;
 }
 
-// Every name of the session a connection REUSES, in one call — so a caller composing a spec cannot name half the pair
-// after the connection and half after a run.
+// Every name of the session a connection REUSES, in one call — so a caller composing a spec cannot name the container
+// after the connection and the network after a run.
 export function defaultSessionNamesFor(connectionId: string): {
   agentContainerName: string;
-  gatewayContainerName: string;
   networkName: string;
 } {
   const scope = defaultScope(connectionId);
   return {
     agentContainerName: assistantContainerName("agent", scope),
-    gatewayContainerName: assistantContainerName("gateway", scope),
     networkName: assistantNetworkName(scope),
   };
-}
-
-// The second network, which exists only when egress is off: the gateway still has to reach the provider, so it gets a
-// routable NIC the agent does not have. That asymmetry IS "only the gateway is reachable".
-export function egressNetworkOf(networkName: string): string {
-  return `${networkName}-egress`;
 }
 
 // Deliberately NOT renamed to match the project. This volume is mounted at pi's agent directory, which holds the

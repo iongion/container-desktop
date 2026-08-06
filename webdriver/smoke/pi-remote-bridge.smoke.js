@@ -9,7 +9,7 @@
 //   CD_LIVE_REMOTE_SSH_HOST=win11 CD_LIVE_REMOTE_SSH_USER=me CD_LIVE_REMOTE_ENGINE=podman \
 //     yarn test:smoke:tauri --spec webdriver/smoke/pi-remote-bridge.smoke.js
 //
-// No turn is submitted: the gateway inside that machine cannot reach a model server on this one, and what is under
+// No turn is submitted: the machine hop is what stops one, and what is under
 // test is the transport, not inference. NOTHING OF THE USER'S IS TOUCHED — only this session's own pair, removed by
 // the last test.
 import { strict as assert } from "node:assert";
@@ -248,15 +248,11 @@ describe("a real session on a connection reached over SSH", () => {
     assert.ok(forwardIsUp(localPort), `no ssh forward for 127.0.0.1:${localPort} in this machine's process table`);
   });
 
-  it("built the pair on the REMOTE machine, not on this one", () => {
+  it("built the container on the REMOTE machine, not on this one", () => {
     assert.ok(runningOnRemote(sessionSpec.agentContainerName), `${sessionSpec.agentContainerName} is not on ${SSH_HOST}`);
-    assert.ok(
-      runningOnRemote(sessionSpec.gatewayContainerName),
-      `${sessionSpec.gatewayContainerName} is not on ${SSH_HOST}`,
-    );
   });
 
-  it("takes the forward down with the session, and the pair with it", async () => {
+  it("takes the forward down with the session, and the container with it", async () => {
     await browser.executeAsync((done) => {
       window.__cdCodingAgentStore
         .getState()
@@ -268,7 +264,6 @@ describe("a real session on a connection reached over SSH", () => {
     });
 
     assert.equal(runningOnRemote(sessionSpec.agentContainerName), false, "the agent container is still on the remote");
-    assert.equal(runningOnRemote(sessionSpec.gatewayContainerName), false, "the gateway is still on the remote");
     // A forward left running holds a local port for the rest of the app's life, and the next session picks another —
     // so the leak is invisible until the ports run out.
     assert.equal(forwardIsUp(localPort), false, `the ssh forward for 127.0.0.1:${localPort} outlived its session`);

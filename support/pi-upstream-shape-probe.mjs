@@ -1,22 +1,21 @@
 // Proves what pi puts ON THE WIRE for a thinking level, per upstream, against a real agent container.
 //
-// pi decides the dialect from the model's provider and base URL, both of which are OUR gateway — so without
-// `CD_UPSTREAM_BASE_URL` every upstream gets OpenAI's shape. This runs the built image twice, once declaring an
-// upstream and once not, and compares the request bodies a stub upstream recorded. No provider, no key, no network:
-// the stub stands in for the gateway's far side, which is the only place the difference is observable.
+// pi decides the dialect from the model's provider and base URL, both of which are OUR OWN endpoint — so without
+// `CD_UPSTREAM_BASE_URL` every upstream gets OpenAI's shape. This runs the built image once per upstream and compares
+// the request bodies. No provider, no key, no network, and no stub server either: inference travels the BRIDGE, so this
+// probe stands in for the app — it answers `provider_request` itself, which is the only place the difference is
+// observable and now also proves that path carries a real turn.
 //
 //   yarn cli agent-image --engine podman        # after ANY container-side change
 //   node support/pi-upstream-shape-probe.mjs
 //
 // Add --engine docker to run it there instead. Exits non-zero if a body does not carry what that upstream wants.
 
-import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 
 const engine = process.argv.includes("--engine") ? process.argv[process.argv.indexOf("--engine") + 1] : "podman";
 const version = JSON.parse(await (await import("node:fs/promises")).readFile("package.json", "utf8")).version;
 const image = `container-desktop/pi-agent:${version}`;
-const hostAlias = engine === "docker" ? "host.docker.internal" : "host.containers.internal";
 const TOKEN = "probe-token";
 const MODEL = "probe-reasoner";
 
@@ -31,30 +30,36 @@ function run(args, opts = {}) {
   });
 }
 
-// One OpenAI-shaped answer, streamed, plus the model listing pi may ask for. Enough for a turn to finish.
-function stubUpstream(recorded) {
-  const server = createServer((request, response) => {
-    let body = "";
-    request.on("data", (chunk) => (body += chunk));
-    request.on("end", () => {
-      if (request.url.includes("/models")) {
-        response.writeHead(200, { "Content-Type": "application/json" });
-        response.end(JSON.stringify({ data: [] }));
-        return;
-      }
-      recorded.push({ url: request.url, body: body ? JSON.parse(body) : undefined });
-      response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
-      const chunk = (delta) => `data: ${JSON.stringify({ id: "1", object: "chat.completion.chunk", choices: [delta] })}\n\n`;
-      response.write(chunk({ index: 0, delta: { role: "assistant", content: "ok" }, finish_reason: null }));
-      response.write(chunk({ index: 0, delta: {}, finish_reason: "stop" }));
-      response.write("data: [DONE]\n\n");
-      response.end();
-    });
+// One OpenAI-shaped answer, streamed back over the bridge exactly as the app streams one, plus the model listing pi may
+// ask for. Enough for a turn to finish.
+const SSE = [
+  `data: ${JSON.stringify({ id: "1", object: "chat.completion.chunk", choices: [{ index: 0, delta: { role: "assistant", content: "ok" }, finish_reason: null }] })}\n\n`,
+  `data: ${JSON.stringify({ id: "1", object: "chat.completion.chunk", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n`,
+  "data: [DONE]\n\n",
+];
+
+// The app's half of one inference request. Answered on this socket, which is the whole point of the design under test:
+// the container never dials anything, so there is nothing to stub and no host alias to add.
+function answerInference(socket, request, recorded) {
+  const send = (event) => socket.send(JSON.stringify({ id: `pv-${request.requestId}`, type: "provider_stream", requestId: request.requestId, event }));
+  const listing = request.path.includes("/models");
+  if (!listing) {
+    const body = request.body ? Buffer.from(request.body, "base64").toString("utf8") : undefined;
+    recorded.push({ url: request.path, body: body ? JSON.parse(body) : undefined });
+  }
+  send({
+    kind: "head",
+    status: 200,
+    statusText: "OK",
+    headers: { "content-type": listing ? "application/json" : "text/event-stream" },
   });
-  return new Promise((resolve) => server.listen(0, "0.0.0.0", () => resolve({ server, port: server.address().port })));
+  for (const chunk of listing ? [JSON.stringify({ data: [] })] : SSE) {
+    send({ kind: "chunk", data: Buffer.from(chunk, "utf8").toString("base64") });
+  }
+  send({ kind: "end" });
 }
 
-async function bridge(port, frames) {
+async function bridge(port, frames, recorded) {
   const socket = new WebSocket(`ws://127.0.0.1:${port}/`);
   const events = [];
   await new Promise((resolve, reject) => {
@@ -62,7 +67,11 @@ async function bridge(port, frames) {
     socket.addEventListener("error", reject);
     setTimeout(() => reject(new Error("the bridge never opened")), 20000);
   });
-  socket.addEventListener("message", (event) => events.push(JSON.parse(event.data)));
+  socket.addEventListener("message", (event) => {
+    const frame = JSON.parse(event.data);
+    events.push(frame);
+    if (frame.type === "provider_request") answerInference(socket, frame.request, recorded);
+  });
   socket.send(JSON.stringify({ id: "hello", type: "hello", token: TOKEN, protocolVersion: 1 }));
   await new Promise((resolve) => setTimeout(resolve, 1500));
   for (const frame of frames) {
@@ -78,14 +87,12 @@ async function bridge(port, frames) {
 let leg = 0;
 async function turn({ label, upstreamBaseUrl, modelId = MODEL }) {
   const recorded = [];
-  const { server, port: stubPort } = await stubUpstream(recorded);
   const name = `cd-agent-shape-${label}`;
   const bridgePort = 41871 + leg++;
   await run(["rm", "-f", name]);
   const env = [
     `CD_BRIDGE_TOKEN=${TOKEN}`,
     "CD_BRIDGE_PORT=8787",
-    `CD_GATEWAY_URL=http://${hostAlias}:${stubPort}/v1`,
     "CD_MODEL_API=openai-completions",
     `CD_MODEL_ID=${modelId}`,
     "CD_MODEL_REASONING=1",
@@ -96,25 +103,24 @@ async function turn({ label, upstreamBaseUrl, modelId = MODEL }) {
   ];
   const argv = ["run", "-d", "--name", name, "--publish", `127.0.0.1:${bridgePort}:8787`];
   if (engine === "podman") argv.push("--userns", "keep-id:uid=1001,gid=1001");
-  argv.push("--add-host", `${hostAlias}:host-gateway`);
   for (const entry of env) argv.push("--env", entry);
   argv.push(image, "--mode", "agent");
   const started = await run(argv);
-  if (started.code !== 0) {
-    server.close();
-    throw new Error(`could not start ${name}: ${started.err || started.out}`);
-  }
+  if (started.code !== 0) throw new Error(`could not start ${name}: ${started.err || started.out}`);
   try {
     await new Promise((resolve) => setTimeout(resolve, 2500));
-    await bridge(bridgePort, [
-      { id: "s", type: "run_command", name: "settings", args: "thinkingLevel medium" },
-      { id: "p", type: "prompt", text: "Say ok." },
-    ]);
+    await bridge(
+      bridgePort,
+      [
+        { id: "s", type: "run_command", name: "settings", args: "thinkingLevel medium" },
+        { id: "p", type: "prompt", text: "Say ok." },
+      ],
+      recorded,
+    );
   } finally {
     const logs = await run(["logs", name]);
     if (!recorded.length) console.log(`[${label}] container log tail:\n${logs.out.split("\n").slice(-8).join("\n")}`);
     await run(["rm", "-f", name]);
-    server.close();
   }
   return recorded;
 }
@@ -122,7 +128,7 @@ async function turn({ label, upstreamBaseUrl, modelId = MODEL }) {
 function report(label, recorded) {
   const completion = recorded.find((entry) => entry.url.includes("chat/completions"));
   if (!completion) {
-    console.log(`[${label}] the stub was never asked for a completion — ${recorded.length} other request(s)`);
+    console.log(`[${label}] no completion was ever asked for — ${recorded.length} other request(s)`);
     return undefined;
   }
   const body = completion.body ?? {};
@@ -139,7 +145,7 @@ function report(label, recorded) {
 }
 
 const OPENROUTER = "https://openrouter.ai/api/v1";
-const gatewayOnly = report("openai-inferred", await turn({ label: "plain", upstreamBaseUrl: undefined }));
+const undeclared = report("openai-inferred", await turn({ label: "plain", upstreamBaseUrl: undefined }));
 const deepseek = report("deepseek-declared", await turn({ label: "deepseek", upstreamBaseUrl: "https://api.deepseek.com/v1" }));
 const glm = report("glm-declared", await turn({ label: "glm", upstreamBaseUrl: "https://open.bigmodel.cn/api/paas/v4" }));
 const routed = report(
@@ -152,8 +158,8 @@ const routedToOpenAI = report(
 );
 
 const failures = [];
-if (!gatewayOnly || gatewayOnly.reasoning_effort !== "medium") failures.push("the undeclared upstream should still get OpenAI's reasoning_effort");
-if (!gatewayOnly || gatewayOnly.systemRole !== "developer") failures.push("the undeclared upstream should still get the developer role");
+if (!undeclared || undeclared.reasoning_effort !== "medium") failures.push("the undeclared upstream should still get OpenAI's reasoning_effort");
+if (!undeclared || undeclared.systemRole !== "developer") failures.push("the undeclared upstream should still get the developer role");
 if (!deepseek || deepseek.thinking?.type !== "enabled") failures.push("DeepSeek should get thinking: {type: enabled}");
 if (!deepseek || deepseek.systemRole !== "system") failures.push("DeepSeek should get the system role, not developer");
 if (!deepseek || deepseek.store !== undefined) failures.push("DeepSeek should not be sent store");

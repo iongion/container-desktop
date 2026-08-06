@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { CONTAINER_TOOL_NAMES, WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import { WORKSPACE_TOOL_NAMES } from "@/ai-system/core/workspaceToolNames";
-import { createPiSession, parseModelApi, sanitizeSessionFileName } from "@/pi-agent-host/session";
+import { createPiSession, sanitizeSessionFileName } from "@/pi-agent-host/session";
 import type { BridgeEvent, PiScopedModels, PiSessionSummary } from "@/pi-bridge/protocol";
 
 // The real loader reads these out of a prompt resource that only esbuild inlines, so the session takes them as an
@@ -77,9 +77,8 @@ describe("createPiSession", () => {
     const session = await createPiSession({
       cwd,
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
       streamOverride: cannedStream as never,
@@ -101,9 +100,8 @@ describe("createPiSession", () => {
     const session = await createPiSession({
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
       streamOverride: cannedStream as never,
@@ -127,9 +125,8 @@ describe("createPiSession", () => {
     const session = await createPiSession({
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       emit: () => {},
       streamOverride: cannedStream as never,
@@ -154,9 +151,8 @@ describe("createPiSession", () => {
     const session = await createPiSession({
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
       streamOverride: cannedStream as never,
@@ -184,9 +180,8 @@ describe("replacing the session with /new", () => {
     return await createPiSession({
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
       streamOverride: cannedStream as never,
@@ -262,9 +257,8 @@ describe("resuming, cloning and importing a conversation", () => {
     const session = await createPiSession({
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
       streamOverride: cannedStream as never,
@@ -322,9 +316,8 @@ describe("resuming, cloning and importing a conversation", () => {
     const session = await createPiSession({
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
       streamOverride: cannedStream as never,
@@ -340,16 +333,15 @@ describe("resuming, cloning and importing a conversation", () => {
   });
 });
 
-// One container's gateway reaches one upstream, so every model that upstream serves is already reachable — the
+// One container reaches one upstream, so every model that upstream serves is already reachable — the
 // session used to be registered with exactly one of them and could therefore never be pointed at another.
 describe("the models the session can be pointed at", () => {
   async function sessionWith(events: BridgeEvent[], contextWindow?: number) {
     return await createPiSession({
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       ...(contextWindow ? { contextWindow } : {}),
       emit: (event) => events.push(event),
@@ -458,9 +450,8 @@ describe("an aborted turn", () => {
     return await createPiSession({
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: agentDirWithoutRetries(),
-      gatewayUrl: "http://gateway.invalid:8788/v1",
       containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-      gatewayToken: "tok",
+      providerToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
       streamOverride: failingStream as never,
@@ -489,22 +480,6 @@ describe("an aborted turn", () => {
   });
 });
 
-describe("parseModelApi", () => {
-  it("defaults to OpenAI completions, which every provider family but Anthropic speaks", () => {
-    expect(parseModelApi(undefined)).toBe("openai-completions");
-    expect(parseModelApi("")).toBe("openai-completions");
-  });
-
-  it("selects Anthropic's own wire shape when the app asked for it", () => {
-    expect(parseModelApi("anthropic-messages")).toBe("anthropic-messages");
-  });
-
-  // A typo would otherwise reach pi as an unknown api and fail deep inside its provider composer.
-  it("refuses a shape this host cannot register", () => {
-    expect(() => parseModelApi("openai-responses")).toThrow(/CD_MODEL_API/);
-  });
-});
-
 // What the model was ACTUALLY offered, read off the session's own context report rather than off the registration
 // call — pi assembles the active tool set per turn, so this is the only place that answers for the model.
 async function toolsOffered(extra: Record<string, unknown>): Promise<string[]> {
@@ -512,9 +487,8 @@ async function toolsOffered(extra: Record<string, unknown>): Promise<string[]> {
   const session = await createPiSession({
     cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
     agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
-    gatewayUrl: "http://gateway.invalid:8788/v1",
     containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
-    gatewayToken: "tok",
+    providerToken: "tok",
     modelId: "canned",
     emit: (event) => events.push(event),
     streamOverride: cannedStream as never,

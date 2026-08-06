@@ -28,6 +28,7 @@ import {
   type PiSessionSummary,
   type PluginListPayload,
   type PluginScope,
+  type ProviderProxyStreamEvent,
   piThinkingLevels,
   type WebSearchAnswer,
 } from "@/pi-bridge/protocol";
@@ -205,7 +206,7 @@ const MOCK_SETTINGS: Omit<PiSessionSettings, "availableThinkingLevels"> = {
   thinkingLevel: "medium",
 };
 
-// The gateway's own provider id, as the mock's session reports it. Every model the app registers lands under it: one
+// The session's own provider id, as the mock reports it. Every model the app registers lands under it: one
 // container reaches one upstream, so that is the only provider a session can answer with.
 const MOCK_PROVIDER = "container-desktop-mock";
 
@@ -333,12 +334,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 // `modelId` is the model this session starts on — what the real container is given as CD_MODEL_ID. Without it the
 // chip would show a fixture id that is not in the provider's list at all.
-const gatewayCredentials: string[] = [];
-
-// What a mock session was handed mid-session, for a spec that has to prove a renewal reached the gateway.
-export function mockGatewayCredentials(): readonly string[] {
-  return gatewayCredentials;
-}
+const providerStreamFrames: Array<{ requestId: string; event: ProviderProxyStreamEvent }> = [];
 
 export function createMockPiBridgeClient(options?: { modelId?: string }): PiBridgeClient {
   const listeners = new Set<(event: BridgeEvent) => void>();
@@ -624,10 +620,10 @@ export function createMockPiBridgeClient(options?: { modelId?: string }): PiBrid
     async checkProvider() {
       return { reachable: true, status: 200, models: MOCK_MODELS.available.length };
     },
-    // Recorded rather than performed: there is no gateway behind a mock session, and what a test wants to know is
-    // that the app pushed the renewed credential at all.
-    async setGatewayCredential(credential: string) {
-      gatewayCredentials.push(credential);
+    // Recorded rather than performed: a mock session has no app to ask for inference, so a spec that drives one only
+    // wants to know the frames were routed at all.
+    async providerStream(requestId: string, event: ProviderProxyStreamEvent) {
+      providerStreamFrames.push({ requestId, event });
     },
     // Applied rather than acknowledged: a mock that kept its one fixture would leave the model chip and
     // `/scoped-models` looking exactly as inert as the session used to be. Like the real host, the set grows by use —

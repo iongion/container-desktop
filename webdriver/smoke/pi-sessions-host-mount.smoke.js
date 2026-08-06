@@ -22,7 +22,7 @@ const PREFERRED_ENGINE = process.env.CD_LIVE_ENGINE ?? "podman";
 const APP_VERSION = process.env.CD_LIVE_APP_VERSION ?? "6.0.0";
 const AGENT_IMAGE = `container-desktop/pi-agent:${APP_VERSION}`;
 // The same directory the host resolves and creates — a SIBLING of the protected `agent/` one, which every
-// web-view-reachable read refuses because the gateway's key file is in it.
+// web-view-reachable read of that one is refused, because the app's own secrets live in it.
 const USER_DATA = process.env.CONTAINER_DESKTOP_USER_DATA_DIR ?? path.join(process.cwd(), "webdriver", ".e2e-user-data");
 const SESSIONS_DIR = path.join(USER_DATA, "assistant-sessions");
 // pi's own prompt plus the tool definitions run to about 9k tokens, so a model loaded under this cannot answer at all.
@@ -194,7 +194,6 @@ describe("a real session keeps its conversation on this machine", () => {
         );
     });
     assert.equal(running(sessionSpec.agentContainerName), false, "the agent container is still running");
-    assert.equal(running(sessionSpec.gatewayContainerName), false, "the gateway container is still running");
 
     // The file the session wrote, read with nothing running: no container, no engine call, no bridge.
     assert.ok(existsSync(before), `${before} went with the containers`);

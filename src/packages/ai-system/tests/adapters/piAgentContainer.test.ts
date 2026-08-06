@@ -6,12 +6,8 @@ import {
   attachPiAgentSession,
   defaultSessionFrom,
   defaultSessionNames,
-  egressNetworkName,
   engineSharesAppFilesystem,
   findDefaultSession,
-  gatewayRunArgv,
-  gatewayUpstreamUrl,
-  hostAliasArgv,
   networkCreateArgv,
   pluginVolumeMount,
   startPiAgentSession,
@@ -28,18 +24,14 @@ const spec: PiAgentSessionSpec = {
   bridgeToken: "tok",
   networkName: "cd-agent-net-1",
   agentContainerName: "cd-agent-1",
-  gatewayContainerName: "cd-gateway-1",
   pluginVolumeName: "cd-agent-plugins",
   upstreamBaseUrl: "https://openrouter.ai/api/v1",
   providerKind: "openai-compatible",
   upstreamAuth: { scheme: "bearer" },
   modelId: "some/model",
   egress: true,
-  hostAlias: "host.containers.internal",
   userMapping: { kind: "keep-id" },
 };
-
-const localSpec: PiAgentSessionSpec = { ...spec, upstreamBaseUrl: "http://127.0.0.1:1234/v1" };
 
 function fakeHost(overrides: Record<string, unknown> = {}) {
   return {
@@ -191,12 +183,6 @@ describe("networkCreateArgv", () => {
   });
 });
 
-describe("egressNetworkName", () => {
-  it("derives the gateway's second network from the session's own", () => {
-    expect(egressNetworkName(spec)).toBe("cd-agent-net-1-egress");
-  });
-});
-
 describe("pluginVolumeMount", () => {
   it("chowns the volume under podman so a volume from a previous mapping still works", () => {
     expect(pluginVolumeMount(spec, "/home/agent/.pi/agent")).toBe("cd-agent-plugins:/home/agent/.pi/agent:U");
@@ -223,76 +209,22 @@ describe("userMappingArgv", () => {
   });
 });
 
-describe("gatewayRunArgv", () => {
-  it("does not publish any host port", () => {
-    expect(gatewayRunArgv(spec, "/tmp/env")).not.toContain("--publish");
-  });
-
-  it("never puts the provider key in argv", () => {
-    expect(gatewayRunArgv(spec, "/tmp/env").join(" ")).not.toContain("sk-real-secret");
-  });
-
-  it("runs in gateway mode", () => {
-    const argv = gatewayRunArgv(spec, "/tmp/env");
-    expect(argv.slice(-3)).toEqual([spec.imageTag, "--mode", "gateway"]);
-  });
-
-  // Without the mapping the alias does not resolve inside the container, so a local model server is
-  // unreachable and every turn fails on connect.
-  it("maps the host alias when the provider runs on this machine", () => {
-    expect(gatewayRunArgv(localSpec, "/tmp/env").join(" ")).toContain(
-      "--add-host host.containers.internal:host-gateway",
-    );
-  });
-
-  it("maps nothing for a provider that is already routable", () => {
-    expect(gatewayRunArgv(spec, "/tmp/env")).not.toContain("--add-host");
-  });
-});
-
-// The gateway dials the provider from INSIDE a container, where 127.0.0.1 is the container itself.
-describe("gatewayUpstreamUrl", () => {
-  it("rewrites a loopback provider to the engine's host alias", () => {
-    expect(gatewayUpstreamUrl(localSpec)).toBe("http://host.containers.internal:1234/v1");
-  });
-
-  it("rewrites localhost and IPv6 loopback too", () => {
-    expect(gatewayUpstreamUrl({ ...spec, upstreamBaseUrl: "http://localhost:8080/v1" })).toBe(
-      "http://host.containers.internal:8080/v1",
-    );
-    expect(gatewayUpstreamUrl({ ...spec, upstreamBaseUrl: "http://[::1]:8080/v1" })).toBe(
-      "http://host.containers.internal:8080/v1",
-    );
-  });
-
-  it("leaves a routable provider alone", () => {
-    expect(gatewayUpstreamUrl(spec)).toBe("https://openrouter.ai/api/v1");
-    expect(hostAliasArgv(spec)).toEqual([]);
-  });
-
-  it("leaves an unparseable URL alone rather than inventing one", () => {
-    expect(gatewayUpstreamUrl({ ...spec, upstreamBaseUrl: "not a url" })).toBe("not a url");
-  });
-});
-
 describe("startPiAgentSession", () => {
-  it("creates the network, starts the gateway, then the agent, and returns both ids", async () => {
+  it("creates the network, then the one container, and returns its id", async () => {
     const host = fakeHost();
     const result = await startPiAgentSession(host, spec, async () => "/tmp/env");
     const commands = (host as unknown as { runHostCommand: { mock: { calls: unknown[][] } } }).runHostCommand.mock
       .calls;
-    // The names are asked about first — nothing is holding them here — and only then is anything created.
+    // The name is asked about first — nothing is holding it here — and only then is anything created.
     expect((commands[0][1] as string[])[0]).toBe("inspect");
-    expect((commands[2][1] as string[])[0]).toBe("network");
-    expect((commands[3][1] as string[]).join(" ")).toContain(spec.gatewayContainerName);
-    expect((commands[4][1] as string[]).join(" ")).toContain(spec.agentContainerName);
+    expect((commands[1][1] as string[])[0]).toBe("network");
+    expect((commands[2][1] as string[]).join(" ")).toContain(spec.agentContainerName);
     expect(result.agentContainerId).toBe("container-id-abc");
   });
 
-  // A reusable session's names are deterministic, so a pair the user stopped — or half a pair a crash left — still
-  // holds them, and `run` answers a taken name with a conflict instead of reusing it. That conflict IS what a click on
-  // Resume used to report.
-  it("frees the names a stopped pair still holds before rebuilding under them", async () => {
+  // A reusable session's name is deterministic, so a container the user stopped still holds it, and `run` answers a
+  // taken name with a conflict instead of reusing it. That conflict IS what a click on Resume used to report.
+  it("frees the name a stopped container still holds before rebuilding under it", async () => {
     const host = fakeHost({
       runHostCommand: vi.fn(async (_program: string, args: string[]) => ({
         pid: 1,
@@ -306,18 +238,13 @@ describe("startPiAgentSession", () => {
     expect(
       commandsOf(host)
         .map((call) => (call[1] as string[]).join(" "))
-        .slice(0, 4),
-    ).toEqual([
-      "inspect cd-gateway-1 --format {{.State.Running}}",
-      "rm --force cd-gateway-1",
-      "inspect cd-agent-1 --format {{.State.Running}}",
-      "rm --force cd-agent-1",
-    ]);
+        .slice(0, 2),
+    ).toEqual(["inspect cd-agent-1 --format {{.State.Running}}", "rm --force cd-agent-1"]);
   });
 
-  // Rebuilding a RUNNING pair would take the user's live session away to make room for a new one. Continuing it is
-  // attachPiAgentSession's job, so this refuses and says so.
-  it("refuses to take the names of a pair that is still running", async () => {
+  // Rebuilding a RUNNING container would take the user's live session away to make room for a new one. Continuing it
+  // is attachPiAgentSession's job, so this refuses and says so.
+  it("refuses to take the name of a container that is still running", async () => {
     const host = fakeHost({
       runHostCommand: vi.fn(async (_program: string, args: string[]) => ({
         pid: 1,
@@ -328,74 +255,31 @@ describe("startPiAgentSession", () => {
       })),
     });
     await expect(startPiAgentSession(host, spec, async () => "/tmp/env")).rejects.toThrow(/already running/);
-    expect(commandsOf(host).map((call) => (call[1] as string[]).join(" "))).not.toContain("rm --force cd-gateway-1");
+    expect(commandsOf(host).map((call) => (call[1] as string[]).join(" "))).not.toContain("rm --force cd-agent-1");
   });
 
-  it("removes nothing when the names are free", async () => {
+  it("removes nothing when the name is free", async () => {
     const host = fakeHost();
     await startPiAgentSession(host, spec, async () => "/tmp/env");
     expect(commandsOf(host).filter((call) => (call[1] as string[])[0] === "rm")).toEqual([]);
   });
 
-  // The session spec carries NO credential at all, so this path cannot compose one even by mistake. A gateway that
-  // needs a key is given a file the HOST wrote (see below); this fallback exists for a keyless local server, where an
-  // empty value is the correct one.
-  it("composes a keyless gateway env when the host wrote none, and never a key in the agent's", async () => {
-    const written: string[] = [];
-    await startPiAgentSession(fakeHost(), spec, async (contents) => {
-      written.push(contents);
-      return "/tmp/env";
-    });
-    expect(written[0]).toContain("CD_UPSTREAM_API_KEY=\n");
-    expect(written[1]).not.toContain("CD_UPSTREAM_API_KEY");
-    expect(written[1]).toContain("CD_BRIDGE_TOKEN=tok");
-  });
-
-  // The only route a real credential takes: the host reads it from the OS keychain and writes the file itself, so the
-  // renderer never holds one and this adapter never composes one.
-  it("uses the file the host wrote instead of composing its own", async () => {
-    const written: string[] = [];
-    await startPiAgentSession(
-      fakeHost(),
-      spec,
-      async (contents) => {
-        written.push(contents);
-        return "/tmp/env";
-      },
-      { gatewayEnvFile: async () => "/run/secrets/gateway.env" },
-    );
-    // Only the AGENT's env file was composed here; the gateway's came from the host.
-    expect(written).toHaveLength(1);
-    expect(written[0]).toContain("CD_BRIDGE_TOKEN=tok");
-    expect(written[0]).not.toContain("CD_UPSTREAM_API_KEY");
-  });
-
-  // pi speaks whatever shape the UPSTREAM speaks: the gateway proxies bytes, so an OpenAI-completions request
-  // can never reach Anthropic's /v1/messages. The Anthropic SDK also builds its own /v1, so its gateway base
-  // must be the origin — otherwise the path arrives doubled and the rewrite lands on /v1/v1/messages.
-  it("tells the agent the upstream's wire shape and the base that shape expects", async () => {
+  // pi speaks whatever shape the UPSTREAM speaks: the app forwards bytes, so an OpenAI-completions request can never
+  // reach Anthropic's /v1/messages. The base URL pi is registered against follows from this shape and is composed
+  // inside the container (`providerProxyBaseUrl`) — the app has no use for a port it never dials.
+  it("tells the agent the upstream's wire shape", async () => {
     const written: string[] = [];
     await startPiAgentSession(fakeHost(), { ...spec, providerKind: "anthropic" }, async (contents) => {
       written.push(contents);
       return "/tmp/env";
     });
-    expect(written[1]).toContain("CD_MODEL_API=anthropic-messages");
-    expect(written[1]).toContain("CD_GATEWAY_URL=http://cd-gateway-1:8788\n");
+    expect(written[0]).toContain("CD_MODEL_API=anthropic-messages");
+    expect(written[0]).not.toContain("CD_GATEWAY_URL");
   });
 
-  it("keeps the version segment on the gateway base for an OpenAI-shaped upstream", async () => {
-    const written: string[] = [];
-    await startPiAgentSession(fakeHost(), spec, async (contents) => {
-      written.push(contents);
-      return "/tmp/env";
-    });
-    expect(written[1]).toContain("CD_MODEL_API=openai-completions");
-    expect(written[1]).toContain("CD_GATEWAY_URL=http://cd-gateway-1:8788/v1");
-  });
-
-  // pi's compat detection reads the model's base URL, which is our gateway — so every upstream looks like plain
-  // OpenAI to it. The agent is told where the bytes really go, and it is NOT told the key that opens it.
-  it("tells the agent which upstream is behind the gateway, and still no credential", async () => {
+  // pi's compat detection reads the model's base URL, which is our own loopback proxy — so every upstream looks like
+  // plain OpenAI to it. The agent is told where the bytes really go, and it is NOT told the key that opens them.
+  it("tells the agent which upstream the app will reach, and still no credential", async () => {
     const written: string[] = [];
     await startPiAgentSession(
       fakeHost(),
@@ -405,8 +289,8 @@ describe("startPiAgentSession", () => {
         return "/tmp/env";
       },
     );
-    expect(written[1]).toContain("CD_UPSTREAM_BASE_URL=https://api.deepseek.com/v1");
-    expect(written[1]).not.toContain("CD_UPSTREAM_API_KEY");
+    expect(written[0]).toContain("CD_UPSTREAM_BASE_URL=https://api.deepseek.com/v1");
+    expect(written[0]).not.toContain("CD_UPSTREAM_API_KEY");
   });
 
   // Only the app can ask a provider whether a model reasons, and the container is born on its model before anything
@@ -421,9 +305,9 @@ describe("startPiAgentSession", () => {
         return "/tmp/env";
       },
     );
-    expect(written[1]).toContain("CD_MODEL_REASONING=1");
-    expect(written[1]).toContain("CD_MODEL_REASONING_LEVELS=low,high,xhigh");
-    expect(written[1]).toContain("CD_MODEL_REASONING_MANDATORY=1");
+    expect(written[0]).toContain("CD_MODEL_REASONING=1");
+    expect(written[0]).toContain("CD_MODEL_REASONING_LEVELS=low,high,xhigh");
+    expect(written[0]).toContain("CD_MODEL_REASONING_MANDATORY=1");
   });
 
   // Silence is the honest answer for a model nobody published a capability for: pi then registers it with its own
@@ -434,95 +318,30 @@ describe("startPiAgentSession", () => {
       written.push(contents);
       return "/tmp/env";
     });
-    expect(written[1]).not.toContain("CD_MODEL_REASONING");
+    expect(written[0]).not.toContain("CD_MODEL_REASONING");
   });
 
-  it("tells the gateway how the upstream authenticates, not just its key", async () => {
-    const written: string[] = [];
-    await startPiAgentSession(fakeHost(), { ...spec, providerKind: "anthropic" }, async (contents) => {
-      written.push(contents);
-      return "/tmp/env";
-    });
-    expect(written[0]).toContain("CD_UPSTREAM_KIND=anthropic");
-    expect(written[0]).toContain("CD_UPSTREAM_AUTH_SCHEME=bearer");
-  });
-
-  it("writes the container-reachable upstream URL, not the loopback one the app sees", async () => {
-    const written: string[] = [];
-    await startPiAgentSession(fakeHost(), localSpec, async (contents) => {
-      written.push(contents);
-      return "/tmp/env";
-    });
-    expect(written[0]).toContain("CD_UPSTREAM_BASE_URL=http://host.containers.internal:1234/v1");
-    expect(written[0]).not.toContain("127.0.0.1:1234");
-  });
-
-  // The provider key lives in the OS keychain, so the host writes the gateway's env file. When it has, the
-  // renderer must not compose a second one — that copy would carry an empty key.
-  it("uses the gateway env file the host wrote instead of composing one", async () => {
-    const written: string[] = [];
-    const host = fakeHost();
-    await startPiAgentSession(
-      host,
-      spec,
-      async (contents) => {
-        written.push(contents);
-        return "/tmp/agent.env";
-      },
-      { gatewayEnvFile: async () => "/run/secrets/gateway.env" },
-    );
-    expect(written.length).toBe(1);
-    expect(written[0]).toContain("CD_BRIDGE_TOKEN=tok");
-    expect(written[0]).not.toContain("sk-real-secret");
-    const commands = (host as unknown as { runHostCommand: { mock: { calls: unknown[][] } } }).runHostCommand.mock
-      .calls;
-    expect((commands[3][1] as string[]).join(" ")).toContain("/run/secrets/gateway.env");
-  });
-
-  it("asks for no second network when egress is allowed", async () => {
+  it("builds one plain network and attaches nothing else when egress is allowed", async () => {
     const host = fakeHost();
     await startPiAgentSession(host, spec, async () => "/tmp/env");
     const argvs = commandsOf(host).map((call) => (call[1] as string[]).join(" "));
     expect(argvs.some((argv) => argv.includes("--internal"))).toBe(false);
-    expect(argvs.some((argv) => argv.includes("-egress"))).toBe(false);
     expect(argvs.some((argv) => argv.startsWith("network connect"))).toBe(false);
   });
 
-  // The agent's network cannot be the one the gateway reaches the provider through — an internal bridge has no
-  // route out at all. So the gateway gets a second, routable one, and the agent is never attached to it.
-  it("gives only the gateway a routable network when egress is off", async () => {
+  // Total isolation, not an asymmetry between two containers: an internal bridge has no route to the internet OR to
+  // this machine, and inference is unaffected because it arrives on the PUBLISHED bridge port the app dials inwards.
+  it("gives the container no route out at all when egress is off", async () => {
     const host = fakeHost();
     await startPiAgentSession(host, { ...spec, egress: false }, async () => "/tmp/env");
     const argvs = commandsOf(host).map((call) => (call[1] as string[]).join(" "));
     expect(argvs).toEqual([
-      "inspect cd-gateway-1 --format {{.State.Running}}",
       "inspect cd-agent-1 --format {{.State.Running}}",
       "network create --internal cd-agent-net-1",
-      "network create cd-agent-net-1-egress",
-      expect.stringContaining("--name cd-gateway-1"),
-      "network connect cd-agent-net-1-egress cd-gateway-1",
       expect.stringContaining("--name cd-agent-1"),
     ]);
-    // The agent's run names only its own network, and the gateway's run starts on it so the agent can still
-    // resolve the gateway by name after the second network is attached.
-    expect(argvs[4]).toContain("--network cd-agent-net-1 ");
-    expect(argvs[6]).toContain("--network cd-agent-net-1 ");
-    expect(argvs[6]).not.toContain("-egress");
-  });
-
-  // Without egress the gateway has no other way to the provider, so a failed attach must not be swallowed the way
-  // a pre-existing network is: a session that starts anyway fails later, on the first turn, with a connect error.
-  it("fails the start when the gateway cannot be given its routable network", async () => {
-    const host = fakeHost({
-      runHostCommand: vi.fn(async (_program: string, args: string[]) =>
-        args[1] === "connect"
-          ? { pid: 1, code: 125, success: false, stdout: "", stderr: "network not found" }
-          : { pid: 1, code: 0, success: true, stdout: "id\n", stderr: "" },
-      ),
-    });
-    await expect(startPiAgentSession(host, { ...spec, egress: false }, async () => "/tmp/env")).rejects.toThrow(
-      "network not found",
-    );
+    expect(argvs[2]).toContain("--network cd-agent-net-1 ");
+    expect(argvs[2]).toContain("--publish 127.0.0.1:43117:8787");
   });
 
   it("throws with the engine's stderr when the agent fails to start", async () => {
@@ -630,7 +449,6 @@ describe("defaultSessionNames", () => {
   it("names the default session after its connection", () => {
     expect(defaultSessionNames("podman-1")).toEqual({
       agentContainerName: "container-desktop-agent-default-podman-1",
-      gatewayContainerName: "container-desktop-gateway-default-podman-1",
       networkName: "container-desktop-net-default-podman-1",
     });
   });
@@ -663,10 +481,6 @@ describe("labelled run arguments", () => {
     expect(argv).toContain("container-desktop.ai.connection=podman-1");
   });
 
-  it("labels the gateway it creates", () => {
-    expect(gatewayRunArgv(identified, "/tmp/env").join(" ")).toContain("container-desktop.ai.role=gateway");
-  });
-
   // A session started before this scheme existed has no labels, and its containers must still be creatable: the
   // reaper's name matching is what covers those, so the argv simply carries no label.
   it("labels nothing when the session has no identity to record", () => {
@@ -680,48 +494,17 @@ describe("labelled run arguments", () => {
 describe("defaultSessionFrom", () => {
   const rows = (...names: [string, string][]) => names.map(([name, state]) => ({ name, state }));
 
-  it("reports a pair that is standing and running", () => {
-    expect(
-      defaultSessionFrom(
-        "podman-1",
-        rows(
-          ["container-desktop-agent-default-podman-1", "running"],
-          ["container-desktop-gateway-default-podman-1", "running"],
-        ),
-      ),
-    ).toEqual({ connectionId: "podman-1", complete: true, running: true });
-  });
-
-  // Stopped is the case the resume offer exists for: both halves are there, holding the conversation.
-  it("reports a stopped pair as standing but not running", () => {
-    expect(
-      defaultSessionFrom(
-        "podman-1",
-        rows(
-          ["container-desktop-agent-default-podman-1", "exited"],
-          ["container-desktop-gateway-default-podman-1", "exited"],
-        ),
-      ),
-    ).toEqual({ connectionId: "podman-1", complete: true, running: false });
-  });
-
-  // One half running is not a session: the agent cannot reach a model without its gateway.
-  it("reports a pair with one half down as not running", () => {
-    expect(
-      defaultSessionFrom(
-        "podman-1",
-        rows(
-          ["container-desktop-agent-default-podman-1", "running"],
-          ["container-desktop-gateway-default-podman-1", "exited"],
-        ),
-      ),
-    ).toEqual({ connectionId: "podman-1", complete: true, running: false });
-  });
-
-  it("reports a lone half as incomplete", () => {
-    expect(defaultSessionFrom("podman-1", rows(["container-desktop-gateway-default-podman-1", "running"]))).toEqual({
+  it("reports a session that is standing and running", () => {
+    expect(defaultSessionFrom("podman-1", rows(["container-desktop-agent-default-podman-1", "running"]))).toEqual({
       connectionId: "podman-1",
-      complete: false,
+      running: true,
+    });
+  });
+
+  // Stopped is the case the resume offer exists for: the container is there, holding the session.
+  it("reports a stopped session as standing but not running", () => {
+    expect(defaultSessionFrom("podman-1", rows(["container-desktop-agent-default-podman-1", "exited"]))).toEqual({
+      connectionId: "podman-1",
       running: false,
     });
   });
@@ -734,13 +517,7 @@ describe("defaultSessionFrom", () => {
 
   it("does not mistake another connection's default for this one's", () => {
     expect(
-      defaultSessionFrom(
-        "podman-1",
-        rows(
-          ["container-desktop-agent-default-docker-1", "running"],
-          ["container-desktop-gateway-default-docker-1", "running"],
-        ),
-      ),
+      defaultSessionFrom("podman-1", rows(["container-desktop-agent-default-docker-1", "running"])),
     ).toBeUndefined();
   });
 
@@ -772,7 +549,6 @@ describe("findDefaultSession", () => {
     );
     expect(await findDefaultSession(host, "podman-1")).toEqual({
       connectionId: "podman-1",
-      complete: true,
       running: true,
     });
     expect((commandsOf(host)[0][1] as string[]).slice(0, 2)).toEqual(["ps", "--all"]);
@@ -896,26 +672,23 @@ describe("attachPiAgentSession", () => {
 });
 
 describe("stopPiAgentSession", () => {
-  it("removes both containers and the session's network", async () => {
+  // The network holds a /24 out of the engine's pool for as long as it exists, so leaving it behind is how an orderly
+  // stop still leaks.
+  it("removes the container and the session's network", async () => {
     const host = fakeHost();
     await stopPiAgentSession(host, spec);
     expect(commandsOf(host).map((call) => (call[1] as string[]).join(" "))).toEqual([
       "rm --force cd-agent-1",
-      "rm --force cd-gateway-1",
       "network rm cd-agent-net-1",
     ]);
   });
 
-  // A no-egress session leaves TWO networks behind, each holding a /24 out of the engine's pool. Removing only the
-  // one named in the spec is how an orderly stop still leaks.
-  it("removes the gateway's second network too when egress was off", async () => {
+  it("removes the same one whether or not egress was allowed", async () => {
     const host = fakeHost();
     await stopPiAgentSession(host, { ...spec, egress: false });
     expect(commandsOf(host).map((call) => (call[1] as string[]).join(" "))).toEqual([
       "rm --force cd-agent-1",
-      "rm --force cd-gateway-1",
       "network rm cd-agent-net-1",
-      "network rm cd-agent-net-1-egress",
     ]);
   });
 });

@@ -1,5 +1,5 @@
 // Starting a live session on the LM Studio server running on THIS machine, the way the app does — and keyless, which
-// is the difference that matters: no OPENROUTER_API_KEY, no cloud, no network. The host still writes the gateway's
+// is the difference that matters: no OPENROUTER_API_KEY, no cloud, no network. The app still resolves the
 // env file (the app always names its provider), and a vault with nothing stored for a keyless provider substitutes an
 // empty key, which is exactly what a local server wants.
 
@@ -32,7 +32,7 @@ export function configureLmStudioProvider(model) {
 }
 
 // What the app's own composer builds for this provider (`screens/AI/startSession.ts`): the provider is NAMED even
-// though it is keyless, because that is what asks the host to write the gateway's env file at all.
+// though it is keyless, because that is what tells the app which provider a turn's inference goes to.
 export function lmStudioStartOptions({ connectionId, workspacePath, model, appVersion = "6.0.0" }) {
   return {
     connectionId,

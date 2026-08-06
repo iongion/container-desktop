@@ -37,8 +37,8 @@ describe("sessionLaunchers", () => {
         "docker-1": { workspacePath: "/home/me/b", modelId: "claude-sonnet-4" },
       },
       discovered: [
-        { connectionId: "podman-1", complete: true, running: true },
-        { connectionId: "docker-1", complete: true, running: false },
+        { connectionId: "podman-1", running: true },
+        { connectionId: "docker-1", running: false },
       ],
     });
     expect(rows.map((row) => [row.connectionId, row.state, row.action])).toEqual([
@@ -49,11 +49,13 @@ describe("sessionLaunchers", () => {
 
   // Half a pair cannot serve, and nothing removes it for the user any more — so it reads as not there yet and
   // starting rebuilds it.
-  it("treats half a pair as nothing to resume", () => {
+  // Nothing discovered on a connection the user HAS configured still reads as absent: starting is what builds it, and
+  // offering "continue" for a container that is not there would fail on the click.
+  it("treats a configured connection with nothing standing as nothing to resume", () => {
     const [row] = sessionLaunchers({
       connections: [podman],
       configured: { "podman-1": { workspacePath: "/home/me/a" } },
-      discovered: [{ connectionId: "podman-1", complete: false, running: false }],
+      discovered: [],
     });
     expect(row).toMatchObject({ state: "absent", action: "start" });
   });

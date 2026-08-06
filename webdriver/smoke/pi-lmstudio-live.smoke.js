@@ -1,7 +1,7 @@
-// A REAL container pair on the TAURI shell, against a REAL model, with NO key and NO network: the local LM Studio
-// server. Every other live spec needs OPENROUTER_API_KEY, so the one path nobody could run without a cloud account
-// was the whole keyless half — the vault substituting an empty key, the gateway forwarding to a host-local server
-// through the container's host alias, and the app's own window probe reading what that server actually loaded.
+// A REAL container on the TAURI shell, against a REAL model, with NO key and NO network: the local LM Studio server.
+// Every other live spec needs OPENROUTER_API_KEY, so the one path nobody could run without a cloud account was the whole
+// keyless half — a turn signed with no credential at all, carried to a server on THIS machine, and the app's own window
+// probe reading what that server actually loaded.
 //
 // Needs a NON-mock app (CONTAINER_DESKTOP_MOCK=), the agent image built for this version
 // (`yarn cli agent-image --engine podman`), and a TOOL-CAPABLE model loaded with room for a session:
@@ -137,7 +137,7 @@ describe("a real container pair on a local model", () => {
     sessionSpec = started.spec;
 
     // One turn, so the session reports its own context — which is the only way the window the app probed becomes
-    // observable, and the only proof the gateway reached a server on this machine.
+    // observable, and the only proof inference reached a server on this machine.
     await browser.execute(() => {
       void window.__cdCodingAgentStore.getState().submit("Reply with the single word: ok");
     });
@@ -174,13 +174,12 @@ describe("a real container pair on a local model", () => {
     });
   });
 
-  it("starts both containers of the pair on the real engine", () => {
+  it("starts the session's container on the real engine", () => {
     assert.ok(sessionSpec.agentContainerName, `no agent container was named: ${JSON.stringify(sessionSpec)}`);
     assert.ok(running(sessionSpec.agentContainerName), `${sessionSpec.agentContainerName} is not running`);
-    assert.ok(running(sessionSpec.gatewayContainerName), `${sessionSpec.gatewayContainerName} is not running`);
   });
 
-  it("answers a turn through the gateway from a server on this machine", () => {
+  it("answers a turn from a server on this machine", () => {
     assert.ok(answer.said.length > 0, `no assistant message arrived; notices: ${answer.notices.join(",")}`);
     assert.ok(
       answer.said.join(" ").trim().length > 0,
@@ -197,7 +196,7 @@ describe("a real container pair on a local model", () => {
     assert.equal(answer.model, MODEL);
   });
 
-  it("removes the pair when the session stops", async () => {
+  it("removes the container when the session stops", async () => {
     const stopped = await browser.executeAsync((done) => {
       window.__cdCodingAgentStore
         .getState()
@@ -213,6 +212,5 @@ describe("a real container pair on a local model", () => {
       interval: 2000,
       timeoutMsg: `${sessionSpec.agentContainerName} outlived the session`,
     });
-    assert.ok(!running(sessionSpec.gatewayContainerName), `${sessionSpec.gatewayContainerName} outlived the session`);
   });
 });

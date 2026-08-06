@@ -9,8 +9,11 @@ import { type ProviderRefreshResult, useProviderLoginStore } from "@/web-app/sto
 
 // The renderer's half of a self-renewing sign-in. The exchange itself belongs to the one-shot container and is
 // covered where it lives (pi-agent-host/authLogin.test.ts); what is covered here is everything the app decides
-// AROUND it — when a rotation is asked for, what a spent refresh token stops, and how a token that lapses mid-session
-// reaches a gateway that is already running. None of it needs a provider, an account or a container.
+// AROUND it — when a rotation is asked for, what a spent refresh token stops, and that the chain survives an exchange
+// that fails. None of it needs a provider, an account or a container.
+//
+// Nothing DELIVERS a rotation any more: inference reads the vault per request, natively, so a session signs its next
+// turn with whatever the last exchange stored. What is left to get wrong is the scheduling.
 
 const startPiAgentSession = vi.fn(async (..._args: unknown[]) => ({ hostPort: 45871 }));
 const stopPiAgentSession = vi.fn(async () => {});
@@ -68,7 +71,6 @@ function fakeClient() {
     listResources: vi.fn(async () => ({ extensions: [], commands: [], skills: [], prompts: [], builtins: [] })),
     setTheme: vi.fn(async () => {}),
     setSystemContext: vi.fn(async () => {}),
-    setGatewayCredential: vi.fn(async () => {}),
     close: vi.fn(),
   };
   return client as unknown as PiBridgeClient;
@@ -88,6 +90,8 @@ const START = {
 const NOW = 1_800_000_000_000;
 const TEN_MINUTES = 600_000;
 const RENEWAL_MARGIN_MS = 60_000;
+const RENEWAL_RETRY_MS = 120_000;
+const RENEWAL_RETRY_LIMIT = 3;
 
 const realRefreshCredential = useProviderLoginStore.getState().refreshCredential;
 let writeAgentGatewayEnv = vi.fn(async () => ({ path: "/protected/gateway.env" }));
@@ -136,15 +140,15 @@ describe("useCodingAgentStore credential renewal", () => {
     (globalThis as { window?: unknown }).window = undefined;
   });
 
-  it("rotates the credential before the gateway env file freezes it", async () => {
+  it("rotates the credential before the pair is created", async () => {
     const rotate = answerRotationWith({ refreshed: true, expiresAt: NOW + TEN_MINUTES, accessToken: "rotated-1" });
 
     await useCodingAgentStore.getState().start(START);
 
     expect(rotate).toHaveBeenCalledWith("anthropic");
-    // That file is where the access token is frozen for the session's whole life, so a rotation after it would be
-    // stored in the vault and never reach the gateway this session talks to.
-    expect(rotate.mock.invocationCallOrder[0]).toBeLessThan(writeAgentGatewayEnv.mock.invocationCallOrder[0]);
+    // A token already lapsed would surface as a 401 on the first turn, which reads as a broken session rather than an
+    // expired sign-in. Renewing first is what keeps that from being how the user finds out.
+    expect(rotate.mock.invocationCallOrder[0]).toBeLessThan(startPiAgentSession.mock.invocationCallOrder[0]);
   });
 
   it("says in the start log that the sign-in was renewed", async () => {
@@ -156,17 +160,16 @@ describe("useCodingAgentStore credential renewal", () => {
   });
 
   // Continuing a pair that outlived the app is the one path where the credential is certain to be OLDER than the
-  // session: nothing renewed it while the app was closed, and attaching writes no env file to freeze a new one into.
-  it("renews a sign-in that lapsed while the app was closed, and hands it to the gateway already standing", async () => {
+  // session: nothing renewed it while the app was closed, and the pair's own environment was frozen when it was built.
+  it("renews a sign-in that lapsed while the app was closed", async () => {
     const rotate = answerRotationWith({ refreshed: true, expiresAt: NOW + TEN_MINUTES, accessToken: "rotated-1" });
-    const client = fakeClient();
-    createPiBridgeClient.mockReturnValue(client);
+    createPiBridgeClient.mockReturnValue(fakeClient());
 
     await useCodingAgentStore.getState().attachSession(START);
 
+    // The rotation needs no delivery to that frozen pair: its next turn asks the app for inference, and the app reads
+    // the vault then.
     expect(rotate).toHaveBeenCalledWith("anthropic");
-    // The gateway's env file was written when the pair was BUILT, so the bridge is the only way in.
-    expect(client.setGatewayCredential).toHaveBeenCalledWith("rotated-1");
   });
 
   it("arms a renewal the closed app could not have left behind", async () => {
@@ -183,7 +186,6 @@ describe("useCodingAgentStore credential renewal", () => {
     await vi.advanceTimersByTimeAsync(TEN_MINUTES - RENEWAL_MARGIN_MS + 1_000);
 
     expect(rotate).toHaveBeenCalledTimes(2);
-    expect(client.setGatewayCredential).toHaveBeenLastCalledWith("rotated-2");
   });
 
   it("carries a session whose sign-in is beyond renewal rather than refusing it", async () => {
@@ -220,39 +222,53 @@ describe("useCodingAgentStore credential renewal", () => {
     expect(useCodingAgentStore.getState().status).toBe("ready");
   });
 
-  it("hands a rotation to the gateway that is already running", async () => {
+  it("renews a token that lapses mid-session, without carrying it anywhere", async () => {
     const rotate = answerRotationWith(
       { refreshed: true, expiresAt: NOW + TEN_MINUTES, accessToken: "rotated-1" },
       { refreshed: true, expiresAt: NOW + 2 * TEN_MINUTES, accessToken: "rotated-2" },
     );
     await useCodingAgentStore.getState().start(START);
-    const client = useCodingAgentStore.getState().client as PiBridgeClient;
 
     await vi.advanceTimersByTimeAsync(TEN_MINUTES - RENEWAL_MARGIN_MS);
 
+    // Storing it IS delivering it: the app resolves the credential from the vault on every inference request, so the
+    // running session's next turn signs with this one and nothing had to be pushed into a container.
     expect(rotate).toHaveBeenCalledTimes(2);
-    // The gateway sits on the pair's --internal network with no published port, so the agent container is the only
-    // thing that can carry the new token to it.
-    expect(client.setGatewayCredential).toHaveBeenCalledWith("rotated-2");
   });
 
-  it("keeps renewing after the gateway refuses a rotation", async () => {
+  // An exchange that neither renewed nor reported the sign-in spent failed transiently — a busy engine, a blinked
+  // network. Dropping the chain there costs EVERY renewal after it, and the session 401s once the token lapses.
+  it("keeps renewing after an exchange fails transiently", async () => {
     const rotate = answerRotationWith(
       { refreshed: true, expiresAt: NOW + TEN_MINUTES, accessToken: "rotated-1" },
-      { refreshed: true, expiresAt: NOW + TEN_MINUTES + 120_000, accessToken: "rotated-2" },
-      { refreshed: true, expiresAt: NOW + TEN_MINUTES + 600_000, accessToken: "rotated-3" },
+      { refreshed: false, reason: "no connected container engine" },
+      { refreshed: true, expiresAt: NOW + 3 * TEN_MINUTES, accessToken: "rotated-3" },
     );
     await useCodingAgentStore.getState().start(START);
-    const client = useCodingAgentStore.getState().client as PiBridgeClient;
-    (client.setGatewayCredential as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("no route to the gateway"));
 
     await vi.advanceTimersByTimeAsync(TEN_MINUTES - RENEWAL_MARGIN_MS);
     expect(rotate).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(120_000);
 
-    // The vault holds the rotation whether or not the push landed, so a refused one costs this session's gateway
-    // its new token; dropping the timer with it would cost every renewal after, silently.
+    await vi.advanceTimersByTimeAsync(RENEWAL_RETRY_MS);
     expect(rotate).toHaveBeenCalledTimes(3);
+  });
+
+  // Bounded, or a provider that keeps refusing spins a login container for as long as the session runs.
+  it("gives up and says so after a run of failed exchanges", async () => {
+    const rotate = answerRotationWith(
+      { refreshed: true, expiresAt: NOW + TEN_MINUTES, accessToken: "rotated-1" },
+      { refreshed: false, reason: "no connected container engine" },
+    );
+    await useCodingAgentStore.getState().start(START);
+    (Notification.show as ReturnType<typeof vi.fn>).mockClear();
+
+    await vi.advanceTimersByTimeAsync(TEN_MINUTES - RENEWAL_MARGIN_MS);
+    for (let attempt = 0; attempt < RENEWAL_RETRY_LIMIT; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(RENEWAL_RETRY_MS);
+    }
+
+    expect(rotate).toHaveBeenCalledTimes(1 + RENEWAL_RETRY_LIMIT);
+    expect(Notification.show).toHaveBeenCalled();
   });
 
   it("reschedules off the expiry the exchange reported, not the first one", async () => {

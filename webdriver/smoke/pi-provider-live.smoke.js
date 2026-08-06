@@ -1,16 +1,16 @@
-// Proves the provider-shape contract with REAL containers: the app resolves a provider, the host writes the
-// gateway's env file from the OS keychain, the gateway signs the upstream its own way, and pi speaks the wire
-// shape that upstream expects. The fixture specs stub every one of those; nothing is stubbed here.
+// Proves the provider-shape contract with a REAL container: the app resolves a provider, signs the upstream its own way
+// with the key resolved natively from the OS keychain, and pi speaks the wire shape that upstream expects. The fixture
+// specs stub every one of those; nothing is stubbed here.
 //
-// Two shapes, both against a REAL container pair on a REAL engine:
+// Two shapes, both against a REAL container on a REAL engine:
 //   • openai-completions — the shape every provider but Anthropic speaks. Started through the REAL DRAWER.
 //   • anthropic-messages — the Anthropic SDK's shape, which posts /v1/messages onto the ORIGIN. This is the
 //     one the old single-URL contract broke: it arrived as /v1/v1/messages and 404ed.
 //
 // Needs a NON-mock app (CONTAINER_DESKTOP_MOCK=), a connected engine, the agent image built for this version
-// (`yarn cli agent-image`), and an OpenAI-compatible server on CD_LIVE_PROVIDER_URL that ALSO serves
-// /v1/messages. LM Studio does both — but it must be bound to the network (`lms server start --bind 0.0.0.0`),
-// because 127.0.0.1 inside the agent container is the container, not this machine.
+// (`yarn cli agent-image`), and an OpenAI-compatible server on CD_LIVE_PROVIDER_URL that ALSO serves /v1/messages.
+// LM Studio does both, on its default loopback bind: the APP dials the provider, from the app's own realm, so a server
+// on 127.0.0.1 is reachable and `--bind 0.0.0.0` is no longer needed.
 //
 // HARNESS RULES, each of which cost a run before:
 //   • An `async` page function handed to browser.execute does NOT work — WebKitWebDriver cannot serialize the
@@ -68,9 +68,8 @@ function hasImage(reference) {
   }
 }
 
-// What a container was actually given, read from the engine rather than from the file the app wrote — this is
-// the only place that proves the env SURVIVED the run argv. Never printed wholesale: the gateway's copy carries
-// the provider key.
+// What the container was actually given, read from the engine rather than from the file the app wrote — this is the only
+// place that proves the env SURVIVED the run argv. No copy of it carries a credential any more.
 function containerEnv(name) {
   const raw = engine(["inspect", name, "--format", "{{json .Config.Env}}"]);
   const pairs = JSON.parse(raw).map((entry) => {
@@ -80,12 +79,9 @@ function containerEnv(name) {
   return Object.fromEntries(pairs);
 }
 
-// The session's own containers, named after the suffix the store picked.
+// The session's own container, named after the suffix the store picked.
 function sessionNames() {
-  return browser.execute(() => {
-    const spec = window.__cdCodingAgentStore.getState().spec;
-    return { agent: spec?.agentContainerName ?? "", gateway: spec?.gatewayContainerName ?? "" };
-  });
+  return browser.execute(() => ({ agent: window.__cdCodingAgentStore.getState().spec?.agentContainerName ?? "" }));
 }
 
 function transcript() {
@@ -331,7 +327,7 @@ describe("the provider-shape contract against real containers", () => {
       assert.equal(state.status, "ready", `the session did not become ready: ${state.reason} [${state.log}]`);
 
       const names = await sessionNames();
-      openaiShape = { agent: containerEnv(names.agent), gateway: containerEnv(names.gateway), names };
+      openaiShape = { agent: containerEnv(names.agent), names };
       openaiShape.turn = await askAndSettle("the openai-completions turn never finished");
       report("OPENAI-COMPLETIONS TURN", openaiShape.turn);
 
@@ -360,32 +356,28 @@ describe("the provider-shape contract against real containers", () => {
       await stopSession();
     });
 
-    it("tells the agent to speak openai-completions, on a /v1 base", () => {
+    it("tells the agent to speak openai-completions", () => {
       assert.equal(openaiShape.agent.CD_MODEL_API, "openai-completions");
-      // pi's openai client posts /chat/completions onto a base that must already carry the version segment.
-      assert.ok(
-        openaiShape.agent.CD_GATEWAY_URL.endsWith("/v1"),
-        `the openai shape needs a /v1 base, got ${openaiShape.agent.CD_GATEWAY_URL}`,
+      // The base pi is registered against is the container's OWN loopback proxy, composed in there. Nothing about it
+      // is in the env, because the app never dials it.
+      assert.equal(openaiShape.agent.CD_GATEWAY_URL, undefined);
+    });
+
+    // The whole point of the design: the session's container is given no credential, on any path, and the loopback
+    // provider the app reaches is named only so pi can read the dialect off it.
+    it("gives the container no credential at all, and the upstream as plain catalogue data", () => {
+      const keys = Object.keys(openaiShape.agent);
+      assert.equal(
+        keys.some((key) => /API_KEY|CREDENTIAL|SECRET/.test(key)),
+        false,
+        `the container was given a credential-shaped variable: ${keys.join(",")}`,
       );
+      assert.equal(openaiShape.agent.CD_UPSTREAM_BASE_URL, PROVIDER_URL);
+      // NOT rewritten to a host alias: the app dials the provider from its own realm, where 127.0.0.1 is this machine.
+      assert.equal(openaiShape.agent.CD_UPSTREAM_BASE_URL.includes("containers.internal"), false);
     });
 
-    it("gives the gateway a keyless credential shape and no key to sign with", () => {
-      assert.equal(openaiShape.gateway.CD_UPSTREAM_AUTH_SCHEME, "none");
-      // The defect this replaced: `required()` on an empty key killed the gateway for every keyless server.
-      assert.equal(openaiShape.gateway.CD_UPSTREAM_API_KEY, "");
-      assert.equal(openaiShape.gateway.CD_UPSTREAM_KIND, "local");
-    });
-
-    it("rewrites a provider on this machine to the engine's host alias", () => {
-      // 127.0.0.1 inside the container is the container. Without the rewrite the upstream is simply unreachable.
-      const alias = program === "podman" ? "host.containers.internal" : "host.docker.internal";
-      assert.ok(
-        openaiShape.gateway.CD_UPSTREAM_BASE_URL.includes(alias),
-        `the upstream was not rewritten to ${alias}: ${openaiShape.gateway.CD_UPSTREAM_BASE_URL}`,
-      );
-    });
-
-    it("answers a real turn through the container pair", () => {
+    it("answers a real turn through the container", () => {
       assert.ok(
         assistantText(openaiShape.turn).includes(ANSWER),
         `the model never answered ${ANSWER}: ${JSON.stringify(openaiShape.turn.items)}`,
@@ -428,31 +420,21 @@ describe("the provider-shape contract against real containers", () => {
       assert.equal(started.status, "ready", `the anthropic session did not become ready: ${started.reason} [${started.log}]`);
 
       const names = await sessionNames();
-      anthropicShape = { agent: containerEnv(names.agent), gateway: containerEnv(names.gateway), names };
+      anthropicShape = { agent: containerEnv(names.agent), names };
       anthropicShape.turn = await askAndSettle("the anthropic-messages turn never finished");
       report("ANTHROPIC-MESSAGES TURN", anthropicShape.turn);
       await stopSession();
     });
 
-    it("tells the agent to speak anthropic-messages, on the ORIGIN", () => {
+    it("tells the agent to speak anthropic-messages", () => {
       assert.equal(anthropicShape.agent.CD_MODEL_API, "anthropic-messages");
-      // The whole defect in one assertion: the Anthropic SDK posts /v1/messages onto whatever base it is given,
-      // so a base carrying /v1 makes the request arrive as /v1/v1/messages and 404.
-      assert.equal(
-        /\/v1\/?$/.test(anthropicShape.agent.CD_GATEWAY_URL),
-        false,
-        `the anthropic shape must be handed the origin, got ${anthropicShape.agent.CD_GATEWAY_URL}`,
-      );
+      // The defect this contract exists for: the Anthropic SDK posts /v1/messages onto whatever base it is given, so a
+      // base carrying /v1 makes the request arrive as /v1/v1/messages and 404. The base is now composed in the
+      // container from this very shape, and the app strips exactly one /v1 before joining the upstream's own.
+      assert.equal(anthropicShape.agent.CD_UPSTREAM_BASE_URL, PROVIDER_URL);
     });
 
-    it("tells the gateway the upstream is anthropic, so it signs x-api-key", () => {
-      // The gateway reads this to pick x-api-key over Authorization: Bearer. Its keyless case signs neither,
-      // which is what makes a local Anthropic-shaped server work without a key at all.
-      assert.equal(anthropicShape.gateway.CD_UPSTREAM_KIND, "anthropic");
-      assert.equal(anthropicShape.gateway.CD_UPSTREAM_AUTH_SCHEME, "none");
-    });
-
-    it("answers a real turn through the container pair", () => {
+    it("answers a real turn through the container", () => {
       assert.ok(
         assistantText(anthropicShape.turn).includes(ANSWER),
         `the model never answered ${ANSWER}: ${JSON.stringify(anthropicShape.turn.items)}`,

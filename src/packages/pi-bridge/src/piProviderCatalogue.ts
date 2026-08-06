@@ -15,7 +15,7 @@ export interface PiProvider {
   id: string;
   // pi's own display name ("Z.AI", "Amazon Bedrock") — never our words for its provider.
   name: string;
-  // The endpoint pi points this provider at, when it names one. Ours goes through the gateway either way; this is
+  // The endpoint pi points this provider at, when it names one. Ours goes through the app either way; this is
   // what a settings entry starts from when a provider is adopted.
   baseUrl?: string;
   // What pi's provider definition accepts. `oauth` means pi carries a login flow for it; the flow itself only runs in
@@ -68,7 +68,7 @@ export function piProvider(id: string): PiProvider | undefined {
 }
 
 // A provider pi publishes nothing for is not worth a row: `radius` is purely dynamic and its catalogue is empty
-// until a gateway answers, so browsing it offline would show an empty panel.
+// until a provider answers, so browsing it offline would show an empty panel.
 export function piBrowsableProviders(): readonly PiProvider[] {
   return PI_PROVIDERS.filter((provider) => provider.models.length > 0);
 }

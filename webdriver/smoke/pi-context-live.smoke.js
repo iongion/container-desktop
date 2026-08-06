@@ -237,9 +237,9 @@ describe("what a real session reports about itself", () => {
       `${AGENT_IMAGE} is missing from ${program} — build it first: yarn cli agent-image --engine ${program}`,
     );
 
-    // Keyless and provider-less on purpose: with no providerId the host does not compose the gateway's env file from
+    // Keyless and provider-less on purpose: with no providerId nothing is read from the keychain, and
     // the keychain, so nothing is read from the OS keyring and the run costs nothing. `scheme: "none"` is what makes
-    // the gateway sign neither x-api-key nor a bearer, which is what a local server wants.
+    // the app sign neither x-api-key nor a bearer, which is what a local server wants.
     const started = await browser.executeAsync(
       (options, done) => {
         const read = () => {

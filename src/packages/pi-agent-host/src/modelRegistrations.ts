@@ -1,4 +1,4 @@
-// The models this container's gateway provider is registered with, and how the app's view of one becomes pi's.
+// The models this container's own provider is registered with, and how the app's view of one becomes pi's.
 //
 // The set grows by USE: the model the container was started on, plus each one the user has since picked. Nothing
 // pre-registers a provider's catalogue — the app's picker is a drill-down precisely so a catalogue is read one level
@@ -65,8 +65,8 @@ function thinkingLevelMap(reasoning: PiModelReasoning): ThinkingLevelMap | undef
 // One registration as pi's provider composer wants it. `name` is the id: the provider listings carry an id and
 // nothing more, and inventing a prettier label would be this app's words in pi's mouth.
 //
-// `upstream` is what pi's own detection would have looked at if the gateway were not in the way — see
-// `piUpstreamCompat`. Absent leaves pi's reading of our gateway untouched, which is right for every upstream it
+// `upstream` is what pi's own detection would have looked at if our own endpoint were not in the way — see
+// `piUpstreamCompat`. Absent leaves pi's reading of our endpoint untouched, which is right for every upstream it
 // would have read the same way. The wire shape matters as well as the URL: those fields are pi's
 // OpenAI-completions dialect, and its Anthropic client has a compat of its own that no URL feeds.
 export function piModelConfig(model: PiModelRegistration, upstream?: { baseUrl?: string; api?: string }) {

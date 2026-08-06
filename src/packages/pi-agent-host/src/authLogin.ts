@@ -163,7 +163,7 @@ export function createProviderLoginRunner(options: {
 
     async refresh(providerId): Promise<PiAuthRefreshOutcome> {
       // Read where the vault's owning realm put it. The app cannot pass it in: `getKey` refuses in the web view, so
-      // the credential reaches this container the same way the gateway's does — substituted into a private env file.
+      // the credential reaches this container substituted into a private env file, written by the realm owning the vault.
       const stored = decodeProviderCredential(readStoredCredential());
       if (!stored) return { ok: false, error: "no credential was handed to this container" };
       if (stored.kind !== "oauth") return { ok: true, unchanged: true };

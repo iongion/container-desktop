@@ -7,25 +7,22 @@ import {
   assistantLabelArgv,
   assistantNetworkName,
   defaultScope,
-  egressNetworkOf,
 } from "@/ai-system/adapters/sessionNaming";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
-import { composeGatewayEnv, gatewayBaseUrl, upstreamModelApi } from "@/ai-system/core/piAgentEnv";
-import { isLoopbackProviderHost, type ProviderKind } from "@/ai-system/core/providers";
+import { upstreamModelApi } from "@/ai-system/core/piAgentEnv";
+import type { ProviderKind } from "@/ai-system/core/providers";
 import type { DefaultSessionCandidate } from "@/ai-system/core/sessionLaunchers";
 import type { AIAuthSettings } from "@/ai-system/core/types";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { ContainerEngineHost } from "@/container-client/types/engine";
 import { createLogger } from "@/logger";
-import { SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
+import { PI_BRIDGE_PORT_IN_IMAGE, SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
 import type { PiModelReasoning } from "@/pi-bridge/protocol";
 import { PI_SESSION_STORAGE_CONTAINER_PORT } from "@/pi-bridge/sessionStorage";
 
 const logger = createLogger("ai.piAgentContainer");
 
 const AGENT_DIR_IN_IMAGE = "/home/agent/.pi/agent";
-const BRIDGE_PORT_IN_IMAGE = 8787;
-export const GATEWAY_PORT_IN_IMAGE = 8788;
 // The uid/gid of the `agent` user baked into the image. Rootless podman maps the invoking host user to
 // container root, so without a mapping the agent user cannot write to the bind-mounted workspace.
 const AGENT_UID_IN_IMAGE = 1001;
@@ -54,15 +51,13 @@ export interface PiAgentSessionSpec {
   bridgeToken: string;
   networkName: string;
   agentContainerName: string;
-  gatewayContainerName: string;
   pluginVolumeName: string;
   upstreamBaseUrl: string;
-  // NO credential lives here, deliberately. This spec is composed in the renderer, which cannot read the OS keychain
-  // and must never hold a key: a gateway that needs one is handed an env file the HOST wrote, and the only thing
-  // that crosses back is its path. What remains for this module to compose is the keyless case.
-  // The provider's catalog kind and connection auth. They decide the wire shape pi speaks and the credential
-  // header the gateway signs — an Anthropic upstream wants /v1/messages and x-api-key, not a bearer token on
-  // /v1/chat/completions.
+  // NO credential lives here, and none is written anywhere either. The session asks the APP for inference over the
+  // bridge, and the app resolves the key from the OS keychain in the realm that owns it — so this spec carries only
+  // catalogue facts.
+  // The provider's catalog kind and connection auth: the kind decides the wire shape pi speaks, and the auth travels so
+  // the container's own model registration reads the upstream the way pi would have (`piUpstreamCompat`).
   providerKind: ProviderKind;
   upstreamAuth: AIAuthSettings;
   modelId: string;
@@ -80,10 +75,6 @@ export interface PiAgentSessionSpec {
   // Where the session's workspace tools run, when the user chose somewhere. Absent means the toolset is not offered
   // at all — the container is told only THAT it exists, never where, because the app is what resolves the target.
   executionTarget?: ExecutionTarget;
-  // The DNS name that resolves to THIS machine from inside a container on this engine — podman's
-  // host.containers.internal, docker's host.docker.internal. A provider running on the host (LM Studio,
-  // llama.cpp) is only reachable through it.
-  hostAlias: string;
   scope?: string;
   // How to map the container's agent user onto the host user so workspace writes land with the right
   // ownership. Podman rootless uses keep-id; Docker needs an explicit --user, which requires knowing the
@@ -150,7 +141,6 @@ export function userMappingArgv(mapping: PiAgentSessionSpec["userMapping"]): str
 
 export interface PiAgentSessionContainers {
   agentContainerId: string;
-  gatewayContainerId: string;
   // The port the agent's bridge ENDED UP on. A published port cannot be reserved, so a taken one is re-picked
   // here and the caller has to dial what it settled on rather than what it asked for.
   hostPort: number;
@@ -188,7 +178,7 @@ export function agentRunArgv(
     "--network",
     spec.networkName,
     "--publish",
-    `127.0.0.1:${spec.hostPort}:${BRIDGE_PORT_IN_IMAGE}`,
+    `127.0.0.1:${spec.hostPort}:${PI_BRIDGE_PORT_IN_IMAGE}`,
     // The conversation store's own socket, published exactly as the bridge is. A second port rather than a second
     // channel on the first: pi's storage calls block the container's main thread, so their answers must arrive on a
     // socket that thread is not the one reading.
@@ -210,9 +200,11 @@ export function agentRunArgv(
   ];
 }
 
-// The agent's own network, and the only one it is ever attached to. `--internal` builds the bridge with no gateway
-// address, so a container on it resolves and reaches its siblings by name and has no route anywhere else — neither
-// the internet nor this machine. It is a network-create flag: `run` rejects it outright.
+// The agent's own network. `--internal` builds the bridge with no gateway address, so a container on it has no route
+// anywhere else — neither the internet nor this machine. Inference is unaffected: it travels on the PUBLISHED bridge
+// port, which the app dials INWARDS, and a published port answers on an internal network (measured, both engines). So
+// `egress: false` is now total isolation rather than an asymmetry between two containers. It is a network-create flag:
+// `run` rejects it outright.
 export function networkCreateArgv(spec: PiAgentSessionSpec): string[] {
   return [
     "network",
@@ -224,24 +216,16 @@ export function networkCreateArgv(spec: PiAgentSessionSpec): string[] {
   ];
 }
 
-// The second network, which exists only when egress is off. The gateway still has to reach the provider, so it is
-// given a routable NIC the agent does not have — that asymmetry IS "only the gateway is reachable".
-export function egressNetworkName(spec: PiAgentSessionSpec): string {
-  return egressNetworkOf(spec.networkName);
-}
-
 // The names of the session the app REUSES for a connection, rather than an ephemeral one created per start. Derived
 // from the connection so the next boot arrives at them without being told, and — being named under the current
 // scheme rather than the legacy one — never mistaken for an orphan by the reaper.
 export function defaultSessionNames(connectionId: string): {
   agentContainerName: string;
-  gatewayContainerName: string;
   networkName: string;
 } {
   const scope = defaultScope(connectionId);
   return {
     agentContainerName: assistantContainerName("agent", scope),
-    gatewayContainerName: assistantContainerName("gateway", scope),
     networkName: assistantNetworkName(scope),
   };
 }
@@ -260,22 +244,16 @@ function rowIsRunning(state: string): boolean {
 }
 
 // What this connection's reusable session looks like right now, read off the engine's listing. Absent means there is
-// nothing to adopt here — which is what sends the boot down the create-or-ask path instead of the resume one. The
-// pair is the unit: one half running is not a session, because the agent cannot reach a model without its gateway.
+// nothing to adopt here — which is what sends the boot down the create-or-ask path instead of the resume one. There is
+// one container to find: inference goes over the bridge, so a session has no second half that could be missing.
 export function defaultSessionFrom(
   connectionId: string,
   rows: readonly ContainerListingRow[],
 ): DefaultSessionCandidate | undefined {
   const names = defaultSessionNames(connectionId);
   const agent = rows.find((row) => row.name === names.agentContainerName);
-  const gateway = rows.find((row) => row.name === names.gatewayContainerName);
-  if (!agent && !gateway) return undefined;
-  const complete = !!agent && !!gateway;
-  return {
-    connectionId,
-    complete,
-    running: complete && rowIsRunning(agent.state) && rowIsRunning(gateway.state),
-  };
+  if (!agent) return undefined;
+  return { connectionId, running: rowIsRunning(agent.state) };
 }
 
 function listingRows(output: string): ContainerListingRow[] {
@@ -361,7 +339,7 @@ export function attachedPiAgentSessionFrom(payload: string): AttachedPiAgentSess
   } catch {
     return undefined;
   }
-  const hostPort = Number(inspected?.ports?.[`${BRIDGE_PORT_IN_IMAGE}/tcp`]?.[0]?.HostPort);
+  const hostPort = Number(inspected?.ports?.[`${PI_BRIDGE_PORT_IN_IMAGE}/tcp`]?.[0]?.HostPort);
   const env = envOf(inspected?.env ?? []);
   const bridgeToken = env.get("CD_BRIDGE_TOKEN");
   if (!bridgeToken || !Number.isInteger(hostPort) || hostPort <= 0) return undefined;
@@ -396,56 +374,6 @@ export async function attachPiAgentSession(
   return attachedPiAgentSessionFrom(output);
 }
 
-// Attached after the gateway is running, so it keeps the internal network as its first: the agent addresses the
-// gateway by container name, which only resolves on the network they share.
-export function egressAttachArgv(spec: PiAgentSessionSpec): string[] {
-  return ["network", "connect", egressNetworkName(spec), spec.gatewayContainerName];
-}
-
-function upstreamIsOnThisMachine(spec: PiAgentSessionSpec): boolean {
-  try {
-    return isLoopbackProviderHost(new URL(spec.upstreamBaseUrl).hostname);
-  } catch {
-    return false;
-  }
-}
-
-// The gateway dials the provider from INSIDE a container, where 127.0.0.1 is the container itself. A provider
-// on this machine therefore has to be addressed by the engine's host alias — otherwise a local LM Studio or
-// llama.cpp server is simply unreachable and every turn fails on connect.
-export function gatewayUpstreamUrl(spec: PiAgentSessionSpec): string {
-  if (!upstreamIsOnThisMachine(spec)) {
-    return spec.upstreamBaseUrl;
-  }
-  const url = new URL(spec.upstreamBaseUrl);
-  url.hostname = spec.hostAlias;
-  return url.toString().replace(/\/$/, spec.upstreamBaseUrl.endsWith("/") ? "/" : "");
-}
-
-// Neither engine guarantees the alias resolves on a user-defined network, so it is mapped explicitly.
-// `host-gateway` is understood by both podman and docker.
-export function hostAliasArgv(spec: PiAgentSessionSpec): string[] {
-  return upstreamIsOnThisMachine(spec) ? ["--add-host", `${spec.hostAlias}:host-gateway`] : [];
-}
-
-export function gatewayRunArgv(spec: PiAgentSessionSpec, envFilePath: string): string[] {
-  return [
-    "run",
-    "--detach",
-    "--name",
-    spec.gatewayContainerName,
-    "--network",
-    spec.networkName,
-    ...hostAliasArgv(spec),
-    ...specLabelArgv(spec, "gateway"),
-    "--env-file",
-    envFilePath,
-    spec.imageTag,
-    "--mode",
-    "gateway",
-  ];
-}
-
 // A scoped engine (WSL, Lima, a podman machine) runs its CLI inside the guest, so every command goes
 // through the scope wrapper and every host path is translated before it is mounted.
 async function run(host: HostClientFacade, args: string[], scope?: string): Promise<string> {
@@ -456,26 +384,30 @@ async function run(host: HostClientFacade, args: string[], scope?: string): Prom
   return (result.stdout ?? "").trim();
 }
 
-// Free the two names this spec is about to ask the engine for. A reusable session's names are deterministic, so a pair
-// the user stopped — or half a pair a crash left behind — still holds them, and `run` answers a name in use with a
-// conflict rather than reusing it. Removing them is exactly what "rebuilt under the same names" means, and it costs
-// nothing: the conversation lives in the plugin volume, not in these containers.
+// Free the name this spec is about to ask the engine for. A reusable session's name is deterministic, so a container the
+// user stopped — or one a crash left behind — still holds it, and `run` answers a name in use with a conflict rather
+// than reusing it. Removing it is exactly what "rebuilt under the same name" means, and it costs nothing: the
+// conversation lives on the user's machine, not in this container.
 //
-// A pair that is still RUNNING is never touched. Continuing that one is `attachPiAgentSession`, and removing it here
-// would be taking the user's live session away to make room for a new one.
+// A container that is still RUNNING is never touched. Continuing that one is `attachPiAgentSession`, and removing it
+// here would be taking the user's live session away to make room for a new one.
 async function freeSessionNames(host: HostClientFacade, spec: PiAgentSessionSpec): Promise<void> {
-  for (const name of [spec.gatewayContainerName, spec.agentContainerName]) {
-    // A name nothing holds makes the engine fail this, which is the answer: there is nothing to free.
-    const state = await run(host, ["inspect", name, "--format", "{{.State.Running}}"], spec.scope).catch(() => "");
-    if (!state.trim()) continue;
-    if (state.trim() === "true") {
-      throw new Error(`${name} is already running — continue that session instead of starting another`);
-    }
-    await run(host, ["rm", "--force", name], spec.scope).catch((error) => {
-      logger.debug(`freeing the name ${name} failed`, error);
-      return "";
-    });
+  // A name nothing holds makes the engine fail this, which is the answer: there is nothing to free.
+  const state = await run(
+    host,
+    ["inspect", spec.agentContainerName, "--format", "{{.State.Running}}"],
+    spec.scope,
+  ).catch(() => "");
+  if (!state.trim()) return;
+  if (state.trim() === "true") {
+    throw new Error(
+      `${spec.agentContainerName} is already running — continue that session instead of starting another`,
+    );
   }
+  await run(host, ["rm", "--force", spec.agentContainerName], spec.scope).catch((error) => {
+    logger.debug(`freeing the name ${spec.agentContainerName} failed`, error);
+    return "";
+  });
 }
 
 // The engines' several ways of saying "that name is taken". Everything else a create can fail with — an exhausted
@@ -489,9 +421,6 @@ export async function startPiAgentSession(
   host: HostClientFacade,
   spec: PiAgentSessionSpec,
   writeEnvFile: (contents: string) => Promise<string>,
-  // The provider key lives in the OS keychain, which only the host can read, so the host writes the gateway's
-  // env file. When it has, that file is used as-is — composing a second one here would carry an empty key.
-  options?: { gatewayEnvFile?: () => Promise<string> },
 ): Promise<PiAgentSessionContainers> {
   await freeSessionNames(host, spec);
   const toGuestPath = async (hostPath: string) =>
@@ -510,45 +439,17 @@ export async function startPiAgentSession(
     logger.debug("network create skipped — the name is already taken", error);
     return "";
   });
-  if (!spec.egress) {
-    await run(host, ["network", "create", egressNetworkName(spec)], spec.scope).catch((error) => {
-      logger.debug("egress network create skipped", error);
-      return "";
-    });
-  }
-
-  const gatewayEnvFile = options?.gatewayEnvFile
-    ? await options.gatewayEnvFile()
-    : await writeEnvFile(
-        composeGatewayEnv({
-          baseUrl: gatewayUpstreamUrl(spec),
-          // Empty because this branch IS the keyless case: a local model server wants no credential, and no key can
-          // reach here. Anything that needs one arrived as `options.gatewayEnvFile`, written by the host.
-          apiKey: "",
-          bridgeToken: spec.bridgeToken,
-          gatewayPort: GATEWAY_PORT_IN_IMAGE,
-          providerKind: spec.providerKind,
-          auth: spec.upstreamAuth,
-        }),
-      );
-  const gatewayContainerId = await run(host, gatewayRunArgv(spec, gatewayEnvFile), spec.scope);
-  if (!spec.egress) {
-    // NOT tolerated the way a pre-existing network is: without this the gateway has no route to the provider at
-    // all, and a session that starts anyway fails on its first turn with a connect error instead.
-    await run(host, egressAttachArgv(spec), spec.scope);
-  }
-
-  // The agent's env file deliberately omits the provider key: plugin code runs in this container.
+  // The env file carries no credential at all, and there is no second file that does: the session asks the app for
+  // inference, and the app resolves the key in the realm that owns the vault.
   const modelApi = upstreamModelApi(spec.providerKind);
   const agentEnvFile = await writeEnvFile(
     [
       `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
-      `CD_BRIDGE_PORT=${BRIDGE_PORT_IN_IMAGE}`,
-      `CD_GATEWAY_URL=${gatewayBaseUrl(`http://${spec.gatewayContainerName}:${GATEWAY_PORT_IN_IMAGE}`, modelApi)}`,
+      `CD_BRIDGE_PORT=${PI_BRIDGE_PORT_IN_IMAGE}`,
       `CD_MODEL_API=${modelApi}`,
-      // The upstream's own base URL, so pi speaks to it in the shape it wants rather than the shape it infers from
-      // our gateway (`piUpstreamCompat`). NOT a credential — catalogue data, useless without the key the gateway
-      // holds — and the same var name the gateway's own env file uses for the same value.
+      // The upstream's own base URL, so pi speaks to it in the shape it wants rather than the shape it infers from our
+      // own endpoint (`piUpstreamCompat`). NOT a credential — catalogue data, and nothing in this container can use it
+      // without a key it has no way to get.
       `CD_UPSTREAM_BASE_URL=${spec.upstreamBaseUrl}`,
       `CD_MODEL_ID=${spec.modelId}`,
       // Present when the conversations reach this machine at all — mounted, or served over the storage RPC. Absent,
@@ -589,7 +490,7 @@ export async function startPiAgentSession(
         agentRunArgv({ ...spec, hostPort }, guestWorkspacePath, agentEnvFile, guestSessionsPath),
         spec.scope,
       );
-      return { agentContainerId, gatewayContainerId, hostPort };
+      return { agentContainerId, hostPort };
     } catch (error) {
       if (attempt >= HOST_PORT_ATTEMPTS || !portAlreadyTaken(error)) throw error;
       // The engine can leave the container behind when only its port mapping failed, and the name goes with it.
@@ -601,18 +502,13 @@ export async function startPiAgentSession(
 }
 
 export async function stopPiAgentSession(host: HostClientFacade, spec: PiAgentSessionSpec): Promise<void> {
-  for (const name of [spec.agentContainerName, spec.gatewayContainerName]) {
-    await run(host, ["rm", "--force", name], spec.scope).catch((error) => {
-      logger.debug(`rm ${name} failed`, error);
-      return "";
-    });
-  }
-  // Both networks a no-egress session created, each of which holds a /24 out of the engine's pool.
-  const networks = spec.egress ? [spec.networkName] : [spec.networkName, egressNetworkName(spec)];
-  for (const network of networks) {
-    await run(host, ["network", "rm", network], spec.scope).catch((error) => {
-      logger.debug("network rm failed", error);
-      return "";
-    });
-  }
+  await run(host, ["rm", "--force", spec.agentContainerName], spec.scope).catch((error) => {
+    logger.debug(`rm ${spec.agentContainerName} failed`, error);
+    return "";
+  });
+  // The network holds a /24 out of the engine's pool for as long as it exists.
+  await run(host, ["network", "rm", spec.networkName], spec.scope).catch((error) => {
+    logger.debug("network rm failed", error);
+    return "";
+  });
 }
