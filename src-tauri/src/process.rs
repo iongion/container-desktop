@@ -151,6 +151,9 @@ pub async fn process_spawn(
     }
     // Streamed children must not flash a console window on Windows.
     crate::spawn_hidden::no_window_tokio(&mut command);
+    // A streamed child can be long-lived — the assistant's `ssh -NL` forward comes through here — and an app that is
+    // KILLED runs neither the drop below nor the registry's kill.
+    crate::child_guard::die_with_parent_tokio(&mut command);
     command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())

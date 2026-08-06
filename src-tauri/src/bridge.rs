@@ -179,6 +179,7 @@ async fn bridge_named_pipe_connection(
         .kill_on_drop(true);
     // Per-connection ssh/wsl relay must not flash a console window on Windows.
     crate::spawn_hidden::no_window_tokio(&mut cmd);
+    crate::child_guard::die_with_parent_tokio(&mut cmd);
     let spawned = cmd.spawn();
     let mut child = match spawned {
         Ok(child) => child,
@@ -215,13 +216,14 @@ async fn bridge_unix_connection(
     launcher: String,
     argv: Vec<String>,
 ) {
-    let spawned = tokio::process::Command::new(&launcher)
-        .args(&argv)
+    let mut cmd = tokio::process::Command::new(&launcher);
+    cmd.args(&argv)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
-        .kill_on_drop(true)
-        .spawn();
+        .kill_on_drop(true);
+    crate::child_guard::die_with_parent_tokio(&mut cmd);
+    let spawned = cmd.spawn();
     let mut child = match spawned {
         Ok(child) => child,
         Err(_) => return,
@@ -262,6 +264,7 @@ async fn start_tunnel(spec: &BridgeSpec) -> Result<BridgeEntry, String> {
         .kill_on_drop(true);
     // The long-lived `ssh -NL` child must not flash a console window on Windows.
     crate::spawn_hidden::no_window_tokio(&mut cmd);
+    crate::child_guard::die_with_parent_tokio(&mut cmd);
     let mut child = cmd.spawn().map_err(|e| e.to_string())?;
     // `ssh -NL` binds the local forward socket only after the connection + forward are established — poll until
     // it appears (~5s), failing fast if the ssh child exits first (auth/host error).

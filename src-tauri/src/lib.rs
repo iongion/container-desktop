@@ -4,6 +4,7 @@
 // the host bridge provides, so nothing above the port changes.
 
 mod bridge;
+mod child_guard;
 mod host;
 mod keychain;
 mod process;
