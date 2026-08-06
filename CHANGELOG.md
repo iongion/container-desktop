@@ -67,7 +67,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Your conversations with the assistant are kept on your own machine: they stay readable with nothing running, survive every rebuild of the agent, and no longer live inside the container volume they used to disappear with. An engine reached over SSH keeps its own, on that machine, until the agent library can be pointed back over the bridge
+- Your conversations with the assistant are kept on your own machine: they stay readable with nothing running, survive every rebuild of the agent, and no longer live inside the container volume they used to disappear with
+
+- An assistant session can run on a connection reached over SSH. The agent's bridge is published on the machine running the engine, so the app forwards it here and talks to the local end — before this, a session on a remote connection was offered, built its containers and then answered nothing. A connection whose scope names no entry in your SSH config now says so instead of starting
 
 - The Assistant's header carries the session itself: its name, renamed in place, and the conversations that workspace already has — switch to one, or start another, without leaving the row. The workspace, the editor and the stop moved into the header's overflow, and the container id into the session list, because what belongs in a header row is the name
 

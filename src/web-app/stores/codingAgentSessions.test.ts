@@ -79,9 +79,28 @@ const START = {
 const HOST_SESSIONS_DIR = "/home/me/.local/share/container-desktop/assistant-sessions";
 
 let askedForSessionsDir = vi.fn(async () => ({ path: HOST_SESSIONS_DIR }));
+// The `ssh -NL` child a remote session is reached through, and the kill that must follow it.
+const killed = vi.fn();
+const spawned = vi.fn(async (_launcher: string, _args: string[]) => ({ kill: killed, on: () => {} }));
 
 function installBridge(overrides: Record<string, unknown> = {}) {
   askedForSessionsDir = vi.fn(async () => ({ path: HOST_SESSIONS_DIR }));
+  // The exec seam the forward is spawned through, and the SSH config it is aimed at. Globals, because that is how the
+  // shells expose them to the renderer.
+  (globalThis as { Command?: unknown }).Command = { ExecuteStreaming: spawned };
+  (globalThis as { Platform?: unknown }).Platform = {
+    getSSHConfig: async () => [
+      {
+        Name: "win11",
+        Host: "win11",
+        HostName: "192.168.122.5",
+        Port: 22,
+        User: "me",
+        IdentityFile: "",
+        ConfigHost: "win11",
+      },
+    ],
+  };
   (globalThis as { window?: unknown }).window = {
     AI: {
       modelWindow: vi.fn(async () => ({})),
@@ -159,12 +178,50 @@ describe("useCodingAgentStore conversations directory", () => {
   it("mounts nothing on a remote engine, whose machine never had this directory", async () => {
     engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
 
-    await useCodingAgentStore.getState().start(START);
+    await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
 
     expect(startedSpec().sessionsPath).toBeUndefined();
     expect(useCodingAgentStore.getState().status).toBe("ready");
     // Not even asked for: a directory created here would be for nothing.
     expect(askedForSessionsDir).not.toHaveBeenCalled();
+  });
+
+  // A remote connection whose scope names no entry in `~/.ssh/config` cannot be forwarded to, and a session that
+  // "started" would then own containers on the remote that nothing can ever talk to.
+  it("refuses a remote session it has no way to reach, instead of starting one", async () => {
+    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+
+    await useCodingAgentStore.getState().start({ ...START, scope: "not-in-my-ssh-config" });
+
+    expect(useCodingAgentStore.getState().status).toBe("error");
+    expect(useCodingAgentStore.getState().error).toContain("not-in-my-ssh-config");
+  });
+
+  // A pair on a remote engine publishes its bridge on ITS loopback, so the app dialling 127.0.0.1 reaches nothing at
+  // all — which is why an assistant session on an SSH connection could not exist. The forward is what makes that port
+  // answer here, and it must die exactly when the session does.
+  it("reaches a remote pair through a forward, and takes it down with the session", async () => {
+    engineHost = { PROGRAM: "podman", HOST: ContainerEngineHost.PODMAN_REMOTE };
+
+    await useCodingAgentStore.getState().start({ ...START, scope: "win11" });
+
+    const [launcher, argv] = spawned.mock.calls[0] as unknown as [string, string[]];
+    expect(launcher).toBe("ssh");
+    // The remote end is the port the pair published; the local end is what the client dialled.
+    expect(argv.join(" ")).toMatch(/-NL 127\.0\.0\.1:\d+:127\.0\.0\.1:45871/);
+    const dialled = createPiBridgeClient.mock.calls[0][0] as { url: string };
+    expect(dialled.url).toBe(`ws://127.0.0.1:${argv.join(" ").match(/127\.0\.0\.1:(\d+):127/)?.[1]}/`);
+
+    await useCodingAgentStore.getState().stop();
+
+    expect(killed).toHaveBeenCalled();
+  });
+
+  it("opens no forward for a pair on this machine", async () => {
+    await useCodingAgentStore.getState().start(START);
+
+    expect(spawned).not.toHaveBeenCalled();
+    expect((createPiBridgeClient.mock.calls[0][0] as { url: string }).url).toBe("ws://127.0.0.1:45871/");
   });
 
   // Attaching mounts nothing — the pair is already built. So what the spec may claim about it is only what the

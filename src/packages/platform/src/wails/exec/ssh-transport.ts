@@ -12,7 +12,7 @@ import type { CommandExecutionResult } from "@/host-contract/exec";
 
 import { EventEmitter } from "eventemitter3";
 import type { ISSHClient } from "@/container-client/services";
-import { buildSSHArgs, type SSHClientConnection } from "@/container-client/ssh-args";
+import { buildSSHArgs, credentialsFromSSHHost, type SSHClientConnection } from "@/container-client/ssh-args";
 
 import type { StreamHandle } from "@/platform/contract";
 
@@ -41,17 +41,6 @@ export interface SSHClientDeps {
   osType: string;
 }
 
-// SSHHost → the credentials buildSSHArgs consumes (mirrors ssh-transport.ts:207).
-export function credentialsFromHost(host: SSHHostLike): SSHClientConnection {
-  return {
-    host: host.HostName || host.Host || host.Name,
-    port: host.Port || 22,
-    username: host.User || "",
-    privateKeyPath: host.IdentityFile || "",
-    configHost: host.ConfigHost,
-  };
-}
-
 function isEstablished(output: CommandExecutionResult | undefined): boolean {
   return !!output?.success && `${output?.stdout ?? ""}`.trim() === SSH_ESTABLISHED;
 }
@@ -59,7 +48,7 @@ function isEstablished(output: CommandExecutionResult | undefined): boolean {
 // Command.StartSSHConnection — run the echo connect-probe; on success return a live ISSHClient.
 export async function startSSHConnection(deps: SSHClientDeps, host: SSHHostLike, _opts?: any): Promise<ISSHClient> {
   const cli = deps.osType === "Windows_NT" ? "ssh.exe" : "ssh";
-  const credentials = credentialsFromHost(host);
+  const credentials = credentialsFromSSHHost(host);
   const emitter = new EventEmitter();
   let connected = false;
 

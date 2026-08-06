@@ -178,6 +178,15 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
 4. connect the WebSocket client and publish the app's theme palette **before** the first plugin frame, so no
    component paints in pi's colours and then flashes to the app's.
 
+**Reaching the bridge.** A pair publishes on `127.0.0.1:<port>` of the machine running the ENGINE, so on a remote (SSH)
+connection the app's own loopback answers nothing — a session there was offered, built its containers and then never
+dialled. `reachBridge` (`stores/codingAgent.ts`) forwards that port with `ssh -NL` for a remote engine
+(`adapters/bridgeTunnel.ts`, spawned through the same exec seam every engine command uses) and dials the local end;
+everything after it — the client, the events, the host requests — is identical either way. The forward dies with the
+session, and if it dies first the session says so rather than leaving a transcript that has quietly stopped receiving.
+A scope naming no `~/.ssh/config` entry is refused before any container is created. NOT the engine's own data plane:
+that one is the native proxy and request-shaped, while a bridge is a WebSocket upgrade over a long-lived socket.
+
 **Continuing one that is already up** is `attachSession()` → `attachPiAgentSession`, and it creates nothing: one
 `inspect` of the agent container yields the published bridge port and, from its env, the token that authorises the
 socket — everything `start` would have written is already in that container. A connection has ONE pi-agent engine and

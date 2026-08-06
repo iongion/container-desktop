@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { credentialsFromHost, startSSHConnection } from "@/platform/tauri/exec/ssh-transport";
+import { credentialsFromSSHHost } from "@/container-client/ssh-args";
+import { startSSHConnection } from "@/platform/tauri/exec/ssh-transport";
 
 const CONFIG_HOST = {
   Name: "prod",
@@ -27,9 +28,9 @@ const PROBE_ARGS = [
 
 const okProbe = { pid: 0, success: true, stdout: "SSH connection established\n", stderr: "", code: 0 };
 
-describe("credentialsFromHost", () => {
+describe("credentialsFromSSHHost", () => {
   it("maps SSHHost → SSHClientConnection (HostName/Host/Name fallback, port/user defaults, configHost)", () => {
-    expect(credentialsFromHost(CONFIG_HOST)).toEqual({
+    expect(credentialsFromSSHHost(CONFIG_HOST)).toEqual({
       host: "10.0.0.1",
       port: 2222,
       username: "deploy",
@@ -37,7 +38,7 @@ describe("credentialsFromHost", () => {
       configHost: "prod",
     });
     // fallbacks: no HostName → Host → Name; no Port → 22; no User → ""
-    expect(credentialsFromHost({ Name: "box", Host: "box", Port: 0, HostName: "", User: "" } as any)).toMatchObject({
+    expect(credentialsFromSSHHost({ Name: "box", Host: "box", Port: 0, HostName: "", User: "" } as any)).toMatchObject({
       host: "box",
       port: 22,
       username: "",

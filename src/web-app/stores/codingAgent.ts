@@ -4,10 +4,12 @@
 import { Intent } from "@blueprintjs/core";
 import { create } from "zustand";
 
+import { type BridgeTunnel, openBridgeTunnel } from "@/ai-system/adapters/bridgeTunnel";
 import type { ModelWindow } from "@/ai-system/adapters/modelWindow";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   attachPiAgentSession,
+  engineIsRemote,
   engineSharesAppFilesystem,
   findDefaultSession,
   GATEWAY_PORT_IN_IMAGE,
@@ -54,6 +56,10 @@ import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/
 import { isWorkspaceToolName } from "@/ai-system/core/workspaceToolNames";
 import { readSessionNameAnswer, readSessionTreeAnswer } from "@/ai-system/ui/core/commands/piCommandAnswers";
 import { isMockMode } from "@/container-client/mock/mode";
+import { getAvailableSSHConnections } from "@/container-client/shared";
+import { credentialsFromSSHHost } from "@/container-client/ssh-args";
+import type { ContainerEngineHost } from "@/container-client/types/engine";
+import { OperatingSystem } from "@/container-client/types/os";
 import { t } from "@/i18n";
 import { createLogger } from "@/logger";
 import { agentImageTag } from "@/pi-bridge/image";
@@ -424,6 +430,9 @@ export interface CodingAgentState {
   // Kept next to the spec so stop() tears the pair down on the connection start() used.
   connectionId?: string;
   client?: PiBridgeClient;
+  // The `ssh -NL` forward a session on a REMOTE engine is reached through. Absent for every pair on this machine,
+  // which is dialled directly. Held here because it must die exactly when the session does.
+  bridgeTunnel?: BridgeTunnel;
   chrome: CodingAgentChrome;
   // pi components, painted as ANSI line frames. Separate from the chrome because they are drawn, not
   // described: the app has no say in what a plugin's component looks like, only where it goes.
@@ -495,6 +504,9 @@ export interface CodingAgentState {
   attachSession(options: StartCodingAgentOptions): Promise<void>;
   submit(text: string): Promise<void>;
   submitSkill(input: SkillSubmission): Promise<void>;
+  // The forward a remote session is reached through has died. Every frame after that goes nowhere, so this says so
+  // instead of leaving a transcript that has quietly stopped receiving.
+  reportBridgeLost(reason: string): void;
   stop(): Promise<void>;
   // Tear the container pair down and start an identical one. What `/quit` followed by starting again does, and the
   // only route back when nothing is running.
@@ -692,6 +704,37 @@ async function readSessionsDir(): Promise<string | undefined> {
     logger.warn("the host could not provide a directory for the conversations", error);
     return undefined;
   }
+}
+
+// How to reach a pair's bridge. A pair on THIS machine publishes on our own loopback and is dialled directly; a pair on
+// a remote engine published on ITS loopback, so a local forward is opened and the local end is dialled instead.
+// Everything after this point — the client, the events, the host requests — is identical either way.
+async function reachBridge(
+  spec: PiAgentSessionSpec,
+  engineHost: ContainerEngineHost | undefined,
+  onLost: (reason: string) => void,
+): Promise<{ url: string; tunnel?: BridgeTunnel }> {
+  if (!engineIsRemote(engineHost)) return { url: `ws://127.0.0.1:${spec.hostPort}/` };
+  const scope = spec.scope ?? "";
+  const entry = (await getAvailableSSHConnections()).find(
+    (host) => host.Name === scope || host.ConfigHost === scope || host.Host === scope,
+  );
+  if (!entry) {
+    throw new Error(
+      `no SSH host in your config matches ${scope || "this connection"}, so its bridge cannot be reached`,
+    );
+  }
+  const tunnel = await openBridgeTunnel(
+    {
+      spawn: (launcher, args) => Command.ExecuteStreaming(launcher, args),
+      localPort: pickHostPort(),
+      // The OS the app is running ON, from the same place every screen reads it. Windows ships OpenSSH as `ssh.exe`,
+      // and a spawn is not a shell, so the name has to be exact.
+      launcher: useAppStore.getState().osType === OperatingSystem.Windows ? "ssh.exe" : "ssh",
+    },
+    { credentials: credentialsFromSSHHost(entry), remotePort: spec.hostPort, onLost },
+  );
+  return { url: `ws://127.0.0.1:${tunnel.localPort}/`, tunnel };
 }
 
 // Why a row could not be launched, in the words the start form already uses for the same problems.
@@ -918,6 +961,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   // has are in the header's list, one click away — deliberately not resumed for the user, because a second window on
   // the same pair would then be driving the same conversation's file as the first.
   async attachSession(options) {
+    get().bridgeTunnel?.stop();
     set(freshSessionState(options));
     if (isMockMode() && import.meta.env.ENVIRONMENT !== "production") {
       await get().start(options);
@@ -977,13 +1021,22 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       hostAlias: host.PROGRAM === "podman" ? "host.containers.internal" : "host.docker.internal",
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
     };
+    let bridge: { url: string; tunnel?: BridgeTunnel } | undefined;
     try {
       set((state) => ({ startLog: [...state.startLog, `attaching to ${spec.agentContainerName}`] }));
-      const client = createPiBridgeClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
+      // Same reach as a fresh start: a remote pair's published port is forwarded here before anything dials it.
+      bridge = await reachBridge(spec, host.HOST, (reason) => get().reportBridgeLost(reason));
+      const client = createPiBridgeClient({ url: bridge.url, token: spec.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));
       // Published before the socket is dialled, for the same reason `start` does it: the session announces itself
       // DURING connect, and every handler for that reads the client back out of here.
-      set({ client, spec, connectionId: options.connectionId, sessionModel: spec.modelId });
+      set({
+        client,
+        spec,
+        connectionId: options.connectionId,
+        sessionModel: spec.modelId,
+        bridgeTunnel: bridge.tunnel,
+      });
       await client.connect();
       // The gateway froze its token into an env file when the pair was BUILT, and attaching cannot rewrite that
       // file — so a credential renewed just now reaches the running gateway over the bridge instead, the same way
@@ -1001,6 +1054,8 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       await get().publishSystemContext();
     } catch (error) {
       logger.error("attaching to the running assistant session failed", error);
+      // The forward was opened for a socket that never came up; nothing else will ever use it.
+      bridge?.tunnel?.stop();
       set((state) => ({
         status: "error",
         error: (error as Error).message,
@@ -1013,6 +1068,8 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   },
 
   async start(options) {
+    // A session arriving replaces the last one: its forward held a local port, and nothing else will use it.
+    get().bridgeTunnel?.stop();
     set(freshSessionState(options));
     const suffix = randomUUID().slice(0, 8);
     // Mock mode has no engine to run a container on, so the far end of the socket is scripted instead. Only
@@ -1119,6 +1176,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       // explicit mapping or the bind-mounted workspace is effectively read-only. Docker has no keep-id.
       userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
     };
+    let bridge: { url: string; tunnel?: BridgeTunnel } | undefined;
     try {
       set((state) => ({ startLog: [...state.startLog, `starting ${spec.agentContainerName}`] }));
       // The provider key lives in the OS keychain, which the renderer cannot read, so the host composes and writes
@@ -1137,13 +1195,16 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       // asked for would reach nothing. The spec is corrected too, since stop() and the panels read it.
       const running: PiAgentSessionSpec = { ...spec, hostPort: started.hostPort };
 
-      const client = createPiBridgeClient({ url: `ws://127.0.0.1:${running.hostPort}/`, token: running.bridgeToken });
+      // A pair on a remote engine published its bridge on ITS loopback, so the port is forwarded here first and the
+      // local end is what gets dialled. A pair on this machine needs none of that.
+      bridge = await reachBridge(running, host.HOST, (reason) => get().reportBridgeLost(reason));
+      const client = createPiBridgeClient({ url: bridge.url, token: running.bridgeToken });
       client.onEvent((event) => get().applyBridgeEvent(event));
       // In the store BEFORE the socket is dialled, because the session announces itself DURING connect: pi's
       // `ready` lands while that promise is still pending, and every handler for it reads the client back out of
       // here. Setting it afterwards silently dropped the resource read that `ready` triggers, which is what left
       // a real session with an empty palette — and answered pi's own commands with "Unknown command".
-      set({ client, spec: running, connectionId: options.connectionId });
+      set({ client, spec: running, connectionId: options.connectionId, bridgeTunnel: bridge.tunnel });
       await client.connect();
       // Before the first plugin component can render: a component that draws once with pi's built-in
       // palette and only then hears about the app's would flash the wrong colours.
@@ -1153,6 +1214,8 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       await get().publishSystemContext();
     } catch (error) {
       logger.error("coding agent start failed", error);
+      // The forward was opened for a socket that never came up; nothing else will ever use it.
+      bridge?.tunnel?.stop();
       set((state) => ({
         status: "error",
         error: (error as Error).message,
@@ -1247,10 +1310,22 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     await stopAfterRejection(get().client);
   },
 
+  // Said out loud, and the socket is closed with it: a client left open on a dead forward would keep accepting
+  // submissions that vanish. The pair itself is untouched — it is still running on the remote, and continuing it is
+  // what attaching does once the connection is back.
+  reportBridgeLost(reason: string) {
+    if (!get().client) return;
+    get().client?.close();
+    set({ status: "error", error: t("The connection to this session was lost: {{reason}}", { reason }) });
+  },
+
   async stop() {
-    const { client, spec, connectionId } = get();
+    const { client, spec, connectionId, bridgeTunnel } = get();
     cancelCredentialRenewal();
     client?.close();
+    // Before the pair goes: a forward left running holds a local port for the rest of the app's life, and the next
+    // session picks a different one — so the leak is invisible until the ports run out.
+    bridgeTunnel?.stop();
     // Whatever this session's workspace target built — above all a disposable sandbox container, which exists for
     // this run and nothing else. Released before the pair goes, and never fatal: the session is ending either way.
     if (spec?.executionTarget && spec.agentContainerName) {
@@ -1266,6 +1341,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     set({
       status: "idle",
       client: undefined,
+      bridgeTunnel: undefined,
       spec: undefined,
       connectionId: undefined,
       chrome: emptyCodingAgentChrome(),

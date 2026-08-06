@@ -121,12 +121,17 @@ const REMOTE_ENGINE_HOSTS: ReadonlySet<ContainerEngineHost> = new Set([
   ContainerEngineHost.APPLE_REMOTE,
 ]);
 
+// Whether the engine runs on another machine, reached over SSH. A host nothing is known about is treated as this
+// machine's, which is what every connection did before either of the two answers below existed.
+export function engineIsRemote(engineHost: ContainerEngineHost | undefined): boolean {
+  return !!engineHost && REMOTE_ENGINE_HOSTS.has(engineHost);
+}
+
 // Whether a path this machine made can be mounted by that engine at all. False keeps the conversations where pi puts
 // them, which is what every connection did before this mount existed: asking a remote engine for a path it has never
-// seen makes the ENGINE create it, owned by root, and pi meets that as EACCES on the first turn. A host nothing is
-// known about keeps the mount, so only a KNOWN remote withholds it.
+// seen makes the ENGINE create it, owned by root, and pi meets that as EACCES on the first turn.
 export function engineSharesAppFilesystem(engineHost: ContainerEngineHost | undefined): boolean {
-  return !engineHost || !REMOTE_ENGINE_HOSTS.has(engineHost);
+  return !engineIsRemote(engineHost);
 }
 
 export function userMappingArgv(mapping: PiAgentSessionSpec["userMapping"]): string[] {

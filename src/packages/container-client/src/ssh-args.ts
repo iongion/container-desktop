@@ -31,6 +31,27 @@ export function buildSSHBaseArgs(params: SSHClientConnection, opts?: { connectTi
   ];
 }
 
+// An `~/.ssh/config` entry as the argv builders want it. One origin, because every caller derives it the same way and
+// each shell used to carry its own copy: the config alias wins when there is one, since `buildSSHBaseArgs` then drops
+// `-i`/`-p` and lets ssh read the rest of the entry itself.
+export function credentialsFromSSHHost(host: {
+  Name: string;
+  Host: string;
+  Port: number;
+  HostName: string;
+  User: string;
+  IdentityFile: string;
+  ConfigHost?: string;
+}): SSHClientConnection {
+  return {
+    host: host.HostName || host.Host || host.Name,
+    port: host.Port || 22,
+    username: host.User || "",
+    privateKeyPath: host.IdentityFile || "",
+    configHost: host.ConfigHost,
+  };
+}
+
 export function buildSSHTarget(params: SSHClientConnection): string {
   if (params.configHost) {
     return params.configHost;
