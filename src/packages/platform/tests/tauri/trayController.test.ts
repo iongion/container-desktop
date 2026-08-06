@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { projectTrayMenu } from "@/platform/tauri/trayController";
-import { TRAY_QUIT_ID } from "@/platform/trayMenu";
+import { TRAY_QUIT_ID, TRAY_SHOW_APP_ID, trayActionId } from "@/platform/trayMenu";
 
 const oneEngine = {
   connections: [
@@ -30,21 +30,46 @@ describe("projectTrayMenu", () => {
     expect(registry.size).toBe(2); // only the always-present Open main window + Quit are clickable
   });
 
-  it("gives Quit the same id whatever else is in the menu, so the native side can answer it alone", () => {
-    // Positional ids are only meaningful to the registry minted beside them. Quit has to keep working when the
-    // native menu and this realm's registry disagree — which is exactly when it is needed — so it is not positional.
+  it("names every clickable item after what it does, so no id depends on where it sits", () => {
+    // The whole hazard this replaces: an id that means "the 3rd clickable item" is only meaningful to the registry
+    // minted beside it. Let the native menu and this realm's registry fall out of step — one failed tray_update does
+    // it — and the 3rd item natively is a DIFFERENT action here, so a click stops the wrong container. An id derived
+    // from the connection, the verb and the resource cannot be remapped: at worst it is absent and does nothing.
     const empty = projectTrayMenu({ connections: [] }, { performAction: vi.fn(), showApp: vi.fn(), quit: vi.fn() });
     const full = projectTrayMenu(oneEngine as any, {
       performAction: vi.fn(),
       showApp: vi.fn(),
       quit: vi.fn(),
     });
-    const quitId = (menu: { items: any[] }) => menu.items.find((item) => item.label === "Quit")?.id;
-    expect(quitId(empty)).toBe(TRAY_QUIT_ID);
-    expect(quitId(full)).toBe(TRAY_QUIT_ID);
-    // …and it does not consume a positional slot, so the menus either side of it keep counting from where they were.
-    expect(empty.items.find((item) => item.label === "Open main window")?.id).toBe("tray:0");
-    expect(full.items.find((item) => item.label === "Open main window")?.id).toMatch(/^tray:\d+$/);
+    const idFor = (menu: { items: any[] }, label: string) => menu.items.find((item) => item.label === label)?.id;
+    expect(idFor(empty, "Quit")).toBe(TRAY_QUIT_ID);
+    expect(idFor(full, "Quit")).toBe(TRAY_QUIT_ID);
+
+    // Same item, same id, in a menu of a completely different shape — the property positional ids cannot have.
+    expect(idFor(empty, "Open main window")).toBe(TRAY_SHOW_APP_ID);
+    expect(idFor(full, "Open main window")).toBe(TRAY_SHOW_APP_ID);
+
+    // And an action id carries its connection, its verb and its resource, so two engines owning a container of the
+    // same name cannot collide onto one another's registry entry.
+    const stopDb = full.items.flatMap((i: any) => i.items ?? []).find((i: any) => i.label === 'Start "db"');
+    expect(stopDb?.id).toBe(trayActionId("container.start", "c2", "podman"));
+    expect([...full.registry.keys()].filter((key) => key === stopDb?.id)).toHaveLength(1);
+  });
+
+  it("never mints an id from position, at any depth", () => {
+    const full = projectTrayMenu(oneEngine as any, { performAction: vi.fn(), showApp: vi.fn(), quit: vi.fn() });
+    const ids: string[] = [];
+    const walk = (nodes: any[]) => {
+      for (const node of nodes) {
+        if (typeof node.id === "string") ids.push(node.id);
+        if (node.items) walk(node.items);
+      }
+    };
+    walk(full.items);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.filter((id) => /^tray:\d+$/.test(id))).toEqual([]);
+    // Every id the native side can send back resolves to a closure, and nothing is registered that no item shows.
+    expect([...full.registry.keys()].sort()).toEqual([...new Set(ids)].sort());
   });
 
   it("one engine → header + Running/Stopped submenus + Open/Quit, with closures registered by id", () => {
