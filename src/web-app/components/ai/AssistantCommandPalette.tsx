@@ -26,7 +26,9 @@ interface AssistantCommandPaletteProps {
   listboxId: string;
   anchor: "input" | "button";
   selectedIndex: number;
-  onSelect: (command: AssistantCommandDefinition) => void;
+  // `via` is how the row was activated, because the two mean different things: a click is a decision about THIS
+  // command, while the keyboard's Enter acts on wherever the cursor happens to have landed.
+  onSelect: (command: AssistantCommandDefinition, via: "click" | "keyboard") => void;
   onSelectedIndexChange: (index: number) => void;
 }
 
@@ -178,7 +180,9 @@ export function AssistantCommandPalette({
                   unavailable ? " is-unavailable" : ""
                 }`}
                 onMouseEnter={() => onSelectedIndexChange(index)}
-                onClick={() => onSelect(command)}
+                // A click the browser synthesised from a key press reports no click count; a real pointer reports at
+                // least one. That is what keeps "clicking runs it" from quietly becoming "Enter runs it" too.
+                onClick={(event) => onSelect(command, event.detail > 0 ? "click" : "keyboard")}
               >
                 <span className="AssistantCommandPaletteIcon">
                   <Icon icon={commandIcon(command)} size={16} />

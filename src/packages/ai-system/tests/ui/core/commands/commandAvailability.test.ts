@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planCommandExecution } from "@/ai-system/ui/core/commands/commandAvailability";
+import { planCommandExecution, runsOnPointerActivation } from "@/ai-system/ui/core/commands/commandAvailability";
 import { BUILTIN_ASSISTANT_COMMANDS } from "@/ai-system/ui/core/commands/commandCatalog";
 
 const command = (id: string) => {
@@ -113,5 +113,40 @@ describe("planCommandExecution", () => {
         sessionPhase: "idle",
       }),
     ).toEqual({ kind: "unavailable", reasonKey: "The Assistant is unavailable" });
+  });
+});
+
+// Clicking a palette row is a commitment in a way that arrowing onto it is not, so a click RUNS the command. What it
+// must never become is the shortest path to something the user did not finish asking for, or did not confirm.
+describe("runsOnPointerActivation", () => {
+  it("runs a command that needs nothing more from the user", () => {
+    expect(runsOnPointerActivation(command("context.usage"))).toBe(true);
+    expect(runsOnPointerActivation(command("session.info"))).toBe(true);
+  });
+
+  it("writes a command that cannot run without arguments into the composer instead", () => {
+    expect(runsOnPointerActivation(command("memory.add"))).toBe(false);
+  });
+
+  it("still runs one whose arguments are merely optional", () => {
+    expect(runsOnPointerActivation(command("help"))).toBe(true);
+    expect(runsOnPointerActivation(command("model.open"))).toBe(true);
+  });
+
+  // Every one of these opens a surface rather than doing something to the user's data — `/memory clear` included,
+  // which navigates to the review that precedes clearing. That is what makes running them on a click unremarkable.
+  it("runs the commands that only open something", () => {
+    for (const id of ["skills.open", "diagnostics.open", "permissions.open", "memory.clear", "changes.diff"]) {
+      expect(runsOnPointerActivation(command(id)), id).toBe(true);
+    }
+  });
+
+  it("never gives a confirmed command a one-click path to doing the thing", () => {
+    // Neither is undoable from here, and nothing in the execution path honours `confirmation` yet — so the guard
+    // that keeps a single click from stopping a session or dropping a key is this one.
+    expect(command("session.quit").confirmation).toBe("required");
+    expect(runsOnPointerActivation(command("session.quit"))).toBe(false);
+    expect(command("provider.logout").confirmation).toBe("required");
+    expect(runsOnPointerActivation(command("provider.logout"))).toBe(false);
   });
 });

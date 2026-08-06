@@ -14,6 +14,7 @@ import type { AISettings } from "@/ai-system/core/types";
 import {
   type AssistantCommandExecutionContext,
   planCommandExecution,
+  runsOnPointerActivation,
 } from "@/ai-system/ui/core/commands/commandAvailability";
 import {
   enqueueAssistantCommand,
@@ -22,6 +23,7 @@ import {
   revalidateQueuedAssistantCommand,
 } from "@/ai-system/ui/core/commands/commandQueue";
 import type {
+  AssistantCommandDefinition,
   AssistantCommandExecutionResult,
   AssistantCommandRegistry,
   AssistantInputParseResult,
@@ -233,7 +235,22 @@ export const AIComposer: React.FC<AIComposerProps> = ({
     if (!canSubmit) {
       return;
     }
-    const text = draft.trim();
+    // A typed submission clears the draft it came from; see submitText for why a clicked command must not.
+    await submitText(draft.trim(), clearSubmittedDraft);
+  };
+
+  // Clicking a palette row runs the command outright, through exactly the path a typed one takes — same parse, same
+  // availability plan, same queueing when a turn is busy. Only the author of the text differs. The palette closes
+  // first, because leaving it open over a command that has already run reads as though nothing happened.
+  const runClickedCommand = async (command: AssistantCommandDefinition) => {
+    completion.dismiss();
+    await submitText(command.path, pushSubmission);
+  };
+
+  // `settle` decides what happens to the composer once the input is accepted. A message the user typed leaves with
+  // the draft it was written in, but a command they CLICKED was never in the draft — so it only joins the history,
+  // and whatever half-written message is sitting there is still theirs when it returns.
+  const submitText = async (text: string, settle: (submitted: string) => void) => {
     const parsed = commands ? parseAssistantInput(text, commands.registry) : ({ kind: "message", text } as const);
     if (parsed.kind === "error") {
       setSubmitError(t(parsed.messageKey));
@@ -263,7 +280,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
           setSubmitError(t(describeError(error)));
           return;
         }
-        clearSubmittedDraft(text);
+        settle(text);
         return;
       }
     }
@@ -277,11 +294,11 @@ export const AIComposer: React.FC<AIComposerProps> = ({
           applyCommandEffect(effect);
           return;
         }
-        clearSubmittedDraft(text);
+        settle(text);
         applyCommandEffect(effect);
       } else {
         await onSubmit(parsed.text, { providerId: target.providerId, model: target.model });
-        clearSubmittedDraft(text);
+        settle(text);
       }
     } catch (error) {
       setSubmitError(describeError(error));
@@ -322,8 +339,13 @@ export const AIComposer: React.FC<AIComposerProps> = ({
               listboxId={commandListboxId}
               anchor="input"
               selectedIndex={completion.selectedIndex}
-              onSelect={(command) => {
+              onSelect={(command, via) => {
                 setSubmitError(undefined);
+                // A click is a decision about this command; the keyboard's Enter still just writes it in.
+                if (via === "click" && runsOnPointerActivation(command)) {
+                  void runClickedCommand(command);
+                  return;
+                }
                 completion.accept("pointer", command.id);
               }}
               onSelectedIndexChange={completion.selectIndex}
@@ -455,8 +477,13 @@ export const AIComposer: React.FC<AIComposerProps> = ({
                 listboxId={commandListboxId}
                 anchor="button"
                 selectedIndex={completion.selectedIndex}
-                onSelect={(command) => {
+                onSelect={(command, via) => {
                   setSubmitError(undefined);
+                  // A click is a decision about this command; the keyboard's Enter still just writes it in.
+                  if (via === "click" && runsOnPointerActivation(command)) {
+                    void runClickedCommand(command);
+                    return;
+                  }
                   completion.accept("pointer", command.id);
                 }}
                 onSelectedIndexChange={completion.selectIndex}
