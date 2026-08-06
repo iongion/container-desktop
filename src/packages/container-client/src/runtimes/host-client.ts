@@ -454,7 +454,12 @@ export class HostClient implements HostContext {
         }
         return { success, details: success ? "Api is reachable" : describeUnexpectedPingBody(response?.data) };
       } catch (error: any) {
-        this.logger.warn(this.id, `API ping service failed - response failure (attempt ${attemptsMade})`, error);
+        // The message and code, not just the object: a transport error's own words are what tell a socket that was
+        // never there from one that answered something unexpected, and the object alone logged as a bare stack.
+        this.logger.warn(
+          this.id,
+          `API ping service failed - response failure (attempt ${attemptsMade}): ${error?.code ?? "no-code"} ${error?.message ?? error}`,
+        );
         return { success: false, details: "API is not reachable - start manually or connect" };
       }
     }, policy);

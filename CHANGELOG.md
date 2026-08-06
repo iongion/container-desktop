@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- A remote connection stops dropping itself. One unanswered engine ping used to close the whole connection — including the SSH channel every command travels on, so the next thing you did failed with "SSH connection is not established". A ping is now retried, with a budget that fits what it crosses; on a remote engine in a machine every ping failed its first attempt and answered on the next, which means the connection used to have to be lucky
+- A remote connection stops dropping itself. One unanswered engine ping used to close the whole connection — including the SSH channel every command travels on, so the next thing you did failed with "SSH connection is not established". A ping is now retried, with a budget that fits what it crosses: on a busy remote engine six pings failed in a single run and every one of them recovered on the next attempt, where before each would have cost you the connection
 - A connection whose channel was closed is reopened instead of refusing your next action
 - A remote command refused mid-handshake is sent again: a remote's SSH server turns away part of a burst, and starting a session is a burst. Only failures where the command provably never ran are retried
 - A session's SSH forward that is refused the moment it opens is opened again, rather than ending the session that was about to use it

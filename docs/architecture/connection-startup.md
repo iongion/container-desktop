@@ -234,11 +234,14 @@ A failed `api` verdict is expensive: the caller stops the API, and an SSH transp
 (`runtimes/api-ping.ts`), with a budget that reflects what it crosses: a local socket answers in milliseconds, while a
 remote engine inside a machine is two SSH hops and a unix socket (measured ~1.1s idle, and the same under load).
 
-Three things go wrong routinely on a remote, all measured on a Windows target, none of them the engine being gone:
+Three things go wrong on a remote, all measured on a Windows target, none of them the engine being gone:
 
-- **The app's own first request races the bridge it just spawned.** Every ping on that target failed its first attempt
-  and answered on the second — same second, so a connection error and not a timeout. Single-shot, each one used to
-  close the connection.
+- **A ping fails transiently and the next one answers.** Measured on a busy target: six attempts failed in one run
+  while all eight verdicts still came back reachable — five recovered on the second attempt, one on the third, each
+  failure and its retry inside the SAME second, so a connection error rather than a timeout. A later idle run had none.
+  What closed those sockets is not pinned down: the bridge's listener is bound before the request is issued, and a
+  connection held through the bridge survives being idle (both measured), so the pooled-connection and
+  racing-the-spawn explanations are both ruled out. Single-shot, each of those six used to close the whole connection.
 - **A remote sshd refuses part of a burst.** Of 14 simultaneous engine commands, up to 2 came back
   `kex_exchange_identification: read: Connection reset by peer`. A session start fires about a dozen. Such a failure
   means the command never ran, so `SSHClient.execute` runs it again (`ssh-retry.ts`) — and only for that family of
