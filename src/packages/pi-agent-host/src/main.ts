@@ -8,6 +8,7 @@ import {
   knowledgeBankEntries,
   workspaceToolDescriptions,
 } from "@/pi-agent-host/containerToolDescriptions";
+import { loadEnvFile } from "@/pi-agent-host/envFile";
 import { reasoningFromEnv } from "@/pi-agent-host/modelRegistrations";
 import { startProviderProxy } from "@/pi-agent-host/providerProxy";
 import { attachBridgeConnection } from "@/pi-agent-host/server";
@@ -181,6 +182,10 @@ async function runLogin(): Promise<void> {
     socket.on("message", (data) => void attached.handleFrame(data.toString()));
   });
 }
+
+// Before either mode reads a variable: for an engine on another machine the environment arrives as a file in a
+// session volume rather than through `--env-file`, which that engine's client reads on ITS filesystem.
+await loadEnvFile(process.env.CD_ENV_FILE);
 
 const mode = argValue("--mode") ?? "agent";
 await (mode === "login" ? runLogin() : runAgent());

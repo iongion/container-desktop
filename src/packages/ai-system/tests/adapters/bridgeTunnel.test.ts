@@ -25,6 +25,14 @@ describe("bridgeTunnelArgv", () => {
   it("refuses to come up quietly when the forward cannot be bound", () => {
     expect(bridgeTunnelArgv(credentials, 41999, 43117)).toContain("-oExitOnForwardFailure=yes");
   });
+
+  // A remote engine that runs its containers inside a MACHINE publishes one hop further away: measured on a real WSL
+  // machine, that port never appears on the Windows host, so a forward to the remote's own loopback reaches nothing.
+  // The destination is resolved ON the remote, which is exactly where the machine's address is reachable.
+  it("forwards to the machine's own address when the pair published inside one", () => {
+    const argv = bridgeTunnelArgv(credentials, 41999, 43117, "172.24.186.248");
+    expect(argv).toContain("127.0.0.1:41999:172.24.186.248:43117");
+  });
 });
 
 describe("openBridgeTunnel", () => {

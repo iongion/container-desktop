@@ -74,6 +74,13 @@ export function assistantNetworkName(scope: string): string {
   return `${ASSISTANT_PROJECT}-net-${scope}`;
 }
 
+// Where the agent's environment is carried for an engine that cannot be handed a file from this machine. Per SESSION
+// and disposable, unlike the plugin volume: it holds this run's bridge token, so it must not outlive the run or be
+// shared with the next one.
+export function assistantEnvVolumeName(scope: string): string {
+  return `${ASSISTANT_PROJECT}-env-${scope}`;
+}
+
 // Every name of the session a connection REUSES, in one call — so a caller composing a spec cannot name the container
 // after the connection and the network after a run.
 export function defaultSessionNamesFor(connectionId: string): {

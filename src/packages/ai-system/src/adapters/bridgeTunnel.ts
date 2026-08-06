@@ -9,6 +9,7 @@
 // upgrade over a long-lived socket. This is a plain `ssh -NL` child process, spawned through the same exec seam every
 // other engine command uses, and killed with the session.
 
+import { LOOPBACK_ADDRESS } from "@/ai-system/adapters/engineMachine";
 import { buildSSHTunnelArgs, type SSHClientConnection } from "@/container-client/ssh-args";
 import { createLogger } from "@/logger";
 
@@ -40,8 +41,12 @@ export interface BridgeTunnelDeps {
 
 export interface BridgeTunnelSpec {
   credentials: SSHClientConnection;
-  // The port the pair published on the remote's loopback.
+  // The port the pair published on the remote.
   remotePort: number;
+  // Where that port answers, as reached FROM the remote. Its own loopback for an engine that runs the containers
+  // itself; the machine's own address for one whose engine lives inside a machine, because a port published there
+  // never appears on the host running it (`adapters/engineMachine`).
+  remoteHost?: string;
   // Called when the forward dies under a live session. Every frame after that goes nowhere, so the caller reports the
   // session as lost rather than leaving a transcript that has silently stopped receiving.
   onLost?: (reason: string) => void;
@@ -50,16 +55,20 @@ export interface BridgeTunnelSpec {
   label?: string;
 }
 
-const LOOPBACK = "127.0.0.1";
-
 // `ssh -NL <local>:<remote>` with no command: this connection exists to carry the forward. The forward's destination is
-// resolved ON the target, so `127.0.0.1` there is the remote's own loopback — exactly where the pair published.
-export function bridgeTunnelArgv(credentials: SSHClientConnection, localPort: number, remotePort: number): string[] {
-  return buildSSHTunnelArgs(credentials, `${LOOPBACK}:${localPort}`, `${LOOPBACK}:${remotePort}`);
+// resolved ON the target, so `127.0.0.1` there is the remote's own loopback — where a pair published by an engine that
+// runs its containers itself is — and a machine's address there is that machine, reached from the host running it.
+export function bridgeTunnelArgv(
+  credentials: SSHClientConnection,
+  localPort: number,
+  remotePort: number,
+  remoteHost: string = LOOPBACK_ADDRESS,
+): string[] {
+  return buildSSHTunnelArgs(credentials, `${LOOPBACK_ADDRESS}:${localPort}`, `${remoteHost}:${remotePort}`);
 }
 
 export async function openBridgeTunnel(deps: BridgeTunnelDeps, spec: BridgeTunnelSpec): Promise<BridgeTunnel> {
-  const argv = bridgeTunnelArgv(spec.credentials, deps.localPort, spec.remotePort);
+  const argv = bridgeTunnelArgv(spec.credentials, deps.localPort, spec.remotePort, spec.remoteHost);
   const child = await deps.spawn(deps.launcher ?? "ssh", argv);
   let stopped = false;
   child.on?.("exit", (payload) => {

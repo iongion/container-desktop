@@ -216,8 +216,9 @@ test, and use its debug binary (or one named by `CONTAINER_DESKTOP_E2E_APP`).
 
 **Keyless, offline, and the one to reach for first** — a real container pair against the LM Studio server on this
 machine. It needs no account and no network, and it is the only spec that drives the keyless half: a vault with
-nothing stored substituting an empty key, the gateway forwarding to a host-local server through the container's host
-alias, and the window the app probed matching what the server actually loaded.
+nothing stored substituting an empty key, a turn carried to a server on the app's OWN loopback (the app dials the
+provider from its own realm, so the server needs no wider bind), and the window the app probed matching what the
+server actually loaded.
 
 ```bash
 lms load qwen3-4b-instruct-2507 --context-length 16384 --yes   # tool-capable, and room for the session's own prompt
@@ -234,6 +235,24 @@ paints in the app's colours: it seeds an extension into the `cd-agent-plugins` v
 `getMarkdownTheme()` — the route that reads pi's module-global theme — and asserts the surface frame's truecolor SGR
 carries the accent the app is painted in at that moment. It removes the extension again; leaving one behind would
 change every later session.
+
+**A whole session on a connection reached over SSH**, including a real turn — and the only spec that covers the
+machine hop, the environment carried into a volume, and the two `ssh -NL` forwards. The remote needs no provider, no
+key and no network of its own: inference travels back over the bridge to the LM Studio server here.
+
+```bash
+CD_LIVE_REMOTE_SSH_HOST=win11 CD_LIVE_REMOTE_SSH_USER=<user> CD_LIVE_REMOTE_ENGINE=podman \
+  CD_LIVE_REMOTE_PROGRAM='C:\Users\<user>\AppData\Local\Programs\Podman\podman.exe' \
+  yarn test:smoke:tauri --spec webdriver/smoke/pi-remote-bridge.smoke.js
+```
+
+The agent image has to be in THAT machine's store (`podman save … | ssh <host> "podman load"`) — an image built here
+does not exist there — and the spec skips saying so when it is not. On a **podman-on-Windows** remote the app's own
+connection is unstable for a reason outside this spec: the engine API is served by `podman system dial-stdio`, which
+cannot authenticate to its own machine without an ssh-agent, and a non-interactive SSH session has none. The app closes
+a connection whose API stops answering, so a start that begins in one of those gaps fails on `SSH connection is not
+established`; the spec asks for the connection again immediately before starting. Overrides:
+`CD_LIVE_REMOTE_SSH_PORT`, `CD_LIVE_REMOTE_WORKSPACE`, `CD_LIVE_LMSTUDIO_MODEL`, `CD_LIVE_APP_VERSION`.
 
 The rest need `OPENROUTER_API_KEY`, because they drive a model's judgement rather than the route to it.
 

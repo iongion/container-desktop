@@ -1,17 +1,22 @@
-// A real session on a connection reached over SSH. The pair publishes its bridge on 127.0.0.1 of the machine running
-// the ENGINE, so the app's own loopback answers nothing — a session there used to be offered, build its containers and
-// never dial. What this proves is the forward: `ssh -NL` opened by the app, a WebSocket riding it, and both the pair and
-// the forward gone when the session stops.
+// A real session on a connection reached over SSH, and a real turn answered on it. The pair publishes on the machine
+// running the ENGINE, so the app's own loopback answers nothing — a session there used to be offered, build its
+// containers and never dial. What this proves is the whole remote path: the `ssh -NL` the app opens, a WebSocket riding
+// it, a turn whose inference travels back over that same socket to a model on THIS machine, and both the pair and the
+// forward gone when the session stops.
 //
-// Needs a NON-mock app, a REMOTE connection configured in the app, and the agent image present on THAT machine's
-// engine (`podman save … | ssh <host> "podman load"`). Nothing here is a defect when it is missing:
+// It also covers the hop BEYOND the remote's loopback. An engine that runs its containers inside a machine (podman on
+// Windows) publishes into that machine's own network, which the Windows host cannot reach at all — measured — so the
+// pair is bound to the machine's own address and the forward is pointed there instead. Whichever topology the target
+// is, the forward's destination is asserted to be where the pair actually published.
+//
+// Needs a NON-mock app, a REMOTE connection configured in the app, the agent image present on THAT machine's
+// engine (`podman save … | ssh <host> "podman load"`), and a model loaded in LM Studio HERE — the remote needs no
+// provider, no key and no network of its own. Nothing here is a defect when it is missing:
 //
 //   CD_LIVE_REMOTE_SSH_HOST=win11 CD_LIVE_REMOTE_SSH_USER=me CD_LIVE_REMOTE_ENGINE=podman \
 //     yarn test:smoke:tauri --spec webdriver/smoke/pi-remote-bridge.smoke.js
 //
-// No turn is submitted: the machine hop is what stops one, and what is under
-// test is the transport, not inference. NOTHING OF THE USER'S IS TOUCHED — only this session's own pair, removed by
-// the last test.
+// NOTHING OF THE USER'S IS TOUCHED — only this session's own pair, removed by the last test.
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -34,6 +39,9 @@ const TARGET = { id: SSH_HOST || "remote", ssh: { host: SSH_HOST, port: SSH_PORT
 let sessionSpec = {};
 let started = {};
 let localPort = 0;
+let answer = {};
+// A remote pair, a forward and a small local model: the turn itself is trivial, what is under test is the route.
+const TURN_TIMEOUT = 180000;
 
 // The harness wipes its user-data dir at the start of every run, so the connection under test is written HERE, after
 // the wipe, in the shape the app's own builder produces for an SSH remote (`buildRemoteConnectionsFromEnv`). Only the
@@ -91,15 +99,26 @@ function runningOnRemote(name) {
   }
 }
 
-// The forward, as this machine's own process table sees it. Matched on the port pair rather than on "ssh", so nothing
-// else's ssh can be mistaken for it.
+// The forward, as this machine's own process table sees it. Matched on the local port rather than on "ssh", so nothing
+// else's ssh can be mistaken for it — and the far end is left out, because where it points is what a test below reads.
 function forwardIsUp(port) {
   if (!port) return false;
   try {
     const listed = execFileSync("ps", ["-eo", "args"], { encoding: "utf8", timeout: 10000 });
-    return listed.includes(`127.0.0.1:${port}:127.0.0.1:`);
+    return listed.includes(`127.0.0.1:${port}:`);
   } catch {
     return false;
+  }
+}
+
+// Where that forward actually points, read off the same process table. `<local>:<destination>:<port>` is one argument
+// of `ssh -NL`, so the destination is what sits between the two ports.
+function forwardDestination(port) {
+  try {
+    const listed = execFileSync("ps", ["-eo", "args"], { encoding: "utf8", timeout: 10000 });
+    return new RegExp(`127\\.0\\.0\\.1:${port}:([^:\\s]+):(\\d+)`).exec(listed)?.slice(1) ?? [];
+  } catch {
+    return [];
   }
 }
 
@@ -108,6 +127,11 @@ describe("a real session on a connection reached over SSH", () => {
     if (!SSH_HOST) {
       return skipSuite(this, "no remote target — set CD_LIVE_REMOTE_SSH_HOST (and _SSH_USER) to an ssh config host");
     }
+    // A remote start is a dozen SSH round trips — freeing the name, the machine probe, the network, the environment,
+    // the run — and W3C's default script timeout is 30 seconds. Left at the default, WebdriverIO gives up and RETRIES
+    // the script, and each retry starts ANOTHER session: three agent containers on the remote from one run, two of
+    // them never stopped by anything.
+    await browser.setTimeout({ script: 600000 });
     const blocked = await firstReason([
       () => appModeReason("real"),
       () => targetReason(TARGET, ENGINE),
@@ -192,9 +216,29 @@ describe("a real session on a connection reached over SSH", () => {
       );
     }
 
-    // A folder on the REMOTE, made there, because that is the filesystem its engine mounts from.
-    onRemote(`${ENGINE} version > NUL 2>&1 || true`);
+    // A folder on the REMOTE, made there, because that is the filesystem its engine mounts from. This spec's own
+    // fixture, not a prerequisite: a workspace the app is pointed at has to exist before the engine mounts it, or the
+    // ENGINE creates it as root and pi meets that as EACCES on the first turn.
+    try {
+      onRemote(`if not exist "${REMOTE_WORKSPACE}" mkdir "${REMOTE_WORKSPACE}"`);
+    } catch (error) {
+      return skipSuite(this, `could not make ${REMOTE_WORKSPACE} on ${SSH_HOST}: ${error}`);
+    }
     configureLmStudioProvider(model.id);
+    // Immediately before the start, and deliberately a second time. The app closes a remote connection whose engine
+    // API stops answering — and on a podman-on-Windows remote that API cannot answer at all: `system dial-stdio` needs
+    // an ssh-agent to reach its own machine and a non-interactive SSH session has none (measured; every other podman
+    // command works). So the connection comes and goes on the app's own ping loop, and a start that begins in a gap
+    // fails on "SSH connection is not established" — which is the environment, not this path.
+    await browser.executeAsync(
+      (id, done) => {
+        window.MessageBus.invoke("resource:ensure-connected", { connectionId: id }).then(
+          () => done(true),
+          (failure) => done(String(failure)),
+        );
+      },
+      `system-env.${SSH_HOST}.${ENGINE}`,
+    );
     started = await browser.executeAsync((options, done) => {
       const read = () => {
         const state = window.__cdCodingAgentStore.getState();
@@ -224,6 +268,27 @@ describe("a real session on a connection reached over SSH", () => {
     });
     sessionSpec = started.spec ?? {};
     localPort = started.localPort;
+    if (started.status !== "ready") return;
+
+    // One turn, and the whole point of it: the container has no provider, no key and — with egress off — no network
+    // at all, so an answer can only have come back through the bridge this forward carries, to the model on THIS
+    // machine. It also proves the conversation store, which pi blocks its first turn on.
+    await browser.execute(() => {
+      void window.__cdCodingAgentStore.getState().submit("Reply with the single word: ok");
+    });
+    await browser.waitUntil(
+      async () => (await browser.execute(() => window.__cdCodingAgentStore.getState().view.phase)) === "idle",
+      { timeout: TURN_TIMEOUT, interval: 1000, timeoutMsg: "the remote session never finished a turn" },
+    );
+    answer = await browser.execute(() => {
+      const state = window.__cdCodingAgentStore.getState();
+      return {
+        said: state.view.timeline
+          .filter((entry) => entry.kind === "message" && entry.role === "assistant")
+          .map((entry) => `${entry.message ?? entry.content ?? ""}`.slice(0, 200)),
+        notices: state.view.timeline.filter((entry) => entry.kind === "notice").map((entry) => entry.notice),
+      };
+    });
   });
 
   // A safety net only: the last test stops the session, because what it asserts happens after the stop.
@@ -250,6 +315,30 @@ describe("a real session on a connection reached over SSH", () => {
 
   it("built the container on the REMOTE machine, not on this one", () => {
     assert.ok(runningOnRemote(sessionSpec.agentContainerName), `${sessionSpec.agentContainerName} is not on ${SSH_HOST}`);
+  });
+
+  // The hop the forward's far end has to account for. An engine inside a machine publishes into that machine's own
+  // network — measured: nothing published there answers on the Windows host, at either bind address — so the pair is
+  // bound to the machine's address and the forward points at it. A native remote publishes on its own loopback and
+  // nothing changes. Either way the destination must be where the pair actually published.
+  it("points the forward at the address the pair published on", () => {
+    const [destination, port] = forwardDestination(localPort);
+    assert.equal(Number(port), sessionSpec.hostPort, `the forward carries ${port}, not the pair's ${sessionSpec.hostPort}`);
+    assert.equal(
+      destination,
+      sessionSpec.machineAddress ?? "127.0.0.1",
+      `the forward points at ${destination}, but the pair published on ${sessionSpec.machineAddress ?? "the remote's loopback"}`,
+    );
+  });
+
+  // The end of the whole path: a container on another machine, with no provider and no key of its own, answered from a
+  // model on this one. Every byte of that inference crossed the same forward the bridge rides.
+  it("answers a turn whose inference travelled back over the bridge", () => {
+    assert.ok(answer.said?.length > 0, `no assistant message arrived; notices: ${(answer.notices ?? []).join(",")}`);
+    assert.ok(
+      answer.said.join(" ").trim().length > 0,
+      `the turn produced an empty answer; notices: ${(answer.notices ?? []).join(",")}`,
+    );
   });
 
   it("takes the forward down with the session, and the container with it", async () => {

@@ -10,6 +10,7 @@ import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import {
   attachPiAgentSession,
   engineIsRemote,
+  engineMachineAddress,
   engineSharesAppFilesystem,
   findDefaultSession,
   pickHostPort,
@@ -25,7 +26,9 @@ import {
   type AiSessionKind,
   ASSISTANT_PLUGIN_VOLUME,
   assistantContainerName,
+  assistantEnvVolumeName,
   assistantNetworkName,
+  defaultScope,
   defaultSessionNamesFor,
 } from "@/ai-system/adapters/sessionNaming";
 import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
@@ -747,6 +750,7 @@ async function forwardRemotePort(
   remotePort: number,
   onLost: (reason: string) => void,
   label: string,
+  remoteHost?: string,
 ): Promise<BridgeTunnel> {
   return await openBridgeTunnel(
     {
@@ -756,7 +760,7 @@ async function forwardRemotePort(
       // and a spawn is not a shell, so the name has to be exact.
       launcher: useAppStore.getState().osType === OperatingSystem.Windows ? "ssh.exe" : "ssh",
     },
-    { credentials: credentialsFromSSHHost(entry), remotePort, onLost, label },
+    { credentials: credentialsFromSSHHost(entry), remotePort, onLost, label, remoteHost },
   );
 }
 
@@ -767,7 +771,9 @@ async function reachBridge(
 ): Promise<{ url: string; tunnel?: BridgeTunnel }> {
   if (!engineIsRemote(engineHost)) return { url: `ws://127.0.0.1:${spec.hostPort}/` };
   const entry = await sshEntryFor(spec.scope ?? "", "its bridge");
-  const tunnel = await forwardRemotePort(entry, spec.hostPort, onLost, "the assistant's bridge");
+  // The forward's far end is the remote's own loopback, or — where the engine runs inside a machine — that machine's
+  // address, which is what the remote can reach and where the pair was told to publish.
+  const tunnel = await forwardRemotePort(entry, spec.hostPort, onLost, "the assistant's bridge", spec.machineAddress);
   return { url: `ws://127.0.0.1:${tunnel.localPort}/`, tunnel };
 }
 
@@ -799,7 +805,13 @@ async function serveConversations(
     return undefined;
   }
   const entry = await sshEntryFor(spec.scope ?? "", "its conversation store");
-  const tunnel = await forwardRemotePort(entry, spec.storageHostPort, onLost, "the assistant's conversation store");
+  const tunnel = await forwardRemotePort(
+    entry,
+    spec.storageHostPort,
+    onLost,
+    "the assistant's conversation store",
+    spec.machineAddress,
+  );
   await window.AI.serveAgentSessions({ localPort: tunnel.localPort, bridgeToken: spec.bridgeToken });
   return tunnel;
 }
@@ -1066,6 +1078,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // directory only for a pair that reports one — the app resolves the same directory it would have mounted, and
     // says nothing at all about a pair whose history is still in the volume.
     const sessionsPath = attached.sessionsDir ? await readSessionsDir() : undefined;
+    // Attaching binds nothing — the pair's sockets are where they are — but the forward still has to be pointed at
+    // them, and a pair built inside a machine published on that machine's address rather than the remote's loopback.
+    const machineAddress = engineIsRemote(host.HOST)
+      ? await engineMachineAddress(host, options.scope, agentImageTag(options.appVersion))
+      : undefined;
     // The pair's OWN facts win where it has them — the model it is running, the socket it publishes — and the rest is
     // what this connection's session was configured with.
     const spec: PiAgentSessionSpec = {
@@ -1079,6 +1096,12 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       // A pair BUILT to ask for its conversations must be answered again, or its next turn blocks on a storage call
       // nobody is listening for. The port is the one the engine actually published, read back off the container.
       ...(attached.storageHostPort ? { storageHostPort: attached.storageHostPort } : {}),
+      ...(machineAddress ? { machineAddress } : {}),
+      // Nothing is carried on an attach — the pair has its environment — but stopping it later must take the volume
+      // that holds this connection's bridge token with it, and the name is derived, not remembered.
+      ...(engineSharesAppFilesystem(host.HOST)
+        ? {}
+        : { envVolumeName: assistantEnvVolumeName(defaultScope(options.connectionId)) }),
       connectionId: options.connectionId,
       sessionKind: "default",
       upstreamBaseUrl: options.upstreamBaseUrl,
@@ -1222,11 +1245,25 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // is possible when the host could not give us a directory at all, and pi then keeps its own default.
     const conversations = await readSessionsDir();
     const shared = conversations && engineSharesAppFilesystem(host.HOST);
+    // Asked BEFORE the pair is built, because it decides what the sockets are bound to: a remote engine running inside
+    // a machine publishes into that machine's own network, which the host running it cannot reach.
+    const machineAddress = engineIsRemote(host.HOST)
+      ? await engineMachineAddress(host, options.scope, agentImageTag(options.appVersion))
+      : undefined;
+    // The same question the conversations ask, for the same reason: an engine that cannot see this filesystem cannot
+    // be handed the agent's env file either — `--env-file` is read on ITS machine — so the environment is carried in
+    // a session volume instead.
+    // On `engineSharesAppFilesystem` alone, never on `shared`: that one is also false when the host could give no
+    // conversations directory at all, which says nothing about whether this engine can read a file of ours.
+    const scope = options.sessionKind === "default" ? defaultScope(options.connectionId) : suffix;
+    const envVolumeName = engineSharesAppFilesystem(host.HOST) ? undefined : assistantEnvVolumeName(scope);
     const spec: PiAgentSessionSpec = {
       imageTag: agentImageTag(options.appVersion),
       workspacePath: options.workspacePath,
       ...(shared ? { sessionsPath: conversations } : {}),
       ...(conversations && !shared ? { storageHostPort: pickHostPort() } : {}),
+      ...(machineAddress ? { machineAddress } : {}),
+      ...(envVolumeName ? { envVolumeName } : {}),
       hostPort: pickHostPort(),
       bridgeToken: randomUUID(),
       ...(options.sessionKind === "default"

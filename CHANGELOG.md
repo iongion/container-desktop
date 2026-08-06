@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An assistant session runs on a remote engine that keeps its containers in a machine — podman on Windows: nothing published inside that machine reaches the host running it, so the session used to build its container and then dial nothing. The pair now publishes on the machine's own address and the forward is pointed there
+- The agent's environment reaches a remote engine at all: it was handed the path of a file on YOUR machine, which that engine has never seen, and every remote session failed before a container existed. Nothing of it travels in a command line, where the rest of that machine could read the session's token
+- A session already running on a remote engine can be continued, and one is found to continue: both questions were asked with a command the remote's own shell took apart — one failed outright, the other answered "nothing here" for every connection
+- A session no longer fails because its conversation store was dialled a moment too early — the app now waits for that socket the way it already waits for the agent's bridge
 - A connection to a Windows machine over SSH can be established at all: the app looked for the engine with a command only a Unix shell has, so a Windows remote always reported the engine as missing however it was installed. It now asks the engine itself, and uses the path you configured when you gave one
 
 - A thinking level now reaches DeepSeek, GLM and OpenRouter in the shape each one actually wants, instead of OpenAI's — the session's own endpoint made every provider look like OpenAI, which also sent those servers a system prompt under a role they do not have and an answer cap under a field they do not read

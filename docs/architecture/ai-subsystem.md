@@ -40,7 +40,10 @@ container is installed with one that asks the app, and every read and write land
 are exclusive by construction, since a pair either mounts the directory or asks for it.
 
 The container asks over a **second published port** (`PI_SESSION_STORAGE_CONTAINER_PORT`), dialled by the app the same
-direction as the bridge and, for a remote engine, through a second `ssh -NL` forward. It has to be a second socket: pi's
+direction as the bridge and, for a remote engine, through a second `ssh -NL` forward. That dial retries while the port
+comes up, for the two reasons the bridge client already did: pi's storage worker binds a few hundred milliseconds after
+`run --detach` returned, and a forward's local end is not bound the instant it is spawned. Single-shot, it took the
+whole start down with "the conversation store's socket failed" while everything about the session was right. It has to be a second socket: pi's
 port is synchronous — `appendMessage` returns an entry id, `create`/`open` touch the store in their constructors — so the
 container's main thread BLOCKS on every call, and an answer arriving on a socket that thread is reading is an immediate
 deadlock. A worker thread owns this one and hands bytes back through a `SharedArrayBuffer` with `Atomics.wait`, in
@@ -187,12 +190,19 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
    "rebuilt under the same name", and it costs nothing because the conversation is not in that container. One still
    RUNNING is refused instead: continuing that one is `attachPiAgentSession`;
 1. create a session-scoped network (`cd-agent-net-<id>`; a pre-existing one is not an error);
-2. write the **agent** env file — the bridge token and port, the model id and its facts, the upstream's base URL as
+2. compose the **agent environment** — the bridge token and port, the model id and its facts, the upstream's base URL as
    catalogue data, `/workspace`, the agent dir. **No credential, on any path**: there is no second file and no second
-   container, because a turn's inference is signed by the app (below);
-3. run `<image> --mode agent` with `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, the plugin volume, and —
+   container, because a turn's inference is signed by the app (below). One composer, two ways in: a private file for an
+   engine whose client can read this machine's filesystem, and for one whose cannot the same text **carried into a
+   session volume over the engine's own stdin** (`CD_ENV_FILE`, loaded by `pi-agent-host/envFile.ts`). `--env-file` is
+   read by the CLIENT, so a path under this app's user data means nothing to a podman on another machine — a remote
+   session died there before any container existed. Not `--env` either: the bridge token authorises the socket AND the
+   proxy a turn is signed through, and argv is readable by every other user of that machine. The volume holds one
+   session's environment and is removed with it;
+3. run `<image> --mode agent` with `--publish <bind>:<port>:8787`, the workspace bind-mount, the plugin volume, and —
    where the engine can see this machine's filesystem — the conversations mount, or where it cannot, a second published
-   port for the conversation store the app answers on;
+   port for the conversation store the app answers on. The bind is the engine's own loopback, or the machine's address
+   where the engine lives inside one (below);
 4. connect the WebSocket client and publish the app's theme palette **before** the first plugin frame, so no
    component paints in pi's colours and then flashes to the app's.
 
@@ -204,6 +214,26 @@ everything after it — the client, the events, the host requests — is identic
 session, and if it dies first the session says so rather than leaving a transcript that has quietly stopped receiving.
 A scope naming no `~/.ssh/config` entry is refused before any container is created. NOT the engine's own data plane:
 that one is the native proxy and request-shaped, while a bridge is a WebSocket upgrade over a long-lived socket.
+
+**One hop further for an engine that keeps its containers in a machine.** podman on Windows runs its engine inside a WSL
+machine, which is a network realm of its own: a port published there never appears on the Windows host — measured, at
+BOTH bind addresses, with `netstat` on the host finding nothing — so a forward to the remote's own loopback lands one
+hop short of the container. What the host DOES reach is the machine's own address, so the pair is bound to it and the
+forward is pointed there; it is a NARROWER bind than the loopback one it replaces, since the machine's own loopback
+stops answering too. `adapters/engineMachine.ts` decides this by asking the engine: a machine that is running, is
+`wsl`, and reports `UserModeNetworking: false` — podman's own words for "nothing carries this machine's ports out to
+its host". Every other topology relays and keeps the loopback bind and dial it has today, which is what makes
+`undefined` the safe answer. The address comes from a throwaway container in the MACHINE's own network namespace,
+asking the kernel which source address it would use; not from `podman machine ssh`, which prints its answer and then
+never exits over a non-interactive SSH session.
+
+**Every argument a remote engine is given is re-split by ITS shell.** `ssh` joins the argv it is handed into one command
+line, so anything with a space, a tab or a `>` in it means something else over there — and this is silent: a `--format`
+template with a space made the attach fail with podman's own `bad character U+007B`, one with a TAB made the
+adopt-a-session listing answer EMPTY with exit 0, and a `>` in a script was taken as a redirect. So the session's own
+commands carry no whitespace: `inspect` is read whole instead of through a template, the listing separator is `=`, the
+environment is written with `tee` and stdin rather than a shell redirect. A path the USER chose is the exception this
+cannot cover — a workspace whose path contains a space is still one argument too many for a remote engine.
 
 **Continuing one that is already up** is `attachSession()` → `attachPiAgentSession`, and it creates nothing: one
 `inspect` of the agent container yields the published bridge port and, from its env, the token that authorises the
@@ -811,6 +841,8 @@ then failed from inside a store.
 | `pi-agent-host/src/toolOutput.ts` | reading back a truncated tool's full output, path-validated against pi's own shape |
 | `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
 | `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |
+| `ai-system/adapters/engineMachine.ts` | where a port this engine publishes actually answers — the machine hop |
+| `pi-agent-host/src/envFile.ts` | the environment for an engine that could not be handed a file |
 | `ai-system/adapters/sessionStorageServer.ts`, `core/sessionStorageOps.ts` | the app's half of the conversation store, and what it will act on |
 | `pi-agent-host/src/sessionStorage{,Channel,Worker}.ts` | pi's storage port over a blocking round trip: the port, the shared window, the thread that owns the socket |
 | `pi-bridge/src/sessionStorage.ts` | that store's wire contract — its own protocol and its own socket |

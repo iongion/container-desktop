@@ -7,6 +7,8 @@ import {
   defaultSessionFrom,
   defaultSessionNames,
   engineSharesAppFilesystem,
+  envVolumeCreateArgv,
+  envWriteArgv,
   findDefaultSession,
   networkCreateArgv,
   pluginVolumeMount,
@@ -15,7 +17,7 @@ import {
   userMappingArgv,
 } from "@/ai-system/adapters/piAgentContainer";
 import { ContainerEngineHost } from "@/container-client/types/engine";
-import { SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
+import { AGENT_ENV_FILE_IN_IMAGE, SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
 
 const spec: PiAgentSessionSpec = {
   imageTag: "container-desktop/pi-agent:6.1.0",
@@ -101,6 +103,79 @@ describe("agentRunArgv", () => {
   it("publishes nothing extra for a pair that mounts its conversations", () => {
     const sessions = "/home/me/.local/share/container-desktop/sessions";
     expect(agentRunArgv(unmapped, "/home/me/project", "/tmp/env", sessions).join(" ")).not.toContain(":8789");
+  });
+
+  // An engine inside a machine publishes on the MACHINE's loopback, which is a realm of its own: measured on a real
+  // WSL machine, nothing published there answers on the host running it, at either bind address. Its own address does,
+  // so that is what both sockets are bound to — a NARROWER bind than the loopback one, since the machine's own
+  // loopback then stops answering too (also measured).
+  const inMachine: PiAgentSessionSpec = { ...spec, machineAddress: "172.24.186.248", storageHostPort: 43900 };
+
+  it("binds both sockets to the machine's own address when the engine runs inside one", () => {
+    const argv = agentRunArgv(inMachine, "C:\\Users\\me\\project", "/tmp/env");
+    expect(argv).toContain("172.24.186.248:43117:8787");
+    expect(argv).toContain("172.24.186.248:43900:8789");
+    expect(argv.join(" ")).not.toContain("127.0.0.1:");
+  });
+
+  // `--env-file` is read by the engine's CLIENT. For an engine on another machine that path is this app's, on a
+  // filesystem it has never seen: measured, a remote session died at `parsing file … The system cannot find the path
+  // specified` before any container existed. The same contents are carried into a session volume instead.
+  const carried: PiAgentSessionSpec = { ...spec, envVolumeName: "container-desktop-env-1a2b" };
+
+  it("takes its environment from the session volume when the engine cannot be handed a file", () => {
+    const argv = agentRunArgv(carried, "/home/me/project", "/tmp/env");
+    expect(argv).toContain("container-desktop-env-1a2b:/cd-env:ro");
+    expect(argv).toContain(`CD_ENV_FILE=${AGENT_ENV_FILE_IN_IMAGE}`);
+    // The local file is not named at all: it does not exist over there, and naming it is what the engine refused.
+    expect(argv).not.toContain("--env-file");
+    expect(argv.join(" ")).not.toContain("/tmp/env");
+  });
+
+  it("keeps the env file for an engine that can be handed one", () => {
+    const argv = agentRunArgv(spec, "/home/me/project", "/tmp/env");
+    expect(argv).toContain("--env-file");
+    expect(argv.join(" ")).not.toContain("CD_ENV_FILE");
+  });
+
+  // Every argument of a remote engine's command is re-split by ITS shell, so a space anywhere in this argv is a
+  // command that means something else over there. The two values the app cannot vouch for — the workspace path and
+  // the env file path — are the user's and this machine's; everything the app composes itself is checked here.
+  it("composes the carried-environment arguments so a remote shell cannot re-split them", () => {
+    for (const argument of agentRunArgv(carried, "/home/me/project", "/tmp/env")) {
+      expect(argument).not.toMatch(/\s/u);
+    }
+  });
+});
+
+// Getting that environment INTO the volume, with no shell and no file on either machine: the contents travel as
+// stdin, which the exec seam forwards to the remote command without them ever appearing in argv. Argv is what the
+// bridge token must stay out of — it authorises the socket AND the proxy a turn's inference is signed through.
+describe("the carried environment's own commands", () => {
+  const carried: PiAgentSessionSpec = { ...spec, envVolumeName: "container-desktop-env-1a2b" };
+
+  it("creates the volume it will be carried in", () => {
+    expect(envVolumeCreateArgv(carried)).toEqual(["volume", "create", "container-desktop-env-1a2b"]);
+  });
+
+  it("writes it with stdin alone — no shell, no redirect, nothing with a space in it", () => {
+    const argv = envWriteArgv(carried);
+    expect(argv.slice(0, 2)).toEqual(["run", "--rm"]);
+    // Without `--interactive` the engine gives the container no stdin at all and `tee` writes an empty file.
+    expect(argv).toContain("--interactive");
+    expect(argv).toContain("container-desktop-env-1a2b:/cd-env");
+    // `tee` rather than `sh -c "cat > …"`: a redirect inside an argument is executed by the REMOTE shell, which would
+    // write the engine's own output to a file on that machine instead.
+    expect(argv).toContain("--entrypoint");
+    expect(argv).toContain("tee");
+    expect(argv.at(-1)).toBe(AGENT_ENV_FILE_IN_IMAGE);
+    for (const argument of argv) expect(argument).not.toMatch(/\s/u);
+  });
+
+  // A fresh volume belongs to root, and the image runs as `agent`. The writer is the one container that needs to be
+  // root; what it leaves behind is world-readable inside a volume only this session's own container mounts.
+  it("writes as the user that owns a new volume", () => {
+    expect(envWriteArgv(carried).join(" ")).toContain("--user 0");
   });
 
   // The plugin volume's `:U` does NOT belong here. It exists for a named volume left owned by an earlier mapping; this
@@ -544,14 +619,23 @@ describe("findDefaultSession", () => {
   }
 
   it("asks the engine for its containers and maps the answer", async () => {
-    const host = listingHost(
-      "container-desktop-agent-default-podman-1\trunning\ncontainer-desktop-gateway-default-podman-1\trunning\n",
-    );
+    const host = listingHost("container-desktop-agent-default-podman-1=running\nweb=running\n");
     expect(await findDefaultSession(host, "podman-1")).toEqual({
       connectionId: "podman-1",
       running: true,
     });
     expect((commandsOf(host)[0][1] as string[]).slice(0, 2)).toEqual(["ps", "--all"]);
+  });
+
+  // The separator is what it is because of the SSH hop: this template used to carry a TAB, and a remote engine then
+  // answered an EMPTY listing with exit 0 — the argv split at the tab, so `{{.State}}` arrived as a container name
+  // filter that matched nothing. Every connection with a running session read as having nothing to adopt.
+  it("asks with a template that survives being re-split by a remote shell", async () => {
+    const host = listingHost("");
+    await findDefaultSession(host, "podman-1");
+    for (const argument of commandsOf(host)[0][1] as string[]) {
+      expect(argument).not.toMatch(/\s/u);
+    }
   });
 
   // Discovery runs at boot against an engine that may be unreachable. Nothing it cannot answer becomes a startup
@@ -565,12 +649,24 @@ describe("findDefaultSession", () => {
 // Continuing a session whose pair is already running means DIALLING it: the names are taken, and taking them back
 // would mean removing the user's containers. Everything needed to dial is in the engine's own inspection.
 describe("attachedPiAgentSessionFrom", () => {
-  const inspection = (overrides: Record<string, unknown> = {}) =>
-    JSON.stringify({
-      ports: { "8787/tcp": [{ HostIp: "127.0.0.1", HostPort: "43521" }] },
-      env: ["CD_BRIDGE_TOKEN=tok-abc", "CD_MODEL_ID=qwen/qwen3-4b", "PATH=/usr/bin"],
-      ...overrides,
-    });
+  // The engine's OWN `inspect` output — an array of one, with the two keys podman and docker both carry. Read whole
+  // rather than through a `--format` template, because a template needs a space (`{{json .X}}`) and an argv element
+  // with a space does not survive the SSH hop to a remote engine: measured, podman answers
+  // `bad character U+007B` there, and a listing template with a TAB answers nothing at all with exit 0.
+  const inspection = (overrides: Record<string, unknown> = {}) => {
+    const { ports, env, ...rest } = overrides as { ports?: unknown; env?: unknown };
+    return JSON.stringify([
+      {
+        NetworkSettings: {
+          Ports: ports === undefined ? { "8787/tcp": [{ HostIp: "127.0.0.1", HostPort: "43521" }] } : ports,
+        },
+        Config: {
+          Env: env === undefined ? ["CD_BRIDGE_TOKEN=tok-abc", "CD_MODEL_ID=qwen/qwen3-4b", "PATH=/usr/bin"] : env,
+        },
+        ...rest,
+      },
+    ]);
+  };
 
   it("reads the published port, the bridge token and the model the pair is running", () => {
     expect(attachedPiAgentSessionFrom(inspection())).toEqual({
@@ -652,16 +748,21 @@ describe("attachPiAgentSession", () => {
         pid: 1,
         code: 0,
         success: true,
-        stdout: JSON.stringify({
-          ports: { "8787/tcp": [{ HostPort: "43000" }] },
-          env: ["CD_BRIDGE_TOKEN=tok"],
-        }),
+        stdout: JSON.stringify([
+          {
+            NetworkSettings: { Ports: { "8787/tcp": [{ HostPort: "43000" }] } },
+            Config: { Env: ["CD_BRIDGE_TOKEN=tok"] },
+          },
+        ]),
         stderr: "",
       })),
     });
     expect(await attachPiAgentSession(host, "cd-agent-1")).toEqual({ hostPort: 43000, bridgeToken: "tok" });
     const argv = commandsOf(host)[0][1] as string[];
     expect(argv.slice(0, 2)).toEqual(["inspect", "cd-agent-1"]);
+    // No `--format`: its template needs a space, and a spaced argv element is re-split by a remote shell — which made
+    // adopting a session on a remote engine fail with podman's own `bad character U+007B`.
+    for (const argument of argv) expect(argument).not.toMatch(/\s/u);
   });
 
   // The pair may have been removed between the listing and the click. That is "nothing to adopt", not a crash.

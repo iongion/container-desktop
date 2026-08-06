@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { answerSessionStorageCall } from "@/ai-system/adapters/sessionStorageServer";
+import { answerSessionStorageCall, serveSessionConversations } from "@/ai-system/adapters/sessionStorageServer";
 import type { FileSystemDirEntry, FileSystemStat, IFileDiscoverySystem, IPath } from "@/host-contract/fs";
 import { SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
 import type { SessionStorageCall } from "@/pi-bridge/sessionStorage";
@@ -185,5 +185,84 @@ describe("answerSessionStorageCall", () => {
     const answer = await answerSessionStorageCall({ op: "createDir", path: SESSIONS_DIR_IN_IMAGE }, deps);
     expect(answer).toMatchObject({ ok: true });
     expect(dirs.has(ROOT)).toBe(true);
+  });
+});
+
+// Dialling that store, which is the half a remote session dies on. Two things are still coming up when this runs:
+// the container's own listener — pi's storage worker binds a few hundred milliseconds after `run --detach` returns —
+// and, for a remote engine, the `ssh -NL` whose local end this dials, which is not bound the instant it is spawned.
+// A single-shot connect is refused by one or the other, and the session then fails with a socket error that says
+// nothing about the session. The bridge client has retried for exactly this reason since it was written.
+describe("serveSessionConversations", () => {
+  function fakeSockets() {
+    const made: { url: string; socket: Record<string, any> }[] = [];
+    const connect = (url: string) => {
+      const socket: Record<string, any> = {
+        sent: [],
+        close: () => {},
+        send: (frame: string) => socket.sent.push(frame),
+      };
+      made.push({ url, socket });
+      return socket as never;
+    };
+    return { made, connect };
+  }
+
+  const settings = (connect: (url: string) => never) => ({
+    ...fakeFiles().deps,
+    localPort: 41999,
+    bridgeToken: "tok",
+    connect,
+    connectRetry: { attempts: 5, delayMs: 1 },
+  });
+
+  it("keeps dialling while the port is still coming up, then serves on the one that opened", async () => {
+    const { made, connect } = fakeSockets();
+    const service = serveSessionConversations(settings(connect));
+
+    // Two refusals, as a forward that has not bound yet and a container that has not listened yet each answer.
+    made[0].socket.onerror?.(new Error("ECONNREFUSED"));
+    await vi.waitUntil(() => made.length === 2, { timeout: 500 });
+    made[1].socket.onclose?.();
+    await vi.waitUntil(() => made.length === 3, { timeout: 500 });
+    made[2].socket.onopen?.();
+
+    await service.ready;
+    // The store announces itself on the socket that opened, not on one of the dead ones.
+    expect(JSON.parse(made[2].socket.sent[0])).toMatchObject({ type: "hello", token: "tok" });
+    expect(made[0].socket.sent).toHaveLength(0);
+  });
+
+  // Once it HAS opened, a death is a real one: every storage call after it blocks the container's main thread, so the
+  // session is reported lost rather than quietly re-dialled under a live conversation.
+  it("reports a socket that dies after it opened, rather than dialling again", async () => {
+    const { made, connect } = fakeSockets();
+    const lost: string[] = [];
+    const service = serveSessionConversations({ ...settings(connect), onLost: (reason) => lost.push(reason) });
+    made[0].socket.onopen?.();
+    await service.ready;
+
+    made[0].socket.onclose?.();
+
+    expect(lost).toHaveLength(1);
+    expect(made).toHaveLength(1);
+  });
+
+  it("gives up saying so, rather than dialling for ever", async () => {
+    const { made, connect } = fakeSockets();
+    const lost: string[] = [];
+    const service = serveSessionConversations({ ...settings(connect), onLost: (reason) => lost.push(reason) });
+    // Awaited here and not at the end: `ready` rejects the moment it gives up, and a rejection nobody is holding is
+    // an unhandled one — which fails the whole suite rather than this test.
+    const refusal = expect(service.ready).rejects.toThrow(/after 5 attempts/);
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await vi.waitUntil(() => made.length === attempt + 1, { timeout: 500 });
+      made[attempt].socket.onerror?.(new Error("ECONNREFUSED"));
+    }
+
+    await refusal;
+    expect(lost).toHaveLength(1);
+    expect(made).toHaveLength(5);
   });
 });

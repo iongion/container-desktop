@@ -163,11 +163,25 @@ export interface SessionStorageSocketDeps extends SessionStorageServerDeps {
   // Called when the socket dies while a session is live. Every storage call after that blocks the container's main
   // thread until its own timeout, so the caller reports the session lost rather than leaving it wedged.
   onLost?: (reason: string) => void;
+  // How long to keep dialling a port that is still coming up. Overridden only by tests.
+  connectRetry?: { attempts: number; delayMs: number };
 }
 
+// Two things are still coming up when this dials, and neither has anything to do with the session: pi's storage
+// worker binds its port a few hundred milliseconds after `run --detach` returned, and for a REMOTE engine the local
+// end of the session's `ssh -NL` is not bound the instant the forward is spawned. A single-shot connect is refused by
+// one or the other and takes the whole start down with it — which is how a remote session failed on "the conversation
+// store's socket failed" while everything about it was right. The bridge client has retried for this reason since it
+// was written; these are its numbers.
+const CONNECT_ATTEMPTS = 40;
+const CONNECT_DELAY_MS = 250;
+
 export function serveSessionConversations(deps: SessionStorageSocketDeps): SessionStorageService {
-  const socket = deps.connect(`ws://127.0.0.1:${deps.localPort}`);
+  const attempts = deps.connectRetry?.attempts ?? CONNECT_ATTEMPTS;
+  const delayMs = deps.connectRetry?.delayMs ?? CONNECT_DELAY_MS;
+  let socket: WebSocketLike | undefined;
   let stopped = false;
+  let serving = false;
   let settle: (() => void) | undefined;
   let fail: ((error: Error) => void) | undefined;
   const ready = new Promise<void>((resolve, reject) => {
@@ -183,33 +197,55 @@ export function serveSessionConversations(deps: SessionStorageSocketDeps): Sessi
     deps.onLost?.(reason);
   };
 
-  socket.onopen = () => {
-    socket.send(
-      JSON.stringify({ type: "hello", token: deps.bridgeToken, version: PI_SESSION_STORAGE_PROTOCOL_VERSION }),
-    );
-    settle?.();
+  const dial = (attempt: number) => {
+    if (stopped) return;
+    const candidate = deps.connect(`ws://127.0.0.1:${deps.localPort}`);
+    socket = candidate;
+    // Until it opens, a refusal means "not up yet"; after it opens, the same events mean the store is gone. A refused
+    // socket fires error AND close, so the retry is scheduled once per attempt and not once per event.
+    let done = false;
+    const givenUp = (reason: string) => {
+      if (stopped) return;
+      // Once it has served, the same two events mean the store is GONE — `lost` is idempotent, so error-then-close
+      // reports once. The per-attempt guard is only about not scheduling two retries for one refusal.
+      if (serving) return lost(reason);
+      if (done) return;
+      done = true;
+      if (attempt >= attempts) return lost(`${reason} after ${attempt} attempts`);
+      setTimeout(() => dial(attempt + 1), delayMs);
+    };
+
+    candidate.onopen = () => {
+      serving = true;
+      candidate.send(
+        JSON.stringify({ type: "hello", token: deps.bridgeToken, version: PI_SESSION_STORAGE_PROTOCOL_VERSION }),
+      );
+      settle?.();
+    };
+    candidate.onmessage = (event) => {
+      void (async () => {
+        let request: SessionStorageRequest;
+        try {
+          request = JSON.parse(String(event.data)) as SessionStorageRequest;
+        } catch (error) {
+          logger.warn("a conversation-storage frame did not parse", error);
+          return;
+        }
+        const outcome = await answerSessionStorageCall(request.call, deps);
+        const answer: SessionStorageAnswer = { id: request.id, ...outcome };
+        // The container is blocked on this answer, so a send that throws must not be swallowed silently.
+        try {
+          candidate.send(JSON.stringify(answer));
+        } catch (error) {
+          lost(`answering the conversation store failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      })();
+    };
+    candidate.onclose = () => givenUp("the conversation store's socket closed");
+    candidate.onerror = (error) => givenUp(`the conversation store's socket failed: ${String(error)}`);
   };
-  socket.onmessage = (event) => {
-    void (async () => {
-      let request: SessionStorageRequest;
-      try {
-        request = JSON.parse(String(event.data)) as SessionStorageRequest;
-      } catch (error) {
-        logger.warn("a conversation-storage frame did not parse", error);
-        return;
-      }
-      const outcome = await answerSessionStorageCall(request.call, deps);
-      const answer: SessionStorageAnswer = { id: request.id, ...outcome };
-      // The container is blocked on this answer, so a send that throws must not be swallowed silently.
-      try {
-        socket.send(JSON.stringify(answer));
-      } catch (error) {
-        lost(`answering the conversation store failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    })();
-  };
-  socket.onclose = () => lost("the conversation store's socket closed");
-  socket.onerror = (error) => lost(`the conversation store's socket failed: ${String(error)}`);
+
+  dial(1);
 
   return {
     ready,
@@ -219,7 +255,7 @@ export function serveSessionConversations(deps: SessionStorageSocketDeps): Sessi
       // Resolved rather than left pending: a caller awaiting readiness when the session is torn down should not hang.
       settle?.();
       try {
-        socket.close();
+        socket?.close();
       } catch (error) {
         logger.debug("closing the conversation store's socket failed", error);
       }

@@ -17,3 +17,9 @@ export const SESSIONS_DIR_IN_IMAGE = "/home/agent/.cd/sessions";
 // neither may own it: the app publishes it, the container binds it, and it was written out three times before — which is
 // how the provider proxy came to be given a port the conversation store already had.
 export const PI_BRIDGE_PORT_IN_IMAGE = 8787;
+
+// Where the agent's own environment appears when it could not be handed to the engine as a file. `--env-file` is read
+// by the engine's CLIENT, so a path under this app's user data means nothing to a podman on another machine: the same
+// contents are written into a session volume mounted here instead, and named in `CD_ENV_FILE`.
+export const AGENT_ENV_DIR_IN_IMAGE = "/cd-env";
+export const AGENT_ENV_FILE_IN_IMAGE = `${AGENT_ENV_DIR_IN_IMAGE}/agent.env`;

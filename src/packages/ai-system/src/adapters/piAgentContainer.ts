@@ -1,3 +1,4 @@
+import { LOOPBACK_ADDRESS, resolveMachineAddress } from "@/ai-system/adapters/engineMachine";
 import type { ModelPricing } from "@/ai-system/adapters/modelWindow";
 import {
   type AiSessionKind,
@@ -16,7 +17,12 @@ import type { AIAuthSettings } from "@/ai-system/core/types";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { ContainerEngineHost } from "@/container-client/types/engine";
 import { createLogger } from "@/logger";
-import { PI_BRIDGE_PORT_IN_IMAGE, SESSIONS_DIR_IN_IMAGE } from "@/pi-bridge/image";
+import {
+  AGENT_ENV_DIR_IN_IMAGE,
+  AGENT_ENV_FILE_IN_IMAGE,
+  PI_BRIDGE_PORT_IN_IMAGE,
+  SESSIONS_DIR_IN_IMAGE,
+} from "@/pi-bridge/image";
 import type { PiModelReasoning } from "@/pi-bridge/protocol";
 import { PI_SESSION_STORAGE_CONTAINER_PORT } from "@/pi-bridge/sessionStorage";
 
@@ -48,6 +54,17 @@ export interface PiAgentSessionSpec {
   // two writers would share one file.
   storageHostPort?: number;
   hostPort: number;
+  // Where the agent's environment is CARRIED for an engine that cannot be handed a file from this machine. `--env-file`
+  // is read by the engine's client, so a path under this app's user data is one a remote engine has never seen — it
+  // refuses the run before any container exists. Present, the same contents are written into this volume over the
+  // engine's own stdin and the container is pointed at them. Absent is the env file, which is what a local engine gets.
+  envVolumeName?: string;
+  // The address the pair's published sockets must answer on, when the engine's own host is not where they land. An
+  // engine running inside a machine publishes into THAT machine's network: measured on a real WSL one, nothing
+  // published there reaches the Windows host running it, so the bridge is bound to the machine's own address instead —
+  // which the host does reach, and which is a narrower bind than the loopback it replaces (`adapters/engineMachine`).
+  // Absent — every engine that publishes where the app already dials — is the loopback bind that has always shipped.
+  machineAddress?: string;
   bridgeToken: string;
   networkName: string;
   agentContainerName: string;
@@ -128,6 +145,37 @@ export function engineSharesAppFilesystem(engineHost: ContainerEngineHost | unde
   return !engineIsRemote(engineHost);
 }
 
+// Where a port this engine publishes will answer, asked of the engine over the same seam every other engine command
+// travels — so for a remote connection the questions are asked ON that machine. `undefined` means the loopback the app
+// already dials, which is every engine that runs its containers itself and every machine that relays its own ports.
+//
+// Asked only for a REMOTE engine, and not because a local one cannot live inside a machine: a local machine-backed
+// connection runs its engine commands THROUGH the machine (`podman machine ssh <scope> podman …`), so this question
+// reaches a podman inside the guest, which has no machines of its own and answers `[]`. It costs a round trip to be
+// told nothing.
+export async function engineMachineAddress(
+  host: HostClientFacade,
+  scope: string | undefined,
+  imageTag: string,
+): Promise<string | undefined> {
+  const address = await resolveMachineAddress(async (args) => {
+    try {
+      const answer = await run(host, args, scope);
+      // Both answers are logged, because "no machine" and "could not ask" look identical from the outside and the
+      // difference decides whether a session is dialling the right address or nothing at all.
+      logger.debug(`the engine answered \`${args.join(" ")}\` with: ${answer.slice(0, 200)}`);
+      return answer;
+    } catch (error) {
+      logger.debug(`the engine refused \`${args.join(" ")}\``, error);
+      throw error;
+    }
+  }, imageTag);
+  logger.debug(
+    address ? `the engine runs inside a machine reachable at ${address}` : "the engine publishes on its own host",
+  );
+  return address;
+}
+
 export function userMappingArgv(mapping: PiAgentSessionSpec["userMapping"]): string[] {
   switch (mapping.kind) {
     case "keep-id":
@@ -170,6 +218,10 @@ export function agentRunArgv(
   envFilePath: string,
   guestSessionsPath?: string,
 ): string[] {
+  // Where the engine binds what it publishes. Its own loopback everywhere the app can dial that, and the machine's
+  // address where the engine lives inside one — the bind is resolved in the ENGINE's realm, so a machine's address is
+  // one of its own interfaces there.
+  const bindAddress = spec.machineAddress ?? LOOPBACK_ADDRESS;
   return [
     "run",
     "--detach",
@@ -178,12 +230,12 @@ export function agentRunArgv(
     "--network",
     spec.networkName,
     "--publish",
-    `127.0.0.1:${spec.hostPort}:${PI_BRIDGE_PORT_IN_IMAGE}`,
+    `${bindAddress}:${spec.hostPort}:${PI_BRIDGE_PORT_IN_IMAGE}`,
     // The conversation store's own socket, published exactly as the bridge is. A second port rather than a second
     // channel on the first: pi's storage calls block the container's main thread, so their answers must arrive on a
     // socket that thread is not the one reading.
     ...(spec.storageHostPort
-      ? ["--publish", `127.0.0.1:${spec.storageHostPort}:${PI_SESSION_STORAGE_CONTAINER_PORT}`]
+      ? ["--publish", `${bindAddress}:${spec.storageHostPort}:${PI_SESSION_STORAGE_CONTAINER_PORT}`]
       : []),
     "--volume",
     `${guestWorkspacePath}:/workspace`,
@@ -191,12 +243,49 @@ export function agentRunArgv(
     pluginVolumeMount(spec, AGENT_DIR_IN_IMAGE),
     ...(guestSessionsPath ? ["--volume", sessionsMount(guestSessionsPath)] : []),
     ...specLabelArgv(spec, "agent"),
-    "--env-file",
-    envFilePath,
+    // One environment, two ways in. A file for an engine whose client can read this machine's filesystem; the same
+    // contents in a session volume for one whose cannot, named so the container loads it itself.
+    ...(spec.envVolumeName
+      ? [
+          "--volume",
+          `${spec.envVolumeName}:${AGENT_ENV_DIR_IN_IMAGE}:ro`,
+          "--env",
+          `CD_ENV_FILE=${AGENT_ENV_FILE_IN_IMAGE}`,
+        ]
+      : ["--env-file", envFilePath]),
     ...userMappingArgv(spec.userMapping),
     spec.imageTag,
     "--mode",
     "agent",
+  ];
+}
+
+// The volume the agent's environment is carried in. Unlabelled, deliberately: it is created and removed inside one
+// start, and a label exists so a resource can be FOUND again later.
+export function envVolumeCreateArgv(spec: PiAgentSessionSpec): string[] {
+  return ["volume", "create", spec.envVolumeName ?? ""];
+}
+
+// Writing it with `tee` and stdin: no shell, no redirect, and nothing in the argv with a space in it. A redirect
+// inside an argument (`sh -c "cat > …"`) would be executed by the REMOTE shell — every argument of a remote engine's
+// command is joined by ssh and re-split over there — and the contents themselves must never be in argv at all, since
+// the bridge token authorises both the socket and the proxy a turn's inference is signed through.
+//
+// `--user 0` because a volume is created owned by root and the image runs as `agent`; what it writes is readable
+// inside a volume that only this session's own container mounts.
+export function envWriteArgv(spec: PiAgentSessionSpec): string[] {
+  return [
+    "run",
+    "--rm",
+    "--interactive",
+    "--user",
+    "0",
+    "--volume",
+    `${spec.envVolumeName ?? ""}:${AGENT_ENV_DIR_IN_IMAGE}`,
+    "--entrypoint",
+    "tee",
+    spec.imageTag,
+    AGENT_ENV_FILE_IN_IMAGE,
   ];
 }
 
@@ -262,8 +351,10 @@ function listingRows(output: string): ContainerListingRow[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [name, ...rest] = line.split("\t");
-      return { name: name.trim(), state: rest.join("\t") };
+      const separator = line.indexOf("=");
+      return separator > 0
+        ? { name: line.slice(0, separator).trim(), state: line.slice(separator + 1).trim() }
+        : { name: line, state: "" };
     });
 }
 
@@ -277,12 +368,16 @@ export async function findDefaultSession(
   // The engine does the selecting, by label: exact identity, and one small answer instead of every container on the
   // machine. A session created before the labels existed is not adopted — it is an ephemeral one, and the reaper's
   // legacy patterns are what deal with those.
+  // `=` and not a tab, because every argument of a remote engine's command is joined by ssh and re-split by ITS shell:
+  // the tab this used to carry split the template in two, the second half arrived as a name filter matching nothing,
+  // and the engine answered an EMPTY listing with exit 0 — so every remote connection read as having nothing to adopt.
+  // Measured. A name cannot contain `=`, and a state that carries spaces is fine: only the ARGV is re-split.
   const argv = [
     "ps",
     "--all",
     ...assistantFilterArgv({ kind: "default", connectionId }),
     "--format",
-    "{{.Names}}\t{{.State}}",
+    "{{.Names}}={{.State}}",
   ];
   const listing = await run(host, argv, scope).catch((error) => {
     logger.debug(`discovering the default session on ${connectionId} failed`, error);
@@ -310,13 +405,13 @@ export interface AttachedPiAgentSession {
   storageHostPort?: number;
 }
 
-// One inspection asked for as JSON, so the two things that matter arrive in one call and neither is scraped out of a
-// tab-separated line: the port the bridge is published on, and the token that authorises it.
-const ATTACH_FORMAT = '{"ports":{{json .NetworkSettings.Ports}},"env":{{json .Config.Env}}}';
-
+// The engine's own inspection, whole. Asking for the two fields with `--format` would need `{{json .X}}`, and an argv
+// element with a space in it is re-split by a REMOTE engine's shell — measured: podman answers `bad character U+007B`
+// and the attach fails, so a running remote session could never be adopted. A few unread kilobytes are the cheaper
+// half of that trade.
 interface InspectedAgent {
-  ports?: Record<string, { HostPort?: string }[] | null> | null;
-  env?: string[] | null;
+  NetworkSettings?: { Ports?: Record<string, { HostPort?: string }[] | null> | null } | null;
+  Config?: { Env?: string[] | null } | null;
 }
 
 // An env line is `KEY=VALUE`, and a VALUE may contain the separator — a token is opaque. Splitting on the FIRST one is
@@ -333,14 +428,18 @@ function envOf(lines: readonly string[]): Map<string, string> {
 // Pure, so the parsing is settled by fixtures rather than by a live container. Anything missing means there is nothing
 // to adopt: without the published port there is no socket to dial, and without the token it would refuse us.
 export function attachedPiAgentSessionFrom(payload: string): AttachedPiAgentSession | undefined {
-  let inspected: InspectedAgent;
+  let inspected: InspectedAgent | undefined;
   try {
-    inspected = JSON.parse(payload) as InspectedAgent;
+    // `inspect` answers an array of one; a single object is accepted too, so the parser is not the reason a dialect
+    // that answers one way rather than the other has nothing to adopt.
+    const parsed = JSON.parse(payload) as InspectedAgent | InspectedAgent[];
+    inspected = Array.isArray(parsed) ? parsed[0] : parsed;
   } catch {
     return undefined;
   }
-  const hostPort = Number(inspected?.ports?.[`${PI_BRIDGE_PORT_IN_IMAGE}/tcp`]?.[0]?.HostPort);
-  const env = envOf(inspected?.env ?? []);
+  const ports = inspected?.NetworkSettings?.Ports;
+  const hostPort = Number(ports?.[`${PI_BRIDGE_PORT_IN_IMAGE}/tcp`]?.[0]?.HostPort);
+  const env = envOf(inspected?.Config?.Env ?? []);
   const bridgeToken = env.get("CD_BRIDGE_TOKEN");
   if (!bridgeToken || !Number.isInteger(hostPort) || hostPort <= 0) return undefined;
   const modelId = env.get("CD_MODEL_ID");
@@ -348,7 +447,7 @@ export function attachedPiAgentSessionFrom(payload: string): AttachedPiAgentSess
   // Read from the PUBLISHED port, not from the env var: the env only says the container listens, while what the app
   // has to dial is the mapping the engine actually made. A pair whose storage port is no longer published cannot be
   // served, whatever its environment claims.
-  const storageHostPort = Number(inspected?.ports?.[`${PI_SESSION_STORAGE_CONTAINER_PORT}/tcp`]?.[0]?.HostPort);
+  const storageHostPort = Number(ports?.[`${PI_SESSION_STORAGE_CONTAINER_PORT}/tcp`]?.[0]?.HostPort);
   const servesStorage = env.get("CD_SESSION_STORAGE_PORT") && Number.isInteger(storageHostPort) && storageHostPort > 0;
   return {
     hostPort,
@@ -367,7 +466,7 @@ export async function attachPiAgentSession(
   agentContainerName: string,
   scope?: string,
 ): Promise<AttachedPiAgentSession | undefined> {
-  const output = await run(host, ["inspect", agentContainerName, "--format", ATTACH_FORMAT], scope).catch((error) => {
+  const output = await run(host, ["inspect", agentContainerName], scope).catch((error) => {
     logger.debug(`inspecting ${agentContainerName} to attach failed`, error);
     return "";
   });
@@ -376,10 +475,14 @@ export async function attachPiAgentSession(
 
 // A scoped engine (WSL, Lima, a podman machine) runs its CLI inside the guest, so every command goes
 // through the scope wrapper and every host path is translated before it is mounted.
-async function run(host: HostClientFacade, args: string[], scope?: string): Promise<string> {
+//
+// `input` is stdin for the command, which the seam forwards to a remote engine's own process without it ever
+// appearing in argv — the only way the agent's environment reaches a machine this app cannot write a file on.
+async function run(host: HostClientFacade, args: string[], scope?: string, input?: string): Promise<string> {
+  const execOpts = input === undefined ? undefined : { input };
   const result = scope
-    ? await host.runScopeCommand(host.PROGRAM, args, scope)
-    : await host.runHostCommand(host.PROGRAM, args);
+    ? await host.runScopeCommand(host.PROGRAM, args, scope, undefined, execOpts)
+    : await host.runHostCommand(host.PROGRAM, args, undefined, execOpts);
   if (!result.success) throw new Error(result.stderr?.trim() || `engine command failed: ${args[0]}`);
   return (result.stdout ?? "").trim();
 }
@@ -439,10 +542,49 @@ export async function startPiAgentSession(
     logger.debug("network create skipped — the name is already taken", error);
     return "";
   });
-  // The env file carries no credential at all, and there is no second file that does: the session asks the app for
+  // The env carries no credential at all, and there is no second file that does: the session asks the app for
   // inference, and the app resolves the key in the realm that owns the vault.
   const modelApi = upstreamModelApi(spec.providerKind);
-  const agentEnvFile = await writeEnvFile(
+  const agentEnv = composeAgentEnv(spec, modelApi);
+  // One composition, delivered the only way each engine can take it: a file this app writes and the engine's client
+  // reads, or — where that client is on another machine — the same text carried into a session volume over stdin.
+  const agentEnvFile = spec.envVolumeName ? await carryAgentEnv(host, spec, agentEnv) : await writeEnvFile(agentEnv);
+  let hostPort = spec.hostPort;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const agentContainerId = await run(
+        host,
+        agentRunArgv({ ...spec, hostPort }, guestWorkspacePath, agentEnvFile, guestSessionsPath),
+        spec.scope,
+      );
+      return { agentContainerId, hostPort };
+    } catch (error) {
+      if (attempt >= HOST_PORT_ATTEMPTS || !portAlreadyTaken(error)) throw error;
+      // The engine can leave the container behind when only its port mapping failed, and the name goes with it.
+      await run(host, ["rm", "--force", spec.agentContainerName], spec.scope).catch(() => "");
+      logger.debug(`bridge port ${hostPort} was taken, trying another`);
+      hostPort = pickHostPort();
+    }
+  }
+}
+
+// Into a volume the agent container mounts, over the engine's own stdin. Answers the path the container will read it
+// at, so the caller cannot tell this apart from a file having been written.
+async function carryAgentEnv(host: HostClientFacade, spec: PiAgentSessionSpec, contents: string): Promise<string> {
+  await run(host, envVolumeCreateArgv(spec), spec.scope).catch((error) => {
+    // Session-scoped, so an existing one is this session's own leftovers — and it is overwritten in the next step.
+    if (!isExistingNameError(error)) throw error;
+    logger.debug("the environment volume already existed", error);
+    return "";
+  });
+  await run(host, envWriteArgv(spec), spec.scope, contents);
+  return AGENT_ENV_FILE_IN_IMAGE;
+}
+
+// The agent's whole environment, in the app's one format. Composed apart from how it travels, so a file and a volume
+// can never carry different things.
+function composeAgentEnv(spec: PiAgentSessionSpec, modelApi: string): string {
+  return (
     [
       `CD_BRIDGE_TOKEN=${spec.bridgeToken}`,
       `CD_BRIDGE_PORT=${PI_BRIDGE_PORT_IN_IMAGE}`,
@@ -480,25 +622,8 @@ export async function startPiAgentSession(
       ...(spec.executionTarget ? ["CD_WORKSPACE_TOOLS=1"] : []),
       "CD_WORKSPACE=/workspace",
       `CD_AGENT_DIR=${AGENT_DIR_IN_IMAGE}`,
-    ].join("\n"),
+    ].join("\n") + "\n"
   );
-  let hostPort = spec.hostPort;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      const agentContainerId = await run(
-        host,
-        agentRunArgv({ ...spec, hostPort }, guestWorkspacePath, agentEnvFile, guestSessionsPath),
-        spec.scope,
-      );
-      return { agentContainerId, hostPort };
-    } catch (error) {
-      if (attempt >= HOST_PORT_ATTEMPTS || !portAlreadyTaken(error)) throw error;
-      // The engine can leave the container behind when only its port mapping failed, and the name goes with it.
-      await run(host, ["rm", "--force", spec.agentContainerName], spec.scope).catch(() => "");
-      logger.debug(`bridge port ${hostPort} was taken, trying another`);
-      hostPort = pickHostPort();
-    }
-  }
 }
 
 export async function stopPiAgentSession(host: HostClientFacade, spec: PiAgentSessionSpec): Promise<void> {
@@ -506,6 +631,14 @@ export async function stopPiAgentSession(host: HostClientFacade, spec: PiAgentSe
     logger.debug(`rm ${spec.agentContainerName} failed`, error);
     return "";
   });
+  // This session's environment, and nothing else's: it holds the bridge token, so it goes with the container that
+  // was authorised by it rather than waiting for the next start to overwrite it.
+  if (spec.envVolumeName) {
+    await run(host, ["volume", "rm", "--force", spec.envVolumeName], spec.scope).catch((error) => {
+      logger.debug("removing the environment volume failed", error);
+      return "";
+    });
+  }
   // The network holds a /24 out of the engine's pool for as long as it exists.
   await run(host, ["network", "rm", spec.networkName], spec.scope).catch((error) => {
     logger.debug("network rm failed", error);
