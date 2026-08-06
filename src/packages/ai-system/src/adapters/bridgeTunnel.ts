@@ -53,7 +53,19 @@ export interface BridgeTunnelSpec {
   // What this forward carries, in the words the reason string uses. A pair has two sockets reached this same way — the
   // bridge and the conversation store — and a reason naming the wrong one sends the reader to the wrong place.
   label?: string;
+  // How many times a forward that died before it could carry anything is opened again, and how long "before it could
+  // have carried anything" means. Overridden only by tests.
+  retry?: { attempts: number; graceMs: number };
+  // The clock the grace window is measured on. Injected so a test does not have to wait one out.
+  now?: () => number;
 }
+
+// `ssh` exits 255 when the remote refuses the handshake, which a remote's sshd does under a burst — measured, up to 2
+// of 14 simultaneous connections on a Windows remote. A forward that dies that way never carried a byte, so re-opening
+// it repeats nothing; a forward that dies after it has been carrying the session is a real loss and is reported. The
+// window is what tells those two apart.
+const RETRY_ATTEMPTS = 3;
+const RETRY_GRACE_MS = 5000;
 
 // `ssh -NL <local>:<remote>` with no command: this connection exists to carry the forward. The forward's destination is
 // resolved ON the target, so `127.0.0.1` there is the remote's own loopback — where a pair published by an engine that
@@ -69,15 +81,42 @@ export function bridgeTunnelArgv(
 
 export async function openBridgeTunnel(deps: BridgeTunnelDeps, spec: BridgeTunnelSpec): Promise<BridgeTunnel> {
   const argv = bridgeTunnelArgv(spec.credentials, deps.localPort, spec.remotePort, spec.remoteHost);
-  const child = await deps.spawn(deps.launcher ?? "ssh", argv);
+  const launcher = deps.launcher ?? "ssh";
+  const attempts = spec.retry?.attempts ?? RETRY_ATTEMPTS;
+  const graceMs = spec.retry?.graceMs ?? RETRY_GRACE_MS;
+  const now = spec.now ?? (() => Date.now());
+  const what = spec.label ?? "the assistant's bridge";
   let stopped = false;
-  child.on?.("exit", (payload) => {
-    if (stopped) return;
-    stopped = true;
-    const reason = `the ssh forward for ${spec.label ?? "the assistant's bridge"} exited (${JSON.stringify(payload ?? {})})`;
-    logger.warn(reason);
-    spec.onLost?.(reason);
-  });
+  let child: TunnelProcess | undefined;
+
+  const open = async (attempt: number): Promise<void> => {
+    const startedAt = now();
+    const spawned = await deps.spawn(launcher, argv);
+    child = spawned;
+    spawned.on?.("exit", (payload) => {
+      if (stopped) return;
+      const carried = now() - startedAt;
+      // Refused before it could carry anything, and there is another attempt: open it again rather than take a session
+      // down for a connection the remote dropped mid-handshake.
+      if (carried <= graceMs && attempt < attempts) {
+        logger.debug(`the ssh forward for ${what} was refused at once, opening it again`, { attempt, payload });
+        void open(attempt + 1).catch((error) => {
+          stopped = true;
+          const reason = `the ssh forward for ${what} could not be opened again: ${error}`;
+          logger.warn(reason);
+          spec.onLost?.(reason);
+        });
+        return;
+      }
+      stopped = true;
+      const exhausted = carried <= graceMs ? ` after ${attempt} attempts` : "";
+      const reason = `the ssh forward for ${what} exited${exhausted} (${JSON.stringify(payload ?? {})})`;
+      logger.warn(reason);
+      spec.onLost?.(reason);
+    });
+  };
+
+  await open(1);
   return {
     localPort: deps.localPort,
     stop: () => {
@@ -86,7 +125,7 @@ export async function openBridgeTunnel(deps: BridgeTunnelDeps, spec: BridgeTunne
       if (stopped) return;
       stopped = true;
       try {
-        child.kill();
+        child?.kill();
       } catch (error) {
         logger.debug("killing the bridge forward failed", error);
       }

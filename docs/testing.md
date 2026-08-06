@@ -247,11 +247,9 @@ CD_LIVE_REMOTE_SSH_HOST=win11 CD_LIVE_REMOTE_SSH_USER=<user> CD_LIVE_REMOTE_ENGI
 ```
 
 The agent image has to be in THAT machine's store (`podman save … | ssh <host> "podman load"`) — an image built here
-does not exist there — and the spec skips saying so when it is not. On a **podman-on-Windows** remote the app's own
-connection is unstable for a reason outside this spec: the engine API is served by `podman system dial-stdio`, which
-cannot authenticate to its own machine without an ssh-agent, and a non-interactive SSH session has none. The app closes
-a connection whose API stops answering, so a start that begins in one of those gaps fails on `SSH connection is not
-established`; the spec asks for the connection again immediately before starting. Overrides:
+does not exist there — and the spec skips saying so when it is not. It deliberately does NOT warm the connection first:
+a remote start fires a dozen SSH commands, a remote sshd refuses some of a burst, and the app's own first API request
+races the bridge process it just spawned — so the recovery from all three is part of what this spec covers. Overrides:
 `CD_LIVE_REMOTE_SSH_PORT`, `CD_LIVE_REMOTE_WORKSPACE`, `CD_LIVE_LMSTUDIO_MODEL`, `CD_LIVE_APP_VERSION`.
 
 The rest need `OPENROUTER_API_KEY`, because they drive a model's judgement rather than the route to it.

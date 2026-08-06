@@ -11,6 +11,7 @@ import {
   SSH_CONNECT_TIMEOUT_SECONDS,
   type SSHClientConnection,
 } from "./ssh-args";
+import { SSH_RETRY_ATTEMPTS, SSH_RETRY_DELAY_MS, sshNeverConnected } from "./ssh-retry";
 
 // Re-exported so existing importers (and tests) keep resolving these from "@/container-client/services".
 export {
@@ -99,10 +100,21 @@ export class SSHClient implements ISSHClient {
   async execute(command: string[], opts?: HostExecOptions) {
     // The local `ssh` process forwards its stdin to the remote command, so piping `opts.input` here delivers a
     // secret (e.g. a registry token for `login --password-stdin`) to the remote engine without exposing it in argv.
-    return await Command.Execute(this.cli, buildSSHArgs(this.params, command), {
-      timeout: SSH_COMMAND_TIMEOUT_MS,
-      input: opts?.input,
-    });
+    const argv = buildSSHArgs(this.params, command);
+    for (let attempt = 1; ; attempt += 1) {
+      const result = await Command.Execute(this.cli, argv, {
+        timeout: SSH_COMMAND_TIMEOUT_MS,
+        input: opts?.input,
+      });
+      // Retried ONLY when the session was never established — a remote sshd dropping one connection out of a burst,
+      // which is measured and ordinary. The command did not run, so running it again cannot repeat anything; an
+      // engine error is an answer and is returned as it came.
+      if (result.success || attempt >= SSH_RETRY_ATTEMPTS || !sshNeverConnected(result.stderr)) {
+        return result;
+      }
+      logger.debug("ssh was refused mid-handshake, asking again", { attempt, stderr: result.stderr });
+      await new Promise((resolve) => setTimeout(resolve, SSH_RETRY_DELAY_MS));
+    }
   }
   async executeStreaming(command: string[]): Promise<StreamHandle> {
     // A build streams for as long as it takes — no command timeout (unlike execute()).

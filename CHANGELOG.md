@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A remote connection stops dropping itself. One unanswered engine ping used to close the whole connection — including the SSH channel every command travels on, so the next thing you did failed with "SSH connection is not established". A ping is now retried, with a budget that fits what it crosses; on a remote engine in a machine every ping failed its first attempt and answered on the next, which means the connection used to have to be lucky
+- A connection whose channel was closed is reopened instead of refusing your next action
+- A remote command refused mid-handshake is sent again: a remote's SSH server turns away part of a burst, and starting a session is a burst. Only failures where the command provably never ran are retried
+- A session's SSH forward that is refused the moment it opens is opened again, rather than ending the session that was about to use it
 - An assistant session runs on a remote engine that keeps its containers in a machine — podman on Windows: nothing published inside that machine reaches the host running it, so the session used to build its container and then dial nothing. The pair now publishes on the machine's own address and the forward is pointed there
 - The agent's environment reaches a remote engine at all: it was handed the path of a file on YOUR machine, which that engine has never seen, and every remote session failed before a container existed. Nothing of it travels in a command line, where the rest of that machine could read the session's token
 - A session already running on a remote engine can be continued, and one is found to continue: both questions were asked with a command the remote's own shell took apart — one failed outright, the other answered "nothing here" for every connection

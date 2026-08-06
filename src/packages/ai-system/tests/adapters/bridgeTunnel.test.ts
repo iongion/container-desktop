@@ -78,22 +78,72 @@ describe("openBridgeTunnel", () => {
   });
 
   // `ssh` exiting is not a detail: every frame after it goes nowhere. The caller is told so it can report the
-  // session as lost rather than leaving a transcript that has quietly stopped receiving.
+  // session as lost rather than leaving a transcript that has quietly stopped receiving. Reported once it has been
+  // carrying the session — an exit at the moment it opened is a refused handshake, and that one is opened again.
   it("reports a forward that dies under the session", async () => {
     const spawned = fakeProcess();
     const lost = vi.fn();
+    let clock = 1000;
     await openBridgeTunnel(
       { spawn: async () => spawned, localPort: 41999 },
       {
         credentials,
         remotePort: 43117,
         onLost: lost,
+        now: () => clock,
       },
     );
 
+    clock += 60_000;
     spawned.emit("exit", { code: 255 });
 
     expect(lost).toHaveBeenCalled();
+  });
+
+  // A forward that dies the instant it is spawned never carried anything: `ssh` exits 255 when a remote refuses the
+  // handshake, which a remote sshd does under a burst — measured, up to 2 of 14 simultaneous connections. Single-shot,
+  // that took the whole session down ("the ssh forward for the assistant's conversation store exited"), so an exit
+  // inside the grace window is retried while a death under a LIVE session is still reported.
+  it("opens the forward again when it dies before it could have carried anything", async () => {
+    const spawned = [fakeProcess(), fakeProcess()];
+    let index = 0;
+    const spawn = vi.fn(async () => spawned[index++]);
+    const lost = vi.fn();
+    let clock = 1000;
+
+    await openBridgeTunnel(
+      { spawn, localPort: 41999 },
+      { credentials, remotePort: 43117, onLost: lost, retry: { attempts: 3, graceMs: 5000 }, now: () => clock },
+    );
+    clock += 200;
+    spawned[0].emit("exit", { code: 255 });
+    await vi.waitUntil(() => spawn.mock.calls.length === 2, { timeout: 500 });
+
+    // Re-opened, and nothing was reported as lost: the session never noticed.
+    expect(lost).not.toHaveBeenCalled();
+  });
+
+  it("gives up saying so when every attempt is refused", async () => {
+    const made: ReturnType<typeof fakeProcess>[] = [];
+    const spawn = vi.fn(async () => {
+      const process = fakeProcess();
+      made.push(process);
+      return process;
+    });
+    const lost = vi.fn();
+
+    await openBridgeTunnel(
+      { spawn, localPort: 41999 },
+      { credentials, remotePort: 43117, onLost: lost, retry: { attempts: 2, graceMs: 5000 }, now: () => 1000 },
+    );
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await vi.waitUntil(() => made.length === attempt + 1, { timeout: 500 });
+      made[attempt].emit("exit", { code: 255 });
+    }
+
+    await vi.waitUntil(() => lost.mock.calls.length === 1, { timeout: 500 });
+    expect(lost.mock.calls[0][0]).toContain("after 2 attempts");
+    expect(spawn).toHaveBeenCalledTimes(2);
   });
 
   it("says why when ssh cannot be spawned at all", async () => {

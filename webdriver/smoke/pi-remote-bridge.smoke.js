@@ -225,20 +225,11 @@ describe("a real session on a connection reached over SSH", () => {
       return skipSuite(this, `could not make ${REMOTE_WORKSPACE} on ${SSH_HOST}: ${error}`);
     }
     configureLmStudioProvider(model.id);
-    // Immediately before the start, and deliberately a second time. The app closes a remote connection whose engine
-    // API stops answering — and on a podman-on-Windows remote that API cannot answer at all: `system dial-stdio` needs
-    // an ssh-agent to reach its own machine and a non-interactive SSH session has none (measured; every other podman
-    // command works). So the connection comes and goes on the app's own ping loop, and a start that begins in a gap
-    // fails on "SSH connection is not established" — which is the environment, not this path.
-    await browser.executeAsync(
-      (id, done) => {
-        window.MessageBus.invoke("resource:ensure-connected", { connectionId: id }).then(
-          () => done(true),
-          (failure) => done(String(failure)),
-        );
-      },
-      `system-env.${SSH_HOST}.${ENGINE}`,
-    );
+    // Nothing is asked of the connection here on purpose. A start on a remote engine fires a dozen SSH commands, and a
+    // remote sshd refuses some of a burst (measured: up to 2 of 14 simultaneous connections on this target) — so the
+    // app has to recover from a refused handshake, a forward that died before it carried anything, and a client that
+    // was closed when an API ping went unanswered. If this spec had to warm the connection first, that recovery would
+    // be untested and the next person to hit it would read it as the assistant failing.
     started = await browser.executeAsync((options, done) => {
       const read = () => {
         const state = window.__cdCodingAgentStore.getState();
