@@ -465,6 +465,9 @@ export interface CodingAgentState {
   // Leave this conversation for another one of the workspace's. pi swaps the session in place, so the containers, the
   // plugins and the mounted folder are untouched.
   resumeWorkspaceSession(session: PiSessionSummary): Promise<void>;
+  // Land back on the newest conversation this workspace has, for a session that was just rebuilt. Selecting only:
+  // nothing is written, nothing is removed, and every other conversation stays exactly where it was.
+  resumeNewestConversation(): Promise<void>;
   // The model the RUNNING session answers with, read off the container: `/model` switches it in place and a resumed
   // conversation can carry one pi resolved for itself, so the id this session STARTED with is not the answer. The one
   // model fact this store keeps — what a provider serves is the picker's question, asked one level at a time.
@@ -799,6 +802,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       const options = { ...resolved.options, sessionKind: "default" as const };
       if (row.state === "running") await get().attachSession(options);
       else await get().start(options);
+      // Continuing a stopped pair rebuilds it, and a rebuilt pair boots into a blank conversation — which is not what
+      // the button promised. So it is put back on the newest conversation the workspace has. Safe here in a way it is
+      // deliberately not when attaching to a RUNNING pair (see attachSession): nothing else can be driving a session
+      // whose containers were down, so there is no second window to collide with over the same session file.
+      if (row.state === "stopped") await get().resumeNewestConversation();
       // Remember what was launched, so the row survives the app and reads the same next time.
       await writeDefaultSession(row.connectionId, {
         workspacePath: row.workspacePath,
@@ -864,6 +872,21 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // `session_replaced` has just cleared what the app knew about the name, and the conversation that arrived carries
     // its own — which the row the user picked already told us.
     set({ sessionName: session.name?.trim() || undefined });
+  },
+
+  // Best-effort by design: if this cannot be answered the user is left in the blank conversation they would have had
+  // anyway, which is worth far less than failing the session they actually asked for.
+  async resumeNewestConversation() {
+    try {
+      const sessions = await get().listWorkspaceSessions();
+      // Newest first, and a conversation nothing was said in is not somewhere to be returned to — that is the blank
+      // one this rebuild just created.
+      const newest = sessions.find((session) => session.messageCount > 0);
+      if (!newest || newest.current) return;
+      await get().resumeWorkspaceSession(newest);
+    } catch (error) {
+      logger.warn("could not return to the newest conversation", error);
+    }
   },
 
   // Adopt the pair that is already running. Everything `start` does before the socket — rotating a credential,
