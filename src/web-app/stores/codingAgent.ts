@@ -893,9 +893,10 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   // loading the model into a local server, writing the env files — belongs to CREATING a session, and this pair was
   // created with all of it. What remains is to dial it, with the port and the token read off the engine.
   //
-  // A connection is one pi session, so this lands in a fresh conversation on the same containers, plugins and folder.
-  // The ones this workspace already has are in the header's session list, one click away — deliberately not resumed
-  // for the user, because a second window on the same pair would then be driving the same session file as the first.
+  // A connection has ONE pi-agent engine — this pair — and that engine opens any of the connection's conversations,
+  // so this lands in a fresh conversation on the same containers, plugins and folder. The ones this workspace already
+  // has are in the header's list, one click away — deliberately not resumed for the user, because a second window on
+  // the same pair would then be driving the same conversation's file as the first.
   async attachSession(options) {
     set(freshSessionState(options));
     if (isMockMode() && import.meta.env.ENVIRONMENT !== "production") {

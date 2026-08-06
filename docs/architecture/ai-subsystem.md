@@ -4,6 +4,21 @@ Container Desktop is a **GUI for a [pi](https://github.com/earendil-works/pi) co
 a library, its terminal UI is replaced by the app's React UI, and the agent itself runs **inside a container on
 one of your engine connections** — not in the webview, not in a host sidecar.
 
+**Two nouns, never one.** In pi's own vocabulary a **session IS a conversation** — an entry tree pi persists, which a
+bare `/resume` lists. This document therefore says *session* only in that sense, and calls the thing that RUNS it the
+**pi-agent engine**: the container pair, one per connection. The two are not coupled the way one word for both would
+suggest, and conflating them is a documented source of wrong conclusions:
+
+| | Scope | Lifetime |
+| --- | --- | --- |
+| **Connection** (local engine, machine, WSL, SSH) | the root — a container and a volume exist on ONE engine only | the user's |
+| **pi-agent engine** — the pair `cd-agent-*` + `cd-gateway-*` | one per connection | disposable; recreating it under the same deterministic names costs nothing |
+| **`cd-agent-plugins` volume** — pi's agent dir | ONE fixed name, no per-session suffix, so it is per-ENGINE | outlives every container and every image rebuild |
+| **Conversation** (pi's *session*) — an entry tree in that volume | MANY per connection | until the user removes it |
+
+A connection is coupled to its **pi-agent engine**, not to one conversation. Conversations are per-connection only
+because a volume is an engine object — they do not float between engines.
+
 Three worlds, two of them containers:
 
 | World | What runs there | Trust |
@@ -144,10 +159,10 @@ returns the **tail**, capped at 2 MiB: a truncated command's interesting part is
 
 **Continuing one that is already up** is `attachSession()` → `attachPiAgentSession`, and it creates nothing: one
 `inspect` of the agent container yields the published bridge port and, from its env, the token that authorises the
-socket — everything `start` would have written is already in that container. A connection is one pi session, so this
-lands in a fresh conversation on the same pair, plugins and folder; the ones the workspace already has are in the
-header's session list rather than resumed for the user, because a second window doing that would drive the same
-session file as the first.
+socket — everything `start` would have written is already in that container. A connection has ONE pi-agent engine and
+that engine opens any of the connection's conversations, so this lands in a fresh conversation on the same pair,
+plugins and folder; the ones the workspace already has are in the header's list rather than resumed for the user,
+because a second window doing that would drive the same conversation's file as the first.
 
 Env files are written privately under `~/.local/share/container-desktop/agent/`, never passed in argv.
 A **scoped** engine (WSL, Lima, a podman machine) runs every command through the scope wrapper, and the
@@ -169,8 +184,8 @@ bridge port either way; both networks are removed on stop.
 
 ## The agent container
 
-`pi-agent-host/src/main.ts` starts a `WebSocketServer` on `0.0.0.0:8787` and builds one pi session per connection,
-queueing frames that arrive while it is still starting. `createPiSession` (`session.ts`) assembles pi's
+`pi-agent-host/src/main.ts` starts a `WebSocketServer` on `0.0.0.0:8787` and builds one pi `AgentSession` runtime per
+bridge connection, queueing frames that arrive while it is still starting. `createPiSession` (`session.ts`) assembles pi's
 `createAgentSessionServices` with **three inline extensions**:
 
 - **the gateway provider** — `registerProvider("container-desktop-gateway", { baseUrl: <gateway>, apiKey:
@@ -629,8 +644,8 @@ and every other reason stays silent, because a `toolUse` step's card IS what the
 provider error is already on screen as itself. The item carries a CODE, never prose (`core/` has no i18n), which the
 renderer translates; both the JSON and the HTML export carry it.
 
-`web-app/stores/useAIStore.ts` derives the assistant's state from the pi session store (one pi session = exactly
-one session). It declares only what the session can answer for — there is no reject-by-name list any more: what pi
+`web-app/stores/useAIStore.ts` derives the assistant's state from the pi session store — the surface shows the ONE
+conversation the engine currently has open. It declares only what the session can answer for — there is no reject-by-name list any more: what pi
 can do is offered under pi's own command names, and what this architecture cannot honour is refused where the
 command is defined, with the reason, instead of from inside a store three layers after the user was told it was
 available.
