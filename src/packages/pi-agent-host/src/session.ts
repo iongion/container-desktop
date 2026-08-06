@@ -101,6 +101,10 @@ export function parseModelApi(value: string | undefined): PiModelApi {
 export interface CreatePiSessionOptions {
   cwd: string;
   agentDir: string;
+  // Where pi keeps the conversations, when the app mounted a directory for them. Absent, pi defaults them under
+  // `agentDir` — which is the plugin volume, so the history lives and dies with a container the user did not think
+  // they were storing it in.
+  sessionDir?: string;
   gatewayUrl: string;
   // The shared secret between the agent and gateway containers. pi sends it as the provider's bearer
   // token, which is exactly what the gateway authorizes on — the real provider key never comes here.
@@ -145,7 +149,7 @@ export interface CreatePiSessionOptions {
 }
 
 export async function createPiSession(options: CreatePiSessionOptions): Promise<BridgeSessionHandle> {
-  const { cwd, agentDir, gatewayUrl, gatewayToken, modelId, emit, streamOverride } = options;
+  const { cwd, agentDir, sessionDir, gatewayUrl, gatewayToken, modelId, emit, streamOverride } = options;
 
   // The models this session has been pointed at: the one the container was given, plus each one the user has since
   // picked. One gateway reaches one upstream, so every model that upstream serves is reachable — but it is registered
@@ -274,7 +278,12 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   const runtime = await createAgentSessionRuntime(createRuntime, {
     cwd,
     agentDir,
-    sessionManager: SessionManager.create(cwd),
+    // The mount root is handed over as-is, which pi treats as a first-class case rather than a flat dumping ground:
+    // given a session dir that is NOT its own per-cwd default, `SessionManager.list` turns cwd filtering ON and
+    // matches each session's recorded `cwd`, so one directory holding several workspaces' conversations still lists
+    // only this workspace's. Separation is by the session header, not by the path — which also means pi's private
+    // directory-name encoding is not something this has to reproduce and drift from.
+    sessionManager: sessionDir ? SessionManager.create(cwd, sessionDir) : SessionManager.create(cwd),
   });
   // Which of pi's replacements is in flight, so the app is told why its transcript was reset. pi does not carry the
   // reason into the rebind, and only this host calls a replacement, so it is recorded where the call is made.

@@ -13,6 +13,7 @@ import {
   hostAliasArgv,
   networkCreateArgv,
   pluginVolumeMount,
+  SESSIONS_DIR_IN_IMAGE,
   startPiAgentSession,
   stopPiAgentSession,
   userMappingArgv,
@@ -70,6 +71,39 @@ describe("agentRunArgv", () => {
     const argv = agentRunArgv(spec, "/mnt/c/Users/me/project", "/tmp/env");
     expect(argv).toContain("/mnt/c/Users/me/project:/workspace");
     expect(argv.join(" ")).not.toContain("/home/me/project:/workspace");
+  });
+
+  // Conversations are the user's, not a container's: pi's default puts them under the agent dir, which IS the plugin
+  // volume, so history that a stopped pair — or an unavailable engine — takes with it. Mounted like the workspace and
+  // through the same translation, they live wherever the workspace comes from instead. It also completes the split the
+  // owner asked for: with conversations elsewhere, the plugin volume holds only setup.
+  // A mapping of `none` here so these two assert the PATH; the `:U` suffix has its own case below.
+  const unmapped: PiAgentSessionSpec = { ...spec, userMapping: { kind: "none" } };
+
+  it("mounts a sessions directory when one is given, outside the plugin volume", () => {
+    const sessions = "/home/me/.local/share/container-desktop/sessions";
+    expect(agentRunArgv(unmapped, "/home/me/project", "/tmp/env", sessions)).toContain(
+      `${sessions}:${SESSIONS_DIR_IN_IMAGE}`,
+    );
+    // Nested inside the agent dir it would be back inside the volume, which is the thing being undone.
+    expect(SESSIONS_DIR_IN_IMAGE.startsWith("/home/agent/.pi/agent")).toBe(false);
+  });
+
+  it("takes the translated guest path for sessions, exactly as it does for the workspace", () => {
+    const argv = agentRunArgv(unmapped, "/mnt/c/Users/me/project", "/tmp/env", "/mnt/c/Users/me/sessions");
+    expect(argv).toContain(`/mnt/c/Users/me/sessions:${SESSIONS_DIR_IN_IMAGE}`);
+  });
+
+  it("adds nothing when no sessions directory is given, so today's behaviour is untouched", () => {
+    expect(agentRunArgv(spec, "/home/me/project", "/tmp/env").join(" ")).not.toContain(SESSIONS_DIR_IN_IMAGE);
+  });
+
+  // Same trap as the plugin volume: under rootless podman's keep-id a mount created on an earlier mapping stays owned
+  // by the old uid, and pi fails with EACCES on the FIRST TURN rather than at startup.
+  it("carries podman's ownership fix on the sessions mount under keep-id", () => {
+    const kept: PiAgentSessionSpec = { ...spec, userMapping: { kind: "keep-id" } };
+    const argv = agentRunArgv(kept, "/home/me/project", "/tmp/env", "/home/me/sessions");
+    expect(argv).toContain(`/home/me/sessions:${SESSIONS_DIR_IN_IMAGE}:U`);
   });
 
   it("mounts the plugin volume at the pi agent dir", () => {

@@ -21,6 +21,10 @@ import type { PiModelReasoning } from "@/pi-bridge/protocol";
 const logger = createLogger("ai.piAgentContainer");
 
 const AGENT_DIR_IN_IMAGE = "/home/agent/.pi/agent";
+// Where the conversations are mounted, and deliberately NOT under the agent dir: that directory IS the plugin volume,
+// which is what tied a user's history to a container's volume in the first place. Kept outside it, the volume holds only
+// SETUP — settings, packages, trust — and the conversations live wherever the mount points.
+export const SESSIONS_DIR_IN_IMAGE = "/home/agent/.cd/sessions";
 const BRIDGE_PORT_IN_IMAGE = 8787;
 export const GATEWAY_PORT_IN_IMAGE = 8788;
 // The uid/gid of the `agent` user baked into the image. Rootless podman maps the invoking host user to
@@ -38,6 +42,10 @@ function specLabelArgv(spec: PiAgentSessionSpec, role: AiSessionRole): string[] 
 export interface PiAgentSessionSpec {
   imageTag: string;
   workspacePath: string;
+  // Where the user's conversations live, on the HOST. Absent leaves pi defaulting them under the agent dir — which is
+  // the plugin volume, so a stopped pair or an unreachable engine takes the history with it. Present, they are mounted
+  // like the workspace and outlive every container.
+  sessionsPath?: string;
   hostPort: number;
   bridgeToken: string;
   networkName: string;
@@ -92,6 +100,14 @@ export function pluginVolumeMount(spec: PiAgentSessionSpec, agentDir: string): s
   return `${spec.pluginVolumeName}:${agentDir}${suffix}`;
 }
 
+// The conversations mount takes the same `:U` as the plugin volume, and for the same reason: under rootless podman's
+// keep-id a mount created on an earlier mapping stays owned by the old uid, and pi fails with EACCES on the FIRST TURN
+// rather than at startup — which reads as a broken model, not a broken mount.
+export function sessionsMount(spec: PiAgentSessionSpec, guestSessionsPath: string): string {
+  const suffix = spec.userMapping.kind === "keep-id" ? ":U" : "";
+  return `${guestSessionsPath}:${SESSIONS_DIR_IN_IMAGE}${suffix}`;
+}
+
 export function userMappingArgv(mapping: PiAgentSessionSpec["userMapping"]): string[] {
   switch (mapping.kind) {
     case "keep-id":
@@ -125,7 +141,16 @@ function portAlreadyTaken(error: unknown): boolean {
   return /address already in use|already allocated/i.test(`${(error as Error)?.message ?? error}`);
 }
 
-export function agentRunArgv(spec: PiAgentSessionSpec, guestWorkspacePath: string, envFilePath: string): string[] {
+// `guestSessionsPath` is the conversations directory, already translated for the engine the way the workspace is —
+// history belongs to the user, so it is mounted from where the workspace comes from rather than left in the volume a
+// stopped pair takes with it. Omitted, nothing is mounted and pi keeps defaulting under the agent dir, which is exactly
+// today's behaviour.
+export function agentRunArgv(
+  spec: PiAgentSessionSpec,
+  guestWorkspacePath: string,
+  envFilePath: string,
+  guestSessionsPath?: string,
+): string[] {
   return [
     "run",
     "--detach",
@@ -139,6 +164,7 @@ export function agentRunArgv(spec: PiAgentSessionSpec, guestWorkspacePath: strin
     `${guestWorkspacePath}:/workspace`,
     "--volume",
     pluginVolumeMount(spec, AGENT_DIR_IN_IMAGE),
+    ...(guestSessionsPath ? ["--volume", sessionsMount(spec, guestSessionsPath)] : []),
     ...specLabelArgv(spec, "agent"),
     "--env-file",
     envFilePath,
@@ -412,9 +438,12 @@ export async function startPiAgentSession(
   options?: { gatewayEnvFile?: () => Promise<string> },
 ): Promise<PiAgentSessionContainers> {
   await freeSessionNames(host, spec);
-  const guestWorkspacePath = spec.scope
-    ? await host.resolveGuestPath(spec.workspacePath, spec.scope)
-    : spec.workspacePath;
+  const toGuestPath = async (hostPath: string) =>
+    spec.scope ? await host.resolveGuestPath(hostPath, spec.scope) : hostPath;
+  const guestWorkspacePath = await toGuestPath(spec.workspacePath);
+  // The conversations directory goes through the SAME translation as the workspace, which is what lets history come
+  // from where the workspace comes from on every engine the app supports rather than needing a local/remote branch.
+  const guestSessionsPath = spec.sessionsPath ? await toGuestPath(spec.sessionsPath) : undefined;
 
   await run(host, networkCreateArgv(spec), spec.scope).catch((error) => {
     // A name already taken is not an error: it is session-scoped, so a retry finds its own leftovers from a crashed
@@ -466,6 +495,10 @@ export async function startPiAgentSession(
       // holds — and the same var name the gateway's own env file uses for the same value.
       `CD_UPSTREAM_BASE_URL=${spec.upstreamBaseUrl}`,
       `CD_MODEL_ID=${spec.modelId}`,
+      // Present only when the conversations directory was actually mounted. Absent, the container leaves pi to default
+      // its session dir under the agent dir, which is today's behaviour — so the var is the one signal that history
+      // belongs somewhere that outlives this container.
+      ...(spec.sessionsPath ? [`CD_SESSION_DIR=${SESSIONS_DIR_IN_IMAGE}`] : []),
       // Omitted entirely when the provider did not say, so the container can tell "unknown" from "zero".
       ...(spec.contextWindow ? [`CD_MODEL_CONTEXT_WINDOW=${spec.contextWindow}`] : []),
       ...(spec.maxOutputTokens ? [`CD_MODEL_MAX_OUTPUT_TOKENS=${spec.maxOutputTokens}`] : []),
@@ -492,7 +525,7 @@ export async function startPiAgentSession(
     try {
       const agentContainerId = await run(
         host,
-        agentRunArgv({ ...spec, hostPort }, guestWorkspacePath, agentEnvFile),
+        agentRunArgv({ ...spec, hostPort }, guestWorkspacePath, agentEnvFile, guestSessionsPath),
         spec.scope,
       );
       return { agentContainerId, gatewayContainerId, hostPort };

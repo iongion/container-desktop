@@ -67,6 +67,9 @@ async function runAgent(): Promise<void> {
     void createPiSession({
       cwd: process.env.CD_WORKSPACE ?? "/workspace",
       agentDir: process.env.CD_AGENT_DIR ?? "/home/agent/.pi/agent",
+      // Set only when the app mounted a directory for the conversations. Absent, pi keeps defaulting them under the
+      // agent dir — the plugin volume — which is the behaviour this replaces.
+      sessionDir: process.env.CD_SESSION_DIR,
       gatewayUrl: required("CD_GATEWAY_URL"),
       gatewayToken: token,
       modelId: required("CD_MODEL_ID"),
