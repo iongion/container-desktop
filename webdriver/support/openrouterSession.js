@@ -12,6 +12,14 @@ import path from "node:path";
 const PROVIDER = "openrouter";
 const BASE_URL = "https://openrouter.ai/api/v1";
 
+// The model every OpenRouter-backed live spec asks for, in ONE place. OpenRouter's free roster churns: the id four
+// specs each carried their own copy of (`inclusionai/ling-3.0-flash:free`) has been retired, so every one of them
+// would have failed at the provider and read as a defect in the app — four separate fixes for one dead id. Verified
+// present, and verified to emit tool calls, before it was written here: a model that will not call a tool cannot
+// drive the container toolset. Re-check with `curl -s https://openrouter.ai/api/v1/models` and look for `tools` in
+// its `supported_parameters`.
+export const MODEL = process.env.CD_LIVE_MODEL ?? "nvidia/nemotron-3-super-120b-a12b:free";
+
 function settingsFile() {
   const userData =
     process.env.CONTAINER_DESKTOP_USER_DATA_DIR ?? path.join(process.cwd(), "webdriver", ".e2e-user-data");

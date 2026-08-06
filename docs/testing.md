@@ -261,8 +261,10 @@ yarn test:smoke:tauri --spec webdriver/smoke/pi-container-live.smoke.js
 ```
 
 It creates its own throwaway container so the destructive half is proven without touching anything of yours,
-and refuses to approve a card aimed at anything else. Overrides: `CD_LIVE_MODEL` (default
-`inclusionai/ling-3.0-flash:free`), `CD_LIVE_ENGINE`, `CD_LIVE_VICTIM`, `CD_LIVE_VICTIM_IMAGE`,
+and refuses to approve a card aimed at anything else — including the slash-prefixed spelling of its own name, which
+a model copies out of the engine's `Names` field and which the app now accepts as the id. Overrides: `CD_LIVE_MODEL`
+(default in `webdriver/support/openrouterSession.js`, shared by every OpenRouter spec),
+`CD_LIVE_ENGINE`, `CD_LIVE_VICTIM`, `CD_LIVE_VICTIM_IMAGE`,
 `CD_LIVE_WORKSPACE`, `CD_LIVE_APP_VERSION`. The sibling live specs are `pi:extension:live`, `pi:gate:live` and
 `pi:data:live`. That last one used to wedge on a WebDriver command at the 180s cap: its wait for a real container
 pair, mocha's timeout and the driver's `connectionRetryTimeout` were all the same number, so the spec was killed
@@ -270,7 +272,25 @@ mid-command instead of failing with its own reason. `wdio.smoke.conf.js` now giv
 longest in-spec wait; the container half it covers is also verified by `support/pi-bridge-probe.mjs`.
 
 **Verify the free-model id before a run** (`curl -s https://openrouter.ai/api/v1/models`, filter `:free`) — the
-free roster shifts weekly, and the tier is rate-limited (~20/min, 50/day unfunded).
+free roster shifts weekly, and the tier is rate-limited (~20/min, 50/day unfunded). The id these specs share was
+retired once and answered through all four as a provider failure, which is why it now has ONE origin and why the
+replacement is checked for `tools` in its `supported_parameters`: a model that will not call a tool cannot drive the
+container toolset, and its silence reads as an app defect.
+
+The keyed half of the inference path is `pi-provider-live.smoke.js`'s third shape: a real cloud provider, where the
+app resolves the key from the vault and signs the request in its own realm. Its two local shapes need LM Studio and
+the cloud one needs `OPENROUTER_API_KEY`, and each gates on its own — a sleeping local server no longer skips the
+cloud scenario.
+
+**A plugin left in the engine's volume breaks every session spec, silently.** `cd-agent-plugins` is per-ENGINE and
+deliberately outlives containers, images and sessions, so an extension seeded by `pi-extension-live`,
+`pi-plugin-data-live` or `pi-plugin-theme-live` loads into every session started afterwards. One that writes a message
+puts conversation input in front of the model, the model answers it, and a spec waiting for the transcript to go idle
+waits until its timeout — reported as "the turn never finished" with the container, bridge, key and model all working.
+A fixture from a run killed before its `after` hook cost two unrelated specs their runs and an hour of misdiagnosis.
+Two things now prevent it: seeding removes an older copy first (`webdriver/support/pluginVolume.js`), so a killed run
+cannot leave one behind, and every session spec asks `cleanPluginVolumeReason` first and skips naming the file with the
+command that removes it.
 
 ## Build tooling (`support/cli/`)
 

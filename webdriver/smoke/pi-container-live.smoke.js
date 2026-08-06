@@ -17,11 +17,10 @@
 //   • ONE saveScreenshot per session — a command after a second one hangs and takes the session with it.
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
-import { openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
-import { agentImageReason, appModeReason, envReason, firstReason, skipSuite } from "../support/prerequisites.js";
+import { MODEL, openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
+import { agentImageReason, appModeReason, envReason, firstReason, cleanPluginVolumeReason, openRouterModelReason, skipSuite } from "../support/prerequisites.js";
 
 const WORKSPACE = process.env.CD_LIVE_WORKSPACE ?? "/home/istoica/Workspace/is/container-desktop/temp/pi-live-workspace";
-const MODEL = process.env.CD_LIVE_MODEL ?? "inclusionai/ling-3.0-flash:free";
 // Which engine to prefer if several are connected. The toolset is engine-neutral, so the run follows whatever the
 // app actually has running rather than insisting on one — an engine whose API socket is down is not a failure here.
 const PREFERRED_ENGINE = process.env.CD_LIVE_ENGINE ?? "podman";
@@ -79,8 +78,11 @@ function removeVictim() {
   }
 }
 
-// Every identity the model could legitimately name the throwaway by — its name, its full id, its short id. The tool's
-// own prose offers all three.
+// Every identity the model could legitimately name the throwaway by — its name, the name as the ENGINE spells it, its
+// full id, its short id. The tool's own prose offers the first, third and fourth; the second is the engine's, and a
+// model that read the container list gets it from there: a listing carries Docker's historical `Names: ["/victim"]`,
+// and one copied that spelling straight into its removal. It is still exactly this container, so the guard below
+// recognises it — and the app now accepts it on the engine, which is what the approved removal proves.
 let victimIdentities = [];
 
 // Compared as a WHOLE VALUE, never as a substring: a model that drops one character while copying a 64-character id
@@ -205,6 +207,8 @@ describe("the container toolset against a real model", () => {
     const blocked = await firstReason([
       () => appModeReason("real"),
       () => envReason("OPENROUTER_API_KEY", "this drives a real model, and there is nothing to fall back to"),
+      () => openRouterModelReason(MODEL),
+      () => cleanPluginVolumeReason("podman", AGENT_IMAGE),
     ]);
     if (blocked) return skipSuite(this, blocked);
 
@@ -258,7 +262,7 @@ describe("the container toolset against a real model", () => {
     removeVictim();
     const victimId = engine(["run", "-d", "--name", VICTIM, VICTIM_IMAGE, "sleep", "900"]);
     assert.ok(victimExists(), "the throwaway container was not created");
-    victimIdentities = [VICTIM, victimId, victimId.slice(0, 12)];
+    victimIdentities = [VICTIM, `/${VICTIM}`, victimId, victimId.slice(0, 12)];
 
     // The start log and the store's own error come back with the status: a session that fails says why in there
     // (a host-port collision, a missing image, an unreachable engine), and a bare "error" sends the next reader
@@ -324,6 +328,36 @@ describe("the container toolset against a real model", () => {
       true,
       `an unqualified read did not reach ${sessionConnectionId}: ${defaultRouting.count} containers, e.g. ${defaultRouting.text}`,
     );
+  });
+
+  // The identity a model copies out of a listing carries Docker's historical leading slash (`Names: ["/victim"]`), and
+  // that is asserted here WITHOUT a model: which spelling one picks is a coin toss — the same prompt produced
+  // `/cd-live-victim` on one run and `cd-live-victim` on the next — so the app's acceptance of the engine's own
+  // spelling cannot rest on winning it. Encoded raw it reached podman as `%2Fcd-live-victim`, which answers 404 "no
+  // such container" (measured directly against the socket) while the bare name answers 204, so an operation aimed at a
+  // container that plainly exists did nothing and reported that nothing to the model. An INSPECT, because it is
+  // ungated and destroys nothing while travelling the identical id-to-path seam every mutation uses.
+  it("acts on a container id spelled the way the engine published it", async () => {
+    const inspected = await browser.executeAsync(
+      (connectionId, id, needle, done) => {
+        window.AI.runEngineOp({ op: "inspectContainer", args: { id }, defaultConnectionId: connectionId }).then(
+          (result) => {
+            // Matched HERE, against the WHOLE answer: an inspect payload runs to kilobytes and the name sits well past
+            // any excerpt short enough to travel back — asserting on the excerpt reports "the container is missing"
+            // about a container that is plainly there. NOT a key named `error`: WebdriverIO reads one as a W3C error
+            // response and throws it.
+            const answer = JSON.stringify(result.value ?? result.reason ?? "");
+            done({ ok: result.ok === true, named: answer.includes(needle), text: answer.slice(0, 300) });
+          },
+          (failure) => done({ ok: false, named: false, text: String(failure) }),
+        );
+      },
+      sessionConnectionId,
+      `/${VICTIM}`,
+      VICTIM,
+    );
+    assert.equal(inspected.ok, true, `the engine's own spelling of the name was refused: ${inspected.text}`);
+    assert.equal(inspected.named, true, `the inspect answered about something else: ${inspected.text}`);
   });
 
   it("lets the model read the real container list, unattended", async () => {

@@ -501,11 +501,12 @@ folder as this app sees it, which is what the app's own git status reads) or one
 
 **Inference** runs entirely on pi's own provider layer: the renderer hands `start()` an endpoint, a model id and
 the provider it came from, and everything after that is the app's own native transport — there is no AI-SDK dependency
-left in the app. Two things travel with the provider, both derived from its catalog kind in `core/piAgentEnv.ts`: the **wire
-shape** pi speaks (`CD_MODEL_API`, from which the container composes the base URL that shape's client expects — the
-Anthropic SDK builds its own `/v1`) and the **credential shape** the app signs (`CD_UPSTREAM_KIND` /
-`CD_UPSTREAM_AUTH_SCHEME` / `…_HEADER_NAME` / `…_USERNAME`, mirroring `providerTransport`'s
-`authenticatedHeaders`: Anthropic is `x-api-key`, a keyless local server is nothing at all).
+left in the app. **Only the wire shape travels to the container** (`CD_MODEL_API`, from which it composes the base URL
+that shape's client expects — the Anthropic SDK builds its own `/v1` — plus `CD_UPSTREAM_BASE_URL` as catalogue data).
+The **credential shape never leaves the app**: it rides the session spec as `upstreamAuth` and is applied per request by
+the transport that owns the vault (`authenticatedHeaders`, and its Rust twin), which resolves the provider from settings
+and signs there — bearer, basic, a custom header, `x-api-key` for Anthropic, and nothing at all for a keyless local
+server. So the container is told the shape it must SPEAK and never the shape the request is signed with.
 **Discovery** is live and provider-specific: `adapters/localModels.ts` `listModels` paginates
 OpenAI-compatible endpoints with `after`, uses Anthropic's `anthropic-version` + `after_id`, falls back to an
 explicitly saved model for a single-model server, and performs no request at all for a manual provider. The

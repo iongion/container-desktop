@@ -34,9 +34,21 @@ process.env.CONTAINER_DESKTOP_MOCK = "";
 // suite that needs it, and the mock suite keeps the tighter cap that catches a hang for what it is.
 const SPEC_WAIT_HEADROOM_MS = 60000;
 
+// W3C's default script timeout is 30 SECONDS, and every spec here starts a real session from inside
+// `browser.executeAsync`: freeing the container name, creating the network, writing the environment, running the image,
+// dialling the bridge. When that runs long WebdriverIO does not fail — it RETRIES the script, and the retry starts
+// ANOTHER session. Measured on this suite: two agent containers four minutes apart out of one run, the second one's
+// client failing on the port and name the first already held, and the whole thing reported as a `before all` timeout
+// nowhere near the cause. It is the suite's business rather than each spec's, because what makes a script slow here is
+// real containers; a spec that is slower still (the remote one, a dozen SSH round trips) can raise its own on top.
+const SCRIPT_TIMEOUT_MS = 600000;
+
 export const config = {
   ...base,
   specs: [path.join(__dirname, "smoke", "**", "*.smoke.js")],
   connectionRetryTimeout: base.connectionRetryTimeout + SPEC_WAIT_HEADROOM_MS,
   mochaOpts: { ...base.mochaOpts, timeout: base.mochaOpts.timeout + SPEC_WAIT_HEADROOM_MS },
+  before: async () => {
+    await browser.setTimeout({ script: SCRIPT_TIMEOUT_MS });
+  },
 };

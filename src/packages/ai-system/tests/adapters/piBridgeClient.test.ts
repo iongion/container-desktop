@@ -30,6 +30,42 @@ describe("createPiBridgeClient", () => {
     await expect(connected).resolves.toBeUndefined();
   });
 
+  // The one outcome the retry loop above cannot reach: the socket OPENS and `ready` never comes. Nothing then fired —
+  // no error, no close, no timer — so `connect()` never settled and `start()` awaited it forever. Live, that is a
+  // session start that spins with a single "bridge socket error" in the log and no end; the harness only surfaced it
+  // as a hook timeout four minutes later, nowhere near the cause. Not retried: an open port means the container's
+  // bridge IS listening, so a second socket only queues another session runtime behind the same wait.
+  it("fails a connect whose socket opened but never finished the handshake", async () => {
+    const { socket } = fakeSocket();
+    const client = createPiBridgeClient({
+      url: "ws://127.0.0.1:1/",
+      token: "tok",
+      socketFactory: () => socket,
+      readyTimeoutMs: 10,
+    });
+    const connected = client.connect();
+    socket.onopen?.();
+    await expect(connected).rejects.toThrow(/handshake/i);
+  });
+
+  it("leaves a connection that DID finish the handshake alone once the bound has passed", async () => {
+    const { socket } = fakeSocket();
+    const client = createPiBridgeClient({
+      url: "ws://127.0.0.1:1/",
+      token: "tok",
+      socketFactory: () => socket,
+      readyTimeoutMs: 10,
+    });
+    const connected = client.connect();
+    socket.onopen?.();
+    socket.onmessage?.({ data: READY });
+    await expect(connected).resolves.toBeUndefined();
+    // Well past the bound: a timer left armed would reject an already-settled promise and, worse, tear down a live
+    // session's client.
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    await expect(connected).resolves.toBeUndefined();
+  });
+
   it("rejects connect when the socket closes before ready", async () => {
     const { socket } = fakeSocket();
     const client = createPiBridgeClient({

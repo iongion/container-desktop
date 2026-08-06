@@ -1,12 +1,13 @@
 // Proves the permission gate for real: a live model calls pi's bash tool, the app asks, the user rejects, and
 // pi refuses to run the tool with the app's reason. Needs a NON-mock app (real podman) and OPENROUTER_API_KEY.
 import { strict as assert } from "node:assert";
-import { openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
-import { appModeReason, envReason, firstReason, skipSuite } from "../support/prerequisites.js";
+import { MODEL, openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
+import { appModeReason, envReason, firstReason, cleanPluginVolumeReason, openRouterModelReason, skipSuite } from "../support/prerequisites.js";
 import { stopAgentSession } from "../support/agentSession.js";
 
 const WORKSPACE = process.env.CD_LIVE_WORKSPACE ?? "/home/istoica/Workspace/is/container-desktop/temp/pi-live-workspace";
-const MODEL = process.env.CD_LIVE_MODEL ?? "inclusionai/ling-3.0-flash:free";
+// Only to read the engine's shared plugin volume with — this spec seeds nothing into it.
+const IMAGE = process.env.CD_LIVE_IMAGE ?? `container-desktop/pi-agent:${process.env.CD_LIVE_APP_VERSION ?? "6.0.0"}`;
 const PROMPT = "Use your bash tool to run `ls -la /workspace` and tell me what you see. Use the tool, do not guess.";
 
 // One screenshot per WebDriver session is the ceiling: saveScreenshot forces a paint WebKitGTK had parked, and the
@@ -26,6 +27,8 @@ describe("the permission gate against a real model", () => {
     const blocked = await firstReason([
       () => appModeReason("real"),
       () => envReason("OPENROUTER_API_KEY", "the gate is proven against a real model's own tool call"),
+      () => openRouterModelReason(MODEL),
+      () => cleanPluginVolumeReason("podman", IMAGE),
     ]);
     if (blocked) return skipSuite(this, blocked);
   });

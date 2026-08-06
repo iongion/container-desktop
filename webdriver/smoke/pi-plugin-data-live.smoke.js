@@ -5,17 +5,15 @@
 // Needs a NON-mock app (real podman) and OPENROUTER_API_KEY in the environment. Rebuild the agent image
 // first (`yarn cli agent-image --engine podman`): the mapping under test runs INSIDE the container.
 import { strict as assert } from "node:assert";
-import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
-import { agentImageReason, appModeReason, envReason, firstReason, skipSuite } from "../support/prerequisites.js";
+import { MODEL, openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
+import { agentImageReason, appModeReason, envReason, firstReason, cleanPluginVolumeReason, openRouterModelReason, skipSuite } from "../support/prerequisites.js";
 import { stopAgentSession } from "../support/agentSession.js";
+import { removePluginVolumeExtension, seedPluginVolumeExtension } from "../support/pluginVolume.js";
 
 const WORKSPACE = process.env.CD_LIVE_WORKSPACE ?? path.resolve(import.meta.dirname, "../../temp/pi-live-workspace");
-const MODEL = process.env.CD_LIVE_MODEL ?? "inclusionai/ling-3.0-flash:free";
 const IMAGE = process.env.CD_LIVE_IMAGE ?? "container-desktop/pi-agent:6.0.0";
-const PLUGIN_VOLUME = "cd-agent-plugins";
 const EXTENSION_FILE = "data-probe.ts";
 
 // appendEntry emits pi's `entry_appended` session event; sendMessage as a followUp enters the agent loop and
@@ -40,24 +38,6 @@ export default function (pi: ExtensionAPI) {
 }
 `;
 
-// The plugin volume is a container volume, so seeding it means writing from inside a container. Root plus a
-// chown, because the session mounts it as the image's `agent` user (1001).
-function inPluginVolume(script, extraMounts = []) {
-  execFileSync("podman", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "--entrypoint",
-    "sh",
-    "--volume",
-    `${PLUGIN_VOLUME}:/mnt`,
-    ...extraMounts,
-    IMAGE,
-    "-c",
-    script,
-  ]);
-}
 
 async function connectionId() {
   await browser.execute(() => {
@@ -75,26 +55,22 @@ describe("plugin data against a real container", () => {
     const blocked = await firstReason([
       () => appModeReason("real"),
       () => envReason("OPENROUTER_API_KEY", "a real model's turn is what makes the plugin emit its data"),
+      () => openRouterModelReason(MODEL),
+      () => cleanPluginVolumeReason("podman", IMAGE, [EXTENSION_FILE]),
       () => agentImageReason("podman", IMAGE),
     ]);
     if (blocked) return skipSuite(this, blocked);
     mkdirSync(WORKSPACE, { recursive: true });
     const source = path.join(WORKSPACE, EXTENSION_FILE);
     writeFileSync(source, EXTENSION);
-    try {
-      execFileSync("podman", ["volume", "create", PLUGIN_VOLUME], { stdio: "ignore" });
-    } catch {
-      // Already there from an earlier session — the app reuses one plugin volume by name.
-    }
-    inPluginVolume(
-      `mkdir -p /mnt/extensions && cp /seed/${EXTENSION_FILE} /mnt/extensions/${EXTENSION_FILE} && chown -R 1001:1001 /mnt`,
-      ["--volume", `${source}:/seed/${EXTENSION_FILE}:ro`],
-    );
+    // Seeding removes any older copy first, so a previous run that was killed before its `after` cannot leave one
+    // behind for every later session to load.
+    seedPluginVolumeExtension("podman", IMAGE, EXTENSION_FILE, source);
   });
 
   after(async () => {
     // Leaving it behind would make every later session emit these cards.
-    inPluginVolume(`rm -f /mnt/extensions/${EXTENSION_FILE}`);
+    removePluginVolumeExtension("podman", IMAGE, EXTENSION_FILE);
     // And leaving the session behind orphans a container pair and its /24 when the harness kills the app.
     await stopAgentSession(browser);
   });

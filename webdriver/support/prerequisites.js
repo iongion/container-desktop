@@ -18,6 +18,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { LM_STUDIO_BASE_URL, loadedContextLength } from "./lmstudioSession.js";
+import { PLUGIN_VOLUME, pluginVolumeExtensions } from "./pluginVolume.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -106,6 +107,42 @@ export async function loadedModelReason(model, minimum, recommended = minimum) {
     return `${model} is loaded at ${loaded}, under the ${minimum} this needs — unload it first, then ${load}`;
   }
   return undefined;
+}
+
+// A session that will be asked to go QUIET, checked before it is started. The engine's plugin volume is shared and
+// persistent, so any extension in it loads into this session too — and one that writes a message is conversation input
+// the model answers, so the transcript never settles and the spec fails as "the turn never finished" with the app,
+// bridge, key and model all working. Measured: a fixture left behind by a killed run cost two unrelated specs their
+// runs and an hour of misdiagnosis. A spec that seeds its OWN extension names it in `allowed`.
+export function cleanPluginVolumeReason(engine, image, allowed = []) {
+  const installed = pluginVolumeExtensions(engine, image).filter((file) => !allowed.includes(file));
+  if (installed.length === 0) return undefined;
+  return `${engine}'s ${PLUGIN_VOLUME} volume still holds ${installed.join(", ")}, which every session loads — a plugin that writes a message keeps this one busy for good. Remove it with \`${engine} run --rm --user root --entrypoint sh -v ${PLUGIN_VOLUME}:/mnt ${image} -c "rm -f /mnt/extensions/${installed[0]}"\``;
+}
+
+// The cloud model a spec is about to drive, asked ONCE before it drives anything. Two absences are invisible from
+// inside a turn and both read as the app failing: an id OpenRouter has RETIRED answers 404 — its free roster churns,
+// and the id four specs shared had already gone — and a free model under load answers 429 "temporarily rate-limited
+// upstream", measured four times in five on one candidate. Neither is a defect in this app, so both SKIP with the
+// reason. Deliberately NOT a tool call or a judgement: one token settles whether the model can be served at all, and
+// whether it uses a tool well is what the spec itself is for.
+export async function openRouterModelReason(model) {
+  const key = process.env.OPENROUTER_API_KEY;
+  // The account is a separate question, answered by envReason — this one has nothing to ask without it.
+  if (!key) return undefined;
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ model, max_tokens: 1, messages: [{ role: "user", content: "ping" }] }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (response.ok) return undefined;
+    const detail = (await response.text()).replace(/\s+/g, " ").slice(0, 200);
+    return `OpenRouter will not serve ${model} (HTTP ${response.status}): ${detail} — name another with CD_LIVE_MODEL, or pick a live one from https://openrouter.ai/api/v1/models`;
+  } catch (failure) {
+    return `OpenRouter is not answering about ${model} — ${String(failure).slice(0, 160)}`;
+  }
 }
 
 // What ~/.ssh/config would dial for a host. A target's SSH_HOST is often an alias (`win11`), which DNS alone

@@ -4,17 +4,16 @@
 //
 // Needs a NON-mock app (real podman) and OPENROUTER_API_KEY in the environment.
 import { strict as assert } from "node:assert";
-import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
-import { agentImageReason, appModeReason, envReason, firstReason, skipSuite } from "../support/prerequisites.js";
+import { MODEL, openRouterStartOptions, seedOpenRouterProvider } from "../support/openrouterSession.js";
+import { agentImageReason, appModeReason, envReason, firstReason, cleanPluginVolumeReason, openRouterModelReason, skipSuite } from "../support/prerequisites.js";
+import { removePluginVolumeExtension, seedPluginVolumeExtension } from "../support/pluginVolume.js";
 import { stopAgentSession } from "../support/agentSession.js";
 
 const WORKSPACE = process.env.CD_LIVE_WORKSPACE ?? path.resolve(import.meta.dirname, "../../temp/pi-live-workspace");
-const MODEL = process.env.CD_LIVE_MODEL ?? "inclusionai/ling-3.0-flash:free";
 const IMAGE = process.env.CD_LIVE_IMAGE ?? "container-desktop/pi-agent:6.0.0";
-const PLUGIN_VOLUME = "cd-agent-plugins";
+const EXTENSION_FILE = "ui-probe.ts";
 
 // The extension under test. It drives ctx.ui from `turn_start`, which is an event the bridge already triggers —
 // pi commands are not dispatched over the bridge yet, so a `/probe` command would never run.
@@ -32,45 +31,14 @@ export default function (pi: ExtensionAPI) {
 }
 `;
 
-// The plugin volume is a container volume, so seeding it means writing from inside a container. Root plus a
-// chown, because the session mounts it as the image's `agent` user (1001).
+// Both go through the shared module: it removes an older copy before seeding, so a run killed before its `after`
+// cannot leave a fixture that every later session loads.
 function seedExtension(source) {
-  try {
-    execFileSync("podman", ["volume", "create", PLUGIN_VOLUME], { stdio: "ignore" });
-  } catch {
-    // Already there from an earlier session — the app reuses one plugin volume by name.
-  }
-  execFileSync("podman", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "--entrypoint",
-    "sh",
-    "--volume",
-    `${PLUGIN_VOLUME}:/mnt`,
-    "--volume",
-    `${source}:/seed/ui-probe.ts:ro`,
-    IMAGE,
-    "-c",
-    "mkdir -p /mnt/extensions && cp /seed/ui-probe.ts /mnt/extensions/ui-probe.ts && chown -R 1001:1001 /mnt",
-  ]);
+  seedPluginVolumeExtension("podman", IMAGE, EXTENSION_FILE, source);
 }
 
 function removeExtension() {
-  execFileSync("podman", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "--entrypoint",
-    "sh",
-    "--volume",
-    `${PLUGIN_VOLUME}:/mnt`,
-    IMAGE,
-    "-c",
-    "rm -f /mnt/extensions/ui-probe.ts",
-  ]);
+  removePluginVolumeExtension("podman", IMAGE, EXTENSION_FILE);
 }
 
 async function connectionId() {
@@ -100,12 +68,14 @@ describe("pi extension UI against a real container", () => {
     const blocked = await firstReason([
       () => appModeReason("real"),
       () => envReason("OPENROUTER_API_KEY", "the extension's dialogs are driven by a real model's tool call"),
+      () => openRouterModelReason(MODEL),
+      () => cleanPluginVolumeReason("podman", IMAGE, [EXTENSION_FILE]),
       () => agentImageReason("podman", IMAGE),
     ]);
     if (blocked) return skipSuite(this, blocked);
     mkdirSync(WORKSPACE, { recursive: true });
     writeFileSync(path.join(WORKSPACE, "README.md"), "live workspace for the pi extension probe\n");
-    const source = path.join(WORKSPACE, "ui-probe.ts");
+    const source = path.join(WORKSPACE, EXTENSION_FILE);
     writeFileSync(source, EXTENSION);
     seedExtension(source);
   });

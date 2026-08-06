@@ -4,18 +4,19 @@ import type { CommandExecutionResult } from "@/host-contract/exec";
 // the Docker multiplexed stream with the shared decoder, and merges them — every line prefixed with its
 // container so a pod's output reads like `podman pod logs`, but entirely over the socket. This makes pod
 // logs work on API/socket connections with no local CLI (`program.path`), which is why it is the DEFAULT.
-// Imports only ./baseUrls + the pure log decoder + types, exactly like compose-rest/swarm-rest.
+// Imports only ./baseUrls + the pure log decoder + normalizers + types, exactly like compose-rest/swarm-rest.
 
 import type { AxiosInstance } from "axios";
 
 import { decodeContainerLogPayload } from "@/container-client/logs";
+import { normalizeContainerName } from "@/container-client/normalizers/shared";
 
 import { LIBPOD_BASE_URL } from "./baseUrls";
 
 type Raw = Record<string, any>;
 
 const nameOf = (container: Raw): string =>
-  String(container?.Name ?? container?.Names?.[0] ?? container?.Id ?? "").replace(/^\//, "");
+  normalizeContainerName(String(container?.Name ?? container?.Names?.[0] ?? container?.Id ?? ""));
 
 // Aggregate a pod's member-container logs over REST (no CLI). Infra container excluded; lines are prefixed.
 export async function getPodLogsViaRest(

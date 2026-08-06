@@ -10,18 +10,18 @@
 //
 // NOTHING OF THE USER'S IS TOUCHED: one seeded extension, removed again, and the session's own container pair.
 import { strict as assert } from "node:assert";
-import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { configureLmStudioProvider, lmStudioStartOptions } from "../support/lmstudioSession.js";
 import { appModeReason, firstReason, loadedModelReason, skipSuite } from "../support/prerequisites.js";
+import { removePluginVolumeExtension, seedPluginVolumeExtension } from "../support/pluginVolume.js";
 
 const WORKSPACE = process.env.CD_LIVE_WORKSPACE ?? path.resolve(import.meta.dirname, "../../temp/pi-theme-ws");
 const MODEL = process.env.CD_LIVE_LMSTUDIO_MODEL ?? "qwen3-4b-instruct-2507";
 const APP_VERSION = process.env.CD_LIVE_APP_VERSION ?? "6.0.0";
 const IMAGE = `container-desktop/pi-agent:${APP_VERSION}`;
-const PLUGIN_VOLUME = "cd-agent-plugins";
+const EXTENSION_FILE = "theme-probe.ts";
 const TURN_TIMEOUT = 180000;
 
 // The realistic plugin pattern, and the one that reads the module-global theme: pi's own Markdown REQUIRES a
@@ -39,43 +39,14 @@ export default function (pi: any) {
 }
 `;
 
+// Both go through the shared module, which removes an older copy before seeding: a run killed before its `after`
+// would otherwise leave a fixture that every later session on this engine loads.
 function seedExtension(source) {
-  try {
-    execFileSync("podman", ["volume", "create", PLUGIN_VOLUME], { stdio: "ignore" });
-  } catch {
-    // Already there from an earlier session — the app reuses one plugin volume by name.
-  }
-  execFileSync("podman", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "--entrypoint",
-    "sh",
-    "--volume",
-    `${PLUGIN_VOLUME}:/mnt`,
-    "--volume",
-    `${source}:/seed/theme-probe.ts:ro`,
-    IMAGE,
-    "-c",
-    "mkdir -p /mnt/extensions && cp /seed/theme-probe.ts /mnt/extensions/theme-probe.ts && chown -R 1001:1001 /mnt",
-  ]);
+  seedPluginVolumeExtension("podman", IMAGE, EXTENSION_FILE, source);
 }
 
 function removeExtension() {
-  execFileSync("podman", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "--entrypoint",
-    "sh",
-    "--volume",
-    `${PLUGIN_VOLUME}:/mnt`,
-    IMAGE,
-    "-c",
-    "rm -f /mnt/extensions/theme-probe.ts",
-  ]);
+  removePluginVolumeExtension("podman", IMAGE, EXTENSION_FILE);
 }
 
 // The accent the app is painted in RIGHT NOW — engine and light/dark decide it, so it is read from the page rather
@@ -96,7 +67,7 @@ describe("a plugin's own component in a real container", () => {
     if (blocked) return skipSuite(this, blocked);
     mkdirSync(WORKSPACE, { recursive: true });
     writeFileSync(path.join(WORKSPACE, "README.md"), "live workspace for the plugin theme probe\n");
-    const source = path.join(WORKSPACE, "theme-probe.ts");
+    const source = path.join(WORKSPACE, EXTENSION_FILE);
     writeFileSync(source, EXTENSION);
     seedExtension(source);
 

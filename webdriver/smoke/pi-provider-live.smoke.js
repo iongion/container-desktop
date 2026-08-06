@@ -2,15 +2,21 @@
 // with the key resolved natively from the OS keychain, and pi speaks the wire shape that upstream expects. The fixture
 // specs stub every one of those; nothing is stubbed here.
 //
-// Two shapes, both against a REAL container on a REAL engine:
+// Three shapes, all against a REAL container on a REAL engine:
 //   • openai-completions — the shape every provider but Anthropic speaks. Started through the REAL DRAWER.
 //   • anthropic-messages — the Anthropic SDK's shape, which posts /v1/messages onto the ORIGIN. This is the
 //     one the old single-URL contract broke: it arrived as /v1/v1/messages and 404ed.
+//   • a KEYED CLOUD provider — the credential-attaching half. The two above are deliberately keyless, so until this
+//     existed every live turn had ever run with `auth.scheme: "none"` and the signing half was unproven. A cloud
+//     upstream answers 401 unless the app attached the real key from the vault, in its OWN realm, so a turn that
+//     comes back IS the proof — while the container is asserted, with a key configured, to hold nothing.
 //
 // Needs a NON-mock app (CONTAINER_DESKTOP_MOCK=), a connected engine, the agent image built for this version
 // (`yarn cli agent-image`), and an OpenAI-compatible server on CD_LIVE_PROVIDER_URL that ALSO serves /v1/messages.
 // LM Studio does both, on its default loopback bind: the APP dials the provider, from the app's own realm, so a server
-// on 127.0.0.1 is reachable and `--bind 0.0.0.0` is no longer needed.
+// on 127.0.0.1 is reachable and `--bind 0.0.0.0` is no longer needed. The cloud shape needs OPENROUTER_API_KEY
+// instead, and each shape gates on ITS OWN prerequisite: a sleeping LM Studio must not skip the cloud scenario, and a
+// machine with no account must not skip the local ones.
 //
 // HARNESS RULES, each of which cost a run before:
 //   • An `async` page function handed to browser.execute does NOT work — WebKitWebDriver cannot serialize the
@@ -24,7 +30,20 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { appModeReason, firstReason, loadedModelReason, skipSuite } from "../support/prerequisites.js";
+import {
+  MODEL as CLOUD_MODEL,
+  openRouterStartOptions,
+  seedOpenRouterProvider,
+} from "../support/openrouterSession.js";
+import {
+  appModeReason,
+  cleanPluginVolumeReason,
+  envReason,
+  firstReason,
+  loadedModelReason,
+  openRouterModelReason,
+  skipSuite,
+} from "../support/prerequisites.js";
 
 const USER_DATA =
   process.env.CONTAINER_DESKTOP_USER_DATA_DIR ?? path.join(process.cwd(), "webdriver", ".e2e-user-data");
@@ -199,10 +218,14 @@ function seedProviders() {
 let connectionId = "";
 let openaiShape = {};
 let anthropicShape = {};
+let cloudShape = {};
 
 describe("the provider-shape contract against real containers", () => {
   before(async function () {
-    const blocked = await firstReason([() => appModeReason("real"), () => loadedModelReason(MODEL, 12000, 16384)]);
+    // Only what EVERY shape needs. The local server and the cloud account are each one scenario's own prerequisite,
+    // asked in its own hook below: gating the suite on both would skip a shape that would have run, and a report that
+    // says SKIPPED for something available reads as coverage nobody has.
+    const blocked = await firstReason([() => appModeReason("real")]);
     if (blocked) return skipSuite(this, blocked);
     seedProviders();
     // The renderer loads user settings once, at boot; a reload is what makes the seed above reach the drawer.
@@ -276,6 +299,8 @@ describe("the provider-shape contract against real containers", () => {
   describe("an openai-completions provider, started from the drawer", () => {
     before(async function startFromDrawer() {
       this.timeout(HOOK_TIMEOUT);
+      const blocked = await loadedModelReason(MODEL, 12000, 16384);
+      if (blocked) return skipSuite(this, blocked);
       // The REAL form: the drawer resolves the connection, the workspace, the provider and the model, and its own
       // submit calls start(). Nothing here reaches into the store to shortcut that.
       await browser.execute(() => {
@@ -406,6 +431,8 @@ describe("the provider-shape contract against real containers", () => {
   describe("an anthropic provider", () => {
     before(async function startAnthropic() {
       this.timeout(HOOK_TIMEOUT);
+      const blocked = await loadedModelReason(MODEL, 12000, 16384);
+      if (blocked) return skipSuite(this, blocked);
       const started = await startSession({
         connectionId,
         workspacePath: WORKSPACE,
@@ -438,6 +465,87 @@ describe("the provider-shape contract against real containers", () => {
       assert.ok(
         assistantText(anthropicShape.turn).includes(ANSWER),
         `the model never answered ${ANSWER}: ${JSON.stringify(anthropicShape.turn.items)}`,
+      );
+    });
+  });
+
+  // The credential-attaching half, which the two keyless shapes above cannot reach. Nothing here inspects the vault or
+  // the native realm — it cannot, by design — so the proof is the upstream's own verdict: OpenRouter refuses an
+  // unsigned request, so an answer means the app resolved the key and signed the turn where the key lives.
+  describe("a keyed cloud provider", () => {
+    before(async function startCloud() {
+      this.timeout(HOOK_TIMEOUT);
+      // The volume check is not incidental: a `data-probe.ts` left in it by a killed run made THIS scenario fail for
+      // four minutes as a hook timeout, while the container, the key, the model and the answer were all correct — the
+      // plugin's message was conversation input, the model answered it, and the wait for idle never ended.
+      const blocked = await firstReason([
+        () => envReason("OPENROUTER_API_KEY", "the credential-attaching half needs a real cloud account"),
+        () => openRouterModelReason(CLOUD_MODEL),
+        () => cleanPluginVolumeReason(PREFERRED_ENGINE, AGENT_IMAGE),
+      ]);
+      if (blocked) return skipSuite(this, blocked);
+      // The key goes into the OS keychain and the provider into settings; `start` is handed a provider ID and no
+      // credential at all, which is the only route a real key takes.
+      await seedOpenRouterProvider(browser, { model: CLOUD_MODEL });
+      cloudShape.held = await browser.executeAsync((done) => {
+        window.AI.hasKey("openrouter").then(
+          (held) => done(held === true),
+          () => done(false),
+        );
+      });
+      const started = await startSession(
+        openRouterStartOptions({
+          connectionId,
+          workspacePath: WORKSPACE,
+          model: CLOUD_MODEL,
+          appVersion: APP_VERSION,
+        }),
+      );
+      assert.equal(started.status, "ready", `the cloud session did not become ready: ${started.reason} [${started.log}]`);
+
+      const names = await sessionNames();
+      cloudShape = { ...cloudShape, agent: containerEnv(names.agent), names };
+      cloudShape.turn = await askAndSettle("the keyed cloud turn never finished");
+      report("KEYED CLOUD TURN", cloudShape.turn);
+      await stopSession();
+    });
+
+    // Without this the assertion below is vacuous: "no credential in the container" says nothing unless there WAS one
+    // to leak.
+    it("has a real key in the vault for the provider the session runs on", () => {
+      assert.equal(cloudShape.held, true, "the vault holds no key for openrouter, so nothing here is being proven");
+    });
+
+    it("still gives the container no credential at all, with a key configured", () => {
+      const keys = Object.keys(cloudShape.agent);
+      // The same pattern the keyless shape uses, and deliberately WITHOUT `TOKEN`: the container legitimately holds
+      // `CD_BRIDGE_TOKEN` — which authorises its own socket and is not the provider's — and a model's answer cap is
+      // named `CD_MODEL_MAX_OUTPUT_TOKENS`, so a `TOKEN` pattern fails on a variable carrying a number.
+      assert.equal(
+        keys.some((key) => /API_KEY|CREDENTIAL|SECRET/.test(key)),
+        false,
+        `the container was given a credential-shaped variable: ${keys.join(",")}`,
+      );
+      // Every value in there, too — a key can leak as a value under an innocent name. The bridge token is the one
+      // secret the container is meant to hold: it authorises its own socket, and it is not the provider's.
+      const leaked = Object.entries(cloudShape.agent).filter(
+        ([name, value]) => name !== "CD_BRIDGE_TOKEN" && `${value}`.includes("sk-or-"),
+      );
+      assert.deepEqual(leaked, [], "an OpenRouter key reached the container as a value");
+    });
+
+    it("tells the agent the cloud upstream, as plain catalogue data", () => {
+      assert.equal(cloudShape.agent.CD_MODEL_API, "openai-completions");
+      assert.equal(cloudShape.agent.CD_UPSTREAM_BASE_URL, "https://openrouter.ai/api/v1");
+      assert.equal(cloudShape.agent.CD_MODEL_ID, CLOUD_MODEL);
+    });
+
+    it("answers a real turn the app signed on its behalf", () => {
+      assert.ok(
+        assistantText(cloudShape.turn).includes(ANSWER),
+        `the cloud model never answered ${ANSWER} — an unsigned request would have come back 401: ${JSON.stringify(
+          cloudShape.turn.items,
+        )}`,
       );
     });
   });

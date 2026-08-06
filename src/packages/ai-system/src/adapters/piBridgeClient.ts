@@ -88,6 +88,13 @@ export interface PiBridgeClient {
 const CONNECT_ATTEMPTS = 40;
 const CONNECT_DELAY_MS = 250;
 
+// The retries above cover a port that is not up yet. They cannot cover the opposite outcome: a socket that OPENS and
+// never sends `ready`, because the session runtime behind it never finished being built. Nothing fires then — no error,
+// no close — so without this the promise never settles and a session start waits forever, with one "bridge socket
+// error" in the log and no end to point at. Generous, because a legitimately slow start builds pi's session and loads
+// every installed plugin's extension through jiti before it answers; finite, because forever is not a diagnosis.
+const READY_TIMEOUT_MS = 60_000;
+
 // A read is answered from memory, so a slow one means something is wrong. An install runs npm or git inside
 // the container against a registry, which legitimately takes minutes.
 const READ_TIMEOUT_MS = 30_000;
@@ -98,6 +105,7 @@ export function createPiBridgeClient(options: {
   token: string;
   socketFactory?: (url: string) => WebSocketLike;
   connectRetry?: { attempts: number; delayMs: number };
+  readyTimeoutMs?: number;
 }): PiBridgeClient {
   const listeners = new Set<(event: BridgeEvent) => void>();
   let socket: WebSocketLike | undefined;
@@ -151,6 +159,7 @@ export function createPiBridgeClient(options: {
     connect(): Promise<void> {
       const attempts = options.connectRetry?.attempts ?? CONNECT_ATTEMPTS;
       const delayMs = options.connectRetry?.delayMs ?? CONNECT_DELAY_MS;
+      const readyTimeoutMs = options.readyTimeoutMs ?? READY_TIMEOUT_MS;
       return new Promise<void>((resolve, reject) => {
         let attempt = 0;
         let ready = false;
@@ -164,17 +173,32 @@ export function createPiBridgeClient(options: {
           // One attempt reports one outcome: a refused socket fires both error and close, and each must not
           // schedule its own retry.
           let done = false;
+          // Armed once the socket opens, cleared by every outcome — a timer left running would reject a promise that
+          // already resolved, on a session the user is by then using.
+          let handshake: ReturnType<typeof setTimeout> | undefined;
+          const settled = () => {
+            done = true;
+            if (handshake) clearTimeout(handshake);
+          };
           const failed = (error: Error) => {
             if (ready || done) return;
-            done = true;
+            settled();
             if (attempt >= attempts) {
               reject(error);
               return;
             }
             setTimeout(open, delayMs);
           };
+          // A handshake that never completes is NOT retried: the port answering means the container's bridge is
+          // listening, so another socket would only queue a second session runtime behind the same unfinished wait.
+          const handshakeExpired = () => {
+            if (ready || done) return;
+            settled();
+            reject(new Error("the agent bridge accepted the connection but never finished its handshake"));
+          };
 
           created.onopen = () => {
+            handshake = setTimeout(handshakeExpired, readyTimeoutMs);
             created.send(
               encodeCommand({
                 id: randomUUID(),
@@ -194,7 +218,7 @@ export function createPiBridgeClient(options: {
             }
             if (event.type === "ready" && !ready) {
               ready = true;
-              done = true;
+              settled();
               resolve();
             }
             if (event.type === "response") settleResponse(event);

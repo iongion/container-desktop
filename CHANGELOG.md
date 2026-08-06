@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Starting an assistant session can no longer hang forever. When the agent container accepted the connection but never finished its handshake, nothing timed out and nothing failed — the start simply waited, with one line in the log and no end to it. It now gives up with that reason
+- A container action the assistant chose now reaches the container it named. The engine reports a container's name with a leading slash, so a model that copied it out of a listing had every inspect, start, stop, restart, pause and remove answered "no such container" for a container that was plainly there — the operation quietly did nothing and the model was told so
 - A remote connection stops dropping itself. One unanswered engine ping used to close the whole connection — including the SSH channel every command travels on, so the next thing you did failed with "SSH connection is not established". A ping is now retried, with a budget that fits what it crosses: on a busy remote engine six pings failed in a single run and every one of them recovered on the next attempt, where before each would have cost you the connection
 - A connection whose channel was closed is reopened instead of refusing your next action
 - A remote command refused mid-handshake is sent again: a remote's SSH server turns away part of a burst, and starting a session is a burst. Only failures where the command provably never ran are retried
