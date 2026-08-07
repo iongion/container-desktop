@@ -139,7 +139,10 @@ How you build here, **per change** — not an end-of-task afterthought:
   fail (that would blame the app) and not pass (that would claim coverage nobody has).
 - **One entry point per suite.** `yarn test:e2e:tauri` (mock) · `yarn test:smoke:tauri` (real, clears
   `CONTAINER_DESKTOP_MOCK`). Select with `--spec <file>`; let the scenario travel in the environment
-  (`CONTAINER_DESKTOP_MOCK=podman|docker`, `CONTAINER_DESKTOP_MOCK_SWARM=manager|none`). Do NOT add a
+  (`CONTAINER_DESKTOP_MOCK=podman|docker`, `CONTAINER_DESKTOP_MOCK_SWARM=manager|none`,
+  `CONTAINER_DESKTOP_MOCK_CONNECTED=none` = boots with NO engine connected). A spec needing a scenario the suite does
+  not set lives in **`webdriver/scenarios/`**, outside the `specs/` glob so the suite never runs it engine-connected —
+  still the mock app, so still never gated. Do NOT add a
   package.json script per spec/scenario.
 - **Smoke specs** need a configured target from `src/__tests__/live/targets.env`:
   `connection-matrix.smoke.js` (the connectivity matrix), `swarm.smoke.js` (real Docker Swarm, against

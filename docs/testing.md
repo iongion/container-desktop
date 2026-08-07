@@ -74,7 +74,10 @@ Config: [`webdriver/wdio.conf.js`](../webdriver/wdio.conf.js). The specs drive t
 there is no CDP in a native webview. UI specs run against deterministic **mock** fixtures
 (`CONTAINER_DESKTOP_MOCK=<engine>`); the swarm spec also sets
 `CONTAINER_DESKTOP_MOCK_SWARM=manager|none` to render the populated vs "Initialize Swarm" states — no
-Docker required.
+Docker required. `CONTAINER_DESKTOP_MOCK_CONNECTED=none` is the one scenario the mock could not otherwise
+reach: an app that boots with NO engine connected. It is decided by `mockAvailability()` alone — the engine
+service reads a connection's `running` off `availability.api` and brings the primary connection up whether or
+not anything is flagged auto-start, so clearing auto-start does not express it.
 
 One entry point per suite — `yarn test:e2e:tauri` runs the mock suite ([below](#two-suites-told-apart-by-what-a-failure-is-allowed-to-mean));
 `--spec` selects one and the scenario travels in the environment, so there is no script per combination:
@@ -87,6 +90,15 @@ CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=none yarn test:e2e:ta
 ```
 
 On Windows, prefix with `yarn cross-env` instead of a shell assignment.
+
+`webdriver/scenarios/` holds specs that need a scenario the default suite does not set, so they are kept OUT
+of `webdriver/specs/` (which is the suite glob) and named explicitly. They are still the mock app, so a
+failure still means the app is wrong — they are not gated on anything absent:
+
+```bash
+CONTAINER_DESKTOP_MOCK=podman CONTAINER_DESKTOP_MOCK_CONNECTED=none \
+  yarn test:e2e:tauri --spec webdriver/scenarios/no-engine-landing.e2e.js
+```
 
 Real-engine specs live in the **smoke** suite, which has its own entry point (`yarn test:smoke:tauri` clears
 `CONTAINER_DESKTOP_MOCK` for you) and a configured target in `src/__tests__/live/targets.env`. They drive
