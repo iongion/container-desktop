@@ -91,13 +91,13 @@ CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=none yarn test:e2e:ta
 
 On Windows, prefix with `yarn cross-env` instead of a shell assignment.
 
-`webdriver/scenarios/` holds specs that need a scenario the default suite does not set, so they are kept OUT
-of `webdriver/specs/` (which is the suite glob) and named explicitly. They are still the mock app, so a
-failure still means the app is wrong — they are not gated on anything absent:
+A spec whose scenario knob has a default asserts what EACH scenario should produce, naming it in the
+`describe` title — `swarm-ui.e2e.js` and `landing-ui.e2e.js` are the two, so a default suite run is never
+vacuous and neither needs a gate:
 
 ```bash
 CONTAINER_DESKTOP_MOCK=podman CONTAINER_DESKTOP_MOCK_CONNECTED=none \
-  yarn test:e2e:tauri --spec webdriver/scenarios/no-engine-landing.e2e.js
+  yarn test:e2e:tauri --spec webdriver/specs/landing-ui.e2e.js
 ```
 
 Real-engine specs live in the **smoke** suite, which has its own entry point (`yarn test:smoke:tauri` clears
