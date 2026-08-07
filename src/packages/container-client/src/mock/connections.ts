@@ -9,7 +9,7 @@ import {
   type Controller,
   type EngineConnectorAvailability,
 } from "@/container-client/types/engine";
-import { getMockEngines, mockEnvValue } from "./mode";
+import { getMockEngines, mockConnectsNothing, mockEnvValue } from "./mode";
 
 export const MOCK_PODMAN_SYSTEM_ID = "mock.podman.system";
 export const MOCK_DOCKER_SYSTEM_ID = "mock.docker.system";
@@ -21,6 +21,26 @@ const MOCK_APPLE_VERSION = "1.0.0";
 
 // Forced-ready availability — bypasses program/socket detection (which would fail with no real engine).
 export function mockAvailability(): EngineConnectorAvailability {
+  // Except in the one scenario that asks for NOTHING connected. This is the seam that decides it: the engine service
+  // reads a connection's `running` straight off `availability.api` (engineDataService.connectAll), and it brings the
+  // PRIMARY connection up whether or not anything is flagged auto-start — so refusing availability here is the only
+  // thing that produces a READY app with no engine. It models an engine that is configured and not running, which is
+  // what the connection manager is there to fix.
+  if (mockConnectsNothing()) {
+    return {
+      enabled: true,
+      host: false,
+      api: false,
+      program: false,
+      controller: false,
+      report: {
+        host: "Mock host is not running",
+        api: "Mock API is not reachable",
+        program: "Mock program is not running",
+        controller: "Mock controller is not running",
+      },
+    };
+  }
   return {
     enabled: true,
     host: true,

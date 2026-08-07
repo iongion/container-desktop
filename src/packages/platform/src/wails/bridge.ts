@@ -285,6 +285,10 @@ export async function installWailsHostBridge(): Promise<void> {
     // scaled run set under Wails too, mirroring the Tauri bridge. Absent ⇒ "" ⇒ no scaled seed (the default).
     target.CONTAINER_DESKTOP_MOCK_SWARM =
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SWARM" })) ?? "";
+    // "none" ⇒ the mock connects no engine at all (mock/mode.ts), mirroring the Tauri bridge. Needed in the webview
+    // realm because getMockEngines() decides autoStart there.
+    target.CONTAINER_DESKTOP_MOCK_CONNECTED =
+      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_CONNECTED" })) ?? "";
     // The same flag that turns the single-instance guard off (main.go) so the harness runs beside a dev app. The
     // webview needs it because work that assumes "only this app is running" — reaping orphaned agent sessions —
     // must stand down when a second instance may hold a live one.

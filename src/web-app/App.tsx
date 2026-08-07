@@ -255,9 +255,17 @@ function AppLayout() {
       return;
     }
     if (!landedRef.current) {
+      // The decision below needs to know where the window IS, and the router has not necessarily matched a route on
+      // the tick READY arrives. Consuming the one-shot before then would decide on `undefined` and never fire again.
+      if (!currentScreen) {
+        return;
+      }
       landedRef.current = true;
       prevRunningRef.current = !!running;
-      if (!running) {
+      // Only from the DEFAULT route, the same guard its sibling below has. A window that opens on a route the user
+      // asked for — a reload keeps the hash — is not redirected away from it just because no engine came up; that
+      // screen reports the missing engine in place. Without this the landing rule silently discarded where they were.
+      if (!running && currentScreen.Route?.Path === DashboardScreen.Route.Path) {
         router.navigate({ to: ConnectionsScreen.Route.Path });
       }
       return;

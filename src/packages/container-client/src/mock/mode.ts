@@ -56,6 +56,14 @@ export function isMockMode(): boolean {
 // connections auto-start at boot (see ./connections) — and therefore whether the app lands in the
 // single-engine or the merged/unified workspace. Empty when not in mock mode.
 export function getMockEngines(): MockEngine[] {
+  // The one state mock mode could not otherwise reach: NOTHING connected. MockCommand answers every lifecycle call
+  // with "ready", so the app always booted with an engine up — which left everything the app does when no engine
+  // came up (above all the landing redirect in AppLayout) impossible to drive, and therefore impossible to change
+  // with proof. The connections are still offered; none auto-starts, which is the real shape of "an engine is
+  // configured and not running" rather than a state with nothing in the connection manager to fix.
+  if (mockConnectsNothing()) {
+    return [];
+  }
   const value = rawFlag().toLowerCase();
   if (value === "docker") {
     return [ContainerEngine.DOCKER];
@@ -70,6 +78,12 @@ export function getMockEngines(): MockEngine[] {
     return [ContainerEngine.PODMAN, ContainerEngine.DOCKER, ContainerEngine.APPLE];
   }
   return [];
+}
+
+// `CONTAINER_DESKTOP_MOCK_CONNECTED=none` — the mock offers its connections and brings NONE of them up. Mock mode
+// itself stays on, so every screen still renders from fixtures; there is simply no engine connected.
+export function mockConnectsNothing(): boolean {
+  return mockEnvValue("CONTAINER_DESKTOP_MOCK_CONNECTED").toLowerCase() === "none";
 }
 
 // True when the mock boots more than one engine — i.e. the merged/unified workspace.
