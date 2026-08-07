@@ -21,12 +21,14 @@ const attachPiAgentSession = vi.fn(
     modelId: "qwen3-4b-instruct-2507",
   }),
 );
+const stopPiAgentSession = vi.fn(async (..._args: unknown[]) => {});
 const createPiBridgeClient = vi.fn();
 
 vi.mock("@/ai-system/adapters/piAgentContainer", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/ai-system/adapters/piAgentContainer")>()),
   startPiAgentSession: (...args: unknown[]) => startPiAgentSession(...args),
   attachPiAgentSession: (...args: unknown[]) => attachPiAgentSession(...args),
+  stopPiAgentSession: (...args: unknown[]) => stopPiAgentSession(...args),
 }));
 vi.mock("@/ai-system/adapters/piBridgeClient", () => ({
   createPiBridgeClient: (...args: unknown[]) => createPiBridgeClient(...args),
@@ -313,5 +315,20 @@ describe("useCodingAgentStore conversations directory", () => {
     // A pair built before the mount existed has no such directory, and saying it has one would describe a mount
     // that is not there.
     expect(useCodingAgentStore.getState().spec?.sessionsPath).toBeUndefined();
+  });
+
+  it("removes nothing when attaching to a running pair fails", async () => {
+    stopPiAgentSession.mockClear();
+    const client = fakeClient();
+    (client.connect as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("connection refused"));
+    createPiBridgeClient.mockReturnValue(client);
+
+    await useCodingAgentStore.getState().attachSession({ ...START, sessionKind: "default" });
+
+    expect(useCodingAgentStore.getState().status).toBe("error");
+    // The deliberate asymmetry with `start`, which DOES release what it just created. This pair was already running
+    // and holds the user's conversation: failing to reach it is this app's problem, not a reason to destroy it. Making
+    // the two paths "consistent" would silently delete the session the user asked to continue.
+    expect(stopPiAgentSession).not.toHaveBeenCalled();
   });
 });

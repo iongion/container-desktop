@@ -765,6 +765,28 @@ async function stopServingConversations(): Promise<void> {
   }
 }
 
+// Everything on the ENGINE that a session's start created: its disposable workspace sandbox, and the agent pair with
+// the environment volume and the network that belong to it. Shared by `stop()` and by a start that FAILED, because a
+// start which brought the pair up and then could not talk to it leaves exactly the same things behind — and no kernel
+// guard reaches any of them, a container being the engine's child rather than this app's. Never sweeps: it releases
+// only what the caller itself just created, which is why it is safe under "the user deals with their own containers".
+async function releaseSessionContainers(
+  spec: PiAgentSessionSpec | undefined,
+  connectionId: string | undefined,
+): Promise<void> {
+  // Never fatal: the session is going either way.
+  if (spec?.executionTarget && spec.agentContainerName) {
+    await window.AI?.releaseWorkspaceTargets(spec.agentContainerName).catch((error) =>
+      logger.debug("releasing the session's workspace targets failed", error),
+    );
+  }
+  // A mock session has no containers to tear down — its spec carries only the workspace and the model.
+  if (spec?.agentContainerName && connectionId) {
+    const host = await resolveConnectionHost(connectionId);
+    if (host) await stopPiAgentSession(host, spec);
+  }
+}
+
 async function serveConversations(
   spec: PiAgentSessionSpec,
   engineHost: ContainerEngineHost | undefined,
@@ -1325,6 +1347,14 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       bridge?.tunnel?.stop();
       storeTunnel?.stop();
       await stopServingConversations();
+      // And the pair ITSELF, which this teardown used to leave running along with its environment volume and its
+      // network: a start can fail with the container perfectly up — an unreachable bridge, a handshake that never
+      // finishes — and then nothing on any path removed it. Only `start` does this, never `attachSession`: that one
+      // adopts a pair it did not create, and releasing there would destroy the session the user asked to continue.
+      // Guarded so a failure to release cannot replace the error being reported.
+      await releaseSessionContainers(spec, options.connectionId).catch((releaseError) =>
+        logger.debug("releasing the containers of a start that failed did not complete", releaseError),
+      );
       set((state) => ({
         status: "error",
         error: (error as Error).message,
@@ -1439,18 +1469,8 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // The conversations were served to THIS pair. Left running, the socket would answer for containers that no longer
     // exist — and the next session's store could not take the handle.
     await stopServingConversations();
-    // Whatever this session's workspace target built — above all a disposable sandbox container, which exists for
-    // this run and nothing else. Released before the pair goes, and never fatal: the session is ending either way.
-    if (spec?.executionTarget && spec.agentContainerName) {
-      await window.AI?.releaseWorkspaceTargets(spec.agentContainerName).catch((error) =>
-        logger.debug("releasing the session's workspace targets failed", error),
-      );
-    }
-    // A mock session has no containers to tear down — its spec carries only the workspace and the model.
-    if (spec?.agentContainerName && connectionId) {
-      const host = await resolveConnectionHost(connectionId);
-      if (host) await stopPiAgentSession(host, spec);
-    }
+    // The workspace sandbox and the pair itself, released before this returns.
+    await releaseSessionContainers(spec, connectionId);
     set({
       status: "idle",
       client: undefined,

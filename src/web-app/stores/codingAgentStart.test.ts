@@ -10,11 +10,13 @@ import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 // is start()'s own — and mock mode takes a different one, which is exactly how this went unnoticed.
 
 const startPiAgentSession = vi.fn(async () => ({ hostPort: 45871 }));
+const stopPiAgentSession = vi.fn(async () => {});
 const createPiBridgeClient = vi.fn();
 
 vi.mock("@/ai-system/adapters/piAgentContainer", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/ai-system/adapters/piAgentContainer")>()),
   startPiAgentSession: (...args: unknown[]) => startPiAgentSession(...(args as [])),
+  stopPiAgentSession: (...args: unknown[]) => stopPiAgentSession(...(args as [])),
 }));
 vi.mock("@/ai-system/adapters/piBridgeClient", () => ({
   createPiBridgeClient: (...args: unknown[]) => createPiBridgeClient(...args),
@@ -69,6 +71,7 @@ const START = {
 
 describe("useCodingAgentStore start", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     // A stray flag in the shell would send start() down the scripted path and prove nothing.
     vi.stubEnv("CONTAINER_DESKTOP_MOCK", "");
     (globalThis as { window?: unknown }).window = {
@@ -121,5 +124,21 @@ describe("useCodingAgentStore start", () => {
     expect(useCodingAgentStore.getState().error).toContain("connection refused");
     // A client nothing answered on would let submit() and every panel dial a socket that was never up.
     expect(useCodingAgentStore.getState().client).toBeUndefined();
+  });
+
+  it("releases the containers a start that failed had already created", async () => {
+    const client = fakeClient([]);
+    (client.connect as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("connection refused"));
+    createPiBridgeClient.mockReturnValue(client);
+
+    await useCodingAgentStore.getState().start(START);
+
+    // The pair came UP and then could not be talked to, which is the case the tunnels-only teardown missed: the
+    // container, its environment volume and its network were all left on the engine. Nothing else reaches them —
+    // a container is the ENGINE's child, so no kernel guard ends it with the app, and the app must never sweep
+    // containers it did not itself just create. The start that made them is the only correct place to release them.
+    expect(stopPiAgentSession).toHaveBeenCalledTimes(1);
+    const [, released] = stopPiAgentSession.mock.calls[0] as unknown as [unknown, { agentContainerName: string }];
+    expect(released.agentContainerName).toBe(useCodingAgentStore.getState().spec?.agentContainerName);
   });
 });
