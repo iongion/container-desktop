@@ -74,3 +74,14 @@ keyring = { version = "3", features = ["apple-native", "windows-native", "sync-s
 # Child::kill is SIGKILL-only). Windows uses taskkill by pid instead.
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# Job objects for the child guard: the Windows half of "a child does not outlive an app that was KILLED"
+# (child_guard.rs), where Linux uses PR_SET_PDEATHSIG. Already in the tree at this version (tauri pulls it), and
+# these are link declarations only — nothing is added to the binary but the four kernel32 calls.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_JobObjects",
+  "Win32_System_Threading",
+] }

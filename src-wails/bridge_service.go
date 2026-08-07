@@ -117,7 +117,6 @@ func bridgeConnection(conn net.Conn, launcher string, argv []string) {
 	defer func() { _ = conn.Close() }()
 	cmd := exec.Command(launcher, argv...)
 	configureHiddenWindow(cmd)
-	configureDeathWithParent(cmd)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return
@@ -126,7 +125,7 @@ func bridgeConnection(conn net.Conn, launcher string, argv []string) {
 	if err != nil {
 		return
 	}
-	if err := cmd.Start(); err != nil {
+	if err := startBoundToApp(cmd); err != nil {
 		return
 	}
 	var both sync.WaitGroup
@@ -158,8 +157,7 @@ func startTunnel(spec bridgeSpec) (*bridgeEntry, error) {
 	configureHiddenWindow(cmd)
 	// The `ssh -NL` this spawns outlives every request, so an app that is KILLED leaves it holding a local port and
 	// an SSH connection to the remote.
-	configureDeathWithParent(cmd)
-	if err := cmd.Start(); err != nil {
+	if err := startBoundToApp(cmd); err != nil {
 		return nil, err
 	}
 	exited := &atomic.Bool{}

@@ -80,9 +80,6 @@ func (s *ProcessService) Spawn(args processSpawnArgs) (SpawnResult, error) {
 		cmd.Env = append(cmd.Env, key+"="+value)
 	}
 	configureHiddenWindow(cmd) // Windows: no console flash for a streamed child (build-tagged); no-op else.
-	// A streamed child can be long-lived — the assistant's `ssh -NL` forward comes through here — and an app that is
-	// KILLED runs neither Wait() nor the registry's kill.
-	configureDeathWithParent(cmd)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -92,7 +89,9 @@ func (s *ProcessService) Spawn(args processSpawnArgs) (SpawnResult, error) {
 	if err != nil {
 		return SpawnResult{}, err
 	}
-	if err := cmd.Start(); err != nil {
+	// A streamed child can be long-lived — the assistant's `ssh -NL` forward comes through here — and an app that is
+	// KILLED runs neither Wait() nor the registry's kill.
+	if err := startBoundToApp(cmd); err != nil {
 		return SpawnResult{}, err
 	}
 

@@ -216,10 +216,12 @@ A scope naming no `~/.ssh/config` entry is refused before any container is creat
 that one is the native proxy and request-shaped, while a bridge is a WebSocket upgrade over a long-lived socket.
 
 **It also dies with an app that was KILLED**, which nothing this app runs can arrange: `kill_on_drop` and the process
-registry cover a clean shutdown, and a SIGKILL runs neither. The kernel is asked instead — `PR_SET_PDEATHSIG` in both
-shells (`src-tauri/src/child_guard.rs`, `src-wails/child_guard_*.go`), applied to every long-lived child either backend
-spawns. Linux only, deliberately: Windows would need a Job object and macOS offers nothing, and both files say so where
-the next reader will look.
+registry cover a clean shutdown, and a SIGKILL runs neither. The kernel is asked instead, by whichever mechanism the
+platform has — `PR_SET_PDEATHSIG` on Linux, a Job object with `KILL_ON_JOB_CLOSE` on Windows — in both shells
+(`src-tauri/src/child_guard.rs`, `src-wails/child_guard_*.go`), applied to every long-lived child either backend
+spawns. macOS offers nothing and never gets one. The app itself is deliberately NOT in its own Windows job: a sign-in
+opens the user's own browser, and a browser inside that job would be torn down with the app. Both files say so where
+the next reader will look, along with the residual window each mechanism keeps.
 
 **One hop further for an engine that keeps its containers in a machine.** podman on Windows runs its engine inside a WSL
 machine, which is a network realm of its own: a port published there never appears on the Windows host — measured, at
