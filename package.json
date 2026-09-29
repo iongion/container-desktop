@@ -184,7 +184,7 @@
     "commander": "15.0.0",
     "cross-env": "10.1.0",
     "dotenv": "17.4.2",
-    "electron": "43.1.0",
+    "electron": "43.5.0",
     "electron-builder": "26.15.3",
     "jsdom": "29.1.1",
     "mime-types": "3.0.2",
