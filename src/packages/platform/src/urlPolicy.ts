@@ -15,8 +15,7 @@ const PRIVATE_IP_RANGES = new Set([
 
 // Exact-match URLs always allowed (project links surfaced in the UI).
 export const URLS_ALLOWED = [
-  "https://container-desktop.com/", // Project website
-  "https://iongion.github.io/container-desktop/", // Project github pages website
+  "https://iongion.github.io/container-desktop/", // Project website
   "https://github.com/iongion/container-desktop/releases", // Project github releases
   "https://github.com/containers/podman-compose", // Podman Compose 3rd party
   "https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct", // Project Microsoft Store link
@@ -25,7 +24,7 @@ export const URLS_ALLOWED = [
 // Hostnames always allowed (docs/vendor sites + localhost).
 export const DOMAINS_ALLOW_LIST = [
   "localhost",
-  "container-desktop.com", // Project website/docs
+  "iongion.github.io", // Project website/docs
   "podman.io", // Podman website
   "docs.podman.io", // Podman documentation
   "avd.aquasec.com", // Aqua Security (trivy)

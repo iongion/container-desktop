@@ -18,12 +18,11 @@ describe("isPrivateIp", () => {
 
 describe("shouldOpenExternally", () => {
   it("allows exact allow-listed URLs", () => {
-    expect(shouldOpenExternally("https://container-desktop.com/")).toBe(true);
-    expect(shouldOpenExternally("https://container-desktop.com/manual/")).toBe(true);
     expect(shouldOpenExternally("https://github.com/iongion/container-desktop/releases")).toBe(true);
   });
 
   it("allows allow-listed hostnames and private IPs", () => {
+    expect(shouldOpenExternally("https://iongion.github.io/container-desktop/manual/#windows")).toBe(true);
     expect(shouldOpenExternally("https://docs.podman.io/en/latest/")).toBe(true);
     expect(shouldOpenExternally("http://localhost:9090/x")).toBe(true);
     expect(shouldOpenExternally("http://127.0.0.1:8080/api")).toBe(true);

@@ -24,7 +24,7 @@ const author = pkg.author; // Ionut Stoica
 const maintainer = pkg.author; // deb Maintainer (Name; package.json carries no email)
 const license = pkg.license; // MIT
 const version = pkg.version; // convenience re-export; package.json stays the source (see sync-manifests)
-const homepage = "https://container-desktop.com";
+const homepage = "https://iongion.github.io/container-desktop";
 
 // `Copyright (c) <year> <author>` — the caller passes the year.
 function copyright(year) {

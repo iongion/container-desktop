@@ -14,7 +14,7 @@ describe("isExternalHttpLink", () => {
   });
 
   it("treats a cross-origin http(s) link as external (→ OS browser)", () => {
-    expect(isExternalHttpLink("https://container-desktop.com/docs", APP)).toBe(true);
+    expect(isExternalHttpLink("https://iongion.github.io/container-desktop/manual/", APP)).toBe(true);
     expect(isExternalHttpLink("http://192.168.1.10:9000/", APP)).toBe(true);
     expect(isExternalHttpLink("https://github.com/iongion/container-desktop", APP)).toBe(true);
   });

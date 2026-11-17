@@ -297,6 +297,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The connection menu shows a solid green icon when connected
 - An SSH config entry that lists several aliases on one line (`Host web1 web2`) now offers each alias, instead of unusable entries with garbled names
 
+## [6.1.0] - 2026-11-17
+
+### Added
+
+- Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
+- Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily
+- Manage image registries per connection — sign in, add or remove them, and set certificates and a proxy for each engine
+- A compatibility view that compares, side by side, what the Podman, Docker and Apple engines can each do
+- Import a Compose file into Podman and run it as native containers, kept together as one stack
+- Pod logs now combine every member and work over a remote connection, with no local command line needed
+- A colored status dot on each container shows at a glance whether it is running, healthy, starting, paused or stopped
+- When importing a stack, a service now waits for the ones it depends on to become healthy before it starts
+- Starting, stopping or removing a whole group now shows progress and reports if something fails
+- A new Wails desktop build joins Electron and Tauri, packaged for the same set of platforms
+- The Wails build has the same shell behavior: single window, remembered size, relaunch, hide to tray, file logs and keychain storage
+- The Wails window waits until it is ready before appearing, so there is no blank flash at startup
+- Branding and packaging details now come from one shared source across all three desktop builds
+- Each desktop build has its own release pipeline, with Tauri as the default publisher
+- A driver for automating and taking screenshots of the Wails build during testing
+- Website screenshots can now be captured from the Wails build too
+- A mounts view listing every container's mounts, grouped by connection, with their sizes
+- A network reachability tool that pinpoints where a connection, port or name lookup breaks and suggests a fix
+- A per-image security view: check its signature, scan for vulnerabilities on demand, and export its software bill of materials
+- If verifying an image signature needs a sign-in, you can log in and verification resumes, with a button to recheck anytime
+- The security view shows the image's source registry, filters findings by severity, and reads clearly when none are found
+- Images, registries, pods, machines, networks, secrets, volumes and swarm lists are now grouped by connection
+- The containers list now nests by connection, then group, then container
+- Inspect and connection details now use consistent, sortable property tables with copy on every row
+- An engine health page per connection: a clear verdict, where the connection breaks, disk and network vitals, and plain-language fixes
+- Richer inspect screens gain a side rail splitting summary, environment, ports and mounts into their own tabs
+- Connection info, system info and engine health now live in a side rail instead of a header menu
+- Breadcrumbs now start with the owning connection, which links to its info page
+- Inspect is now the first action on every resource; networks and machines finally get it too
+- Every detail screen now has a reload button, and detail headers arrange their actions the same way the lists do
+- Untagged images show a short ID in the name column instead of a blank cell
+- The container detail header shows a combined health-and-state badge next to the playback controls
+- Container detail is reorganized into one side rail — summary, environment, ports, mounts, logs, processes and more — with playback kept inline
+
+### Changed
+
+- Engine health moves runtime details into its header and lets networking use the full width
+- Connection info shows the real socket it connects through and hides rows that don't apply
+- Settings categories are alphabetical, connection links look cleaner, and the image Start button matches the others
+- English is now the complete translation source, and much more of the app — states, headers, menus — can be translated, with wider language coverage
+- Container state and health are now translated instead of showing raw engine text
+- The "Explore more in the docs" link always points to the Container Desktop manual
+- Collapsed sidebar labels are trimmed with an ellipsis instead of overflowing
+- Inspect tables are more compact
+- Container inspect breaks environment variables and ports into their own copyable tables
+- The raw-configuration viewer titles itself to match whether it shows a tree or JSON
+- Breadcrumbs show their icon only on the first crumb
+- Back buttons in screen headers have consistent spacing
+- Network, secret and volume actions now remember which connection they belong to
+- Connection detail pages are scoped to one connection, with their own links, breadcrumbs and refresh
+- The Connections list now uses the same search field as every other list
+- The footer shows engine versions inline, dropping the separate version dropdown
+- The image vulnerabilities view sets a severity chart and filters beside the findings, with a clear all-clear state
+- The image bill-of-materials is now a sortable package table with export, and licenses get their own panel
+- The reachability tool and engine health now share the same connection-path and diagnosis display
+
+### Fixed
+
+- The website, manual links, update check and WSL rootfs download moved to iongion.github.io/container-desktop and GitHub releases; the project no longer trusts its former domain
+- IDs are generated in a way that works in every desktop build, not just Chromium-based ones
+- Fixed detecting the image-signing tool's version, which used to log a spurious error
+- Docker networks now report their subnets, so subnet-aware views work just as they do on Podman
+- Slow container stops and removals no longer look like failures while the engine is still working
+- A brief connection hiccup no longer flips the engine into "reconnecting"
+- Importing a stack no longer fails on a container that is still settling from a previous state
+- The internal pod infrastructure containers are hidden from the containers list
+- Re-importing a stack in a different mode tears the old one down first and keeps named volumes
+- Stack teardown removes the pod cleanly instead of one member at a time, which could crash the engine
+- Stack teardown now also removes the networks it created
+- Container groups sort ahead of standalone containers across every engine
+- Linux AppImage no longer crashes at startup with EGL_BAD_PARAMETER on rolling-release distros
+- Resource list headers and actions now follow one consistent layout
+- The connection menu shows a solid green icon when connected
+
 ## [6.0.0] - 2026-07-06
 
 ### Changed
