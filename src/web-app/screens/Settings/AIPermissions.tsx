@@ -6,14 +6,13 @@ import { Button, ButtonGroup, Callout, Intent, Tag } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { Application } from "@/container-client/Application";
 import {
   type PermissionRule,
   type PermissionsList,
   type PermissionsSnapshot,
   permissionKey,
-} from "@/ai-system/core/permissions";
-import { Application } from "@/container-client/Application";
+} from "@/mcp-server/core/permissions";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 
 import "./AIPermissions.css";

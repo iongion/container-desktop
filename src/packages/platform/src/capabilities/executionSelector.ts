@@ -6,7 +6,7 @@
 
 import { type ExecutionTarget, executionTargetKey, floorScopeFor } from "@/ai-system/core/executionTargets";
 import type { ConnectionExecHost, ExecutionSelector, ResolvedExecution } from "@/ai-system/core/ports";
-import type { EngineOps } from "@/ai-system/core/types";
+import type { EngineOps } from "@/container-client/engineOps";
 
 import { createExecWorkspaceAccess, type TargetExec } from "./execWorkspaceAccess";
 

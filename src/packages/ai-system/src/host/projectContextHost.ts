@@ -13,8 +13,8 @@ import {
   parseProjectMemoryImport,
   prepareProjectContextStore,
 } from "@/ai-system/core/projectContext";
-import { redactText } from "@/ai-system/core/redact";
 import type { IWorkspaceAccess, WorkspaceStat } from "@/host-contract/workspaceAccess";
+import { redactText } from "@/utils/redact";
 
 export interface ProjectContextHostDeps {
   store: ProjectContextStore;

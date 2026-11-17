@@ -10,10 +10,8 @@ import {
   type AIStatus,
 } from "@/ai-system/core/channels";
 import type { AIRecordedError } from "@/ai-system/core/diagnostics";
-import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
-import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
 import { composeAuthRefreshEnv, KEYCHAIN_SECRET_PLACEHOLDER } from "@/ai-system/core/piAgentEnv";
 import type {
   AIKeyStore,
@@ -24,14 +22,17 @@ import type {
 } from "@/ai-system/core/ports";
 import { resolveProviderProxyRequest } from "@/ai-system/core/providerProxyOps";
 import { type ResolvedProvider, resolveProvider } from "@/ai-system/core/providers";
-import { redactText } from "@/ai-system/core/redact";
 import { validateAIInvokeRequest } from "@/ai-system/core/schemas";
 import { SKILL_LIMITS } from "@/ai-system/core/skills";
-import type { AISettings, DiagnosticsBundle, EngineOps, ListedModel, ProviderTransport } from "@/ai-system/core/types";
+import type { AISettings, DiagnosticsBundle, ListedModel, ProviderTransport } from "@/ai-system/core/types";
 import type { WorkspaceChangesPort } from "@/ai-system/core/workspaceChanges";
 import { dispatchWorkspaceOp } from "@/ai-system/core/workspaceOpDispatch";
+import type { EngineOps } from "@/container-client/engineOps";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
+import { dispatchEngineOp } from "@/mcp-server/core/engineOpDispatch";
+import type { PermissionsStoreLike } from "@/mcp-server/core/permissions";
 import { base64ToBytes, bytesToBase64 } from "@/utils/base64";
+import { redactText } from "@/utils/redact";
 import { createDiagnosticsHost } from "./diagnosticsHost";
 import { createModelDiscoveryHost } from "./modelDiscoveryHost";
 import type { ProjectContextHost } from "./projectContextHost";

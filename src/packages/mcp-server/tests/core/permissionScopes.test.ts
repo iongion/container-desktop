@@ -5,7 +5,7 @@ import {
   type PermissionDecisionContext,
   permissionKey,
   toolRule,
-} from "@/ai-system/core/permissions";
+} from "@/mcp-server/core/permissions";
 
 const context = {
   workspaceId: "workspace-a",

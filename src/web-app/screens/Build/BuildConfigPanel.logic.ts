@@ -2,11 +2,11 @@
 // capability predicates. Kept out of the component so it is unit-testable without a DOM. The preview reuses
 // the SAME per-engine flag mappers the BuildAdapter runs, so what the user sees is what will execute.
 
-import { redactText } from "@/ai-system/core/redact";
 import { buildAppleArgs } from "@/container-client/builder/flags/apple";
 import { buildDockerArgs } from "@/container-client/builder/flags/docker";
 import { buildPodmanArgs } from "@/container-client/builder/flags/podman";
 import type { BuildEngineKind, ImageBuildOptions } from "@/container-client/builder/types";
+import { redactText } from "@/utils/redact";
 
 const PROGRAM: Record<BuildEngineKind, string> = {
   docker: "docker",

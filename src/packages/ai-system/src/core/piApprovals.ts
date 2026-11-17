@@ -7,10 +7,16 @@
 // runs in a disposable container with only the chosen workspace bind-mounted — the same reasoning the floor's
 // own `sandbox` scope already encodes.
 
-import type { AIPermissionMode, CachedVerdict, PermissionDecisionContext, ToolAction } from "./permissions";
-import { resolveToolAction } from "./permissions";
+import type {
+  AIPermissionMode,
+  CachedVerdict,
+  PermissionDecisionContext,
+  ToolAction,
+} from "@/mcp-server/core/permissions";
+import { resolveToolAction } from "@/mcp-server/core/permissions";
+import { isContainerToolName } from "@/mcp-server/core/toolNames";
 import { TOOL_CATALOGUE } from "./toolCatalogue";
-import { isContainerToolName, WEB_SEARCH_TOOL_NAME } from "./toolNames";
+import { WEB_SEARCH_TOOL_NAME } from "./toolNames";
 
 // pi's read-only built-ins, plus the app's own web search. Everything else — the mutating built-ins, plugin tools,
 // MCP tools — is gated, so a tool nobody has classified yet is asked about rather than run silently.

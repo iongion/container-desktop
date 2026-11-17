@@ -33,13 +33,6 @@ import { bindSessionWorkspace } from "@/ai-system/adapters/sessionWorkspace";
 import { AI_CHANNELS } from "@/ai-system/core/channels";
 import { describeError } from "@/ai-system/core/errors";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
-import {
-  type AIPermissionMode,
-  cachedVerdict,
-  type PermissionRule,
-  permissionKey,
-  toolRule,
-} from "@/ai-system/core/permissions";
 import { decidePiToolCall, piPermissionContext } from "@/ai-system/core/piApprovals";
 import { undersizedWindow } from "@/ai-system/core/piContextReport";
 import { emptyPiSessionView, type PiSessionViewContext, projectPiSessionView } from "@/ai-system/core/piSessionView";
@@ -62,11 +55,18 @@ import { publishedPortAddress } from "@/container-client/runtimes/publishedPortH
 import type { ContainerEngineHost } from "@/container-client/types/engine";
 import { t } from "@/i18n";
 import { createLogger } from "@/logger";
+import type { EngineOpResult } from "@/mcp-server/core/engineOpDispatch";
+import {
+  type AIPermissionMode,
+  cachedVerdict,
+  type PermissionRule,
+  permissionKey,
+  toolRule,
+} from "@/mcp-server/core/permissions";
 import { agentImageTag } from "@/pi-bridge/image";
 import type {
   BridgeEvent,
   ContributedResources,
-  EngineOpResult,
   PiCommandResult,
   PiSessionSummary,
   SessionProviderCheck,

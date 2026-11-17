@@ -3,11 +3,11 @@
 // the vocabulary stays the app's and the producer is the pi bridge.
 
 import type { EffectiveContextSource } from "@/ai-system/core/context";
-import type { AIPermissionMode } from "@/ai-system/core/permissions";
 import { piApprovalSummary } from "@/ai-system/core/piApprovals";
 import { toEffectiveContext, toSessionUsage } from "@/ai-system/core/piContextReport";
 import type { SessionView } from "@/ai-system/core/sessionEvents";
 import { classifyHostRequest } from "@/ai-system/core/uiRequests";
+import type { AIPermissionMode } from "@/mcp-server/core/permissions";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 

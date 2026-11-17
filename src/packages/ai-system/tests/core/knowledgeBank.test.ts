@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { parseKnowledgeBank, searchKnowledgeBank } from "@/ai-system/core/knowledgeBank";
+import { parseMarkdownSections } from "@/mcp-server/core/markdownSections";
 import knowledgeMarkdown from "@/resources/prompts/knowledge-bank.md?raw";
-import { parseMarkdownSections } from "@/template/markdownSections";
 
 const REAL = parseKnowledgeBank(parseMarkdownSections(knowledgeMarkdown));
 

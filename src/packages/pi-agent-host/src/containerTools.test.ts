@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { CONTAINER_TOOL_NAMES } from "@/ai-system/core/toolNames";
+import type { EngineOpResult } from "@/mcp-server/core/engineOpDispatch";
+import { CONTAINER_TOOL_NAMES } from "@/mcp-server/core/toolNames";
 import { createContainerToolsExtension } from "@/pi-agent-host/containerTools";
 import type { HostRpc } from "@/pi-agent-host/hostRpc";
-import type { EngineOpResult } from "@/pi-bridge/protocol";
 
 const descriptions = Object.fromEntries(CONTAINER_TOOL_NAMES.map((name) => [name, `does ${name}`]));
 

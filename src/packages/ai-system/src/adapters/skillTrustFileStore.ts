@@ -2,7 +2,7 @@ import PQueue from "p-queue";
 
 import { parseSkillTrustFile, prepareSkillTrustFile, type SkillTrustStore } from "@/ai-system/core/skillTrust";
 import type { IFileSystem, IPath } from "@/host-contract/fs";
-import { readTextFileOrNull, writePrivateFileViaTempRename } from "./fsHelpers";
+import { readTextFileOrNull, writePrivateFileViaTempRename } from "@/mcp-server/adapters/fsHelpers";
 
 export function createSkillTrustFileStore(filePath: string, fs: IFileSystem, path: IPath): SkillTrustStore {
   const writes = new PQueue({ concurrency: 1 });

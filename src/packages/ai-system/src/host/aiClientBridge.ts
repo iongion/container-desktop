@@ -15,12 +15,13 @@ import {
   type ModelsListResult,
 } from "@/ai-system/core/channels";
 import type { ExecutionTarget } from "@/ai-system/core/executionTargets";
-import type { PermissionRule, PermissionsList, PermissionsSnapshot } from "@/ai-system/core/permissions";
 import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import { validateAIInvokeResponse, validateAIPushPayload } from "@/ai-system/core/schemas";
 import type { ResolveSkillInvocationRequest, SkillHostSnapshot } from "@/ai-system/core/skills";
 import type { WorkspaceChangeSnapshot, WorkspaceDiff } from "@/ai-system/core/workspaceChanges";
-import type { EngineOpResult, WorkspaceOpResult } from "@/pi-bridge/protocol";
+import type { EngineOpResult } from "@/mcp-server/core/engineOpDispatch";
+import type { PermissionRule, PermissionsList, PermissionsSnapshot } from "@/mcp-server/core/permissions";
+import type { WorkspaceOpResult } from "@/pi-bridge/protocol";
 
 export interface IAI {
   status: () => Promise<AIStatus>;

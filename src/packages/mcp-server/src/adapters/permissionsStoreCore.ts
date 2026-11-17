@@ -8,6 +8,8 @@
 // is status:"missing".
 
 import PQueue from "p-queue";
+import type { IFileSystem, IPath } from "@/host-contract/fs";
+import { permissionRule } from "@/mcp-server/core/permissionSchemas";
 import {
   AI_PERMISSIONS_VERSION,
   type AIPermissionsCache,
@@ -17,9 +19,7 @@ import {
   type PermissionsSnapshot,
   type PermissionsStoreLike,
   permissionKey,
-} from "@/ai-system/core/permissions";
-import { permissionRule } from "@/ai-system/core/schemas";
-import type { IFileSystem, IPath } from "@/host-contract/fs";
+} from "@/mcp-server/core/permissions";
 
 import { readTextFileOrNull, writePrivateFileViaTempRename } from "./fsHelpers";
 

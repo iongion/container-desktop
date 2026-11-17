@@ -10,7 +10,7 @@
 // The "floor" (catastrophic denylist + shell-metachars + traversal) is computed elsewhere (sandbox) and
 // passed in as `floorBlocked`; it is enforced in ask + remember, and bypassed in allow.
 import type { z } from "zod";
-import type { permissionRule, permissionsList, permissionsSnapshot } from "./schemas";
+import type { permissionRule, permissionsList, permissionsSnapshot } from "./permissionSchemas";
 
 export type AIPermissionMode = "ask" | "remember" | "allow";
 

@@ -43,6 +43,8 @@
       "@/logger/*": ["./src/packages/logger/src/*"],
       "@/i18n": ["./src/packages/i18n/src"],
       "@/i18n/*": ["./src/packages/i18n/src/*"],
+      "@/mcp-server": ["./src/packages/mcp-server/src"],
+      "@/mcp-server/*": ["./src/packages/mcp-server/src/*"],
       "@/pi-agent-host": ["./src/packages/pi-agent-host/src"],
       "@/pi-agent-host/*": ["./src/packages/pi-agent-host/src/*"],
       "@/pi-bridge": ["./src/packages/pi-bridge/src"],

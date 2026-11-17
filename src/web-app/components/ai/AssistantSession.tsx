@@ -7,7 +7,6 @@ import { Button, Callout, Icon, Intent, NonIdealState } from "@blueprintjs/core"
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { AIPermissionMode } from "@/ai-system/core/permissions";
 import { latestAssistantResponse } from "@/ai-system/core/sessionExport";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import type {
@@ -22,6 +21,7 @@ import {
   readSessionSettingsAnswer,
   readSessionTreeAnswer,
 } from "@/ai-system/ui/core/commands/piCommandAnswers";
+import type { AIPermissionMode } from "@/mcp-server/core/permissions";
 import { resolveScreenPrompt } from "@/template/screenPrompts";
 import { AIComposer, type ParsedAssistantCommand } from "@/web-app/components/AIComposer";
 import { AssistantContextDrawer, type AssistantContextSection } from "@/web-app/components/ai/AssistantContextDrawer";

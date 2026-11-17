@@ -2,7 +2,7 @@
 import { HTMLTable } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
-import type { EngineVolume } from "@/ai-system/core/types";
+import type { EngineVolume } from "@/container-client/engineOps";
 
 import { AICardShell } from "./AICardShell";
 import type { ToolCardProps } from "./types";

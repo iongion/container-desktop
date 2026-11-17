@@ -12,7 +12,7 @@ import {
   resolveToolAction,
   toolKey,
   toolRule,
-} from "@/ai-system/core/permissions";
+} from "@/mcp-server/core/permissions";
 
 const CONTEXT: PermissionDecisionContext = {
   workspaceId: "workspace-a",

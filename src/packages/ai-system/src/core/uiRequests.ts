@@ -3,9 +3,8 @@
 // without a socket, and an unknown method degrades to "ignored" rather than crashing the renderer on a plugin
 // that was written against a newer host.
 
+import { parseEngineOpRequest } from "@/mcp-server/core/engineOpDispatch";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
-
-import { parseEngineOpRequest } from "./engineOpDispatch";
 import { parseWorkspaceOpRequest } from "./workspaceOpDispatch";
 
 export type HostRequestEvent = Extract<BridgeEvent, { type: "host_request" }>;

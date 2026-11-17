@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { CONTAINER_TOOL_NAMES, getContainerToolPresentation } from "@/ai-system/core/toolNames";
+import { getContainerToolPresentation } from "@/ai-system/core/toolNames";
 import { toolTitle } from "@/ai-system/ui/core/toolTitle";
+import { CONTAINER_TOOL_NAMES } from "@/mcp-server/core/toolNames";
 
 const t = (key: string, options?: Record<string, unknown>): string =>
   key.replace(/{{(\w+)}}/g, (_, name: string) => String(options?.[name] ?? ""));

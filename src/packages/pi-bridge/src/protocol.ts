@@ -31,19 +31,6 @@ export interface WebSearchRequest {
 // turned web search off" is a reason the model should read, not a broken response.
 export type WebSearchAnswer = { ok: true; text: string } | { ok: false; error: string };
 
-// What an `engine_op` host request carries. One method for the whole container toolset rather than a protocol
-// member per operation: the op name is the app's own container tool name, so the cards, presentations and
-// descriptions the app already owns keep working untouched.
-export interface EngineOpRequest {
-  op: string;
-  args?: Record<string, unknown>;
-}
-
-// The answer, as a value rather than a thrown error: `hostRpc.request` resolves to its fallback instead of
-// rejecting, so a lost socket has to arrive as an explicit failure. The tool throws on it, which is how pi
-// marks a result `isError`.
-export type EngineOpResult = { ok: true; value?: unknown } | { ok: false; error: string };
-
 // One workspace file or command operation the agent wants performed. Its own method rather than an `engine_op`
 // because it lands somewhere else entirely: an engine operation goes to a container ENGINE, while this goes to a
 // filesystem inside the container the session chose — one already running, or a disposable one.

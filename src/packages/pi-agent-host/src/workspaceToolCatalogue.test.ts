@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { WORKSPACE_TOOL_NAMES } from "@/ai-system/core/workspaceToolNames";
+import { parseMarkdownSections } from "@/mcp-server/core/markdownSections";
 import { workspaceToolSpecs } from "@/pi-agent-host/workspaceToolCatalogue";
 import descriptions from "@/resources/prompts/workspace-tool-descriptions.md?raw";
-import { parseMarkdownSections } from "@/template/markdownSections";
 
 const REAL = parseMarkdownSections(descriptions);
 

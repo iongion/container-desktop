@@ -3,7 +3,8 @@
 // not import the executing tool specs — they drag in the `?raw` description markdown and the workspace-access port
 // for no reason. The specs remain the executing authority; this states the same fact where the UI can reach it.
 
-import { CONTAINER_TOOL_NAMES } from "./toolNames";
+import { GATED_CONTAINER_TOOLS } from "@/mcp-server/core/toolCatalogue";
+import { CONTAINER_TOOL_NAMES } from "@/mcp-server/core/toolNames";
 import { WORKSPACE_TOOL_NAMES } from "./workspaceToolNames";
 
 export type ToolGroup = "container" | "workspace";
@@ -14,20 +15,6 @@ export interface ToolCatalogueEntry {
   // Gated tools pass the permission gate before running; ungated ones (the reads) execute unattended.
   gated: boolean;
 }
-
-// Mutating container tools. Everything else in CONTAINER_TOOL_NAMES is a read.
-const GATED_CONTAINER_TOOLS = new Set<string>([
-  "startContainer",
-  "stopContainer",
-  "restartContainer",
-  "pauseContainer",
-  "unpauseContainer",
-  "removeContainer",
-  "removeImage",
-  "removeNetwork",
-  "removeVolume",
-  "pullImage",
-]);
 
 // Mutating workspace tools — writes, deletes and process execution.
 const GATED_WORKSPACE_TOOLS = new Set<string>(["writeFile", "editFile", "removePath", "execCommand"]);

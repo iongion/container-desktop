@@ -14,11 +14,11 @@
 
 import type { HostResponsePayload, PiBridgeClient } from "@/ai-system/adapters/piBridgeClient";
 import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
+import type { EngineOpResult } from "@/mcp-server/core/engineOpDispatch";
 import {
   type AppThemePalette,
   type BridgeEvent,
   type ContributedResources,
-  type EngineOpResult,
   PI_THINKING_LEVELS,
   type PiModelReasoning,
   type PiModelRegistration,

@@ -2,12 +2,13 @@
 // states facts about itself; everything here is either arithmetic on those facts or the app's own policy — which
 // tool is gated, which provider this is, what permission mode is in force — because pi has no opinion on any of it.
 
+import type { AIPermissionMode } from "@/mcp-server/core/permissions";
+import { isContainerToolName } from "@/mcp-server/core/toolNames";
 import {
   PI_FALLBACK_MAX_OUTPUT_TOKENS,
   type SessionContextReport,
   type SessionUsageReport,
 } from "@/pi-bridge/protocol";
-
 import type {
   EffectiveContextSection,
   EffectiveContextSnapshot,
@@ -15,9 +16,7 @@ import type {
   EffectiveToolView,
   SessionUsageSnapshot,
 } from "./context";
-import type { AIPermissionMode } from "./permissions";
 import { isPiToolGated } from "./piApprovals";
-import { isContainerToolName } from "./toolNames";
 import { isWorkspaceToolName } from "./workspaceToolNames";
 
 // Four characters per token. Crude, and labelled "approximate" everywhere it is shown: the alternative is a

@@ -1,12 +1,12 @@
 import { createProviderFetch } from "@/ai-system/adapters/providerFetch";
 import type { AIDiagnosticState, AIDiagnosticsSnapshot, AIRecordedError } from "@/ai-system/core/diagnostics";
 import { describeError } from "@/ai-system/core/errors";
-import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
 import type { AIKeyStore } from "@/ai-system/core/ports";
 import { type ResolvedProvider, resolveProvider } from "@/ai-system/core/providers";
-import { redactText } from "@/ai-system/core/redact";
 import type { AISettings, ListedModel, ProviderTransport } from "@/ai-system/core/types";
 import type { SkillHost } from "@/ai-system/host/skillHost";
+import type { PermissionsStoreLike } from "@/mcp-server/core/permissions";
+import { redactText } from "@/utils/redact";
 
 interface DiagnosticsHostDeps {
   keyStore: AIKeyStore;

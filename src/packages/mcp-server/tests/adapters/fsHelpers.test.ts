@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import type { IFileSystem, IPath } from "@/host-contract/fs";
 import {
   readTextFileOrNull,
   writePrivateFileEnsuringDir,
   writePrivateFileViaTempRename,
-} from "@/ai-system/adapters/fsHelpers";
-import type { IFileSystem, IPath } from "@/host-contract/fs";
+} from "@/mcp-server/adapters/fsHelpers";
 
 function fakeFs(over: Partial<IFileSystem> = {}): IFileSystem {
   return {

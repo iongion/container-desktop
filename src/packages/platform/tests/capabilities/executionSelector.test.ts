@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectionExecHost } from "@/ai-system/core/ports";
-import type { EngineOps } from "@/ai-system/core/types";
+import type { EngineOps } from "@/container-client/engineOps";
 import { createExecutionSelector } from "@/platform/capabilities/executionSelector";
 
 interface ContainerExecCall {

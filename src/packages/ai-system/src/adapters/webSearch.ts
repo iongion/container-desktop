@@ -6,7 +6,7 @@
 // DNS-rebinding SSRF); responses are size-capped, redirect-capped, time-bounded, and redacted.
 
 import ipaddr from "ipaddr.js";
-import { redactText } from "@/ai-system/core/redact";
+import { redactText } from "@/utils/redact";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_BYTES = 96 * 1024;

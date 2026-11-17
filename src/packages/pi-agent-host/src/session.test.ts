@@ -4,8 +4,9 @@ import { join } from "node:path";
 import type { ExtensionContext, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
-import { CONTAINER_TOOL_NAMES, WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
+import { WEB_SEARCH_TOOL_NAME } from "@/ai-system/core/toolNames";
 import { WORKSPACE_TOOL_NAMES } from "@/ai-system/core/workspaceToolNames";
+import { CONTAINER_TOOL_NAMES } from "@/mcp-server/core/toolNames";
 import { createPiSession, sanitizeSessionFileName } from "@/pi-agent-host/session";
 import type { BridgeEvent, PiScopedModels, PiSessionSummary } from "@/pi-bridge/protocol";
 

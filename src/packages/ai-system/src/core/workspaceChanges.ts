@@ -1,6 +1,6 @@
+import { redactText } from "@/utils/redact";
 import type { ExecutionTarget } from "./executionTargets";
 import { executionTargetKey } from "./executionTargets";
-import { redactText } from "./redact";
 
 export type WorkspaceChangeState =
   | "unchanged"

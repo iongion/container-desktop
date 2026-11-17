@@ -5,11 +5,11 @@
 // error the tool layer surfaces. Lifecycle ops route through performAction so the resource store refreshes;
 // other mutations (image/network/volume remove, image pull) trigger a domain refresh explicitly.
 
-import type { EngineConnectionInfo, EngineOps } from "@/ai-system/core/types";
 import { ContainersAdapter } from "@/container-client/adapters/containers";
 import { ImagesAdapter } from "@/container-client/adapters/images";
 import { NetworksAdapter } from "@/container-client/adapters/networks";
 import { VolumesAdapter } from "@/container-client/adapters/volumes";
+import type { EngineConnectionInfo, EngineOps } from "@/container-client/engineOps";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 
 import type { EngineDataService } from "@/platform/engineDataService";

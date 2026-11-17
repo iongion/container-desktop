@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-
-import { dispatchEngineOp, isEngineOpName, parseEngineOpRequest } from "@/ai-system/core/engineOpDispatch";
-import type { EngineOps } from "@/ai-system/core/types";
+import type { EngineOps } from "@/container-client/engineOps";
+import { dispatchEngineOp, isEngineOpName, parseEngineOpRequest } from "@/mcp-server/core/engineOpDispatch";
 
 function fakeOps(overrides: Partial<Record<keyof EngineOps, unknown>> = {}): EngineOps {
   const base = {

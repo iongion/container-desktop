@@ -4,7 +4,7 @@
 // this is the split that guarantees it.
 import { describe, expect, it } from "vitest";
 
-import { keystrokeChunks } from "./webdriverioDriver.mjs";
+import { keystrokeChunks } from "./keystrokes.js";
 
 describe("keystrokeChunks", () => {
   it("keeps text with no repeated character in one chain", () => {

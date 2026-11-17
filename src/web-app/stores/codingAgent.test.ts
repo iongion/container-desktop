@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
 import type { PiBridgeClient } from "@/ai-system/adapters/piBridgeClient";
 import { sessionWorkspaceRoot } from "@/ai-system/adapters/sessionWorkspace";
-import type { AIPermissionMode, PermissionsSnapshot } from "@/ai-system/core/permissions";
-import { toolRule } from "@/ai-system/core/permissions";
 import { piPermissionContext } from "@/ai-system/core/piApprovals";
 import { emptyPiSessionView } from "@/ai-system/core/piSessionView";
 import type { ProjectContextPack, ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import type { HostRequestEvent } from "@/ai-system/core/uiRequests";
+import type { AIPermissionMode, PermissionsSnapshot } from "@/mcp-server/core/permissions";
+import { toolRule } from "@/mcp-server/core/permissions";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import {

@@ -12,9 +12,8 @@ import type { CommandExecutionResult } from "@/host-contract/exec";
 import { isFloorBlocked } from "@/ai-system/core/commandFloor";
 import { describeError } from "@/ai-system/core/errors";
 import type { SandboxCommand, SandboxExecResult } from "@/ai-system/core/ports";
-import { redactText } from "@/ai-system/core/redact";
-
 import type { ExecuteIsolated, HostEnv, IsolatedExecOpts } from "@/host-contract/capabilities";
+import { redactText } from "@/utils/redact";
 
 // Environment variables a sandboxed child may see. Everything else (tokens, cloud creds, etc.) is
 // dropped — an allowlist, not a denylist, so a new secret-bearing variable can't silently leak.

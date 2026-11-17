@@ -9,9 +9,9 @@
 import type { ExtensionFactory, InlineExtension } from "@earendil-works/pi-coding-agent";
 
 import { createLogger } from "@/logger";
-import { containerToolSpecs } from "@/pi-agent-host/containerToolCatalogue";
+import { containerToolSpecs } from "@/mcp-server/core/containerToolCatalogue";
+import type { EngineOpResult } from "@/mcp-server/core/engineOpDispatch";
 import type { HostRpc } from "@/pi-agent-host/hostRpc";
-import type { EngineOpResult } from "@/pi-bridge/protocol";
 
 const logger = createLogger("pi-agent-host.containerTools");
 

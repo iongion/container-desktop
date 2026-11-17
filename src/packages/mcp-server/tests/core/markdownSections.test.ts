@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMarkdownSections } from "@/template/markdownSections";
+import { parseMarkdownSections } from "@/mcp-server/core/markdownSections";
 
 describe("parseMarkdownSections", () => {
   it("indexes level-two sections and preserves their markdown body", () => {

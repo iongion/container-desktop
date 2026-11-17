@@ -6,6 +6,7 @@
   "main": "./src/main.ts",
   "dependencies": {
     "@container-desktop/logger": "*",
+    "@container-desktop/mcp-server": "*",
     "@container-desktop/pi-bridge": "*",
     "@container-desktop/utils": "*",
     "@earendil-works/pi-ai": "0.83.0",

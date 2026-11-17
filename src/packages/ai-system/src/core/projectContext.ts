@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { redactText } from "./redact";
+import { redactText } from "@/utils/redact";
 
 export const PROJECT_CONTEXT_LIMITS = {
   packBytes: 48 * 1024,

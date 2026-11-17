@@ -6,7 +6,7 @@ import {
   prepareProjectContextStore,
 } from "@/ai-system/core/projectContext";
 import type { IFileSystem, IPath } from "@/host-contract/fs";
-import { readTextFileOrNull, writePrivateFileViaTempRename } from "./fsHelpers";
+import { readTextFileOrNull, writePrivateFileViaTempRename } from "@/mcp-server/adapters/fsHelpers";
 
 export function createProjectContextFileStore(filePath: string, fs: IFileSystem, path: IPath): ProjectContextStore {
   const writes = new PQueue({ concurrency: 1 });

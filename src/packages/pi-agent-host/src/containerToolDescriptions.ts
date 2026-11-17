@@ -8,10 +8,10 @@
 
 import { parseKnowledgeBank } from "@/ai-system/core/knowledgeBank";
 import type { KnowledgeEntry } from "@/ai-system/core/ports";
+import { parseMarkdownSections } from "@/mcp-server/core/markdownSections";
 import descriptionsMarkdown from "@/resources/prompts/agent-tool-descriptions.md";
 import knowledgeMarkdown from "@/resources/prompts/knowledge-bank.md";
 import workspaceDescriptionsMarkdown from "@/resources/prompts/workspace-tool-descriptions.md";
-import { parseMarkdownSections } from "@/template/markdownSections";
 
 export function containerToolDescriptions(): Readonly<Record<string, string>> {
   return parseMarkdownSections(descriptionsMarkdown);

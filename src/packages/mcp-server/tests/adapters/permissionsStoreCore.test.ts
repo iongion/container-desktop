@@ -3,9 +3,9 @@
 // over window.FS, whichever shell installed it.
 
 import { describe, expect, it, vi } from "vitest";
-import { createPermissionsStore } from "@/ai-system/adapters/permissionsStoreCore";
-import { permissionKey, toolRule } from "@/ai-system/core/permissions";
 import type { IFileSystem, IPath } from "@/host-contract/fs";
+import { createPermissionsStore } from "@/mcp-server/adapters/permissionsStoreCore";
+import { permissionKey, toolRule } from "@/mcp-server/core/permissions";
 
 // A shared-map fake so multiple store instances round-trip the same persisted file, like real disk.
 function memFs(seed: Record<string, string> = {}) {

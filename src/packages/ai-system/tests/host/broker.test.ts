@@ -1,6 +1,5 @@
 import { describe, expect, it, type Mock, vi } from "vitest";
 import { AI_CHANNELS } from "@/ai-system/core/channels";
-import { AI_PERMISSIONS_VERSION, type PermissionsSnapshot } from "@/ai-system/core/permissions";
 import type { AIKeyStore } from "@/ai-system/core/ports";
 import type { ResolvedProvider } from "@/ai-system/core/providers";
 import { normalizeAISettings } from "@/ai-system/core/settings";
@@ -14,6 +13,7 @@ import type {
 import { createAIBroker } from "@/ai-system/host/broker";
 import type { ProjectContextHost } from "@/ai-system/host/projectContextHost";
 import type { SkillHost } from "@/ai-system/host/skillHost";
+import { AI_PERMISSIONS_VERSION, type PermissionsSnapshot } from "@/mcp-server/core/permissions";
 
 const LOCAL_AGENT_SETTINGS = {
   defaultProvider: "llamacpp",

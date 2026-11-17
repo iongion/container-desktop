@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { redactPayload, redactText } from "@/ai-system/core/redact";
+import { redactPayload, redactText } from "@/utils/redact";
 
 describe("redactText", () => {
   it("redacts Authorization bearer tokens", () => {

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { CONTAINER_TOOL_NAMES } from "@/ai-system/core/toolNames";
-import { containerToolSpecs } from "@/pi-agent-host/containerToolCatalogue";
+import { containerToolSpecs } from "@/mcp-server/core/containerToolCatalogue";
+import { CONTAINER_TOOL_NAMES } from "@/mcp-server/core/toolNames";
 
 // Every tool needs one, so the fixture answers for all of them; the individual lookups are asserted below.
 const descriptions = Object.fromEntries(CONTAINER_TOOL_NAMES.map((name) => [name, `does ${name}`]));

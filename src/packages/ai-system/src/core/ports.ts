@@ -2,10 +2,10 @@
 // Neutral, framework-agnostic PORT interfaces. No React/AI-SDK/node:*.
 // Shell adapters wire these to platform capability impls (platform/{tauri,wails}/capabilities).
 
+import type { EngineOps } from "@/container-client/engineOps";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
 import type { FloorScope } from "./commandFloor";
 import type { ExecutionTarget } from "./executionTargets";
-import type { EngineOps } from "./types";
 import type { WorkspaceChangesPort } from "./workspaceChanges";
 
 // Provider key store = the AI subsystem's view of the generic host Keychain port. Provider keys ARE the

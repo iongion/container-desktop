@@ -4,7 +4,7 @@
 // dropped.
 import { IconNames } from "@blueprintjs/icons";
 
-import { redactPayload } from "@/ai-system/core/redact";
+import { redactPayload } from "@/utils/redact";
 
 import { AICardShell } from "./AICardShell";
 

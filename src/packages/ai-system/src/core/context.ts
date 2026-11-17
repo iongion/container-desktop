@@ -1,5 +1,5 @@
+import type { AIPermissionMode } from "@/mcp-server/core/permissions";
 import type { Money } from "./cost";
-import type { AIPermissionMode } from "./permissions";
 import type { ToolGroup } from "./toolCatalogue";
 
 export type EffectiveContextSectionKind = "system" | "history" | "turn" | "tools";

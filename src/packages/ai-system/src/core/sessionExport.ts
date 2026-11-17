@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { redactPayload } from "@/utils/redact";
 import { MAX_SESSION_TIMELINE_ITEMS } from "./limits";
-import { redactPayload } from "./redact";
 import { MAX_AI_TEXT_CHARS, type SessionTimelineItem, type SessionView } from "./sessionEvents";
 import type { SessionSummary } from "./sessions";
 

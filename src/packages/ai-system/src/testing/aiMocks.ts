@@ -2,6 +2,11 @@
 // the pi bridge (testing/mockPiBridge.ts); what lives here are the ports around it — engine operations, model
 // listings, the key store, the sandbox, knowledge and the permission cache.
 
+import type { AIKeyStore, KnowledgeEntry, SandboxCommand, SandboxExecResult } from "@/ai-system/core/ports";
+import type { ResolvedProvider } from "@/ai-system/core/providers";
+import type { ListedModel } from "@/ai-system/core/types";
+import type { EngineOps } from "@/container-client/engineOps";
+import { permissionRule } from "@/mcp-server/core/permissionSchemas";
 import {
   AI_PERMISSIONS_VERSION,
   type AIPermissionsCache,
@@ -10,11 +15,7 @@ import {
   type PermissionsSnapshot,
   type PermissionsStoreLike,
   permissionKey,
-} from "@/ai-system/core/permissions";
-import type { AIKeyStore, KnowledgeEntry, SandboxCommand, SandboxExecResult } from "@/ai-system/core/ports";
-import type { ResolvedProvider } from "@/ai-system/core/providers";
-import { permissionRule } from "@/ai-system/core/schemas";
-import type { EngineOps, ListedModel } from "@/ai-system/core/types";
+} from "@/mcp-server/core/permissions";
 import mockEngine from "@/resources/ai/mock-engine.json";
 import mockKnowledge from "@/resources/ai/mock-knowledge.json";
 import mockModels from "@/resources/ai/mock-models.json";

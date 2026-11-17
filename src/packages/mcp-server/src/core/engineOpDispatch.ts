@@ -6,10 +6,19 @@
 // Names are checked against CONTAINER_TOOL_NAMES rather than reflected off the port, so `constructor`,
 // `toString` and anything else reachable through the prototype can never be dispatched.
 
-import type { EngineOpRequest, EngineOpResult } from "@/pi-bridge/protocol";
-
+import type { EngineOps } from "@/container-client/engineOps";
 import { isContainerToolName } from "./toolNames";
-import type { EngineOps } from "./types";
+
+// One container operation request. One method for the whole container toolset rather than a member per
+// operation: the op name is the app's own container tool name.
+export interface EngineOpRequest {
+  op: string;
+  args?: Record<string, unknown>;
+}
+
+// The answer, as a value rather than a thrown error, so a lost transport arrives as an explicit failure the
+// caller can report instead of a rejection nothing settles.
+export type EngineOpResult = { ok: true; value?: unknown } | { ok: false; error: string };
 
 // The port's methods differ in argument shape but agree in kind: an optional single options object. Stating
 // that once here is what lets one dispatcher stand in for twenty-one signatures.

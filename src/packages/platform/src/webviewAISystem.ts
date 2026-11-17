@@ -1,9 +1,10 @@
 import type { ResolvedFetch } from "@/ai-system/adapters/webSearch";
 import type { AIInvokeChannel, AIInvokeResponse, AIPushChannel, AIPushPayload } from "@/ai-system/core/channels";
 import type { AIKeyStore, ConnectionExecHost } from "@/ai-system/core/ports";
-import type { AISettings, EngineOps, ProviderTransport } from "@/ai-system/core/types";
+import type { AISettings, ProviderTransport } from "@/ai-system/core/types";
 import type { AIBroker } from "@/ai-system/host/broker";
 import { createAISystem } from "@/ai-system/host/createAISystem";
+import type { EngineOps } from "@/container-client/engineOps";
 import type { DnsResolve, ExecuteIsolated, HostEnv } from "@/host-contract/capabilities";
 import type { IFileDiscoverySystem, IPath } from "@/host-contract/fs";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
