@@ -13,13 +13,11 @@ export interface SettingsCategory {
   icon: IconName;
 }
 
-// Listed alphabetically by (English) title — the order the rail renders. AI Assistant stays first, so the
-// default category / deep-link fallback is unchanged.
+// Listed alphabetically by (English) title — the order the rail renders. The first entry is the default
+// category and the deep-link fallback.
 export const SETTINGS_CATEGORIES: SettingsCategory[] = [
-  { id: "ai", title: i18n.t("AI Assistant"), icon: IconNames.PREDICTIVE_ANALYSIS },
   { id: "policy", title: i18n.t("Air-gap & policy"), icon: IconNames.SHIELD },
   { id: "appearance", title: i18n.t("Appearance"), icon: IconNames.STYLE },
-  { id: "avatars", title: i18n.t("Avatars"), icon: IconNames.MUGSHOT },
   { id: "config", title: i18n.t("Configuration"), icon: IconNames.COG },
   { id: "logging", title: i18n.t("Logging"), icon: IconNames.CONSOLE },
   { id: "network", title: i18n.t("Network"), icon: IconNames.GLOBE_NETWORK },

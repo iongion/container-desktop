@@ -9,7 +9,6 @@ export function ReadyStep() {
   const { t } = useTranslation();
   const plan = useProvisioningStore((s) => s.plan);
   const run = useProvisioningStore((s) => s.run);
-  const setupAssistant = useProvisioningStore((s) => s.setupAssistant);
 
   if (!plan || !run || run.overall === "idle") {
     return <p className="PWizSub">{t("Run the setup to see the readiness checklist.")}</p>;
@@ -27,11 +26,6 @@ export function ReadyStep() {
           ? t("Your engine is set up with shared folders and permissions that just work.")
           : t("Something went wrong during setup — review the step below and try again.")}
       </Callout>
-      {report.ready && setupAssistant ? (
-        <Callout intent="primary" icon={IconNames.CHAT} compact>
-          {t("Your assistant is ready")}
-        </Callout>
-      ) : null}
       <ul className="PWizChecklist">
         {report.items.map((item) => (
           <li key={item.key} className={`PWizCheck ${item.ok ? "is-ok" : "is-bad"}`}>

@@ -4,7 +4,7 @@ import { ContainersAdapter } from "@/container-client/adapters/containers";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 
 // The engine reports a container's name with Docker's historical leading slash (`Names: ["/web"]`), and that payload is
-// what a caller hands back as the id — the UI from a row, the coding agent from a tool result. Percent-encoded it
+// what a caller hands back as the id — the UI from a row, a client from a listing. Percent-encoded it
 // reaches the API as `%2Fweb`, which answers 404 "no such container" while the bare name answers 204. Measured against
 // a real podman socket, so every request path is asserted here rather than at one helper: a site that skips the rule
 // is the defect, and only the path it built shows it.
@@ -40,7 +40,7 @@ describe("ContainersAdapter — the id the engine itself published", () => {
     expect(paths).toEqual(["/containers/web"]);
   });
 
-  // Every mutation the coding agent's toolset and the UI's row actions can reach. One test per op, because the
+  // Every mutation the UI's row actions can reach. One test per op, because the
   // failure mode is a single site that kept the raw id.
   it("strips it on every lifecycle operation", async () => {
     const { adapter, paths } = recordingHost();

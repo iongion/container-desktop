@@ -31,10 +31,8 @@ interface ProvisioningState {
   plan?: ProvisionPlan;
   run?: ProvisionRunState;
   canceled: boolean;
-  setupAssistant: boolean;
   openWizard: (source: WizardSource) => void;
   closeWizard: () => void;
-  setSetupAssistant: (value: boolean) => void;
   next: () => void;
   back: () => void;
   goToStep: (index: number) => void;
@@ -61,14 +59,12 @@ const INITIAL = {
   plan: undefined as ProvisionPlan | undefined,
   run: undefined as ProvisionRunState | undefined,
   canceled: false,
-  setupAssistant: true,
 };
 
 export const useProvisioningStore = create<ProvisioningState>((set, get) => ({
   ...INITIAL,
   openWizard: (source) => set({ isOpen: true, source, stepIndex: 0, shownThisSession: true }),
   closeWizard: () => set({ isOpen: false, source: null }),
-  setSetupAssistant: (value) => set({ setupAssistant: value }),
   next: () => set((s) => ({ stepIndex: clampStep(s.stepIndex + 1) })),
   back: () => set((s) => ({ stepIndex: clampStep(s.stepIndex - 1) })),
   goToStep: (index) => set({ stepIndex: clampStep(index) }),

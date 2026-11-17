@@ -1,4 +1,4 @@
-import { type HotkeyConfig, HotkeysProvider, NonIdealState, useHotkeys } from "@blueprintjs/core";
+import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import {
   createHashHistory,
@@ -10,7 +10,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 
@@ -25,7 +25,6 @@ import { AppFooter } from "@/web-app/components/AppFooter";
 import { AppHeader } from "@/web-app/components/AppHeader";
 import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
-import { AssistantConsoleHost } from "@/web-app/components/ai/AssistantConsole/AssistantConsoleHost";
 import { FindHost } from "@/web-app/components/Find/FindHost";
 import { NotificationCenterHost } from "@/web-app/components/NotificationCenter/NotificationCenterHost";
 import { ProvisioningWizardHost } from "@/web-app/components/ProvisioningWizard/ProvisioningWizardHost";
@@ -33,8 +32,6 @@ import { resolveEngineTheme } from "@/web-app/domain/engineTheme";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { waitForPreload } from "@/web-app/Native";
 import { pathTo } from "@/web-app/Navigator";
-import { Screen as AIAssistantScreen } from "@/web-app/screens/AI/AssistantScreen";
-import { Screen as AIPluginsScreen } from "@/web-app/screens/AI/Plugins/PluginsScreen";
 import { Screen as BuildScreen } from "@/web-app/screens/Build/ManageScreen";
 import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Connections/ConnectionInfoScreen";
 import { Screen as ConnectionsScreen } from "@/web-app/screens/Connections/ManageScreen";
@@ -75,14 +72,11 @@ import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 import { Screen as MountsScreen } from "@/web-app/screens/Volume/mounts/MountsScreen";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
-import { useUIStore } from "@/web-app/stores/uiStore";
 
 const logger = createLogger("web.app");
 
 const Screens = [
   DashboardScreen,
-  AIAssistantScreen,
-  AIPluginsScreen,
   ContainersScreen,
   ContainerLogsScreen,
   ContainerInspectScreen,
@@ -131,8 +125,7 @@ const rootRoute = createRootRoute({
   notFoundComponent: NotFoundScreen,
 });
 
-// AI is always on, so there is no access gate — every screen (incl. the AI ones) is reachable. This
-// just wraps the active screen + footer in the viewport.
+// Wraps the active screen + footer in the viewport.
 function ScreenViewport({ Screen }: { Screen: (typeof Screens)[number] }) {
   return (
     <div className="AppScreenViewport">
@@ -233,7 +226,6 @@ function AppLayout() {
   const startApplication = useAppStore((state) => state.startApplication);
   const program = currentConnector?.settings?.program;
   const currentScreen = useCurrentScreen();
-  const setCurrentScreen = useUIStore((state) => state.setCurrentScreen);
   const ready = phase === AppBootstrapPhase.READY;
 
   const onReconnect = useCallback(() => {
@@ -276,46 +268,6 @@ function AppLayout() {
     prevRunningRef.current = !!running;
   }, [ready, running, currentScreen]);
 
-  // Publish the active screen's identity so the AI console header chip + the assistant's context collector
-  // can read "what screen is the user on" without the router.
-  useEffect(() => {
-    setCurrentScreen({ id: currentScreen?.ID, title: currentScreen?.Title });
-  }, [currentScreen, setCurrentScreen]);
-
-  // Global summon for the AI console: Ctrl (Windows/Linux) or Cmd (macOS) + backtick, from anywhere in the app.
-  // Registered here in the always-mounted layout (not in AssistantConsoleHost, whose mount is gated) and matched
-  // on e.code === "Backquote" — the PHYSICAL key, identical on every keyboard layout — because Blueprint's
-  // useHotkeys matches on e.key, which varies by layout and silently misses backtick (palantir/blueprint#6693).
-  // Capture phase so it fires even while a text input is focused. The same combo toggles open and closed.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "Backquote") {
-        e.preventDefault();
-        useUIStore.getState().toggleAssistantConsole();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, []);
-
-  // Dialog-only registration: this entry exists solely so the shortcut appears in the "?" shortcuts dialog.
-  // `disabled: true` stops Blueprint from also handling the event (its e.key matcher misses backtick on some
-  // layouts — palantir/blueprint#6693), so there is no double toggle; the real executor is the e.code listener
-  // above. HotkeysDialog renders disabled entries, so it still shows under the "AI Assistant" group.
-  const assistantHotkeys = useMemo<HotkeyConfig[]>(
-    () => [
-      {
-        combo: "mod+`",
-        global: true,
-        disabled: true,
-        label: t("Toggle the AI assistant console"),
-        group: t("AI Assistant"),
-      },
-    ],
-    [t],
-  );
-  useHotkeys(assistantHotkeys);
-
   const content: React.ReactNode = booting ? (
     <div className="AppScreenViewport">
       <AppLoading />
@@ -329,7 +281,7 @@ function AppLayout() {
   return (
     <>
       <AppBootstrapReadySignal />
-      {/* Each region (wizard, content, console) gets its own boundary so a crash is caught close to its
+      {/* Each region (wizard, content) gets its own boundary so a crash is caught close to its
           source and stays recoverable; the fallback is a full-window opaque overlay (AppErrorBoundaryOverlay),
           so the error screen never renders alongside live app chrome. */}
       <AppErrorBoundary
@@ -365,16 +317,6 @@ function AppLayout() {
           </div>
         </div>
       </AppErrorBoundary>
-      {ready ? (
-        <AppErrorBoundary
-          onReconnect={onReconnect}
-          reconnect={t("Try to recover")}
-          title={t("An uncaught error showed up")}
-          suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
-        >
-          <AssistantConsoleHost />
-        </AppErrorBoundary>
-      ) : null}
     </>
   );
 }

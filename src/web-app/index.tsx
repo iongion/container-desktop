@@ -30,59 +30,10 @@ async function boot() {
   const { tauriLogBackend } = await import("@/platform/tauri/log/tauriLog");
   const loggerBackend: LoggerBackend = tauriLogBackend;
   if (import.meta.env.DEV) {
-    // DEV-only: expose window.__assistantDemo.seed() to load a synthetic transcript so the assistant's
-    // rendering can be exercised without a live model. Dynamic import → tree-shaken from production.
-    const { installAssistantDemo } = await import("@/web-app/components/ai/assistantDemo");
-    installAssistantDemo();
     // DEV-only: window.__cdLiveProbe, the real-engine probes the WebDriver live specs drive through the host globals.
+    // Dynamic import → tree-shaken from production.
     const { installLiveProbes } = await import("@/web-app/liveProbes");
     installLiveProbes();
-    // DEV-only: window.__cdCodingAgentStore, so the Coding Agent spec can render a transcript without
-    // starting a real container session.
-    const { installCodingAgentProbe } = await import("@/web-app/stores/codingAgent");
-    installCodingAgentProbe();
-    // DEV-only: window.__cdPluginStore, so the Plugins spec can render a table of plugins against a stand-in
-    // bridge client instead of installing real packages into a real container.
-    const { installPluginStoreProbe } = await import("@/web-app/stores/pluginStore");
-    installPluginStoreProbe();
-    // DEV-only: window.__cdProviderLoginStore, so the remote sign-in spec can start one on a chosen connection and
-    // abandon it before anything is written to the user's keychain.
-    const { installProviderLoginProbe } = await import("@/web-app/stores/providerLogin");
-    installProviderLoginProbe();
-    // MOCK-only: bring up the scripted pi session so the Assistant, its cards and the approval gate are usable
-    // without an engine. The real app has no session until one is started deliberately; this stands in for that.
-    const { isMockMode } = await import("@/container-client/mock/mode");
-    if (isMockMode()) {
-      // MOCK-only: window.__cdMockKeyWrites, so a spec can prove WHICH secret a sign-in stored. The mock vault
-      // answers `hasKey` true for every provider by design, so presence can never be the evidence.
-      const { mockKeyWrites } = await import("@/ai-system/testing/aiMocks");
-      (globalThis as { __cdMockKeyWrites?: typeof mockKeyWrites }).__cdMockKeyWrites = mockKeyWrites;
-      const { useCodingAgentStore } = await import("@/web-app/stores/codingAgent");
-      const { awaitHostRuntime } = await import("@/platform/provider");
-      // The workspace has to be a HOST path, not the container's `/workspace`: the session header opens this folder
-      // and hands it to VS Code, and `/workspace` exists only inside an agent container the mock never starts. The
-      // home directory is the one directory certain to be there on any machine running the mock.
-      //
-      // Chained off the runtime rather than read here: nothing has registered one yet at this point in boot —
-      // `startApplication()` does, after React mounts — so a synchronous read throws and takes the whole boot with it.
-      void awaitHostRuntime()
-        .then(async (runtime) => {
-          // Only if nothing has started one meanwhile. This resolves AFTER React mounts, so anything that starts a
-          // session in the meantime — a spec's own `start()`, or a user reaching the drawer first — would otherwise be
-          // replaced by this one, and every read that follows the session's folder would answer for the wrong folder.
-          if (useCodingAgentStore.getState().status !== "idle") return;
-          await useCodingAgentStore.getState().start({
-            connectionId: "mock-connection",
-            workspacePath: await runtime.platform.getHomeDir(),
-            modelId: "mock-assistant",
-            upstreamBaseUrl: "",
-            appVersion: "0.0.0",
-          });
-        })
-        .catch((error) => {
-          console.error("mock assistant session did not start", error);
-        });
-    }
   }
   const { renderApplication } = await import("./App.render");
   bootTimeline.mark("app-render-imported");

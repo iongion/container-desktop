@@ -11,7 +11,7 @@ import { DOCKER_BASE_URL, LIBPOD_BASE_URL, LIFECYCLE_TIMEOUT_MS, ResourceAdapter
 const logger = createLogger("client.containers");
 
 // An id becomes a path segment ONLY through here. The engine publishes a container's name with Docker's leading slash
-// and that payload is what a caller hands back — a row in the UI, a tool result the coding agent read. Encoded raw it
+// and that payload is what a caller hands back — a row in the UI, or an id copied out of a listing. Encoded raw it
 // arrives as `%2Fweb`, which the API answers 404 "no such container" for, while the bare name answers 204 — measured
 // against a real podman socket. So the engine's own spelling is normalized off, then the segment is escaped as before.
 const pathId = (id: string): string => encodeURIComponent(normalizeContainerName(id));

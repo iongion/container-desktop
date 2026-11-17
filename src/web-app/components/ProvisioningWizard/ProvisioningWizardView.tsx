@@ -1,10 +1,8 @@
 import { Button, ButtonGroup, Icon, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/i18n";
-import { createLogger } from "@/logger";
 import { useProvisioningStore, WIZARD_STEPS } from "@/web-app/stores/provisioningStore";
 
 import { EngineStep } from "./steps/EngineStep";
@@ -14,11 +12,8 @@ import { ResourcesStep } from "./steps/ResourcesStep";
 import { ReviewStep } from "./steps/ReviewStep";
 import { SystemCheckStep } from "./steps/SystemCheckStep";
 import { VolumesStep } from "./steps/VolumesStep";
-import { configureAssistantOnEngine } from "./useProvisioning";
 
 import "./ProvisioningWizard.css";
-
-const logger = createLogger("web.provisioning.wizard");
 
 const STEP_LABELS: Record<(typeof WIZARD_STEPS)[number], string> = {
   "system-check": i18n.t("System check"),
@@ -65,20 +60,6 @@ export function ProvisioningWizardView() {
   const currentStep = WIZARD_STEPS[stepIndex];
   const StepBody = STEP_COMPONENTS[currentStep];
 
-  const finishWizard = useCallback(async () => {
-    const { setupAssistant, target, run } = useProvisioningStore.getState();
-    if (setupAssistant && target && run?.overall === "done") {
-      const connectionId = await configureAssistantOnEngine(target.engine).catch((err) => {
-        logger.warn("could not configure the assistant on the provisioned engine", err);
-        return undefined;
-      });
-      if (connectionId) {
-        logger.info("assistant configured on connection %s", connectionId);
-      }
-    }
-    closeWizard();
-  }, [closeWizard]);
-
   return (
     <div className="PWizOverlay" data-testid="provisioning-wizard">
       <nav className="PWizRail">
@@ -115,7 +96,7 @@ export function ProvisioningWizardView() {
           <Button
             intent={Intent.PRIMARY}
             text={isLast ? t("Finish") : t("Continue")}
-            onClick={isLast ? finishWizard : next}
+            onClick={isLast ? closeWizard : next}
           />
         </ButtonGroup>
       </div>

@@ -40,7 +40,6 @@
   display: inline-flex;
   align-items: center;
 }
-.AppHeaderAIActions,
 .AppHeaderUtilityActions,
 .AppHeaderWindowActions {
   display: inline-flex;
@@ -49,24 +48,6 @@
 }
 body.bp6-light[data-engine] .AppHeaderActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon {
   color: #5f6b7c;
-}
-.AppHeaderAIActions {
-  border: 1px solid color-mix(in srgb, var(--app-accent) 55%, transparent);
-  background-color: color-mix(in srgb, var(--app-accent) 55%, transparent);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-right: 6px;
-  transform: scale(0.75);
-}
-.AppHeaderAIActions .bp6-popover-target {
-  display: flex;
-}
-.AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton {
-  outline: none;
-}
-body.bp6-dark .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon,
-body.bp6-light .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon {
-  color: var(--app-accent);
 }
 .App-projectNameVersion {
   display: flex;
@@ -85,7 +66,4 @@ body.bp6-light .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(
 }
 [data-native="yes"] .App-projectNameVersion span {
   display: none;
-}
-.bp6-portal.AppHeaderPopoverAboveWizard {
-  z-index: 50;
 }
