@@ -216,6 +216,10 @@
     if (!Array.isArray(manifest.frames) || manifest.frames.length === 0) {
       throw new Error("Demo manifest has no frames");
     }
+    // Frame paths are relative to the manifest that was actually fetched (the fallback one included).
+    for (const item of manifest.frames) {
+      item.screenshot = new URL(item.screenshot, response.url).href;
+    }
 
     // Lock the shell to the capture aspect-ratio: the image then fills it exactly at any width, so it
     // never distorts and never letterboxes (the source of the pink border at narrow widths).

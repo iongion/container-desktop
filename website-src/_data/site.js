@@ -6,6 +6,7 @@ import pkg from "../../package.json" with { type: "json" };
 
 const require = createRequire(import.meta.url);
 const { WINDOWS_INSTALLER_VERSION } = require("../../support/build-matrix.cjs");
+const { homepage } = require("../../support/app-metadata.cjs");
 
 // Engine color themes — single source of truth for the swatch picker and the per-engine media that
 // swaps with it. `id` matches the CSS html[data-theme="…"] blocks in assets/css/site.css; `swatch`
@@ -54,7 +55,7 @@ export default {
   tagline: "Podman Desktop Companion",
   description:
     "A familiar desktop interface for the free, open container managers — Podman, Docker and Apple™ Container. Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux.",
-  url: "https://container-desktop.com",
+  url: homepage,
   repo: "https://github.com/iongion/container-desktop",
   repoSlug: "iongion/container-desktop",
   podmanDesktop: "https://podman-desktop.io/",
