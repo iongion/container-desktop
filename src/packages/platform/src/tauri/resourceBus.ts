@@ -4,8 +4,8 @@ import type { ResourceSyncHost } from "./resourceSyncHost";
 
 const SUBSCRIBABLE = new Set<string>([RESOURCE_SYNC.snapshot, RESOURCE_SYNC.progress]);
 
-// Tauri webview-side resource receive bridge exposed as window.ResourceBus. Mirrors
-// its Wails peer; transport is the in-realm ResourceSyncHost.
+// Tauri webview-side resource receive bridge exposed as window.ResourceBus; transport is the in-realm
+// ResourceSyncHost.
 export function createTauriResourceBus(host: Pick<ResourceSyncHost, "subscribe">): IResourceBus {
   return {
     subscribe(channel, callback) {

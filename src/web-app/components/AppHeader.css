@@ -3,7 +3,6 @@
   margin: 0;
   padding: 0;
   -webkit-app-region: drag;
-  --wails-draggable: drag;
 }
 .AppHeader .bp6-navbar {
   display: flex;
@@ -38,7 +37,6 @@
 }
 .AppHeaderActions {
   -webkit-app-region: no-drag;
-  --wails-draggable: no-drag;
   display: inline-flex;
   align-items: center;
 }

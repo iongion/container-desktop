@@ -22,17 +22,18 @@ describe("resolveCaptureBackend", () => {
   });
 
   it("reads the env var (case-insensitive)", () => {
-    process.env[ENV_KEY] = "WAILS";
-    expect(resolveCaptureBackend()).toBe("wails");
+    process.env[ENV_KEY] = "TAURI";
+    expect(resolveCaptureBackend()).toBe("tauri");
   });
 
   it("prefers an explicit override over the env var", () => {
-    process.env[ENV_KEY] = "tauri";
-    expect(resolveCaptureBackend("wails")).toBe("wails");
+    process.env[ENV_KEY] = "chromium";
+    expect(resolveCaptureBackend("tauri")).toBe("tauri");
   });
 
-  it("throws on an unknown backend", () => {
+  it("throws on an unknown backend, the removed wails one included", () => {
     expect(() => resolveCaptureBackend("chromium")).toThrow(/unknown capture backend/i);
+    expect(() => resolveCaptureBackend("wails")).toThrow(/unknown capture backend/i);
   });
 });
 

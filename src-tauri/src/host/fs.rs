@@ -1,4 +1,4 @@
-// FileSystem host port — the Rust side of IFileSystem. src-wails/fs_service.go must behave identically.
+// FileSystem host port — the Rust side of IFileSystem.
 
 use std::path::Path;
 use std::time::UNIX_EPOCH;

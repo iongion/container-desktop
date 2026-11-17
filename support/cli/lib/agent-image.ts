@@ -5,9 +5,9 @@ export function agentImageBuildArgv(options: { tag: string; contextDir: string; 
   return ["build", "--tag", options.tag, "--file", options.dockerfile, options.contextDir];
 }
 
-// Dev reads the staged context from the repo. A packaged app has to pass `override`, because neither
-// shell ships it yet: Tauri would need a `bundle.resources` entry plus a resource-directory helper on the
-// platform ports, and Wails its own asset mechanism. Keeping this explicit stops the packaged path from
+// Dev reads the staged context from the repo. A packaged app has to pass `override`, because the shell
+// does not ship it yet: Tauri would need a `bundle.resources` entry plus a resource-directory helper on the
+// platform ports. Keeping this explicit stops the packaged path from
 // silently resolving to a directory that does not exist.
 export function resolveAgentImageContext(options: { repoRoot: string; override?: string }): string {
   return options.override ?? path.posix.join(options.repoRoot, "build/agent-image");

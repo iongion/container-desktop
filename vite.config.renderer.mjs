@@ -113,7 +113,7 @@ export const createConfig = ({ mode, command, host, port }) => {
       // Pre-bundle the heavy, lazy-loaded deps at dev-server startup. Otherwise the first visit to a screen that
       // dynamically imports them (Terminal/Logs → xterm; editors → monaco) makes Vite discover + re-optimize
       // them mid-session, which 504s the in-flight dynamic import ("Outdated Optimize Dep") and trips the error
-      // boundary. Build mode ignores optimizeDeps, so this is dev-server only (Tauri dev + Wails dev alike).
+      // boundary. Build mode ignores optimizeDeps, so this is dev-server only.
       include: [
         "@xterm/xterm",
         "@xterm/addon-fit",

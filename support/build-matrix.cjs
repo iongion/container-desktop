@@ -1,8 +1,7 @@
 // Single source of truth for what each platform actually builds and publishes.
 //
 // The release pipelines and website read this file, so they can never drift:
-//   - CDPipeline.Tauri.yml (default) resolves its matrix through `cdJobsForTarget`;
-//     CDPipeline.Wails.yml through `wailsCdJobsForTarget`.
+//   - CDPipeline.Tauri.yml resolves its matrix through `cdJobsForTarget`.
 //   - website-src/_data/downloads.js renders its download cards from here.
 //   - src/__tests__/website-downloads.test.ts asserts the two stay identical.
 //
@@ -43,10 +42,6 @@ const ARCH = {
 
 const RUNTIME = {
   tauri: "tauri",
-  // Go backend, at full Tauri parity. It ships via the ADDITIVE CDPipeline.Wails.yml (WAILS_CD_JOBS below) and is
-  // intentionally kept OUT of PLATFORMS.formats — those drive the public website/release, and Tauri remains the
-  // publish-default, so Wails must not appear there yet.
-  wails: "wails",
 };
 
 const PACKAGE_SCRIPT_BY_PLATFORM_ARCH = {
@@ -95,29 +90,6 @@ const CD_JOBS = [
     packageScript: "package:tauri:win_arm",
   },
 ];
-
-// Wails CI matrix — the source of truth for CDPipeline.Wails.yml (consumed via a setup job → fromJSON).
-// Additive and separate from CD_JOBS: Wails leans on Go cross-compilation, so ONE Linux runner cross-builds
-// Linux (native gtk3) AND Windows x64+arm64 (purego, cgo=0) — the concrete Go-over-Rust win. linux-arm64
-// (arm64 cgo gtk3) and macOS (Cocoa cgo) still need their own runners. `targets` are keys in wails-package.ts
-// TARGETS; the workflow stages the renderer once per job then runs the packager per target.
-const WAILS_CD_JOBS = [
-  { id: "linux-and-windows", os: "ubuntu-24.04", targets: ["linux_x64", "win_x64", "win_arm64"] },
-  { id: "linux-arm64", os: "ubuntu-24.04-arm", targets: ["linux_arm64"] },
-  { id: "macos-arm64", os: "macos-14", targets: ["mac_arm64"] },
-  // Microsoft Store packages (appx/msix) are the ONLY formats that can't cross-build from Linux — makeappx ships
-  // only in the Windows SDK — so they build on native Windows runners (mirroring the Tauri win-store step). The
-  // portable zip + the NSIS installer still cross-build on the ubuntu job above; these add ONLY the Store
-  // artifacts (a `formats` override). PRIVATE (release-artifacts.cjs isWindowsBuilderInstallerAsset) — the
-  // Microsoft Store re-signs them, and a Wails-built package carries the SAME identity as the Tauri-built one.
-  { id: "windows-store-x64", os: "windows-latest", targets: ["win_x64"], formats: ["appx", "msix"] },
-  { id: "windows-store-arm64", os: "windows-11-arm", targets: ["win_arm64"], formats: ["appx", "msix"] },
-];
-
-function wailsCdJobsForTarget(target) {
-  if (!target || target === "all") return WAILS_CD_JOBS;
-  return WAILS_CD_JOBS.filter((job) => job.id === target);
-}
 
 const PLATFORMS = {
   linux: {
@@ -454,7 +426,6 @@ module.exports = {
   CD_JOBS,
   PLATFORMS,
   RUNTIME,
-  WAILS_CD_JOBS,
   WINDOWS_INSTALLER_VERSION,
   allAssetNames,
   assetName,
@@ -463,5 +434,4 @@ module.exports = {
   publicArtifactTargets,
   publicAssetNames,
   releaseArtifactEntries,
-  wailsCdJobsForTarget,
 };

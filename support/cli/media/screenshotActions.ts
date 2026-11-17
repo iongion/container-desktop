@@ -1,9 +1,8 @@
 import type { Box, CaptureDriver } from "./drivers/types";
 
 // Screen-driving actions shared by the screenshot + demo capture scripts. Written against CaptureDriver
-// (not a raw driver page) so a single action layer drives either shell — Wails over MCP or Tauri
-// over WebDriver. DOM reads/writes stay inside evaluate() (identical page-side JS on both); only pointer,
-// screenshot and injection go through backend-specific primitives.
+// (not a raw driver page), driving Tauri over WebDriver. DOM reads/writes stay inside evaluate(); only
+// pointer, screenshot and injection go through backend-specific primitives.
 
 export async function waitReady(driver: CaptureDriver, opts: { timeout?: number } = {}) {
   const timeout = opts.timeout ?? 45_000;

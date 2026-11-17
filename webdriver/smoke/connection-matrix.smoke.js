@@ -1,6 +1,6 @@
 // Real connectivity matrix against the owner's machines, driven INSIDE the shell over W3C WebDriver. Replaces
 // the deleted Vitest suite, which could only run because a Node executor existed; the engine ports live in
-// Rust (Tauri) and Go (Wails), so the matrix runs where they do and proves the shipping path instead of a
+// Rust (Tauri), so the matrix runs where they do and proves the shipping path instead of a
 // parallel Node one.
 //
 // Native hosts get a full /_ping + container list; SSH remotes are checked end-to-end by the bounded

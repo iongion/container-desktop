@@ -3,9 +3,8 @@
 // requests are request/response; streaming responses (container logs) are opened here and pushed to the
 // requester as chunked events it reassembles into the on/off/destroy emitter Api.clients consumes.
 //
-// It exists for a shell whose engine HTTP must cross a boundary to reach the connection owner. Tauri and Wails
-// both dial their native proxy directly (tauri|wails/exec/proxy-request.ts), so neither wires it — see the
-// open item in docs/todo.md. Injected deps keep it unit-testable without a shell.
+// It exists for a shell whose engine HTTP must cross a boundary to reach the connection owner. Tauri dials its
+// native proxy directly (tauri/exec/proxy-request.ts), so it does not wire it — see the open item in docs/todo.md. Injected deps keep it unit-testable without a shell.
 
 import { COMMAND_PROXY, type CommandProxyResult } from "@/container-client/commandProxyProtocol";
 import { createLogger } from "@/logger";

@@ -1,14 +1,12 @@
-// Single source of truth for app branding + packaging metadata, shared by BOTH desktop backends
-// so nothing can drift:
-//   • support/cli/lib/wails-package.ts     — require() via createRequire (tsx)
+// Single source of truth for app branding + packaging metadata, so nothing can drift:
 //   • src-tauri/tauri.conf.json            — a DERIVED file, kept in sync by `yarn cli sync-manifests`,
 //                                            which writes productName / identifier / window title from here
 //
 // Values that already live in package.json (name, title, description, author, version, license) are read
 // from there — package.json stays the root source. This module adds the packaging-only constants that
-// don't belong in package.json: the per-backend reverse-DNS identifiers (each STABLE — they key app
-// identity, update channels and Store listings), the freedesktop + macOS categories, the shared icon
-// source dir + per-target icon filenames, the .desktop entry text, and the Linux runtime dependencies.
+// don't belong in package.json: the reverse-DNS identifiers (each STABLE — they key app identity, update
+// channels and Store listings), the freedesktop + macOS categories, the shared icon source dir + per-target
+// icon filenames, and the .desktop entry text.
 //
 // Mirrors the build-matrix.cjs / release-artifacts.cjs pattern: plain CommonJS, so both the
 // the .cjs packaging helpers and the tsx-run TypeScript tooling consume it unchanged.
@@ -31,12 +29,11 @@ function copyright(year) {
   return `Copyright (c) ${year} ${author}`;
 }
 
-// Reverse-DNS-ish identifiers differ per backend + store and MUST stay stable — changing one breaks
-// update channels / Store identity. Defined ONCE here so every consumer reads the same literal.
+// Reverse-DNS-ish identifiers differ per store and MUST stay stable — changing one breaks update channels /
+// Store identity. Defined ONCE here so every consumer reads the same literal.
 const identifiers = {
   windowsIdentity: "IonutStoica.ContainerDesktop", // appx identityName + applicationId
   tauri: "com.iongion.container-desktop.tauri", // tauri.conf.json identifier
-  wails: "com.iongion.container-desktop.wails", // wails macOS bundle id (future)
 };
 
 // freedesktop `Categories=` (trailing `;` per spec) + macOS LSApplicationCategoryType.
@@ -49,15 +46,10 @@ const categories = {
 const icons = {
   dir: "src/resources/icons",
   png: "appIcon.png",
-  linux: "appIcon-unified.png", // linux + wails .desktop icon
+  linux: "appIcon-unified.png", // linux .desktop icon
   mac: "appIcon.icns",
   win: "icon.ico",
 };
-
-// Linux runtime deps for the GTK3 / webkit2gtk-4.1 Wails build — same libraries, distro-specific package
-// names: Debian (.deb Depends) vs Fedora/RHEL (.rpm Requires).
-const linuxRuntimeDepends = ["libgtk-3-0", "libwebkit2gtk-4.1-0", "libayatana-appindicator3-1"]; // .deb
-const rpmRequires = ["gtk3", "webkit2gtk4.1", "libappindicator-gtk3"]; // .rpm
 
 module.exports = {
   name,
@@ -74,6 +66,4 @@ module.exports = {
   identifiers,
   categories,
   icons,
-  linuxRuntimeDepends,
-  rpmRequires,
 };

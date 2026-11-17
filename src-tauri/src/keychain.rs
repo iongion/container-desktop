@@ -198,7 +198,7 @@ pub(crate) async fn keychain_get(account: String) -> Result<Option<String>, Stri
 pub const SECRET_PLACEHOLDER: &str = "__CD_KEYCHAIN_SECRET__";
 
 /// Keeps a caller to naming a FILE — never a directory, never a traversal. Shared by both writers into the
-/// protected agent directory, and mirrored in the Wails shell (isSafeAgentFileName).
+/// protected agent directory.
 fn is_safe_agent_file_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 128

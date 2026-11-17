@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => {
     createSharedAISystem: vi.fn(async () => ({ id: "broker" })),
     createFetchProviderTransport: vi.fn(() => providerTransport),
     createTauriKeychain: vi.fn(async () => ({ id: "tauri-keychain" })),
-    createWailsKeychain: vi.fn(async () => ({ id: "wails-keychain" })),
     providerTransport,
   };
 });
@@ -16,10 +15,8 @@ vi.mock("@/platform/providerTransport/fetchProviderTransport", () => ({
   createFetchProviderTransport: mocks.createFetchProviderTransport,
 }));
 vi.mock("@/platform/tauri/capabilities/keychain", () => ({ createTauriKeychain: mocks.createTauriKeychain }));
-vi.mock("@/platform/wails/capabilities/keychain", () => ({ createWailsKeychain: mocks.createWailsKeychain }));
 
 import { createAISystem as createTauriAISystem } from "@/platform/tauri/aiSystem";
-import { createAISystem as createWailsAISystem } from "@/platform/wails/aiSystem";
 
 function deps() {
   return {
@@ -40,13 +37,10 @@ describe("trusted-webview provider fetch composition", () => {
     vi.clearAllMocks();
   });
 
-  it.each([
-    ["Tauri", createTauriAISystem, mocks.createTauriKeychain],
-    ["Wails", createWailsAISystem, mocks.createWailsKeychain],
-  ])("uses %s keychain with the webview's own fetch", async (_name, createAISystem, createKeychain) => {
-    await createAISystem(deps());
+  it("uses the Tauri keychain with the webview's own fetch", async () => {
+    await createTauriAISystem(deps());
 
-    const keychain = await createKeychain.mock.results[0].value;
+    const keychain = await mocks.createTauriKeychain.mock.results[0].value;
     expect(mocks.createFetchProviderTransport).toHaveBeenCalledWith({
       keychain,
       fetchImpl: expect.any(Function),
@@ -77,14 +71,7 @@ describe("trusted-webview provider fetch composition", () => {
     );
   });
 
-  it("hands Wails the webview transport, but wraps Tauri's so a keyed request can go native", async () => {
-    await createWailsAISystem(deps());
-    expect(mocks.createSharedAISystem).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ providerTransport: mocks.providerTransport }),
-    );
-
-    vi.clearAllMocks();
+  it("wraps the webview transport so a keyed request can go native", async () => {
     await createTauriAISystem(deps());
     const call = mocks.createSharedAISystem.mock.calls[0] as unknown as [unknown, { providerTransport: unknown }];
     const options = call[1];

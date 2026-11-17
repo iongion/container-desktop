@@ -246,7 +246,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- The Electron build — the app ships on Tauri (Rust) and Wails (Go) only
+- The Electron and Wails builds — the app ships on Tauri only
 - Installing the app no longer downloads a bundled browser, and provisioning a machine no longer pulls in a display server it does not need
 
 ### Fixed

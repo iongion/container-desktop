@@ -1,6 +1,6 @@
 // Real Docker Swarm end-to-end against a LOCAL sandbox, driven INSIDE the shell over W3C WebDriver. Replaces
 // the deleted Vitest suite: the assertions are unchanged, but the engine calls now go through the running
-// shell's own ports (Rust under Tauri, Go under Wails) rather than a Node executor.
+// shell's own Rust ports rather than a Node executor.
 //
 // Swarm is Docker-only. Point the target's DOCKER_SOCKET at the disposable dind sandbox
 // (support/swarm-sandbox.sh up | up-multi), NEVER your primary daemon. Needs a NON-mock app:

@@ -81,7 +81,7 @@ export function runBuildWebsite(): void {
 }
 
 // Translate commander options into the argv the media capture scripts parse. `--backend` (or the
-// CONTAINER_DESKTOP_CAPTURE_BACKEND env var read inside the scripts) picks tauri vs wails.
+// CONTAINER_DESKTOP_CAPTURE_BACKEND env var read inside the scripts) picks the backend (tauri).
 function mediaArgs(options: {
   mode?: string;
   backend?: string;

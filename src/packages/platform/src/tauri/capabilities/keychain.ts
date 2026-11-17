@@ -1,8 +1,7 @@
 // Tauri Keychain (IKeychain) — the webview-realm OS-secret-store capability, reached through the GENERIC Rust
 // `keychain_*` commands (src-tauri/src/keychain.rs). The IKeychain consumer here is the AI provider-key store, so
-// the port argument is a provider id; it maps to the keychain's generic `account`. Mirrors its Wails peer
-// policy (storing a key while degraded needs explicit opt-in), but needs no local credentials file: the keyring
-// keeps one entry per key.
+// the port argument is a provider id; it maps to the keychain's generic `account`. Storing a key while degraded
+// needs explicit opt-in, and no local credentials file is needed: the keyring keeps one entry per key.
 //
 // getEncryptionStatus() is SYNCHRONOUS, yet reaching the OS vault is an async `invoke`. So the factory probes
 // the status ONCE at construction (async) and the returned keychain closes over that cached value — vault

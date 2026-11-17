@@ -60,7 +60,7 @@ async function killRustProcess(deps: CommandDeps, processId: string, signal?: un
   await deps.invoke("process_kill", { payload: { processId, signal: toSignal(signal) } }).catch(() => undefined);
 }
 
-// The { process, child } shape onSpawn/ready hands to callers. Wails' peer must produce the same shape.
+// The { process, child } shape onSpawn/ready hands to callers.
 // The Tauri child carries the Rust processId so Command.Kill(child) and child.kill() route to process_kill.
 export function wrap_process(deps: CommandDeps, proc: any, processId: string | undefined) {
   return {

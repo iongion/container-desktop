@@ -1,5 +1,5 @@
 // Platform host port — what the shared renderer reads as window.Platform (os type/arch, env, home, user-data dir,
-// flatpak, darwin major). src-wails/platform_service.go must answer the same values.
+// flatpak, darwin major).
 
 use std::path::Path;
 

@@ -80,7 +80,6 @@ export const BOOT_CHROME_STYLE = `/* boot splash content area (--app-bg unified 
       background: #171c26;
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
       -webkit-app-region: drag;
-      --wails-draggable: drag;
     }
     #app-splash .app-splash-ring {
       width: 36px; height: 36px; border-radius: 50%;
@@ -95,7 +94,6 @@ export const BOOT_CHROME_STYLE = `/* boot splash content area (--app-bg unified 
       display: flex; align-items: center;
       background: #11151d;
       -webkit-app-region: drag;
-      --wails-draggable: drag;
     }
     #app-boot-brand {
       display: flex; align-items: center; height: 100%;
@@ -111,14 +109,12 @@ export const BOOT_CHROME_STYLE = `/* boot splash content area (--app-bg unified 
     #app-boot-controls {
       margin-left: auto; display: flex; align-items: center; height: 100%; padding-right: 4px;
       -webkit-app-region: no-drag;
-      --wails-draggable: no-drag;
     }
     #app-boot-controls .app-boot-ctl {
       width: 30px; height: 30px; margin: 0 1px; padding: 0; border: 0; border-radius: 2px;
       background: transparent; color: #ffffff; cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center;
       -webkit-app-region: no-drag;
-      --wails-draggable: no-drag;
     }
     #app-boot-controls .app-boot-ctl:hover { background: rgba(148, 163, 184, 0.15); }
     #app-boot-controls .app-boot-close:hover { background: #e11d48; }

@@ -18,38 +18,23 @@ const rootEl = document.getElementById("root");
 
 async function boot() {
   bootTimeline.mark("script-start");
-  // Shell selection: install the matching host bridge (the window.* globals, backed by the native Go/Rust
-  // ports) before rendering. Wails is checked FIRST — both shells set window.Preloaded, so each detector keys
-  // off its own marker to stay exclusive.
-  const { isWailsRuntime } = await import("@/platform/wails/detect");
+  // Install the Tauri host bridge (the window.* globals, backed by the native Rust ports) before rendering.
   const { isTauriRuntime } = await import("@/platform/tauri/detect");
-  let loggerBackend: LoggerBackend | undefined;
-  if (isWailsRuntime()) {
-    const { installWailsHostBridge } = await import("@/platform/wails/bridge");
-    await installWailsHostBridge();
-    bootTimeline.mark("wails-bridge-installed");
-    // Symmetric to the Tauri backend: route the façade's persisted records to the Wails log backend
-    // (a Phase-1 no-op until the Go LogService lands). Dynamic so it never loads under the other shells.
-    const { wailsLogBackend } = await import("@/platform/wails/log/wailsLog");
-    loggerBackend = wailsLogBackend;
-  } else if (isTauriRuntime()) {
-    const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
-    await installTauriHostBridge();
-    bootTimeline.mark("tauri-bridge-installed");
-    // Symmetric to the Wails backend above: route the façade's persisted records to the native Rust
-    // file sink (@tauri-apps/plugin-log). Dynamic so plugin-log never loads under Wails.
-    const { tauriLogBackend } = await import("@/platform/tauri/log/tauriLog");
-    loggerBackend = tauriLogBackend;
-  } else {
+  if (!isTauriRuntime()) {
     throw new Error("No supported desktop host runtime detected");
   }
+  const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
+  await installTauriHostBridge();
+  bootTimeline.mark("tauri-bridge-installed");
+  // Route the façade's persisted records to the native Rust file sink (@tauri-apps/plugin-log).
+  const { tauriLogBackend } = await import("@/platform/tauri/log/tauriLog");
+  const loggerBackend: LoggerBackend = tauriLogBackend;
   if (import.meta.env.DEV) {
     // DEV-only: expose window.__assistantDemo.seed() to load a synthetic transcript so the assistant's
     // rendering can be exercised without a live model. Dynamic import → tree-shaken from production.
     const { installAssistantDemo } = await import("@/web-app/components/ai/assistantDemo");
     installAssistantDemo();
-    // DEV-only: window.__cdLiveProbe, the real-engine probes the WebDriver live specs drive. They run against
-    // whichever shell installed the host globals, so one probe covers both backends.
+    // DEV-only: window.__cdLiveProbe, the real-engine probes the WebDriver live specs drive through the host globals.
     const { installLiveProbes } = await import("@/web-app/liveProbes");
     installLiveProbes();
     // DEV-only: window.__cdCodingAgentStore, so the Coding Agent spec can render a transcript without

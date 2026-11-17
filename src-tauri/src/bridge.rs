@@ -1,5 +1,5 @@
 // The remote-connection data plane — the SSH/WSL dial-stdio bridges and `ssh -NL` tunnels. Owned by Rust so a
-// webview reload never tears a live connection down. src-wails/bridge_service.go is its Go twin.
+// webview reload never tears a live connection down.
 //
 // It is deliberately ENGINE-AGNOSTIC: the shared JS builders (buildSSHArgs / buildSSHTunnelArgs /
 // buildWSLDialStdioArgs) stay the single source of truth for the argv and hand this layer a BridgeSpec of just

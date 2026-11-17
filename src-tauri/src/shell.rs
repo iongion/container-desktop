@@ -1,7 +1,6 @@
 // Native-shell commands (Phase D): the Rust side of the window/lifecycle integrations the webview reaches
 // through MessageBus channels — reveal the storage folder, toggle devtools, open an external URL (gated
-// JS-side by the shared urlPolicy), and launch a per-OS terminal. Wails' terminal_*.go must match these argv
-// templates emulator for emulator — the two shells launch the same terminals the same way.
+// JS-side by the shared urlPolicy), and launch a per-OS terminal.
 
 use std::path::Path;
 

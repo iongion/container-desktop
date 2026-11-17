@@ -3,13 +3,13 @@ import type { CommandExecutionResult } from "@/host-contract/exec";
 // (contract.ts). These are realm-local: a keychain that hands back plaintext secrets, an env-scrubbed
 // executor, DNS, and the base process environment. They are NEVER re-aliased onto window.* / global.d.ts and
 // never reach the renderer; a privileged consumer (the AI broker) is handed them in the realm that runs it —
-// the Tauri or Wails webview realm.
+// the Tauri webview realm.
 //
 // This file is deliberately AI-free and imports nothing from @/ai-system, so ai-system can consume these
 // ports without the platform↔AI type cycle that contract.ts (which imports @/ai-system/core) would create.
-// One impl per port per shell lives under platform/tauri/capabilities and platform/wails/capabilities.
+// One impl per port lives under platform/tauri/capabilities.
 
-// OS secret store (the Tauri keyring / the Wails keychain service). Owns its own encrypted-at-rest storage — for the
+// OS secret store (the Tauri keyring). Owns its own encrypted-at-rest storage — for the
 // degraded-vault fallback that is a 0600 credentials file; the FS port is not used for secrets (it has no mode
 // semantics). `getEncryptionStatus` is synchronous so the settings UI can read it without awaiting the vault.
 export interface EncryptionStatus {

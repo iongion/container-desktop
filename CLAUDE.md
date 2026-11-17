@@ -9,12 +9,12 @@ Cross-platform **desktop app** for managing container engines
 (Podman, Docker, and Apple Container — the last is **experimental**, macOS /
 Apple-silicon only) — local, remote over SSH, and WSL. A **TypeScript** renderer over a native backend:
 
-- **App** — React renderer in a native webview, over a Tauri (Rust) or Wails (Go) backend
+- **App** — React renderer in a native webview, over a Tauri (Rust) backend
 - **Build/dev/release tooling** — a home-grown CLI (`yarn cli`, commander + tsx) in `support/cli/`
 
 ## Stack
 
-Tauri 2 (Rust) · Wails 3 (Go) · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
+Tauri 2 (Rust) · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
 Zustand (state) · TanStack Query + Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format).
 Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Build/dev/release tooling is a home-grown
 TypeScript CLI (commander) run via **tsx**, in `support/cli/` — no Python.
@@ -32,9 +32,9 @@ TypeScript CLI (commander) run via **tsx**, in `support/cli/` — no Python.
 - `src/web-app/` — the **application** (NOT a package): React renderer — `App.tsx`, `stores/` (Zustand),
   `domain/` (TanStack Query), `screens/`, `components/`, `hooks/`, `Native.ts`, `Environment.ts`. Consumes the
   packages via `@/…`. `src/resources/` (assets) + loose `*.d.ts` + `src/__tests__/` also stay at `src/` root.
-- `src/packages/platform/` + `src-tauri/` + `src-wails/` — runtime ports: shared brokers/services live at
-  `platform/src/*`; `tauri/` (Rust backend) and `wails/` (Go backend) align host, command, exec, buses, tray,
-  runtime, AI. Packaging/branding metadata is centralized in `support/app-metadata.cjs`.
+- `src/packages/platform/` + `src-tauri/` — runtime ports: shared brokers/services live at `platform/src/*`;
+  `tauri/` (the Rust backend's webview side) covers host, command, exec, buses, tray, runtime, AI.
+  Packaging/branding metadata is centralized in `support/app-metadata.cjs`.
 - `src/packages/ai-system/` — local-first AI assistant (hexagonal: core/host/runtimes/ui): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
 - `vite.config.{common,renderer}.mjs` · **`support/cli/`** (the `yarn cli` build/dev/release
   tool, commander + tsx) · `Makefile`
@@ -57,7 +57,7 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - **Verify — run all before claiming done:**
   `yarn check-types` (tsc — app + `support/cli`) · `yarn lint` (Biome; `yarn lint:check` = no-write, used in CI) ·
   `yarn test:run` (Vitest, hermetic) · `yarn build` (the renderer bundle)
-- Keep no node/@tauri/@wailsio leaks in shared `src/` code.
+- Keep no node/@tauri leaks in shared `src/` code.
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
 - Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
   full release: `yarn cli release`
@@ -65,8 +65,7 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   `yarn cli publish-release --run-id <actions-run-id>` dry-run,
   then add `--perform`. The Microsoft Store wrapper is optional and can be
   copied into `release/container-desktop-installer.exe` when available.
-  `CDPipeline.Tauri.yml` (the default release pipeline; `CDPipeline.Wails.yml` is the
-  alternate) can also publish after all production
+  `CDPipeline.Tauri.yml` (the release pipeline) can also publish after all production
   targets build; use its `replace-release` input to delete/recreate the same version cleanly.
 - **Build/dev/release CLI:** `yarn cli <command>` (commander + tsx; source in `support/cli/`) — the
   home-grown replacement for the old Python `invoke` tasks: `bundle`, `bump`, `sync-manifests`
@@ -94,9 +93,9 @@ How you build here, **per change** — not an end-of-task afterthought:
 ## Build / runtime model — READ BEFORE TOUCHING THE BUILD
 
 - **One bundle: the renderer.** `yarn build` emits `build/<version>/renderer.mjs` (ESM) and nothing
-  else — the native backend is compiled by `cargo` (Tauri) or `go` (Wails), not by vite.
-- **The renderer blocks on `window.Preloaded`** (`Native.ts:waitForPreload`), which each shell's host
-  bridge sets LAST, once its window.* globals are up — `platform/{tauri,wails}/bridge.ts`.
+  else — the native backend is compiled by `cargo` (Tauri), not by vite.
+- **The renderer blocks on `window.Preloaded`** (`Native.ts:waitForPreload`), which the shell's host
+  bridge sets LAST, once its window.* globals are up — `platform/tauri/bridge.ts`.
 - **Production requires `ENVIRONMENT=production`** (e.g.
   `cross-env ENVIRONMENT=production yarn build`) and loads the packaged renderer from the native
   side. Without production env the build defaults to development and tries the dev-server URL →
@@ -123,8 +122,8 @@ How you build here, **per change** — not an end-of-task afterthought:
 
 ## Dev launcher & debugging
 
-- **`yarn dev`** runs Tauri (`yarn dev:mock` adds the deterministic mock backend); `yarn wails:dev`
-  / `yarn wails:dev:mcp` run the Go shell. Both serve the SAME Vite renderer on :3000.
+- **`yarn dev`** runs Tauri (`yarn dev:mock` adds the deterministic mock backend), serving the Vite renderer
+  on :3000.
 - **There is no CDP** — the renderer runs in a native webview, not Chromium. Drive it over **W3C
   WebDriver**: `yarn test:e2e:tauri` runs `webdriver/wdio.conf.js` (WebdriverIO → `tauri-driver` →
   `WebKitWebDriver` → the app). Prereqs: `tauri-driver` (`~/.cargo/bin`) + `webkitgtk-webdriver`
@@ -158,7 +157,6 @@ How you build here, **per change** — not an end-of-task afterthought:
   reports SKIP with the fixing command. Never start a VM, load a model, stand up a sandbox or build an image
   to make a spec run; never gate a mock spec (nothing is absent, so a gate could only hide a defect); and
   never let a gate skip something that would have run — that reads as coverage.
-- **The Wails shell has its own driver**, `support/wails-mcp.mjs` (MCP + X11 grab).
 - **NEVER GUESS ROUTES.** Every hash route you navigate to (or assert on) MUST come from the source —
   a screen's `Screen.Route.Path` / its `Navigation.ts` constant (e.g. `BUILD_ROUTE`), a real `#/...`
   href in the rendered DOM, or an id returned by the mock snapshot — never an invented path or a
@@ -166,11 +164,9 @@ How you build here, **per change** — not an end-of-task afterthought:
   route, the screen never mounts, and you misread that as a broken feature. Grep the route first, then drive it.
 - **NEVER `xvfb-run` or spawn a second app instance to verify the UI.** Drive the running dev app
   over WebDriver (above); that is the required verification path.
-- **Website capture (screenshots) runs on either shell.** `support/cli/media/screenshots.ts` drives a
-  `CaptureDriver` port with two adapters — WebdriverIO/WebDriver (Tauri, reusing the `test:e2e:tauri`
-  stack) and MCP + X11 grab (Wails). Pick via **`CONTAINER_DESKTOP_CAPTURE_BACKEND=tauri|wails`**
-  (**default `tauri`**) or `--backend`. Both backends write the same published
-  `website-src/static/**` images — Tauri is the default producer, Wails the comparison. The website **demo** is a
+- **Website capture (screenshots).** `support/cli/media/screenshots.ts` drives a `CaptureDriver` port over
+  WebdriverIO/WebDriver (Tauri, reusing the `test:e2e:tauri` stack) and writes the published
+  `website-src/static/**` images. The website **demo** is a
   screenshot slideshow: `yarn screenshots` also writes the per-engine demo manifests
   (`demoManifest.ts` expands `demoScenario.json` → `/replays/<engine>.json`, paged by `demo-replay.js`).
   Tauri needs `CONTAINER_DESKTOP_MOCK=1 yarn tauri:serve` for the debug binary, or a release binary via
@@ -181,7 +177,7 @@ How you build here, **per change** — not an end-of-task afterthought:
   gated-tool message can land in the previous chat and its approval card auto-resolves. Assistant flows must
   `newAssistantChat()` (wait for idle — no `.AIComposerStop` — → New chat → wait transcript empty) before
   submitting. A flow that passes in isolation but fails in the full suite is almost always this.
-- Kill switch: kill the `tauri dev` / `wails3 dev` process by PID. **Footgun:** never
+- Kill switch: kill the `tauri dev` process by PID. **Footgun:** never
   run `pkill -f <pattern>` from a one-liner whose own command text contains `<pattern>` —
   it matches and kills its own shell (silent exit 144). Kill by numeric PID instead.
 
@@ -225,15 +221,12 @@ How you build here, **per change** — not an end-of-task afterthought:
   → node-free) or imported `?raw`. NEVER inline prompt/markdown prose in TS/TSX — add a `.md` there and import it.
 - **AI dependency direction — a review rule, NOT a suite test.** `@/ai-system/core/` stays dependency-free: no
   imports of `@/platform`, `@/i18n`, `@/web-app`/`@/components`, the AI SDK (`ai` / `@ai-sdk/*`), `react`,
-  `node:*`, `@tauri`/`@wailsio`, or sibling `@/ai-system/{adapters,host,ui}`. The package's layers are `core/`
+  `node:*`, `@tauri`, or sibling `@/ai-system/{adapters,host,ui}`. The package's layers are `core/`
   (pure protocol + policy) → `adapters/` (impure infra) → `host/`, which composes `core/` + `adapters/` only.
   The agent engine is **not** in this package: the assistant runs on the pi bridge (`@/pi-bridge` protocol +
   `@/pi-agent-host` in the container), injected into `createAISystem`, so no agent library enters `core`'s
   graph. No barrels / `index.ts` aggregators / pass-through re-exports anywhere in `@/ai-system` — import from
   the defining module. This is common sense; hold the line in review, don't encode it as a Vitest test.
-- **Shell port-module parity is a review rule, not a test.** Keep the Tauri / Wails port modules in
-  `src/platform/<shell>/` aligned (a capability added to one shell usually needs its peers) — verify it in review;
-  don't assert directory-listing parity in a Vitest test.
 
 ## UI conventions (renderer · Blueprint)
 

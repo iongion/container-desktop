@@ -19,8 +19,8 @@ import {
 // productName/identifier/window-title. Both are the derived "synced" files — the Rust shell must build at
 // the same version and identity the release publishes.
 
-// The single source of truth for branding + packaging metadata, shared with the packaging helpers
-// and wails-package.ts. CommonJS module → require it via createRequire from this ESM file.
+// The single source of truth for branding + packaging metadata, shared with the packaging helpers.
+// CommonJS module → require it via createRequire from this ESM file.
 const appMeta = createRequire(import.meta.url)("../../app-metadata.cjs");
 
 // package.json (source of truth) + the files derived from it, rendered at `version`.
