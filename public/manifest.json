@@ -11,5 +11,5 @@
   "manifest_version": 2,
   "name": "Container Desktop",
   "permissions": ["webNavigation"],
-  "version": "6.0.0"
+  "version": "6.1.0"
 }
