@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The website, manual links, update check and WSL rootfs download moved to iongion.github.io/container-desktop and GitHub releases; the project no longer trusts its former domain
 - IDs are generated in a way that works in every desktop build, not just Chromium-based ones
 - Fixed detecting the image-signing tool's version, which used to log a spurious error
 - Docker networks now report their subnets, so subnet-aware views work just as they do on Podman

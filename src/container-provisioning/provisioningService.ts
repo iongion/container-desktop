@@ -78,8 +78,9 @@ export function stepPlan(step: ProvisionStep, _target: ProvisionTarget): StepAct
 
 // Pinned name for the runtime we create. (A single provisioned scope per machine keeps reuse simple.)
 const PROVISION_NAME = "container-desktop";
-// TODO(Phase 3): pin the rootfs URL to a released asset + verify its checksum/signature before import.
-const WSL_ROOTFS_URL = "https://cdn.container-desktop.com/wsl/container-desktop-rootfs.tar.gz";
+// TODO(Phase 3): pin the rootfs URL to a versioned release asset + verify its checksum/signature before import.
+const WSL_ROOTFS_URL =
+  "https://github.com/iongion/container-desktop/releases/latest/download/container-desktop-rootfs.tar.gz";
 
 // Map a provisioning step to the real per-OS/strategy command sequence (osCommands). `scope`-tagged commands
 // run INSIDE the created VM/distro (install-engine after a create/import); host commands run locally.

@@ -29,7 +29,8 @@ const scenario: Scenario = JSON.parse(readFileSync(new URL("./demoScenario.json"
 // (mirrors theme-switcher.js, so a not-yet-captured engine still gets a complete demo).
 function resolveScreenshot(engine: string, file: string): string {
   const folder = existsSync(path.join(IMG_DIR, engine, file)) ? engine : "unified";
-  return `/img/${folder}/${file}`;
+  // Relative to the manifest (replays/<engine>.json), so the site works under any path prefix.
+  return `../img/${folder}/${file}`;
 }
 
 function manifestForEngine(engine: string) {

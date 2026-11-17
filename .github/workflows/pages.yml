@@ -2,7 +2,7 @@ name: Deploy website to GitHub Pages
 
 # Publishes the static site in website/ to GitHub Pages via GitHub Actions
 # (replaces the classic "deploy from branch /docs" source so the folder can be
-# named freely). The custom domain is preserved through website/CNAME.
+# named freely). Served at https://iongion.github.io/container-desktop/ (no custom domain).
 #
 # Pages deploys ONLY as part of a release: CDPipeline.Tauri.yml's publish-pages job runs
 # this content after the release assets are published. There is intentionally no

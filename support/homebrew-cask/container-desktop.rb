@@ -6,7 +6,7 @@ cask "container-desktop" do
       verified: "github.com/iongion/container-desktop/"
   name "Container Desktop"
   desc "General purpose container operations"
-  homepage "https://container-desktop.com/"
+  homepage "https://iongion.github.io/container-desktop/"
 
   livecheck do
     url :url

@@ -33,7 +33,7 @@ TypeScript CLI (commander) run via **tsx**, in `support/cli/` — no Python.
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
   · `support/watch.mjs` (dev launcher) · **`support/cli/`** (the `yarn cli` build/dev/release
   tool, commander + tsx) · `Makefile`
-- **`website-src/`** — Eleventy sources for the public site (container-desktop.com),
+- **`website-src/`** — Eleventy sources for the public site (iongion.github.io/container-desktop),
   compiled to the **generated `website/`** (never hand-edit `website/`; see Website below).
 - **`docs/`** — architecture docs (C4 diagrams) + contributor guides;
   start at `docs/README.md`.
@@ -102,7 +102,10 @@ How you build here, **per change** — not an end-of-task afterthought:
   dev-server URL → blank window when packaged.
 - Build target is `es2022`; the renderer uses top-level await — keep target ≥ es2022.
 
-## Website (container-desktop.com) — `website/` IS GENERATED, NEVER EDIT IT
+## Website (iongion.github.io/container-desktop) — `website/` IS GENERATED, NEVER EDIT IT
+
+- Served under the `/container-desktop/` path prefix (`pathPrefix` in `eleventy.config.mjs`): write
+  root-relative URLs (`/manual/`); HtmlBasePlugin prefixes `href`/`src`, and `| htmlBaseUrl` covers anything else.
 
 - **Never edit anything under `website/` by hand — it is compiled output, wiped and
   rebuilt on every run.** Edit the **`website-src/`** sources instead (Eleventy:

@@ -9,7 +9,7 @@
   <div class="nav-cta">
     <div class="engine-switcher" role="group" aria-label="Engine switcher">
       {%- for t in site.themes %}
-      <button type="button" class="engine-swatch{% if t.id == site.defaultTheme %} is-active{% endif %}" data-theme-id="{{ t.id }}" data-shots="{{ t.shots }}" data-replay="{{ t.replay }}" data-poster="{{ t.poster }}" data-tagline="{{ t.tagline }}" style="--sw:{{ t.swatch }}" title="{{ t.label }}" aria-label="{{ t.label }} engine" aria-pressed="{% if t.id == site.defaultTheme %}true{% else %}false{% endif %}"></button>
+      <button type="button" class="engine-swatch{% if t.id == site.defaultTheme %} is-active{% endif %}" data-theme-id="{{ t.id }}" data-shots="{{ t.shots }}" data-replay="{{ t.replay | htmlBaseUrl }}" data-poster="{{ t.poster | htmlBaseUrl }}" data-tagline="{{ t.tagline }}" style="--sw:{{ t.swatch }}" title="{{ t.label }}" aria-label="{{ t.label }} engine" aria-pressed="{% if t.id == site.defaultTheme %}true{% else %}false{% endif %}"></button>
       {%- endfor %}
     </div>
     <span class="gh-star"><a class="github-button" href="{{ site.repo }}" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star {{ site.repoSlug }} on GitHub">Star</a></span>
