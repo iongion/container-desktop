@@ -7,6 +7,7 @@ mod bridge;
 mod child_guard;
 mod host;
 mod keychain;
+mod mcp;
 mod process;
 mod proxy;
 mod shell;
@@ -35,6 +36,12 @@ fn create_main_window(app: &tauri::App) -> tauri::Result<()> {
     }
     builder.build()?;
     Ok(())
+}
+
+/// `container-desktop --mcp-stdio`: relay MCP between stdin/stdout and the running app's loopback endpoint. Nothing
+/// of the GUI starts. Returns the process exit code.
+pub fn run_mcp_stdio() -> i32 {
+    mcp::stdio::run()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -125,6 +132,8 @@ pub fn run() {
         .manage(bridge::BridgeState::default())
         // The single native tray icon (built on first tray_update from the webview's projected menu).
         .manage(tray::TrayState::default())
+        // The MCP server's listener and the requests waiting for the webview's answers.
+        .manage(mcp::commands::McpState::default())
         .setup(|app| Ok(create_main_window(app)?))
         // Hide-to-tray: while the tray is up, closing the window HIDES it (keeps the webview + the in-realm
         // engine hub alive). A true quit goes through application.exit
@@ -173,6 +182,12 @@ pub fn run() {
             keychain::keychain_set,
             keychain::keychain_clear,
             tray::tray_update,
+            mcp::commands::mcp_start,
+            mcp::commands::mcp_stop,
+            mcp::commands::mcp_status,
+            mcp::commands::mcp_reply,
+            mcp::commands::mcp_token,
+            mcp::commands::mcp_regenerate_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Container Desktop Tauri shell");

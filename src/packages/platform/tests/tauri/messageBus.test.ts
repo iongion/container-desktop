@@ -102,6 +102,24 @@ describe("createMessageBus", () => {
     expect(resourceSyncHost.invoke).toHaveBeenCalledWith("RESOURCE_SYNC:get-snapshot", undefined);
   });
 
+  it("routes the mcp:* channels to the MCP controller", async () => {
+    const { deps } = makeDeps();
+    const mcp = {
+      apply: vi.fn(async () => ({ running: true })),
+      status: vi.fn(async () => ({ running: true, port: 17627 })),
+      token: vi.fn(async () => "a".repeat(64)),
+      regenerateToken: vi.fn(async () => "b".repeat(64)),
+      dispose: vi.fn(),
+    };
+    const bus = createMessageBus({ ...deps, mcp });
+
+    await expect(bus.invoke("mcp:status")).resolves.toEqual({ running: true, port: 17627 });
+    await expect(bus.invoke("mcp:token")).resolves.toBe("a".repeat(64));
+    await bus.invoke("mcp:apply");
+
+    expect(mcp.apply).toHaveBeenCalledWith(undefined, { allowDegraded: false });
+  });
+
   it("routes proxy apply/test through the shared app-control registrar", async () => {
     const { deps } = makeDeps();
     const bus = createMessageBus(deps);

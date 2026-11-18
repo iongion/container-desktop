@@ -16,13 +16,16 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open as openFileDialog, save as saveFileDialog, message as showDialog } from "@tauri-apps/plugin-dialog";
 import { exit as processExit, relaunch as processRelaunch } from "@tauri-apps/plugin-process";
 import { userConfiguration } from "@/container-client/config";
+import { MCP_SETTINGS_KEY, normalizeMcpSettings } from "@/container-client/mcpSettings";
 import { normalizeProxyConfig, validateProxy } from "@/container-client/proxy";
 import { createLogger } from "@/logger";
 import type { IPlatform, IResourceBus } from "@/platform/contract";
+import { createEngineOpsAdapter } from "@/platform/engineOpsAdapter";
 import { installPlatformGlobals } from "@/platform/globals";
 import { shouldOpenExternally } from "@/platform/urlPolicy";
 import { ActivityBus, type CommandProxyStreamEvent, createCommand, type ProcessEventMessage } from "./command";
 import { createFileSystem, createPath, createPlatform } from "./host";
+import { createMcpHost } from "./mcpHost";
 import { createMessageBus } from "./messageBus";
 import { applyProxyAtRuntime, testProxyConnectivity } from "./proxyBootstrap";
 import { createRecoveryService as createTauriRecoveryService, writeFallbackErrorPage } from "./recovery";
@@ -108,6 +111,17 @@ export async function installTauriHostBridge(): Promise<void> {
     // MessageBus.invoke/send + ResourceBus.subscribe drive it directly; the renderer's stores are unchanged.
     const resourceSyncHost = createResourceSyncHost();
     target.__resourceSyncHost = resourceSyncHost; // handle for teardown/live-debug (no CDP under WebKitGTK)
+    // The MCP server answers on the SAME in-realm engine service the UI uses, so an MCP change refreshes the UI. The
+    // Rust listener only runs once apply() below finds it enabled in the settings.
+    const mcpHost = createMcpHost({
+      invoke,
+      listen,
+      engineOps: createEngineOpsAdapter(resourceSyncHost.service),
+      serverVersion: import.meta.env.PROJECT_VERSION ?? "0.0.0",
+      readSettings: async () => normalizeMcpSettings(await userConfiguration.getKey(MCP_SETTINGS_KEY)),
+      logger: createLogger("tauri.mcp"),
+    });
+    target.__mcpHost = mcpHost; // live-debug handle (no CDP under WebKitGTK)
     const messageBus = createMessageBus({
       resourceSyncHost,
       invoke,
@@ -132,6 +146,7 @@ export async function installTauriHostBridge(): Promise<void> {
         }
         return await testProxyConnectivity(validation.value, { invoke });
       },
+      mcp: mcpHost,
       logger: createLogger("tauri.app-control"),
     });
     const resourceBus: IResourceBus = createTauriResourceBus(resourceSyncHost);
@@ -158,6 +173,9 @@ export async function installTauriHostBridge(): Promise<void> {
         void processExit(0);
       },
     });
+    // Start the MCP listener when the settings enable it (a reload also stops one they no longer do). A failure
+    // stays in its status for the Settings screen; it never blocks the boot.
+    void mcpHost.apply();
     // The renderer blocks on window.Preloaded (Native.ts:waitForPreload) — set it LAST, once the surface is up.
     target.Preloaded = true;
     // Custom-chrome behaviors WebKitGTK doesn't give a frameless window for free: drag + resize.

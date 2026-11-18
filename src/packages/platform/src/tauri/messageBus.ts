@@ -2,6 +2,7 @@ import { registerAppControlIpc } from "@/platform/appControlIpc";
 import type { IMessageBus } from "@/platform/contract";
 import { createInRealmBus } from "@/platform/inRealmBus";
 import { registerLoggingIpc } from "@/platform/loggingIpc";
+import { type McpController, registerMcpIpc } from "@/platform/mcpIpc";
 import type { ResourceSyncHost } from "./resourceSyncHost";
 
 type TauriInvoke = (command: string, args?: Record<string, unknown>) => Promise<any>;
@@ -28,6 +29,8 @@ export interface TauriMessageBusDeps {
   relaunch: () => Promise<unknown> | unknown;
   applyProxy?: (options: any) => Promise<unknown> | unknown;
   testProxy?: (options: any) => Promise<unknown> | unknown;
+  // The MCP server's controller, reached by the Settings screen over the mcp:* channels.
+  mcp?: McpController;
   logger: { debug: (...args: unknown[]) => void };
 }
 
@@ -85,6 +88,10 @@ export function createMessageBus(deps: TauriMessageBusDeps): IMessageBus {
     openLogFile: () => deps.invoke("logging_open"),
     revealLogFile: () => deps.invoke("logging_reveal"),
   });
+
+  if (deps.mcp) {
+    registerMcpIpc({ onInvoke: bus.onInvoke, isAllowedSender: bus.isAllowedSender, controller: deps.mcp });
+  }
 
   return {
     send: (channel: string, ...data: any[]) => {

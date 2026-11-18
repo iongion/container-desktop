@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   configReads: [] as Array<{ key: string; hasPlatform: boolean; hasPath: boolean; hasFS: boolean }>,
+  settings: {} as Record<string, unknown>,
   invoke: vi.fn(async (command: string, args?: Record<string, unknown>) => {
     switch (command) {
       case "get_os_type":
@@ -62,7 +63,7 @@ vi.mock("@/container-client/config", () => ({
         hasPath: !!target.Path,
         hasFS: !!target.FS,
       });
-      return undefined;
+      return mocks.settings[key];
     }),
     setProxyConfig: vi.fn(async () => undefined),
   },
@@ -105,6 +106,7 @@ describe("installTauriHostBridge", () => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.configReads.length = 0;
+    mocks.settings = {};
     document.body.replaceChildren();
     for (const key of [
       "Platform",
@@ -160,5 +162,25 @@ describe("installTauriHostBridge", () => {
     expect(mocks.appWindow.show).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(8000);
     expect(mocks.appWindow.show).not.toHaveBeenCalled();
+  });
+
+  it("starts the MCP listener at boot when the settings enable it", async () => {
+    mocks.settings.mcp = { enabled: true, port: 18080, mode: "allow" };
+    const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
+
+    await installTauriHostBridge();
+
+    await vi.waitFor(() =>
+      expect(mocks.invoke).toHaveBeenCalledWith("mcp_start", { port: 18080, mode: "allow", allowDegraded: false }),
+    );
+  });
+
+  it("leaves the MCP listener off at boot by default", async () => {
+    const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
+
+    await installTauriHostBridge();
+
+    await vi.waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("mcp_stop"));
+    expect(mocks.invoke).not.toHaveBeenCalledWith("mcp_start", expect.anything());
   });
 });

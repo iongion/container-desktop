@@ -65,6 +65,13 @@ serde_urlencoded = "0.7"
 # Keychain, Linux Secret Service. The Secret Service backend is pure-Rust (zbus + RustCrypto via crypto-rust),
 # so Linux needs no libsecret C library at build or runtime.
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+# The MCP server's loopback listener (mcp/server.rs): hyper's HTTP/1 server over tokio, a size-capped body reader, a
+# constant-time token compare, and the OS randomness behind the token. All but httpdate are already in the tree.
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+subtle = "2"
+getrandom = "0.3"
 
 # Unix signal delivery for ExecuteStreaming/BackgroundService kill (SIGTERM/SIGKILL by pid — tokio's
 # Child::kill is SIGKILL-only). Windows uses taskkill by pid instead.
