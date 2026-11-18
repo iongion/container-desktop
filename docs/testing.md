@@ -3,7 +3,7 @@
 The verification gate is **type-check · lint · unit tests · production build** — all enforced on
 every PR and push to `main` by
 [`.github/workflows/CIPipeline.yml`](../.github/workflows/CIPipeline.yml). That is the **CI**
-pipeline; the `CDPipeline.*` files (`CDPipeline.Tauri.yml` default, plus `.Wails`) are the separate **release/publish** pipelines and run no checks.
+pipeline; `CDPipeline.Tauri.yml` is the separate **release/publish** pipeline and runs no checks.
 
 ## JS/TS — Vitest
 
@@ -124,31 +124,26 @@ yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js   # the 
 yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js               # real Docker Swarm
 ```
 
-Sandbox execution (`webdriver/specs/sandbox-exec.e2e.js`) runs on the **mock** app instead: the
-`__aiSandboxExecProbe` seam resolves a disposable sandbox target and round-trips a file through the
-container-routed workspace, proving the real execution selector works inside the WebKitGTK realm:
-`yarn test:e2e:tauri --spec webdriver/specs/sandbox-exec.e2e.js`.
-
 ## Two suites, told apart by what a failure is allowed to mean
 
 | | `webdriver/specs/*.e2e.js` | `webdriver/smoke/*.smoke.js` |
 | --- | --- | --- |
-| Runs against | the **mock app only** — fixtures, no engine, no account, no network | **real integration**: real engines, real machines, a real account, a real model |
+| Runs against | the **mock app only** — fixtures, no engine, no account, no network | **real integration**: real engines, real machines |
 | A failure means | the app is wrong. Nothing else is involved | either the app is wrong **or** something outside it was missing — so it must not be allowed to mean the first by default |
 | Entry point | `yarn test:e2e:tauri` | `yarn test:smoke:tauri` (clears `CONTAINER_DESKTOP_MOCK`) |
 | Gating | **none, ever.** Nothing is absent, so nothing may be skipped | **skips** when its subject is absent, naming what was missing |
 
 A mock spec carries no gate because there is nothing for it to be missing: gating one would only hide a
-real defect. A smoke spec's *subject is the integration*, so when the engine, the machine, the image, the
-account or the loaded model is not there, there is nothing to prove — failing would blame the app for the
+real defect. A smoke spec's *subject is the integration*, so when the engine, the machine or the sandbox
+is not there, there is nothing to prove — failing would blame the app for the
 operator's environment, and passing would claim coverage nobody has. It reports **SKIP** with the command
 that fixes it ([`webdriver/support/prerequisites.js`](../webdriver/support/prerequisites.js)): a VM that is
 shut off must never read as five failing hosts. A machine answering on 22 is not the same question as the engine
 it declares being up — win11 boots long before Docker Desktop does, and its CLI answers while the daemon behind it
 does not — so a remote target's engine is asked separately, over plain ssh (`remoteEngineReason`).
 
-Nothing in that helper starts anything. Bringing a VM up, loading a model, standing up a sandbox and
-building the agent image are the operator's decisions, never a test's — and a gate that skips something
+Nothing in that helper starts anything. Bringing a VM up or standing up a sandbox are the operator's
+decisions, never a test's — and a gate that skips something
 which *would* have run is worse than no gate at all, because the report then looks like it ran.
 
 ```bash
@@ -157,166 +152,22 @@ yarn test:smoke:tauri                                                  # real in
 yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js
 ```
 
-## AI subsystem
+## MCP server
 
-The assistant is a **pi coding agent running in a container** (see
-[`architecture/ai-subsystem.md`](architecture/ai-subsystem.md)), so its coverage is in four bands: units on
-both sides of the bridge, UI specs driven through the bridge, probes against a real container, and real-model
-runs.
+Three bands, cheapest first:
 
-### Units (hermetic, CI)
-
-Both halves are ordinary Vitest and run in `yarn test:run`:
-
-- **Renderer side** — the bridge codec, the transcript projection (`piSessionView`), card resolution
-  (`piToolCards`), the permission policy (`piApprovals`, `permissions`, `commandFloor`), host-request routing
-  (`uiRequests`), `engineOpDispatch`, `pluginCatalog`, providers, the model probe (`modelWindow`) against each
-  provider's real listing shape, the context report (`piContextReport`), redaction, the stores.
-- **Container side** — every `pi-agent-host` module: session, host RPC, permission gate, container tools and
-  their catalogue, model registrations, surfaces, tool surfaces, virtual terminal, UI context, plugins,
-  resources, gateway, events, theme.
-
-### UI specs — the mock app over WebDriver
-
-The mock app boots a **scripted pi session** (`testing/mockPiBridge.ts`): the same `PiBridgeClient` the real
-session uses, speaking the same bridge events, with no engine, no container and no model. So the Assistant
-answers, renders cards and raises approval prompts through its production path. Specs that want a specific
-frame still push it through the DEV-only `window.__cdCodingAgentStore` seam. Start `yarn dev:mock` in one
-shell, then:
+- **Protocol core** (Vitest, hermetic): `src/packages/mcp-server/tests/` drives `handleMcpMessage` over a fake
+  `EngineOps` — the handshake and versions, the tool catalogue per mode, argument validation, refusals, redaction.
+- **Native listener** (`cargo test --lib mcp`): the request rules (Host, Origin, token, path, method, version, size),
+  the listener on a free port with a fake webview, the token store, and the stdio relay against that listener.
+- **The mock app** (`webdriver/specs/mcp-server.e2e.js`): turns the server on in Settings, reads the endpoint and
+  token from the panel, then speaks MCP from the spec — handshake, read-only listing and refusal, the switch to
+  allow, a 403 for a foreign `Origin` and a 401 for a wrong token. The mock engine is stateless, so a stop is
+  proven by its result, not by the row changing. The run keeps its token in its own data dir, never the OS keychain.
 
 ```bash
-yarn test:e2e:tauri --spec webdriver/specs/extension-ui.e2e.js        # T1 — native dialogs, chrome, widgets       (5)
-yarn test:e2e:tauri --spec webdriver/specs/pi-tool-cards.e2e.js       # T2 — tool results as typed cards           (12)
-yarn test:e2e:tauri --spec webdriver/specs/pi-surfaces.e2e.js         # T3 — pi components as ANSI surfaces        (10)
-yarn test:e2e:tauri --spec webdriver/specs/pi-plugins.e2e.js          # plugin install / enable / update / remove  (8)
-yarn test:e2e:tauri --spec webdriver/specs/pi-container-tools.e2e.js  # the container toolset over a driven bridge (9)
-yarn test:e2e:tauri --spec webdriver/specs/pi-start-drawer.e2e.js     # the session-start drawer                   (6)
-yarn test:e2e:tauri --spec webdriver/specs/pi-model-chip.e2e.js       # the model a session answers with           (6)
-yarn test:e2e:tauri --spec webdriver/specs/pi-model-reasoning.e2e.js  # the thinking levels a provider published   (4)
-yarn test:e2e:tauri --spec webdriver/specs/pi-turn-facts.e2e.js       # an empty turn; a window with no room       (3)
-yarn test:e2e:tauri --spec webdriver/specs/pi-session-points.e2e.js   # the fork and branch points pi answers with (6)
-yarn test:e2e:tauri --spec webdriver/specs/assistant-screen.e2e.js    # the screen, its bar and its theme          (4)
-yarn test:e2e:tauri --spec webdriver/specs/assistant-soundness.e2e.js # what it says about its own session         (7)
-yarn test:e2e:tauri --spec webdriver/specs/assistant-on-pi.e2e.js     # the surface mounts on a pi session         (1)
-yarn test:e2e:tauri --spec webdriver/specs/ai-flows.e2e.js            # the assistant flows, scripted session
+yarn test:e2e:tauri --spec webdriver/specs/mcp-server.e2e.js
 ```
-
-The two **model** specs serve their own provider listing from a loopback `node:http` stub in OpenRouter's shape and
-re-point the app's default provider at it, so the shipped probe runs for real with no network and no key: the probe is
-selected by provider **id**, never by URL. `user-settings.json` is re-read on every `getAISettings()`, which is what
-lets a spec's Node half change that answer mid-run.
-
-The **AI flows** ([`support/e2e/ai/flows.mjs`](../support/e2e/ai/flows.mjs)) drive the running app through a
-backend-agnostic `AiE2eDriver` and assert both branches of each gate — chat echo and reply, Enter-to-send, the
-slash-command palette under a real keyboard, the context and diagnostics drawers, the Project Memory review
-gate, and tool approval **Allow** and **Reject** including two gated calls in one turn. A flow that cannot run
-for an environmental reason reports **SKIP**, not a pass: the skill-discovery flow does that when the app
-binary predates `fs_list_directory`, because the skill source then reads as unreadable.
-
-**Keyboard caveat (WebKitGTK):** a synthetic keystroke run loses a REPEATED character — `…1785799812784`
-arrives as `…178579812784`. Any flow whose assertion is the text it typed must avoid adjacent repeats in its
-marker; the loss is mid-string, so retyping a tail cannot repair it.
-
-### Real containers, no app
-
-The image itself is verified without the GUI — build it, then run a probe against a real container:
-
-```bash
-yarn cli agent-image --engine podman   # or --engine docker; per-engine, not shared
-node support/pi-plugins-probe.mjs      # plugin management in a real container
-node support/pi-bridge-probe.mjs       # the bridge + data path in a real container
-node support/pi-session-storage-probe.mjs   # a real pair's conversations, kept on THIS machine
-node support/pi-upstream-shape-probe.mjs   # what pi puts on the wire per upstream
-```
-
-The **upstream-shape probe** is the only place the gateway's far side is observable: it runs the built image once per
-upstream against a stub that records the request body, and fails if a declared upstream did not get its own dialect —
-DeepSeek's `thinking` object, GLM's `max_tokens`, OpenRouter's nested `reasoning`, and the `developer` role only where
-it belongs. It needs no provider, no key and no network. The first leg deliberately declares nothing, so the
-OpenAI-shaped body pi infers from our own gateway is on the record beside the corrected ones.
-
-### Real model, real engine
-
-Run by hand, **never in CI**, on a NON-mock app. All of these need Vite serving the renderer from the worktree under
-test, and use its debug binary (or one named by `CONTAINER_DESKTOP_E2E_APP`).
-
-**Keyless, offline, and the one to reach for first** — a real container pair against the LM Studio server on this
-machine. It needs no account and no network, and it is the only spec that drives the keyless half: a vault with
-nothing stored substituting an empty key, a turn carried to a server on the app's OWN loopback (the app dials the
-provider from its own realm, so the server needs no wider bind), and the window the app probed matching what the
-server actually loaded.
-
-```bash
-lms load qwen3-4b-instruct-2507 --context-length 16384 --yes   # tool-capable, and room for the session's own prompt
-yarn test:smoke:tauri --spec webdriver/smoke/pi-lmstudio-live.smoke.js
-```
-
-A model loaded at less than about 12k cannot answer at all — pi's system prompt plus the tool definitions come to
-roughly 9k tokens before the first word — so the spec asserts the loaded length up front rather than letting a turn
-fail with the server's own `n_keep >= n_ctx` and reading like an app fault. Overrides: `CD_LIVE_LMSTUDIO_MODEL`,
-`CD_LIVE_LMSTUDIO_URL`, `CD_LIVE_WORKSPACE`, `CD_LIVE_ENGINE`.
-
-`pi-plugin-theme-live.smoke.js` runs on the same keyless session and is the only proof that a plugin's OWN component
-paints in the app's colours: it seeds an extension into the `cd-agent-plugins` volume that builds pi's `Markdown` from
-`getMarkdownTheme()` — the route that reads pi's module-global theme — and asserts the surface frame's truecolor SGR
-carries the accent the app is painted in at that moment. It removes the extension again; leaving one behind would
-change every later session.
-
-**A whole session on a connection reached over SSH**, including a real turn — and the only spec that covers the
-machine hop, the environment carried into a volume, and the two `ssh -NL` forwards. The remote needs no provider, no
-key and no network of its own: inference travels back over the bridge to the LM Studio server here.
-
-```bash
-CD_LIVE_REMOTE_SSH_HOST=win11 CD_LIVE_REMOTE_SSH_USER=<user> CD_LIVE_REMOTE_ENGINE=podman \
-  CD_LIVE_REMOTE_PROGRAM='C:\Users\<user>\AppData\Local\Programs\Podman\podman.exe' \
-  yarn test:smoke:tauri --spec webdriver/smoke/pi-remote-bridge.smoke.js
-```
-
-The agent image has to be in THAT machine's store (`podman save … | ssh <host> "podman load"`) — an image built here
-does not exist there — and the spec skips saying so when it is not. It deliberately does NOT warm the connection first:
-a remote start fires a dozen SSH commands, a remote sshd refuses some of a burst, and the app's own first API request
-races the bridge process it just spawned — so the recovery from all three is part of what this spec covers. Overrides:
-`CD_LIVE_REMOTE_SSH_PORT`, `CD_LIVE_REMOTE_WORKSPACE`, `CD_LIVE_LMSTUDIO_MODEL`, `CD_LIVE_APP_VERSION`.
-
-The rest need `OPENROUTER_API_KEY`, because they drive a model's judgement rather than the route to it.
-
-```bash
-CD_LIVE_ENGINE=docker \
-CONTAINER_DESKTOP_E2E_APP=<repo>/src-tauri/target/debug/container-desktop \
-yarn test:smoke:tauri --spec webdriver/smoke/pi-container-live.smoke.js
-```
-
-It creates its own throwaway container so the destructive half is proven without touching anything of yours,
-and refuses to approve a card aimed at anything else — including the slash-prefixed spelling of its own name, which
-a model copies out of the engine's `Names` field and which the app now accepts as the id. Overrides: `CD_LIVE_MODEL`
-(default in `webdriver/support/openrouterSession.js`, shared by every OpenRouter spec),
-`CD_LIVE_ENGINE`, `CD_LIVE_VICTIM`, `CD_LIVE_VICTIM_IMAGE`,
-`CD_LIVE_WORKSPACE`, `CD_LIVE_APP_VERSION`. The sibling live specs are `pi:extension:live`, `pi:gate:live` and
-`pi:data:live`. That last one used to wedge on a WebDriver command at the 180s cap: its wait for a real container
-pair, mocha's timeout and the driver's `connectionRetryTimeout` were all the same number, so the spec was killed
-mid-command instead of failing with its own reason. `wdio.smoke.conf.js` now gives the harness headroom over the
-longest in-spec wait; the container half it covers is also verified by `support/pi-bridge-probe.mjs`.
-
-**Verify the free-model id before a run** (`curl -s https://openrouter.ai/api/v1/models`, filter `:free`) — the
-free roster shifts weekly, and the tier is rate-limited (~20/min, 50/day unfunded). The id these specs share was
-retired once and answered through all four as a provider failure, which is why it now has ONE origin and why the
-replacement is checked for `tools` in its `supported_parameters`: a model that will not call a tool cannot drive the
-container toolset, and its silence reads as an app defect.
-
-The keyed half of the inference path is `pi-provider-live.smoke.js`'s third shape: a real cloud provider, where the
-app resolves the key from the vault and signs the request in its own realm. Its two local shapes need LM Studio and
-the cloud one needs `OPENROUTER_API_KEY`, and each gates on its own — a sleeping local server no longer skips the
-cloud scenario.
-
-**A plugin left in the engine's volume breaks every session spec, silently.** `cd-agent-plugins` is per-ENGINE and
-deliberately outlives containers, images and sessions, so an extension seeded by `pi-extension-live`,
-`pi-plugin-data-live` or `pi-plugin-theme-live` loads into every session started afterwards. One that writes a message
-puts conversation input in front of the model, the model answers it, and a spec waiting for the transcript to go idle
-waits until its timeout — reported as "the turn never finished" with the container, bridge, key and model all working.
-A fixture from a run killed before its `after` hook cost two unrelated specs their runs and an hour of misdiagnosis.
-Two things now prevent it: seeding removes an older copy first (`webdriver/support/pluginVolume.js`), so a killed run
-cannot leave one behind, and every session spec asks `cleanPluginVolumeReason` first and skips naming the file with the
-command that removes it.
 
 ## Build tooling (`support/cli/`)
 
@@ -345,7 +196,5 @@ yarn test:run      # includes support/cli/**/*.test.ts
 | Headless globals / live opt-in | [`src/__tests__/setup/headless.ts`](../src/__tests__/setup/headless.ts)       |
 | Recording `Command` fake       | [`src/__tests__/setup/fakeCommand.ts`](../src/__tests__/setup/fakeCommand.ts) |
 | Vitest config                  | [`vitest.config.mts`](../vitest.config.mts)                                   |
-| AI UI specs (pi bridge)        | [`webdriver/specs/`](../webdriver/specs) — `extension-ui`, `pi-tool-cards`, `pi-surfaces`, `pi-plugins`, `pi-container-tools`, `pi-model-chip`, `pi-model-reasoning`, `pi-turn-facts`, `pi-session-points`, `assistant-*` |
-| Live AI (real model + engine)  | [`webdriver/smoke/pi-container-live.smoke.js`](../webdriver/smoke/pi-container-live.smoke.js) |
-| Real-container probes          | [`support/pi-plugins-probe.mjs`](../support/pi-plugins-probe.mjs) · [`support/pi-bridge-probe.mjs`](../support/pi-bridge-probe.mjs) · [`support/pi-upstream-shape-probe.mjs`](../support/pi-upstream-shape-probe.mjs) · [`support/pi-session-storage-probe.mjs`](../support/pi-session-storage-probe.mjs) |
-| AI mock fixtures               | [`src/packages/ai-system/src/testing/aiMocks.ts`](../src/packages/ai-system/src/testing/aiMocks.ts) |
+| MCP protocol units             | [`src/packages/mcp-server/tests/`](../src/packages/mcp-server/tests)           |
+| MCP end to end (mock app)      | [`webdriver/specs/mcp-server.e2e.js`](../webdriver/specs/mcp-server.e2e.js) |

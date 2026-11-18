@@ -42,10 +42,6 @@
     {
       "screenshot": "../img/podman/ConnectionManager.png",
       "title": "Local, SSH, WSL & LIMA"
-    },
-    {
-      "screenshot": "../img/podman/AIAssistant.png",
-      "title": "Built-in AI assistant"
     }
   ]
 }

@@ -14,7 +14,7 @@ Full project documentation lives in [`docs/`](docs/):
   - [Overview](docs/architecture/overview.md)
   - [Backend](docs/architecture/backend.md)
   - [Frontend](docs/architecture/frontend.md)
-  - [AI subsystem](docs/architecture/ai-subsystem.md)
+  - [MCP server](docs/architecture/mcp-server.md)
   - [Connection startup](docs/architecture/connection-startup.md)
   - [Engine matrix](docs/architecture/engine-matrix.md)
   - [Notes / principles](docs/architecture/notes.md)
@@ -57,9 +57,11 @@ If one wants to add support for docker container engine, the easiest is to insta
 
 ![Image Actions](website-src/static/img/unified/Build.png?raw=true)
 
-## AI assistant
+## AI clients over MCP
 
-![AI assistant](website-src/static/img/unified/AIAssistant.png?raw=true)
+Turn on Settings → MCP server and Claude Code, Cursor, VS Code or any MCP client can work with your engines: read-only
+by default, loopback only, token kept in the OS keychain. See the [manual](https://iongion.github.io/container-desktop/manual/#mcp)
+and [docs/architecture/mcp-server.md](docs/architecture/mcp-server.md).
 
 ## Podman is the driving engine
 

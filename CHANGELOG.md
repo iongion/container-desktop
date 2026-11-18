@@ -7,244 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- A WebDriver run no longer reads or writes your installed app's webview storage (localStorage, HTTP cache). With `CONTAINER_DESKTOP_USER_DATA_DIR` set, the webview keeps its own under that directory; a normal launch is unchanged
-- The mock inventory WebDriver spec runs in every mock scenario, the default one included, and fails on an unknown scenario instead of silently skipping
-- A killed app no longer leaves its SSH forwards running, on Windows as well as Linux. Stopping the app has always taken them with it, but being killed — the task manager, a crash, an out-of-memory kill — left each one holding a local port and an open connection to the remote, and the next forward quietly picked a different port, so nothing looked wrong until the ports ran out. The kernel now ends them, in both backends. macOS offers no such mechanism and is unchanged
-- Starting the app with no engine connected no longer throws away the screen you were on. It always redirected to the connection manager, so a reload with the engine down lost your place; it now does that only from the default route, and any other screen reports the missing engine where you are. The engine-less state can also be exercised for the first time (`CONTAINER_DESKTOP_MOCK_CONNECTED=none`), which is what made the behaviour testable at all
-- An assistant session that fails to start no longer leaves its container running. The start tore down its forwards but not the pair itself, and a start can fail with the container perfectly up — an unreachable bridge, a handshake that never finishes — so the container, its environment volume and its network were all left on the engine until the next start on that connection happened to reuse the names. They are released by the start that created them. Continuing an already-running session is untouched: that pair holds your conversation and is never removed just because this app could not reach it
-- A provider sign-in works on the connection you chose, remote included. It ran the one-shot login container against a LOCAL engine whatever you had selected — and then dialled a port only that local engine had published — so on a machine whose only engine is remote you could not sign in at all, and the app blamed a bridge it had never been able to reach. The container now lands where that connection's engine is, its bridge is forwarded here, and the container, its environment and the forward all go again on every path out
-- Renewing a sign-in says why it cannot, instead of failing as a rejected token. The exchange needs a file holding your stored credential, which only the realm that owns the keychain can write and only an engine on this machine can read — so it now runs on such an engine when one is connected, and reports plainly when none is
-- The assistant's environment reaches a scoped engine (WSL, Lima, a podman machine): its CLI runs inside the guest, where a path from this machine is not the path, so the file was there and unreadable. It is now named the way that engine sees it, exactly as the workspace and your conversations already were
-- A session on a remote engine survives an SSH forward the remote refused. The app opened it three times, but all three attempts landed in the same instant — one more connection into the very burst being refused — so all three failed. They are spaced now, the way every other burst-refused SSH command in the app already is
-- A session that cannot be reached says why. When the forward carrying it died, the app went on dialling a local port with nothing behind it for ten seconds and then reported "bridge socket error" — the symptom of a cause it had been holding the whole time. It now stops at the first refusal and reports what actually died
-- An assistant session on a remote or WSL connection now runs its engine commands where that connection lives. The scope came from a start option nothing in the app ever filled, so every command ran against a LOCAL engine — the pair was built on the wrong machine and the forward could not be aimed at all. It is now asked of the connection itself
-- Starting an assistant session can no longer hang forever. When the agent container accepted the connection but never finished its handshake, nothing timed out and nothing failed — the start simply waited, with one line in the log and no end to it. It now gives up with that reason
-- A container action the assistant chose now reaches the container it named. The engine reports a container's name with a leading slash, so a model that copied it out of a listing had every inspect, start, stop, restart, pause and remove answered "no such container" for a container that was plainly there — the operation quietly did nothing and the model was told so
-- A remote connection stops dropping itself. One unanswered engine ping used to close the whole connection — including the SSH channel every command travels on, so the next thing you did failed with "SSH connection is not established". A ping is now retried, with a budget that fits what it crosses: on a busy remote engine six pings failed in a single run and every one of them recovered on the next attempt, where before each would have cost you the connection
-- A connection whose channel was closed is reopened instead of refusing your next action
-- A remote command refused mid-handshake is sent again: a remote's SSH server turns away part of a burst, and starting a session is a burst. Only failures where the command provably never ran are retried
-- A session's SSH forward that is refused the moment it opens is opened again, rather than ending the session that was about to use it
-- An assistant session runs on a remote engine that keeps its containers in a machine — podman on Windows: nothing published inside that machine reaches the host running it, so the session used to build its container and then dial nothing. The pair now publishes on the machine's own address and the forward is pointed there
-- The agent's environment reaches a remote engine at all: it was handed the path of a file on YOUR machine, which that engine has never seen, and every remote session failed before a container existed. Nothing of it travels in a command line, where the rest of that machine could read the session's token
-- A session already running on a remote engine can be continued, and one is found to continue: both questions were asked with a command the remote's own shell took apart — one failed outright, the other answered "nothing here" for every connection
-- A session no longer fails because its conversation store was dialled a moment too early — the app now waits for that socket the way it already waits for the agent's bridge
-- A connection to a Windows machine over SSH can be established at all: the app looked for the engine with a command only a Unix shell has, so a Windows remote always reported the engine as missing however it was installed. It now asks the engine itself, and uses the path you configured when you gave one
-
-- A thinking level now reaches DeepSeek, GLM and OpenRouter in the shape each one actually wants, instead of OpenAI's — the session's own endpoint made every provider look like OpenAI, which also sent those servers a system prompt under a role they do not have and an answer cap under a field they do not read
-- The assistant now actually receives your Project Rules and Memory — it used to confirm them in the UI and send the model nothing
-- Everything the app does on the agent's behalf acts on the folder the session mounted, not the one named in Settings: workspace changes, project rules and memory, and project skills
-- Public web search works for the assistant, or says why not — the setting used to promise something the session could not do
-- The Context and Usage panels show real numbers: tokens, cost, the model's budget and the exact tools the model was offered
-- pi's own slash commands are offered under pi's own names; the app no longer answers `/compact`, `/new`, `/session` or `/resume` with something adjacent of its own
-- A plugin's own commands appear in the palette — every one of them was silently dropped before it got there
-- pi's commands work outside demo mode: a real session announced them before the app was listening, so every one of them answered "Unknown command"
-- Diagnostics answer the question that matters: whether the SESSION can reach the model, along the path a turn takes, and not only whether this app can
-- A turn that has read your project's rules, an untrusted skill or a public web page no longer honours a remembered approval
-- The Wails backend no longer lets the web view read a provider key, which Tauri has always refused
-- A command a container image is too old to know now fails immediately with the reason, instead of hanging for thirty seconds
-- Rejecting a tool call no longer leaves "Connection error." in the transcript — stopping the agent was reported as the model failing, several times over
-- The Context panel reports the model's real budget, asked of the provider: a local server's loaded context length, not the 128k every model used to claim regardless of what the server would accept. A provider that publishes nothing now says so
-- The composer's model chip shows the model the running session is answering with, instead of a saved default it had no way to apply
-- Changing the model no longer costs you the session: the conversation continues on the new one instead of the pair being torn down and built again
-- The Context panel follows a model change instead of going on describing the model the session was started with
-- A turn the model answered with nothing says so, in the transcript and in an exported one — it used to look exactly like a turn that never ran
-- Choosing a model with no room for the session says so at the moment you choose it, naming both numbers, instead of letting the next turn fail with the inference server's own message
-- The provider key has no route into a container at all: the app reads it from the OS keychain and signs each request itself, and there is no field it could travel in from the web view
-- The agent's bridge token is protected like the provider key beside it: both env files now live in the one directory the web view cannot read back, instead of the token sitting in a second unguarded one
-- Starting a session with network access turned off works at all: the session's network is created internal, instead of handing the engine a flag `run` does not have
-- A session no longer fails because something else already holds the port it picked — the agent's bridge port is re-picked and tried again when the engine says it is in use
-- The Context panel says whether the budget reserved for the answer is the provider's published cap or the app's own default, instead of presenting one as the other
-- Estimated cost is a real number: the provider's published rates now reach the session, so a priced model reports what it charged instead of nothing
-- A turn that cost a fraction of a cent reports what it charged instead of rounding to zero, which read exactly like a free local model
-- The demo session's Workspace and VS Code buttons open a folder that exists, instead of a path only an agent container has
-- Demo mode holds its engine connections instead of dropping them every few seconds: it was checking the filesystem for sockets no demo has, so the connected engines flapped and the theme flickered between them
-- A project you have not trusted can no longer have plugin settings written into it: pi's own default is to trust the project, and the assistant now starts it untrusted and follows your decision
-- A new conversation keeps your containers, your plugins and your workspace — starting one used to tear the pair down and build it again
-
-- Sessions using a cloud provider start again: the credential is resolved outside the app's web view and cannot be read back from it
-- A local model server session starts again — asking for a key a keyless provider never had used to stop it
-- The assistant shows that it is working from the moment you send, not only once the answer starts arriving
-- The workspace folder's own start log is styled again
-- The mock model list no longer offers a model that does not exist
-- The assistant can now use an Anthropic model: the session speaks Anthropic's own wire shape and the request is signed the way Anthropic expects
-- A keyless local model server no longer stops the assistant from starting
-- The upstream is now signed the way that provider's settings say — bearer token, API-key header, basic auth or a custom header
-- The WebDriver tests are two suites again, told apart by what a failure is allowed to mean: `webdriver/specs/*.e2e.js` runs on the mock app only and is never gated, while `webdriver/smoke/*.smoke.js` is real integration with its own entry point (`yarn test:smoke:tauri`) — the two used to share one glob, so the real-integration specs ran against the mock app by default
-- A smoke spec whose machine, engine, agent image, provider key or loaded model is simply absent now reports SKIP with the command that fixes it, instead of failing: a powered-off VM used to read as five failing hosts
-- A Windows connection now says that reaching its containers needs WSL, instead of naming an execution target kind the app no longer has
-- An SSH connection that fails now says why: ssh writes a post-quantum advisory to stderr before the real error, and the diagnostic reported that advisory as the reason — so "start Docker Desktop" read as a key-exchange warning
-- The smoke specs that took several screenshots in one session no longer wedge the session they are measuring — the frames are budgeted, and the container-logs one now asserts that xterm actually painted instead of only logging what it saw
-- Ending an assistant session ends its sign-in renewals too: one stopped while a renewal was still running went on renewing for the rest of the app's life, starting a throwaway login container every time
-- A provider hiccup the assistant retries by itself no longer reads as a failed answer: the working indicator names the attempt and counts the wait down instead of going quiet, and only the attempt it gives up on stays in the transcript
-- A skill's narrowing, and a turn's public-web taint, now last the whole run instead of its first step — a tool-using run ends a turn at every step, and both were being lifted at the first one
-
-- The assistant no longer asks you to fill in a form before it will do anything: the empty state IS the bootstrap. A row per engine, the one this app favours offered first, each saying where it runs and what it may read, write and reach — and a verb that follows its state, so a running session is continued, a stopped one resumed with its conversation intact, and a new one started in a click
-- Sessions you define yourself sit beside the offered default and are remembered, so the assistant is set up once rather than on every launch
-- Continuing a session whose containers are already running works: the app dials the pair it finds instead of asking the engine for names it already holds, which answered with a conflict
-- Resuming a stopped session works: its containers still held their names, so they are rebuilt under them — which costs the user nothing, because the conversation lives in the assistant's volume and not in the container
-- A long workspace path no longer squeezes a launcher row's verb into a clipped smear, and the row's buttons are compact
-- The Assistant's error message no longer prints its icon on top of its first line
-- Summoning the assistant console glides instead of stuttering: the panel and its dim animate on their own compositor layers, and the conversation mounts in the same frame the slide starts rather than one frame into it
-
 ### Added
 
 - An MCP server for AI clients, set up in Settings → MCP server: loopback only, off by default, read-only by default, its token kept in the OS keychain, and `container-desktop --mcp-stdio` for clients that only speak stdio
-- Your conversations with the assistant are kept on your own machine: they stay readable with nothing running, survive every rebuild of the agent, and no longer live inside the container volume they used to disappear with
-
-- The provider key never leaves your machine, and never leaves the one place that can read it: a turn's inference is now signed by the app itself, from the OS keychain, per request. There is no longer a second container holding the key, no file with a credential in it for a session, and nothing to ship to a remote machine — which is what a session on a remote engine used to be unable to do at all
-- A session on a REMOTE engine keeps its conversations on your own machine too. That machine cannot see this one's disk, so the agent asks for its history instead of mounting it, and every conversation lands in the same folder a local session uses — one place, whichever connection you started on, and nothing is ever copied or synced between the two. The agent may only touch that folder's own conversation files, and nothing else on your machine
-
-- An assistant session can run on a connection reached over SSH. The agent's bridge is published on the machine running the engine, so the app forwards it here and talks to the local end — before this, a session on a remote connection was offered, built its containers and then answered nothing. A connection whose scope names no entry in your SSH config now says so instead of starting
-
-- The Assistant's header carries the session itself: its name, renamed in place, and the conversations that workspace already has — switch to one, or start another, without leaving the row. The workspace, the editor and the stop moved into the header's overflow, and the container id into the session list, because what belongs in a header row is the name
-
-- A plugin can be installed for THIS PROJECT rather than for the agent everywhere — pi's own second package scope, offered once pi trusts the project and explained when it does not
-- The assistant can look up the app's own built-in troubleshooting knowledge — curated podman, docker, WSL and SSH connection failures with the fix and the commands — as a search it makes when it needs one, not as prose in every prompt
-- The assistant can act on files and run commands in ANOTHER container, where you choose: one already running on the connection, picked from what is actually running with its image and id, or a disposable one created from an image and removed when the session ends. Chosen on the start form, off until you choose it, and every write or command asks first
-- Sign in to any provider pi carries a flow for — Anthropic, GitHub Copilot, Kimi, xAI, Radius, OpenAI Codex and OpenRouter — under that provider's own label: pi's own login runs in a one-shot container, the browser does the signing in, and what it returns goes to the OS keychain
-- A sign-in that expires is renewed for you, before it lapses and without interrupting the conversation — the exchange runs pi's own refresh in a throwaway container, and a running session picks the renewal up on its next turn
-- Every provider pi ships is offered in the model picker — 37 of them, with names and model counts read from pi itself — behind their own heading, under the sources you already use
-- A provider the app was never set up for can be browsed and then added in one click: its endpoint comes from what pi publishes, and only the key is left to paste
-- Every model row in the picker says what it costs, how much room it has and whether it thinks, instead of an id alone
-- A cloud provider you have not added a key for can be browsed instead of being a dead end — the models it publishes are listed, and the key is what using one needs
-- A cloud model's real budget, answer cap and rates now show up even when its provider serves nothing to ask: Anthropic, OpenAI, DeepSeek and GLM models are read from pi's own published catalogue, and a running server's answer still wins wherever one can be asked
-- Claude models offer a thinking level, taken from what pi publishes about each one rather than a claim of the app's own — including that some of them cannot stop thinking
-- A plugin can say what it is working on: its own message replaces the word beside the spinner while a turn runs, and it can hide the indicator altogether — three calls that used to do nothing at all
-- Plugin components take the app's colours, including the ones a plugin renders without asking for a theme: they used to paint in the agent's own dark palette whatever engine and mode you were in, and they now follow both
-- Change the model a running session answers with, from the composer's chip: the conversation, the containers and the plugins all survive it
-- A model is looked up when you choose it — one level of your source's catalogue at a time, nothing fetched or registered up front
-- `/model` switches straight away when you name one, pi's own way (`/model <provider/model>`), and opens the picker when you do not
-- pi's own slash commands, all of them, under pi's own names — the ones this architecture cannot honour are listed with the reason rather than hidden
-- **Every one of pi's own commands works.** The nine that used to be refused — `/clone`, `/resume`, `/import`, `/trust`, `/settings`, `/scoped-models`, `/login`, `/logout`, `/share` — described this app's wiring, not pi's limits
-- `/compact`, `/name`, `/fork`, `/tree`, `/hotkeys`, `/changelog`, `/reload`, `/new`, `/clone`, `/resume`, `/trust`, `/settings` and `/scoped-models` run against the session itself
-- A session replaced in place brings its conversation with it: the transcript is rebuilt from the session's own history rather than left empty
-- `/resume` opens a picker of the sessions this workspace has, newest first with the one you are in marked; `/clone` duplicates the conversation as it stands
-- `/import` opens a session JSONL you pick and continues it, in the container you are already running
-- `/share` saves the conversation as one standalone HTML file wherever you choose — no gist, no upload, no GitHub account
-- `/trust` records pi's project-trust decision, which is stored with the agent and never in your workspace, and says when the decision gates nothing here
-- `/settings`, `/trust` and `/scoped-models` open one drawer of the session's own setup — auto-compaction, steering, follow-ups, thinking level, project trust and the models Ctrl+P cycles — as controls rather than typed arguments, hiding the thinking level for a model that does not reason and refusing a level it cannot reach
-- A reasoning model gets its thinking level back, with exactly the efforts its source published — the levels above high included, and no off for a model that cannot stop reasoning
-- `/login` and `/logout` manage provider authentication where it actually lives: the app's settings and the OS keychain
-- A resumed or imported session says so when pi had to fall back to this session's model instead of the one its history was written with
-- `/fork` and `/tree` open a picker: your earlier messages to start again from, or the session's branches with the one you are on marked
-- llama.cpp reports its real context window — the length the server actually loaded, not the maximum the model could do
-- The assistant reports what it has spent and what it is sending the model, after every turn
-- One Assistant: the full screen and the quake console are the same conversation, with the same transcript, cards and composer — the separate Coding Agent screen is gone
-- Start a session from wherever you are — the console offers it too, instead of a composer that leads nowhere
-- The AI screens are reachable again, from a menu on the header's AI button
-- The session's connection, workspace and container ride in the screen header; open the workspace folder, or open it as a VS Code workspace, from there
-- Start an assistant session from the app: pick the connection, the workspace folder, the model and whether it may reach the network
-- A local model server (LM Studio, llama.cpp) is reachable for a session, on its own loopback address
-- A truncated command's full output can be opened from its card — the agent writes it inside the container, the app reads it back
-- The assistant now answers, runs tools and asks for approval in demo mode, with no container engine present
-- The assistant runs inside a container, streamed into the app over a token-authenticated bridge
-- `yarn cli agent-image` builds the local pi agent image from the shipped Dockerfile
-- Provider credentials never enter a container at all; the app signs each request itself
-- The assistant runs on a containerized pi session instead of an in-app agent engine
-- pi extensions can ask you things through native dialogs, and show status entries and widgets around the composer
-- Every tool the assistant runs passes your permission settings first; a rejection blocks the call inside pi
-- The assistant's tool calls read as cards: shell output, file contents, a real diff of every edit, and directory or search results
-- A tool card names the file it touched and says whether it was read or written, and notes when output was truncated
-- Data an extension publishes for the app now appears in the conversation as its own labelled, inspectable card
-- Extension components render in the app: custom dialogs, tool renderers, footers, headers, widgets and editors, with keyboard input
-- Extension output follows the app's own theme, per engine and per light or dark mode
-- Remembered tool decisions are now saved from the approval card, scoped to the workspace and connection
-- The assistant can work with your containers again — list, inspect, read logs and stats, start, stop, remove, and pull images — across every connection
-- Container reads run unattended; every container change asks first, naming the entity and the connection it would act on
-- Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
-- Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily
-- Manage image registries per connection — sign in, add or remove them, and set certificates and a proxy for each engine
-- A compatibility view that compares, side by side, what the Podman, Docker and Apple engines can each do
-- Import a Compose file into Podman and run it as native containers, kept together as one stack
-- Pod logs now combine every member and work over a remote connection, with no local command line needed
-- A colored status dot on each container shows at a glance whether it is running, healthy, starting, paused or stopped
-- When importing a stack, a service now waits for the ones it depends on to become healthy before it starts
-- Starting, stopping or removing a whole group now shows progress and reports if something fails
-- A new Wails desktop build joins Tauri, packaged for the same set of platforms
-- The Wails build has the same shell behavior: single window, remembered size, relaunch, hide to tray, file logs and keychain storage
-- The Wails window waits until it is ready before appearing, so there is no blank flash at startup
-- Branding and packaging details now come from one shared source across both desktop builds
-- Each desktop build has its own release pipeline, with Tauri as the default publisher
-- A driver for automating and taking screenshots of the Wails build during testing
-- Website screenshots can now be captured from the Wails build too
-- A mounts view listing every container's mounts, grouped by connection, with their sizes
-- A network reachability tool that pinpoints where a connection, port or name lookup breaks and suggests a fix
-- A per-image security view: check its signature, scan for vulnerabilities on demand, and export its software bill of materials
-- If verifying an image signature needs a sign-in, you can log in and verification resumes, with a button to recheck anytime
-- The security view shows the image's source registry, filters findings by severity, and reads clearly when none are found
-- Images, registries, pods, machines, networks, secrets, volumes and swarm lists are now grouped by connection
-- The containers list now nests by connection, then group, then container
-- Inspect and connection details now use consistent, sortable property tables with copy on every row
-- An engine health page per connection: a clear verdict, where the connection breaks, disk and network vitals, and plain-language fixes
-- Richer inspect screens gain a side rail splitting summary, environment, ports and mounts into their own tabs
-- Connection info, system info and engine health now live in a side rail instead of a header menu
-- Breadcrumbs now start with the owning connection, which links to its info page
-- Inspect is now the first action on every resource; networks and machines finally get it too
-- Every detail screen now has a reload button, and detail headers arrange their actions the same way the lists do
-- Untagged images show a short ID in the name column instead of a blank cell
-- The container detail header shows a combined health-and-state badge next to the playback controls
-- Container detail is reorganized into one side rail — summary, environment, ports, mounts, logs, processes and more — with playback kept inline
-- Summon the AI assistant as a console over any screen — a bottom panel opened with a keyboard shortcut or the header button and dismissed with Escape
-- The assistant now knows which screen you're on, so you can ask about what you're looking at without spelling it out
-- Each screen offers its own starter questions to kick off a conversation with the assistant
-- Make the assistant console see-through with a transparency slider, so you can keep watching the screen behind it
-- Resize the assistant console by dragging the grip in its header, up to 80% of the window and no smaller than 250px
-- The assistant renders replies as rich markdown — tables, fenced code blocks with a copy button, lists, callouts and links
-- Recall recently sent messages in the assistant composer with the Up and Down arrows
-- The assistant shows an animated thinking indicator above the composer while it works on your request
-- Send a follow-up while the assistant is working to steer its live response or queue it behind an active tool
-- Assistant conversations are durable, navigable, and keep background work and approvals reachable
-- Web search has an explicit enable switch separate from its remembered permission
-- Providers without model discovery can use a manually entered model
-- Point the assistant at a project folder so it can read, search, edit and run things there, always asking before it changes anything
-- The assistant shows file reads, edits, searches, listings and command output as rich cards instead of raw text
-- A Plugins screen: install pi plugins from npm or git, then update, disable, re-enable or remove them
-- Each plugin row lists what it contributes — commands, skills and prompt templates — and whether it is enabled and on disk
-- Installing states plainly that the plugin's code will run inside the agent container, and a source with shell characters is refused
-- Disabling a plugin keeps it installed, so switching it back on costs no download
-- Installed plugins persist across sessions, and a fresh install takes effect without restarting the agent
-- Plugin commands, skills and prompt templates appear in the composer's slash-command palette, labelled with the plugin they came from
+- Branding and packaging details now come from one shared source
 
 ### Changed
 
 - Linux WebDriver runs no longer put a window on your desktop: the app runs on a private headless sway, on a GPU that is not NVIDIA's, keeps its secrets out of your OS keychain, and a killed run leaves nothing behind. `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows it; sway joins the e2e prerequisites
-- An assistant session is ONE container, not a pair. Inference travels the socket the app already has open to it, so the second container that used to hold the provider key is gone, along with its network and its env file
-- Turning network access off now means it: the session's container gets no route to the internet or to your machine at all, instead of the key-holding half being given a routable one. A turn still works, because the app dials INWARDS
-- A renewed sign-in takes effect on the next turn with nothing to deliver, including for a session started before it was renewed — and a renewal that fails on a busy engine is retried instead of silently ending every renewal after it
-- A local model server no longer has to be bound to the network for the assistant to reach it: the app dials it from its own realm, so LM Studio's default loopback bind is enough
-- The assistant speaks pi's vocabulary throughout: what the app used to call a thread is a **session**, because that is what pi calls it — pi's documentation now reads directly onto this app, with nothing to translate
-- A session is one conversation: the thread list, rename, delete, branch and compaction drawers are gone, replaced by pi's own `/resume`, `/name`, `/fork`, `/tree` and `/compact`
-- The access-profile and reasoning-level pickers are gone, with `/access` and `/reasoning`: a session takes both when it starts and neither can be changed afterwards, so the controls only ever looked live
-- The in-app agent engine's whole path is gone — its thread store, tool-artifact store, knowledge bank and fifteen IPC channels had no caller left once the assistant moved into a container
+- The app now runs entirely in the system's own webview over a native backend, so it starts faster and ships a far smaller download
 - The left sidebar now starts collapsed, giving screens their full width until you expand it
-- Eleven unused libraries are gone from the app, including the retired multi-agent engine — a smaller install and a faster build
 - Container and pod lists no longer refetch on every health-check probe — only real lifecycle events and health-status changes trigger a refresh
 - Resource actions no longer show a success toast — only failures notify, keeping routine start, stop and remove quiet
-- Engine health moves runtime details into its header and lets networking use the full width
-- Connection info shows the real socket it connects through and hides rows that don't apply
-- Settings categories are alphabetical, connection links look cleaner, and the image Start button matches the others
-- English is now the complete translation source, and much more of the app — states, headers, menus — can be translated, with wider language coverage
-- Container state and health are now translated instead of showing raw engine text
-- The "Explore more in the docs" link always points to the Container Desktop manual
-- The AI assistant runs on a smaller, leaner internal core — identical streaming, steering, tool approvals and recovery, with less code and one fewer dependency
-- Starting a goal moves into the Runs list, so a Run you open is one of several rather than the only one
-- A selected view mode, such as board or table, now reads as selected instead of looking dimmed
-- Collapsed sidebar labels are trimmed with an ellipsis instead of overflowing
-- Inspect tables are more compact
-- Container inspect breaks environment variables and ports into their own copyable tables
-- The raw-configuration viewer titles itself to match whether it shows a tree or JSON
-- Breadcrumbs show their icon only on the first crumb
-- Back buttons in screen headers have consistent spacing
-- Network, secret and volume actions now remember which connection they belong to
-- Connection detail pages are scoped to one connection, with their own links, breadcrumbs and refresh
-- The Connections list now uses the same search field as every other list
-- The footer shows engine versions inline, dropping the separate version dropdown
-- The image vulnerabilities view sets a severity chart and filters beside the findings, with a clear all-clear state
-- The image bill-of-materials is now a sortable package table with export, and licenses get their own panel
-- The reachability tool and engine health now share the same connection-path and diagnosis display
-- The app now runs entirely in the system's own webview over a native backend, so it starts faster and ships a far smaller download
 - Development and website screenshots now drive the real app the same way the tests do
 
 ### Removed
@@ -252,57 +26,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Electron and Wails builds — the app ships on Tauri only
 - The AI assistant: its screens, console, header menu, Settings section and the setup wizard's assistant option. Settings now opens on Air-gap & policy
 - Nothing the assistant left behind is deleted for you: its settings block, stored provider keys, conversations, and the agent images, containers and volume on your engines stay where they are
-- Installing the app no longer downloads a bundled browser, and provisioning a machine no longer pulls in a display server it does not need
 - The assistant's strings from all 11 translations
 - Three dependencies nothing used: `tslib`, `vite-plugin-static-copy` and `dmg-license`
+- Installing the app no longer downloads a bundled browser, and provisioning a machine no longer pulls in a display server it does not need
 
 ### Fixed
 
-- Running a skill from the composer or the skills drawer works again — it had stopped reaching the agent after the move into a container, and a skill's declared tool list is now enforced for the turn it runs
-- Rejecting a tool call now stops the assistant, instead of it asking again for the same command every second
-- A container change the assistant asks for is now approved once, not twice — the same removal no longer raises a second identical card after you have already allowed it
-- An approval card for a container change now names the connection it will act on even when the agent did not name one, so it is clear which engine is about to lose a container
-- An assistant session no longer fails to start while the agent container is still opening its port
-- The agent container no longer fails to start because one of pi's packages was missing from the image
-- The AI section tabs no longer link to two screens that no longer exist
-- Stopping a turn reads as stopped, not as a model error
+- A WebDriver run no longer reads or writes your installed app's webview storage (localStorage, HTTP cache). With `CONTAINER_DESKTOP_USER_DATA_DIR` set, the webview keeps its own under that directory; a normal launch is unchanged
+- The mock inventory WebDriver spec runs in every mock scenario, the default one included, and fails on an unknown scenario instead of silently skipping
+- The WebDriver tests are two suites again, told apart by what a failure is allowed to mean: `webdriver/specs/*.e2e.js` runs on the mock app only and is never gated, while `webdriver/smoke/*.smoke.js` is real integration with its own entry point (`yarn test:smoke:tauri`) — the two used to share one glob, so the real-integration specs ran against the mock app by default
+- A smoke spec whose machine or engine is simply absent now reports SKIP with the command that fixes it, instead of failing: a powered-off VM used to read as five failing hosts
+- The smoke specs that took several screenshots in one session no longer wedge the session they are measuring — the frames are budgeted, and the container-logs one now asserts that xterm actually painted instead of only logging what it saw
+- A killed app no longer leaves its SSH forwards running, on Windows as well as Linux. Stopping the app has always taken them with it, but being killed — the task manager, a crash, an out-of-memory kill — left each one holding a local port and an open connection to the remote, and the next forward quietly picked a different port, so nothing looked wrong until the ports ran out. The kernel now ends them, in both backends. macOS offers no such mechanism and is unchanged
+- Starting the app with no engine connected no longer throws away the screen you were on. It always redirected to the connection manager, so a reload with the engine down lost your place; it now does that only from the default route, and any other screen reports the missing engine where you are. The engine-less state can also be exercised for the first time (`CONTAINER_DESKTOP_MOCK_CONNECTED=none`), which is what made the behaviour testable at all
+- A remote connection stops dropping itself. One unanswered engine ping used to close the whole connection — including the SSH channel every command travels on, so the next thing you did failed with "SSH connection is not established". A ping is now retried, with a budget that fits what it crosses: on a busy remote engine six pings failed in a single run and every one of them recovered on the next attempt, where before each would have cost you the connection
+- A connection whose channel was closed is reopened instead of refusing your next action
+- A connection to a Windows machine over SSH can be established at all: the app looked for the engine with a command only a Unix shell has, so a Windows remote always reported the engine as missing however it was installed. It now asks the engine itself, and uses the path you configured when you gave one
+- A Windows connection now says that reaching its containers needs WSL, instead of naming an execution target kind the app no longer has
+- An SSH connection that fails now says why: ssh writes a post-quantum advisory to stderr before the real error, and the diagnostic reported that advisory as the reason — so "start Docker Desktop" read as a key-exchange warning
+- An SSH config entry that lists several aliases on one line (`Host web1 web2`) now offers each alias, instead of unusable entries with garbled names
+- A command a container image is too old to know now fails immediately with the reason, instead of hanging for thirty seconds
+- Demo mode holds its engine connections instead of dropping them every few seconds: it was checking the filesystem for sockets no demo has, so the connected engines flapped and the theme flickered between them
+- On Windows, checking whether an engine is listening no longer opens its named pipe — the check now reads the pipe list instead, so a busy engine is not reported as missing and Docker Desktop's current pipe is picked over the legacy one as intended
+- A connection whose engine cannot run on this operating system no longer contacts the engine anyway, and keeps the precise reason instead of replacing it with "API is not reachable"
 - A container the engine reports with no name at all is no longer listed and grouped as "undefined"
 - Container ports, container statistics and a container's health block are now typed the way both engines really answer them, so nothing reads a field that is not there
 - A container's published ports are read from the shape both engines actually send, so a mapped port is no longer reported as unpublished
 - A container that exposes a port without binding it, and one the engine reports without a configuration block, no longer break the list they appear in
-- On Windows, checking whether an engine is listening no longer opens its named pipe — the check now reads the pipe list instead, so a busy engine is not reported as missing and Docker Desktop's current pipe is picked over the legacy one as intended
-- A connection whose engine cannot run on this operating system no longer contacts the engine anyway, and keeps the precise reason instead of replacing it with "API is not reachable"
-- A Run's plan-ready list and tool-approval prompts now scroll within a fixed height, so a large plan or a burst of approvals no longer pushes the task graph off-screen
-- A message typed while the assistant is still answering now redirects that answer immediately, instead of waiting for it to finish and replying separately
-- The AI provider key is used only inside the app's native layer on the Tauri build, so it is never handed to the web view
-- The assistant's web search connects only to the exact public address it already checked, closing a DNS-rebinding gap (verified end-to-end in the real WebKitGTK runtime)
-- The assistant asks again before repeating a previously approved action once it has read a file or tool output, so instructions hidden in that content cannot reuse your earlier approval
-- Finished, failed and awaiting-approval stages in a Run now show their status colour instead of rendering plain
-- Commands the assistant runs in a project folder are held to the same blocked-command list as everywhere else
-- Older conversations reopen cleanly against the rewritten assistant instead of failing on the first reply
-- Stopping the assistant while it is revising an interrupted answer now reliably ends the turn instead of occasionally continuing it
-- A provider stream error now surfaces as an error instead of being reported as a completed answer
-- When the assistant asks for several tool approvals at once, they resolve together and all approved tools run
-- A window closing while the assistant is responding can no longer crash it
-- The assistant no longer gets stuck refusing new messages if a tool approval is interrupted by an error
-- Stopping the assistant while a tool approval is pending — even as it is being saved — now ends the turn cleanly and never runs the tool
-- An answer that ends in a stream error or is cut off partway is reported as failed or stopped, never as a completed answer
-- Stopping the assistant while a tool is running and an approval is pending no longer wedges your next message on a leftover approval
-- IDs are generated in a way that works in every desktop build, not just Chromium-based ones
-- Fixed detecting the image-signing tool's version, which used to log a spurious error
-- Docker networks now report their subnets, so subnet-aware views work just as they do on Podman
-- Slow container stops and removals no longer look like failures while the engine is still working
-- A brief connection hiccup no longer flips the engine into "reconnecting"
-- Importing a stack no longer fails on a container that is still settling from a previous state
-- The internal pod infrastructure containers are hidden from the containers list
-- Re-importing a stack in a different mode tears the old one down first and keeps named volumes
-- Stack teardown removes the pod cleanly instead of one member at a time, which could crash the engine
-- Stack teardown now also removes the networks it created
-- Container groups sort ahead of standalone containers across every engine
-- Linux AppImage no longer crashes at startup with EGL_BAD_PARAMETER on rolling-release distros
-- Resource list headers and actions now follow one consistent layout
-- The connection menu shows a solid green icon when connected
-- An SSH config entry that lists several aliases on one line (`Host web1 web2`) now offers each alias, instead of unusable entries with garbled names
 
 ## [6.1.0] - 2026-11-17
 

@@ -230,7 +230,7 @@ flowchart TB
 ## What one unanswered ping is allowed to mean
 
 A failed `api` verdict is expensive: the caller stops the API, and an SSH transport's `stopApi` closes the ssh client
-**every** engine command travels on — the assistant's session included. So the ping is retried before it is believed
+**every** engine command travels on — an MCP call included. So the ping is retried before it is believed
 (`runtimes/api-ping.ts`), with a budget that reflects what it crosses: a local socket answers in milliseconds, while a
 remote engine inside a machine is two SSH hops and a unix socket (measured ~1.1s idle, and the same under load).
 

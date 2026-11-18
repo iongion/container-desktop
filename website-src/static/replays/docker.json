@@ -42,10 +42,6 @@
     {
       "screenshot": "../img/docker/ConnectionManager.png",
       "title": "Local, SSH, WSL & LIMA"
-    },
-    {
-      "screenshot": "../img/docker/AIAssistant.png",
-      "title": "Built-in AI assistant"
     }
   ]
 }

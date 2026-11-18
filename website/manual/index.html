@@ -80,7 +80,7 @@
     <div class="eyebrow">Handbook · bring your own engine</div>
     <h1>The Manual</h1>
     <p>Set up Podman, Docker and Apple™ Container on any platform — local, virtualized, or WSL. Every command, every engine, copy-paste ready.</p>
-    <div class="osjump"><a href="#linux"><i class="fab fa-linux"></i> Linux</a><a href="#macos"><i class="fab fa-apple"></i> macOS</a><a href="#windows"><i class="fab fa-windows"></i> Windows</a><a href="#assistant"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</a><a href="#using"><i class="fas fa-book-open"></i> Using the app</a><a href="#shortcuts"><i class="fas fa-keyboard"></i> Keyboard shortcuts</a>
+    <div class="osjump"><a href="#linux"><i class="fab fa-linux"></i> Linux</a><a href="#macos"><i class="fab fa-apple"></i> macOS</a><a href="#windows"><i class="fab fa-windows"></i> Windows</a><a href="#mcp"><i class="fas fa-plug"></i> AI clients (MCP)</a><a href="#using"><i class="fas fa-book-open"></i> Using the app</a><a href="#shortcuts"><i class="fas fa-keyboard"></i> Keyboard shortcuts</a>
     </div>
   </div>
 
@@ -89,7 +89,7 @@
       <div class="grp"><i class="fab fa-linux"></i> Linux</div><a href="#linux-req">Requirements</a><a href="#linux-quick">1 · Quick guide</a><a href="#linux-podman-docker">2 · Podman as Docker</a><a href="#linux-dd-alt">3 · Docker Desktop alternative</a><a href="#linux-share">4 · Sharing connection</a>
       <div class="grp"><i class="fab fa-apple"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-apple-container">5 · Apple™ Container</a><a href="#macos-share">6 · Sharing connection</a>
       <div class="grp"><i class="fab fa-windows"></i> Windows</div><a href="#windows-req">Requirements</a><a href="#windows-quick">1 · Quick guide</a><a href="#windows-best">2 · Best experience</a><a href="#windows-podman-docker">3 · Podman as Docker</a><a href="#windows-dd-alt">4 · Docker Desktop alternative</a><a href="#windows-podman-custom">5 · Podman custom install</a><a href="#windows-share">6 · Sharing connection</a><a href="#windows-tips">7 · Tips &amp; tricks</a>
-      <div class="grp"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</div><a href="#assistant-what">What it is</a><a href="#assistant-model">Choose your model</a><a href="#assistant-do">What it can do</a><a href="#assistant-runs">Where it runs</a><a href="#assistant-plugins">Plugins &amp; commands</a><a href="#assistant-privacy">Privacy &amp; permissions</a>
+      <div class="grp"><i class="fas fa-plug"></i> AI clients (MCP)</div><a href="#mcp-what">What it is</a><a href="#mcp-enable">Turn it on</a><a href="#mcp-http">Connect a client</a><a href="#mcp-stdio">Clients that only speak stdio</a><a href="#mcp-access">What clients may do</a><a href="#mcp-assistant">After the old assistant</a>
       <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-build">Building images</a>
       <div class="grp"><i class="fas fa-keyboard"></i> Keyboard shortcuts</div><a href="#shortcuts-find">Find</a><a href="#shortcuts-all">All shortcuts</a>
     </aside>
@@ -413,66 +413,74 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <p>Although possible, <strong>it is not required</strong> to install the Container Desktop application inside WSL.</p>
 </section>
 
-      <div class="guide-os" id="assistant"><i class="fas fa-wand-magic-sparkles"></i><h2>AI Assistant</h2></div>
-      <section class="guide-sec" id="assistant-what">
+      <div class="guide-os" id="mcp"><i class="fas fa-plug"></i><h2>AI clients (MCP)</h2></div>
+      <section class="guide-sec" id="mcp-what">
 <h3>What it is</h3>
-<p>Container Desktop has a built-in <strong>AI assistant</strong> that understands your container setup and can inspect and operate it for you — in plain language. Ask <em>&quot;why did my web container exit?&quot;</em> or <em>&quot;show me the running containers&quot;</em> and it investigates and acts, right inside the app.</p>
-<p>Open it from the <strong>AI menu</strong> in the header (the chat button). It is <strong>local-first</strong>: point it at a model running on your own machine and nothing leaves the device.</p>
+<p>Container Desktop includes an <strong>MCP server</strong>, so the AI tool you already use (Claude Code, Cursor, VS Code, or any client that speaks the <a href="https://modelcontextprotocol.io">Model Context Protocol</a>) can list, inspect and, if you allow it, manage your containers through the app, across every engine connection you have.</p>
+<p>It listens on <strong>this computer only</strong> (<code>127.0.0.1</code>), answers only requests carrying its token, and is <strong>off until you turn it on</strong>.</p>
 </section>
-<section class="guide-sec" id="assistant-model">
-<h3>Choose your model</h3>
-<p>Pick your inference <strong>source → provider → model</strong> from the selector in the message box. Two kinds of source are supported:</p>
+<section class="guide-sec" id="mcp-enable">
+<h3>Turn it on</h3>
+<p>Open <strong>Settings → MCP server</strong> and switch it <strong>On</strong>. The panel then shows:</p>
 <ul>
-<li><strong>Local (no API key, runs on your machine):</strong> <strong>LM Studio</strong> and <strong>llama.cpp</strong>. Start the server, and the assistant lists its models — your prompts and container data never leave the device.</li>
-<li><strong>Cloud (needs an API key):</strong> <strong>OpenRouter</strong>, <strong>Anthropic</strong>, <strong>OpenAI</strong>, <strong>DeepSeek</strong>, <strong>GLM</strong> and <strong>MiniMax</strong>. Add a key in <strong>Settings → AI</strong>; OpenRouter exposes many vendors' models behind one key.</li>
+<li>the <strong>endpoint</strong>, <code>http://127.0.0.1:17627/mcp</code> unless you change the port;</li>
+<li>the <strong>token</strong> clients must send, with a copy button;</li>
+<li><strong>Regenerate token</strong> in the menu beside it: every client still holding the old token stops working until you give it the new one.</li>
 </ul>
-<div class="note info">
-<p>Keys are stored in your operating system's <strong>keychain</strong> (encrypted at rest) and are only ever read in the background process — the interface never shows them back. A cloud model is only reached once you've added its key.</p>
-</div>
+<p>The token is kept in your operating system's keychain (macOS Keychain, Windows Credential Manager, or the Secret Service on Linux). A machine without one cannot run the server yet; the status line says so.</p>
 </section>
-<section class="guide-sec" id="assistant-do">
-<h3>What it can do</h3>
-<p>The assistant doesn't just chat — it calls <strong>typed tools</strong> and renders the results as rich <strong>cards</strong> instead of walls of text:</p>
-<ul>
-<li><strong>Look:</strong> list and inspect <strong>containers, images, networks and volumes</strong>, read a container's <strong>logs</strong>, and check its <strong>stats</strong> — shown as sortable tables, a log viewer, and state badges. These read-only actions run freely.</li>
-<li><strong>Act:</strong> <strong>start / stop / restart / pause / remove</strong> a container, <strong>pull</strong> or <strong>remove</strong> an image, <strong>remove</strong> a network or volume. Every state-changing action <strong>asks for your approval first</strong> (see below).</li>
-<li><strong>Files:</strong> read, write and edit files, list a directory, search text, and run commands in the <strong>workspace folder</strong> you pick for the session.</li>
-<li><strong>Escape hatch:</strong> for anything the typed tools don't cover, it can run a host command in a <strong>sandbox</strong> (no shell, scrubbed environment, output capped) — also gated by your approval.</li>
-</ul>
+<section class="guide-sec" id="mcp-http">
+<h3>Connect a client</h3>
+<p>Clients that speak HTTP connect straight to the endpoint with the token as a bearer header. Claude Code, for example:</p>
+<pre><code class="language-bash">claude mcp add --transport http container-desktop http://127.0.0.1:17627/mcp \
+  --header &quot;Authorization: Bearer &lt;token&gt;&quot;
+</code></pre>
+<p>For a client configured through JSON, the same in its own format:</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;container-desktop&quot;: {
+      &quot;type&quot;: &quot;http&quot;,
+      &quot;url&quot;: &quot;http://127.0.0.1:17627/mcp&quot;,
+      &quot;headers&quot;: { &quot;Authorization&quot;: &quot;Bearer &lt;token&gt;&quot; }
+    }
+  }
+}
+</code></pre>
 </section>
-<section class="guide-sec" id="assistant-runs">
-<h3>Where it runs</h3>
-<p>The assistant runs <strong>inside a container</strong> on one of your engine connections, not in the app. You start a session by picking that connection and a <strong>workspace folder</strong> from your machine, which is mounted into the container as the one folder its file and command tools can reach.</p>
-<ul>
-<li><strong>Your key never enters it.</strong> Inference goes through a second, separate container that holds the provider credential; the agent container has no key, no access to your keychain and no route to your provider except through that proxy.</li>
-<li><strong>Sign in instead of pasting a key.</strong> Where the provider offers it, <strong>Settings → AI</strong> runs that provider's own sign-in — in a throwaway container, because the sign-in needs one — and stores what it returns in your OS keychain. A sign-in that expires is <strong>renewed for you</strong>, before it lapses and without interrupting the conversation.</li>
-<li><strong>Network access is yours to give.</strong> Leave it on so package managers work, or turn it off for a session and only the inference proxy stays reachable.</li>
-<li><strong>The container is disposable, the folder is not.</strong> Stopping a session removes the pair; your workspace is a normal folder on your machine and whatever the assistant wrote is simply there. <strong>Workspace changes</strong> shows you exactly what it touched, as a Git status and diff.</li>
-<li><strong>Change the model mid-conversation</strong> from the chip in the message box: the session, the containers and everything installed in them survive it, and a reasoning model's <strong>thinking level</strong> is offered when its provider says it has one.</li>
-<li><strong>Give the assistant a second container to work in</strong>, if you want it acting somewhere other than its own: on the start form, choose an <strong>existing container</strong> on that connection — picked from a list of what is actually running, with its image and id — or a <strong>disposable one</strong> created from an image and removed when the session ends. Every file write and command there asks first.</li>
-</ul>
+<section class="guide-sec" id="mcp-stdio">
+<h3>Clients that only speak stdio</h3>
+<p>Some clients only start a program and talk to it over its standard input and output. Point them at the Container Desktop program with <code>--mcp-stdio</code>: it relays to the running app, finds the port in your settings and the token in the keychain, and opens no window.</p>
+<pre><code class="language-bash">claude mcp add container-desktop -- &quot;&lt;path to the Container Desktop program&gt;&quot; --mcp-stdio
+</code></pre>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;container-desktop&quot;: {
+      &quot;command&quot;: &quot;&lt;path to the Container Desktop program&gt;&quot;,
+      &quot;args&quot;: [&quot;--mcp-stdio&quot;]
+    }
+  }
+}
+</code></pre>
+<p>The app must be running with the server on: otherwise every request gets an error saying so.</p>
 </section>
-<section class="guide-sec" id="assistant-plugins">
-<h3>Plugins &amp; commands</h3>
-<p>The assistant is a GUI for the <a href="https://github.com/earendil-works/pi">pi</a> coding agent, so pi's own ecosystem works here.</p>
+<section class="guide-sec" id="mcp-access">
+<h3>What clients may do</h3>
+<p><strong>Access</strong> in the panel decides it, and applies to the very next request:</p>
 <ul>
-<li><strong>Plugins</strong> install from <strong>npm or a Git URL</strong> on the <strong>Plugins</strong> screen — reachable from the <strong>AI menu</strong> — and stay installed across sessions. What a plugin contributes (extra commands, skills and prompts) appears in the message box's slash-command palette, and anything it asks you is shown as a native dialog rather than terminal text.</li>
-<li><strong>Slash commands</strong> cover the session itself: start a new one, compact the context, review project trust, look something up in the built-in troubleshooting notes, or save the whole conversation as a single standalone <strong>HTML file</strong>. They are pi's commands under pi's names, so <a href="https://github.com/earendil-works/pi">pi's own documentation</a> applies here unchanged.</li>
-<li><strong>Skills</strong> are reusable prompt-backed workflows you invoke by name; the app checks a skill's fingerprint and your project's trust before it runs one.</li>
+<li><strong>Read-only</strong> (the default): list connections, list and inspect containers, images, networks and volumes, read container logs and stats. Nothing changes.</li>
+<li><strong>Allow changes</strong>: also start, stop, restart, pause, resume and remove containers, remove images, networks and volumes, and pull images.</li>
 </ul>
+<p>In read-only the changing tools are not even offered to the client, and a call to one is refused with an explanation. Anything a client changes shows in the app at once, and secrets are redacted from everything the server returns.</p>
 </section>
-<section class="guide-sec" id="assistant-privacy">
-<h3>Privacy &amp; permissions</h3>
-<p>You decide what the assistant is allowed to run. The mode dropdown in the message box has three settings:</p>
+<section class="guide-sec" id="mcp-assistant">
+<h3>After the old assistant</h3>
+<p>Versions 6.0 and 6.1 had a built-in AI assistant; it is gone, and the MCP server takes its place. What it left behind stays where it was, untouched, for you to keep or remove:</p>
 <ul>
-<li><strong>Always ask</strong> — every state-changing action surfaces an <strong>Allow / Reject</strong> card; nothing is remembered.</li>
-<li><strong>Ask and remember</strong> — approve (or decline) once, and that exact action is remembered so it won't ask again.</li>
-<li><strong>Always allow</strong> — no prompts. Only choose this on a machine you fully trust.</li>
+<li>the <code>ai</code> block in <code>user-settings.json</code>, and <code>ai-permissions.json</code> and the conversations folder, in the app's data folder;</li>
+<li><code>agent/</code> and <code>keychain-fallback.json</code> in the same folder, which can hold provider keys: delete them if you no longer need those keys;</li>
+<li>provider keys in your OS keychain, under the service <code>com.iongion.container-desktop.keychain</code>, removable with your keychain's own tool;</li>
+<li>the assistant's images, containers and plugin volume on your engines, removable from the app like any other.</li>
 </ul>
-<p>A reject <strong>never</strong> runs. Review or revoke everything you've remembered — and the web-search switch — under <strong>Settings → AI permissions</strong>.</p>
-<div class="note info">
-<p><strong>Local-first and private by design.</strong> Secrets (API keys, tokens) are <strong>redacted</strong> out of anything the model sees, and out of command output before it's read back. With a local model, your prompts and container details stay on your machine; a cloud model is only contacted after you've explicitly added its key.</p>
-</div>
 </section>
 
       <div class="guide-os" id="using"><i class="fas fa-book-open"></i><h2>Using the app</h2></div>

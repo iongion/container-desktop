@@ -140,13 +140,13 @@
   
   <div class="row alt">
     <div class="copy">
-      <span class="eyebrow">AI assistant</span>
-      <h3>An assistant that drives your engines</h3>
-      <p>Ask in plain language and a built-in, local-first AI inspects and operates your containers — it calls typed tools and renders the results as rich cards, and asks before anything that changes state. It runs in a disposable container on your own engine, with only the workspace folder you pick, and its provider key stays in a separate proxy container. Bring your own model: LM Studio or llama.cpp on your machine, or OpenRouter, Anthropic and more in the cloud.</p>
-      <ul><li>Local-first — your data stays on your machine</li><li>Runs in a container — your workspace, your engine, no key inside</li><li>Your model, your keys (stored in the OS keychain)</li></ul>
+      <span class="eyebrow">AI clients (MCP)</span>
+      <h3>Your AI tool, working with your engines</h3>
+      <p>Turn on the built-in MCP server and Claude Code, Cursor, VS Code or any Model Context Protocol client can list, inspect and — only if you allow it — manage your containers, images, networks and volumes across every connection. It answers this computer only, needs its token, and is off until you switch it on.</p>
+      <ul><li>Read-only by default; changes only when you allow them</li><li>Loopback only, token kept in the OS keychain</li><li>HTTP for most clients, stdio for the rest</li></ul>
       
     </div>
-    <div class="shot"><img src="/container-desktop/img/podman/AIAssistant.png" alt="AI assistant"></div>
+    <div class="shot"><img src="/container-desktop/img/podman/003-ContainerInspect.png" alt="Container inspection, as an MCP client sees it"></div>
   </div>
   
   <div class="row">

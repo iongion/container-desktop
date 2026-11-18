@@ -45,8 +45,7 @@ renders the results.
 ## C4 L2 — Containers (runnable pieces)
 
 The app is a TypeScript renderer running in the OS's own **webview**, over a
-**native backend** — Rust ([Tauri](https://tauri.app)) or Go
-([Wails](https://wails.io)). Both ship; see [`CLAUDE.md`](../../CLAUDE.md) for the
+**native backend** in Rust ([Tauri](https://tauri.app)); see [`CLAUDE.md`](../../CLAUDE.md) for the
 build model. A TypeScript build CLI lives in `support/cli/` (not shown — it
 builds, it doesn't run at app runtime).
 
@@ -67,10 +66,10 @@ flowchart TB
       direction TB
       web["React UI<br/>(web-app/)<br/>screens, stores, routing"]:::container
       svc["Engine service + brokers<br/>(platform/*.ts + container-client/)<br/>connection, /events, resource lists"]:::container
-      bridge["Host bridge<br/>(platform/{tauri,wails}/bridge.ts)<br/>installs Command · FS · Platform · Path ·<br/>MessageBus · ResourceBus · AI"]:::container
+      bridge["Host bridge<br/>(platform/tauri/bridge.ts)<br/>installs Command · FS · Platform · Path ·<br/>MessageBus · ResourceBus"]:::container
     end
 
-    native["Native backend<br/>(src-tauri/ Rust · src-wails/ Go)<br/>window &amp; tray, terminal, dialogs, keychain,<br/>process spawn, engine HTTP, SSH/WSL bridges"]:::container
+    native["Native backend<br/>(src-tauri/ Rust)<br/>window &amp; tray, terminal, dialogs, keychain,<br/>process spawn, engine HTTP, SSH/WSL bridges,<br/>MCP listener"]:::container
   end
 
   engines[(Container engine sockets:<br/>Podman / Docker / Apple Container · local · VM ·<br/>WSL · remote SSH)]:::external
@@ -78,7 +77,7 @@ flowchart TB
   dev -->|interacts| web
   web -->|"in-realm calls (MessageBus / ResourceBus)"| svc
   svc -->|"window.Command / FS / Platform / Path"| bridge
-  bridge -->|"invoke (Tauri IPC / Wails Call.ByName)"| native
+  bridge -->|"invoke (Tauri IPC)"| native
   native -->|"spawns CLIs, HTTP-over-socket, SSH;<br/>bridges via engine 'system dial-stdio'"| engines
 
   classDef person fill:#08427b,color:#fff,stroke:#052e56;
@@ -97,16 +96,14 @@ flowchart TB
     no process to cross, the brokers and their clients talk over an in-memory bus
     ([`inRealmBus.ts`](../../src/packages/platform/src/inRealmBus.ts)) that the
     bridge exposes as `window.MessageBus` / `window.ResourceBus`.
-  - **Host bridge** — [`platform/tauri/bridge.ts`](../../src/packages/platform/src/tauri/bridge.ts)
-    / [`platform/wails/bridge.ts`](../../src/packages/platform/src/wails/bridge.ts).
+  - **Host bridge** — [`platform/tauri/bridge.ts`](../../src/packages/platform/src/tauri/bridge.ts).
     Installs the `window.*` globals the shared code reads ambiently — `Command`
     (process spawn, `ProxyRequest` = HTTP over a unix socket / named pipe,
     `StartSSHConnection`), `FS`, `Platform`, `Path`, `MessageBus`, the receive
-    buses, and `AI` — each backed by an `invoke` into native code. It sets
+    buses — each backed by an `invoke` into native code. It sets
     `window.Preloaded` **last**, which is the readiness flag the renderer blocks
     on (`Native.ts:waitForPreload`).
-- **Native backend** — `src-tauri/` (Rust) and `src-wails/` (Go), at feature
-  parity. Owns the window and native tray menu, terminal launch, file dialogs,
+- **Native backend** — `src-tauri/` (Rust). Owns the window and native tray menu, terminal launch, file dialogs,
   the keychain, process spawn/streaming, the engine HTTP client, and the
   remote-connection data plane. It does the privileged I/O the webview cannot.
 - **Socket bridge (native)** — for hosts whose engine socket isn't locally
@@ -116,7 +113,7 @@ flowchart TB
   (no SSH server needed inside it) or over `ssh` for a remote host — shuttling
   raw bytes both ways. Linux/macOS remote SSH can instead use a long-lived
   `ssh -NL` port forward. Both kinds live in
-  [`bridge.rs`](../../src-tauri/src/bridge.rs) / [`bridge_service.go`](../../src-wails/bridge_service.go),
+  [`bridge.rs`](../../src-tauri/src/bridge.rs),
   keyed and cached so a webview reload never tears a live connection down. See
   [connection-startup.md](connection-startup.md).
 - **External engines** — Podman/Docker REST sockets, plus Apple Container's
@@ -126,7 +123,7 @@ flowchart TB
 ### Build/runtime note (don't relearn the hard way)
 
 `yarn build` emits **one** bundle, the ESM renderer — the native side is compiled
-by `cargo` or `go`, not by vite. Production needs `ENVIRONMENT=production`. The
+by `cargo`, not by vite. Production needs `ENVIRONMENT=production`. The
 renderer's browser baseline is the real webview floor (`safari 17` + `chrome 120`),
 not a bundled browser version. Full details live in
 [`CLAUDE.md`](../../CLAUDE.md) → *Build / runtime model*; they are not repeated
@@ -137,13 +134,13 @@ here.
 | Piece | Path |
 | --- | --- |
 | Tauri backend (Rust) | [`src-tauri/src/`](../../src-tauri/src/) |
-| Wails backend (Go) | [`src-wails/`](../../src-wails/) |
-| Host bridges | [`tauri/bridge.ts`](../../src/packages/platform/src/tauri/bridge.ts) · [`wails/bridge.ts`](../../src/packages/platform/src/wails/bridge.ts) |
-| Host ports (OS / FS / path) | [`tauri/host.ts`](../../src/packages/platform/src/tauri/host.ts) · [`wails/host.ts`](../../src/packages/platform/src/wails/host.ts) |
+| Host bridge | [`tauri/bridge.ts`](../../src/packages/platform/src/tauri/bridge.ts) |
+| Host ports (OS / FS / path) | [`tauri/host.ts`](../../src/packages/platform/src/tauri/host.ts) |
 | Command facade | [`tauri/command.ts`](../../src/packages/platform/src/tauri/command.ts) + [`tauri/exec/`](../../src/packages/platform/src/tauri/exec/) |
 | In-realm bus | [`inRealmBus.ts`](../../src/packages/platform/src/inRealmBus.ts) |
 | Engine service | [`engineDataService.ts`](../../src/packages/platform/src/engineDataService.ts) |
 | Engine logic (backend) | [`src/packages/container-client/`](../../src/packages/container-client/) |
 | React renderer (frontend) | [`src/web-app/`](../../src/web-app/) |
 | Platform-port naming | [`platform-ports.md`](platform-ports.md) |
-| Socket bridge / tunnels | [`bridge.rs`](../../src-tauri/src/bridge.rs) · [`bridge_service.go`](../../src-wails/bridge_service.go) |
+| Socket bridge / tunnels | [`bridge.rs`](../../src-tauri/src/bridge.rs) |
+| MCP server | [`mcp-server.md`](mcp-server.md) |

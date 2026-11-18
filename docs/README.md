@@ -22,9 +22,9 @@ The app has two pillars, and the docs are organized around them:
 | [architecture/engine-matrix.md](architecture/engine-matrix.md)           | The engine × host × transport × scope support matrix and how a connection resolves.                      |
 | [architecture/frontend.md](architecture/frontend.md)                     | React renderer — C4 **Components** (L3): stores, queries, screens, the Native bridge.                    |
 | [architecture/overview.md](architecture/overview.md)                     | The whole system at a glance — C4 **Context** (L1) + **Containers** (L2). Start here.                    |
-| [architecture/platform-ports.md](architecture/platform-ports.md)         | Tauri/Wails platform-port naming, aligned concepts, and intentional runtime-specific modules.       |
+| [architecture/platform-ports.md](architecture/platform-ports.md)         | Platform-port naming over the Tauri shell, and its intentionally runtime-specific modules.               |
 | [architecture/system-tray.md](architecture/system-tray.md)               | System tray — a native OS menu projected from the engine service, so it works with the app window closed. |
-| [architecture/ai-subsystem.md](architecture/ai-subsystem.md)             | AI layer — C4 **Components** (L3): the **containerized pi coding agent** and its two containers, the **WebSocket bridge protocol**, the **credential gateway**, **container tools over `engine_op`**, the **permission model** (3 modes · two boundaries · allow/reject record), **extension UI** (native dialogs · generative-UI cards · ANSI surfaces), plugin management, providers, and what the broker still owns. |
+| [architecture/mcp-server.md](architecture/mcp-server.md)                 | The MCP server for AI clients: the loopback listener, request rules, token, modes and tools.             |
 
 ## How to read the diagrams
 

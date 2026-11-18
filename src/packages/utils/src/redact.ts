@@ -8,15 +8,6 @@ export const REDACTED = "[REDACTED]";
 const SECRET_KEY_RE =
   /(pass(?:word|phrase|wd)?|secret|token|api[-_ ]?key|access[-_ ]?key|client[-_ ]?secret|authorization|credential|bearer|private[-_ ]?key)/i;
 
-const PUBLIC_NUMERIC_METRIC_KEYS = new Set([
-  "estimatedtokens",
-  "inputtokens",
-  "outputtokens",
-  "maxinputtokens",
-  "reservedoutputtokens",
-  "maxtokens",
-]);
-
 // Ordered text replacements. Each runs once over the whole string.
 const TEXT_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
   // user:password@host embedded in a URL → keep the user, redact the password.
@@ -63,8 +54,7 @@ function redactValue(value: unknown): unknown {
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value)) {
-      const publicMetric = typeof val === "number" && PUBLIC_NUMERIC_METRIC_KEYS.has(key.toLowerCase());
-      out[key] = SECRET_KEY_RE.test(key) && val != null && !publicMetric ? REDACTED : redactValue(val);
+      out[key] = SECRET_KEY_RE.test(key) && val != null ? REDACTED : redactValue(val);
     }
     return out;
   }

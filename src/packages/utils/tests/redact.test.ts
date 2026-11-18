@@ -78,16 +78,6 @@ describe("redactPayload", () => {
     expect(out).toEqual({ port: 8080, enabled: true, model: "m" });
   });
 
-  it("preserves declared token-count metrics without exempting arbitrary token fields", () => {
-    const out = redactPayload({ estimatedTokens: 123, inputTokens: 45, outputTokens: 6, token: 789 });
-    expect(out).toEqual({
-      estimatedTokens: 123,
-      inputTokens: 45,
-      outputTokens: 6,
-      token: "[REDACTED]",
-    });
-  });
-
   it("does not mutate the input", () => {
     const input = { password: "p", nested: { token: "t" } };
     const out = redactPayload(input);

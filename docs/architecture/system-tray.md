@@ -1,6 +1,6 @@
 # System tray — native menu (C4 L2/L3)
 
-The tray is a **native OS menu** — a Rust `TrayIcon` under Tauri, a Go `SystemTray` under Wails — so it keeps
+The tray is a **native OS menu** — a Rust `TrayIcon` — so it keeps
 working whether or not the main application window is open. It is not a second copy of the app: the
 `EngineDataService` is the single engine authority — it owns the connection, the data, and command execution
 (see [backend.md](backend.md)) — and the menu is just a projection of that one source. There is **no tray
@@ -122,8 +122,8 @@ external shell bridge, and no separate tray window.
 | Piece                                   | Path                                                                                                                                                          |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Menu builder (pure)                     | [`platform/trayMenu.ts`](../../src/packages/platform/src/trayMenu.ts) · [`trayMenu.test.ts`](../../src/packages/platform/tests/trayMenu.test.ts)               |
-| Tray controllers                        | [`tauri/trayController.ts`](../../src/packages/platform/src/tauri/trayController.ts) · [`wails/trayController.ts`](../../src/packages/platform/src/wails/trayController.ts) |
-| Native tray widgets                     | [`src-tauri/src/tray.rs`](../../src-tauri/src/tray.rs) · [`src-wails/tray_service.go`](../../src-wails/tray_service.go)                                        |
-| Receive bridge (follow signal)          | [`tauri/trayBus.ts`](../../src/packages/platform/src/tauri/trayBus.ts) · [`wails/trayBus.ts`](../../src/packages/platform/src/wails/trayBus.ts)                |
+| Tray controllers                        | [`tauri/trayController.ts`](../../src/packages/platform/src/tauri/trayController.ts) |
+| Native tray widgets                     | [`src-tauri/src/tray.rs`](../../src-tauri/src/tray.rs) |
+| Receive bridge (follow signal)          | [`tauri/trayBus.ts`](../../src/packages/platform/src/tauri/trayBus.ts) |
 | Runtime data / actions / machines       | [`platform/engineDataService.ts`](../../src/packages/platform/src/engineDataService.ts)                                                                       |
 | Follow-the-switch in the app            | [`src/web-app/stores/appStore.ts`](../../src/web-app/stores/appStore.ts)                                                                                       |
