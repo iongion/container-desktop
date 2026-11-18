@@ -68,7 +68,9 @@ if (wrongApp) {
   describe("swarm live: services / stacks / secrets / configs (single-node manager)", () => {
     let observed;
 
-    before(async () => {
+    before(async function () {
+      const absent = await targetReason(target, DOCKER);
+      if (absent) return skipSuite(this, `${absent} (support/swarm-sandbox.sh up)`);
       observed = await browser.execute(
         async (t, engine, host) => window.__cdLiveProbe.swarmManager(t, engine, host),
         probeTarget,

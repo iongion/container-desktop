@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The swarm smoke spec's manager half skips when the sandbox is down, as its lifecycle half does, instead of failing
 - A WebDriver run no longer reads or writes your installed app's webview storage (localStorage, HTTP cache). With `CONTAINER_DESKTOP_USER_DATA_DIR` set, the webview keeps its own under that directory; a normal launch is unchanged
 - The mock inventory WebDriver spec runs in every mock scenario, the default one included, and fails on an unknown scenario instead of silently skipping
 - The WebDriver tests are two suites again, told apart by what a failure is allowed to mean: `webdriver/specs/*.e2e.js` runs on the mock app only and is never gated, while `webdriver/smoke/*.smoke.js` is real integration with its own entry point (`yarn test:smoke:tauri`) — the two used to share one glob, so the real-integration specs ran against the mock app by default
