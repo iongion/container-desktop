@@ -72,8 +72,11 @@ const BOOT_CONTROL_BUTTONS = WINDOW_CONTROLS.map((control) => {
 // Boot CSS — paints the splash + a faithful copy of the header bar (logo left, controls right) before the
 // bundle loads. Colors are the app's default `unified` dark theme (tokens.css --app-bg / --app-chrome) so
 // there is no color jump when React swaps in. The logo + control classes are sized/scoped HERE because the
-// real AppHeader.css / AppHeaderLogo.css are not loaded yet at boot.
-export const BOOT_CHROME_STYLE = `/* boot splash content area (--app-bg unified dark) — the whole splash is a drag handle while booting */
+// real AppHeader.css / AppHeaderLogo.css are not loaded yet at boot, which is also why the engine tagline is
+// scoped to `unified` here (the SVG ships all three). The whole splash and the 50px header bar are drag handles;
+// the window controls are `no-drag` so they stay clickable inside them. macOS uses its native traffic lights,
+// so the custom controls are hidden there and the brand recenters.
+export const BOOT_CHROME_STYLE = `
     #app-splash {
       position: fixed; inset: 0; z-index: 2147483646;
       display: flex; align-items: center; justify-content: center;
@@ -88,7 +91,6 @@ export const BOOT_CHROME_STYLE = `/* boot splash content area (--app-bg unified 
     }
     @keyframes app-splash-spin { to { transform: rotate(360deg); } }
 
-    /* boot header bar — mirrors <AppHeader>: 50px tall, --app-chrome background, drag region */
     #app-boot-header {
       position: fixed; top: 0; left: 0; right: 0; height: 50px; z-index: 2147483647;
       display: flex; align-items: center;
@@ -100,12 +102,9 @@ export const BOOT_CHROME_STYLE = `/* boot splash content area (--app-bg unified 
       width: 250px; padding-left: 6px; box-sizing: border-box;
     }
     #app-boot-brand .AppHeaderLogo { display: block; width: 100%; height: auto; overflow: visible; }
-    /* AppHeaderLogo.css is not loaded at boot, so scope the engine tagline to unified here (the SVG ships all three) */
     #app-boot-brand .AppHeaderLogoTagline { display: none; }
     #app-boot-brand .AppHeaderLogoTagline--unified { display: inline; }
 
-    /* window controls — same set <AppHeader> draws on Linux/Windows; macOS uses native traffic lights, so the
-       custom set is hidden and the brand recenters there. no-drag so they stay clickable in the drag region. */
     #app-boot-controls {
       margin-left: auto; display: flex; align-items: center; height: 100%; padding-right: 4px;
       -webkit-app-region: no-drag;
@@ -138,6 +137,8 @@ export const BOOT_CHROME_BODY = `
 // Boot script — keeps the frameless window controllable before <AppHeader> mounts. Reaches the SAME MessageBus
 // channels the React header uses (the host bridge installs window.MessageBus first). macOS gets the
 // native traffic lights, so the custom set is hidden there. React removes #root — and this — once it mounts.
+// Both catches stay empty on purpose: boot chrome must never break startup, and a click before the bridge is up
+// is dropped because the React header takes over.
 export const BOOT_CHROME_SCRIPT = `(function () {
       try {
         if ((navigator.userAgent || "").indexOf("Mac") !== -1) {
@@ -155,8 +156,8 @@ export const BOOT_CHROME_SCRIPT = `(function () {
               if (window.MessageBus && typeof window.MessageBus.send === "function") {
                 window.MessageBus.send(action);
               }
-            } catch (err) { /* bridge not ready — ignore, the React header will take over */ }
+            } catch (err) {}
           });
         }
-      } catch (err) { /* never let boot chrome break startup */ }
+      } catch (err) {}
     })();`;

@@ -382,9 +382,6 @@ body.bp6-dark .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] 
 
 .AppErrorBoundaryOverlay {
   position: fixed;
-  /* Never over the titlebar. The window is built with decorations off, so .AppHeader IS the window chrome — it
-     carries close/minimize/maximize and the whole drag region. An overlay on `inset: 0` covered it, and a crash
-     then left a window that could not be moved, minimised or closed: the error screen was worse than the error. */
   inset: var(--app-header-height, 50px) 0 0 0;
   z-index: 10000;
   display: flex;
@@ -450,8 +447,6 @@ body.bp6-dark .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] 
   border-radius: 15px;
 }
 
-/* Global shortcuts dialog (Blueprint HotkeysDialog) follows the app chrome — neutral surfaces + accent-free
-   keys — rather than any feature palette, so it matches the current theme on every engine. */
 .bp6-hotkey-dialog {
   background-color: var(--app-surface) !important;
   color: var(--app-text);
