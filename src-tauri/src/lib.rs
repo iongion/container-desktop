@@ -14,8 +14,28 @@ mod spawn_hidden;
 mod ssh_config;
 mod tray;
 
-use tauri::{Manager, WindowEvent};
+use tauri::{Manager, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
+
+const MAIN_WINDOW: &str = "main";
+
+// The main window is tauri.conf.json's, built here (it is `create: false` there) only so an isolated run can give
+// the webview its own storage: the config's dataDirectory takes relative paths only, and the override is absolute.
+fn create_main_window(app: &tauri::App) -> tauri::Result<()> {
+    let config = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == MAIN_WINDOW)
+        .expect("tauri.conf.json declares the main window");
+    let mut builder = WebviewWindowBuilder::from_config(app.handle(), config)?;
+    if let Some(dir) = host::platform::webview_data_dir() {
+        builder = builder.data_directory(dir);
+    }
+    builder.build()?;
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,7 +62,7 @@ pub fn run() {
         // runs standalone. No effect on normal/production launches.
         if std::env::var_os("CONTAINER_DESKTOP_E2E").is_none() {
             builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-                if let Some(window) = app.get_webview_window("main") {
+                if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
                     let _ = window.unminimize();
                     let _ = window.show();
                     let _ = window.set_focus();
@@ -105,6 +125,7 @@ pub fn run() {
         .manage(bridge::BridgeState::default())
         // The single native tray icon (built on first tray_update from the webview's projected menu).
         .manage(tray::TrayState::default())
+        .setup(|app| Ok(create_main_window(app)?))
         // Hide-to-tray: while the tray is up, closing the window HIDES it (keeps the webview + the in-realm
         // engine hub alive). A true quit goes through application.exit
         // (process.exit) or the tray's Quit item — both terminate without firing this.

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A WebDriver run no longer reads or writes your installed app's webview storage (localStorage, HTTP cache). With `CONTAINER_DESKTOP_USER_DATA_DIR` set, the webview keeps its own under that directory; a normal launch is unchanged
 - The mock inventory WebDriver spec runs in every mock scenario, the default one included, and fails on an unknown scenario instead of silently skipping
 - A killed app no longer leaves its SSH forwards running, on Windows as well as Linux. Stopping the app has always taken them with it, but being killed — the task manager, a crash, an out-of-memory kill — left each one holding a local port and an open connection to the remote, and the next forward quietly picked a different port, so nothing looked wrong until the ports ran out. The kernel now ends them, in both backends. macOS offers no such mechanism and is unchanged
 - Starting the app with no engine connected no longer throws away the screen you were on. It always redirected to the connection manager, so a reload with the engine down lost your place; it now does that only from the default route, and any other screen reports the missing engine where you are. The engine-less state can also be exercised for the first time (`CONTAINER_DESKTOP_MOCK_CONNECTED=none`), which is what made the behaviour testable at all

@@ -12,6 +12,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Container Desktop",
         "width": 1280,
         "height": 800,
