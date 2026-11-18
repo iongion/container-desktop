@@ -15,12 +15,24 @@
 // Single-instance: the app skips tauri-plugin-single-instance when CONTAINER_DESKTOP_E2E is set (see
 // src-tauri/src/lib.rs), so this launched instance runs standalone ALONGSIDE the developer's running app
 // instead of forwarding-and-exiting. That env is set in beforeSession and inherited down the process chain.
+//
+// On Linux the app runs on a private headless sway (support/headlessDisplay.js): its window never reaches the
+// developer's desktop, and it renders on a GPU that is not NVIDIA's. CONTAINER_DESKTOP_E2E_HEADLESS=0 shows it.
 
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+
+import {
+  diesWithParent,
+  headlessWanted,
+  reapStaleDisplays,
+  signalGroup,
+  startHeadlessDisplay,
+} from "./support/headlessDisplay.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -33,10 +45,21 @@ const TAURI_DRIVER = process.env.TAURI_DRIVER ?? path.join(os.homedir(), ".cargo
 // A throwaway user-data dir the e2e app is pinned to (see beforeSession), so it never touches the developer's
 // daily release-app data. get_user_data_path honors this on every shell.
 const E2E_USER_DATA = process.env.CONTAINER_DESKTOP_USER_DATA_DIR ?? path.join(repoRoot, "webdriver", ".e2e-user-data");
-// Where workspace-access.e2e.js's fixture workspace lives (a subdir of the isolated data dir).
-const E2E_WORKSPACE = path.join(E2E_USER_DATA, "workspace-fixture");
+const DRIVER_STOP_GRACE_MS = 5000;
 
 let tauriDriver;
+let display;
+
+// tauri-driver leads its own process group, which WebKitWebDriver and the app join, so ending the group ends all
+// three; signalling tauri-driver alone could leave the app running.
+async function stopDriver() {
+  const pid = tauriDriver?.pid;
+  if (!pid) return;
+  signalGroup(pid, "SIGTERM");
+  const deadline = Date.now() + DRIVER_STOP_GRACE_MS;
+  while (tauriDriver.exitCode === null && tauriDriver.signalCode === null && Date.now() < deadline) await delay(50);
+  signalGroup(pid, "SIGKILL");
+}
 
 export const config = {
   runner: "local",
@@ -56,6 +79,9 @@ export const config = {
   // narrowing anything, and on that suite a full run dials every real machine.
   specs: [path.join(__dirname, "specs", "**", "*.e2e.js")],
   maxInstances: 1,
+  // WebdriverIO wraps its worker in xvfb-run whenever DISPLAY is unset on Linux; the app has its own headless
+  // display, and under xvfb-run the worker dies at start on `write EINVAL`.
+  autoXvfb: false,
   capabilities: [
     {
       // tauri-driver reads this to launch the app under WebKitWebDriver.
@@ -91,22 +117,17 @@ export const config = {
           "Install it (`cargo install tauri-driver --locked`) or set TAURI_DRIVER.",
       );
     }
-    // Seed the isolated user-data dir BEFORE the app launches. Doing this at runtime from a spec races the app's
-    // own first-run settings write (which clobbered ai.workspaceRoot); pre-seeding wins the race deterministically.
-    // Start clean so every run has an identical fixture + settings, then let the app merge its own keys on top.
+    // Seed the isolated user-data dir BEFORE the app launches: start clean so every run has identical settings, and
+    // mark first-run handled so the setup wizard never covers the screen a spec drives.
     rmSync(E2E_USER_DATA, { recursive: true, force: true });
-    mkdirSync(E2E_WORKSPACE, { recursive: true });
-    writeFileSync(path.join(E2E_WORKSPACE, "package.json"), '{ "name": "demo" }\n');
-    writeFileSync(path.join(E2E_WORKSPACE, "greeting.txt"), "hello world\nsecond line\n");
-    // Pre-set ai.workspaceRoot (for workspace-access) and mark first-run handled so the app does not overwrite
-    // settings during boot. The app reads user-settings.json fresh per getAISettings call, so this is authoritative.
+    mkdirSync(E2E_USER_DATA, { recursive: true });
     writeFileSync(
       path.join(E2E_USER_DATA, "user-settings.json"),
-      `${JSON.stringify({ ai: { workspaceRoot: E2E_WORKSPACE }, wizard: { skipAtStartup: true } }, null, 2)}\n`,
+      `${JSON.stringify({ wizard: { skipAtStartup: true } }, null, 2)}\n`,
     );
   },
 
-  beforeSession: () => {
+  beforeSession: async () => {
     // Run standalone next to the developer's app (see the single-instance note above). Inherited by
     // tauri-driver → WebKitWebDriver → the app.
     process.env.CONTAINER_DESKTOP_E2E = "1";
@@ -119,9 +140,18 @@ export const config = {
     // Rust path has no `-dev` suffix of its own, so without this the debug binary would
     // read/write ~/.config/container-desktop — the release app's dir).
     process.env.CONTAINER_DESKTOP_USER_DATA_DIR ??= E2E_USER_DATA;
-    tauriDriver = spawn(TAURI_DRIVER, ["--native-driver", NATIVE_DRIVER], {
+    let driverEnv = process.env;
+    if (headlessWanted(process.env, process.platform)) {
+      reapStaleDisplays();
+      display = await startHeadlessDisplay();
+      driverEnv = display.envFor(process.env);
+    }
+    // An interrupted run SIGKILLs this worker, so afterSession never runs: the kernel ends tauri-driver with it (the
+    // app then loses its driver and its display, and exits), and the next session reaps the display directory.
+    tauriDriver = spawn(...diesWithParent(TAURI_DRIVER, ["--native-driver", NATIVE_DRIVER]), {
       stdio: [null, process.stdout, process.stderr],
-      env: process.env,
+      env: driverEnv,
+      detached: true,
     });
     tauriDriver.on("error", (error) => {
       console.error("tauri-driver failed to start:", error);
@@ -129,7 +159,9 @@ export const config = {
     });
   },
 
-  afterSession: () => {
-    tauriDriver?.kill();
+  afterSession: async () => {
+    await stopDriver();
+    await display?.stop();
+    display = undefined;
   },
 };

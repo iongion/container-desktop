@@ -79,6 +79,20 @@ reach: an app that boots with NO engine connected. It is decided by `mockAvailab
 service reads a connection's `running` off `availability.api` and brings the primary connection up whether or
 not anything is flagged auto-start, so clearing auto-start does not express it.
 
+On Linux the app never shows a window on your desktop
+([`webdriver/support/headlessDisplay.js`](../webdriver/support/headlessDisplay.js), pagecast's method):
+
+- Each session starts a private headless **sway**; the app gets its socket as `WAYLAND_DISPLAY` and no `DISPLAY`,
+  so GTK cannot fall back onto the desktop. It keeps the real `XDG_RUNTIME_DIR`, where the engine sockets live.
+- It renders on the first GPU that is not NVIDIA's (mesa-only EGL), or in software when there is none.
+- `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows the window, to watch a spec. Without sway the run stops and names the
+  fix (`bash support/provision-deps.sh`).
+- `autoXvfb: false` is load-bearing: WebdriverIO otherwise wraps its worker in `xvfb-run` whenever `DISPLAY` is
+  unset, and the worker dies on `write EINVAL`.
+- A run killed mid-way leaves nothing running. Ctrl-C makes WebdriverIO SIGKILL its worker, which runs no exit
+  handler, so sway and tauri-driver start under `setpriv --pdeathsig KILL` and the kernel ends them with it. The
+  next session removes the dead run's directory.
+
 One entry point per suite — `yarn test:e2e:tauri` runs the mock suite ([below](#two-suites-told-apart-by-what-a-failure-is-allowed-to-mean));
 `--spec` selects one and the scenario travels in the environment, so there is no script per combination:
 

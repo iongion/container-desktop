@@ -134,6 +134,10 @@ How you build here, **per change** — not an end-of-task afterthought:
   `CONTAINER_DESKTOP_E2E_APP`. **Paint caveat:** WebKitGTK parks its compositor when idle, so a
   WebDriver screenshot can force a paint the live view hadn't done — read the DOM to confirm data,
   use eyes/screenshots for paint.
+- **On Linux the WebDriver app never reaches your desktop.** Each session runs it on a private headless **sway**
+  (`webdriver/support/headlessDisplay.js`, prereq `sway`), no `DISPLAY`, rendering on the first GPU that is not
+  NVIDIA's (software if none). `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows the window, to watch a spec. Keep
+  `autoXvfb: false` in the config: WebdriverIO otherwise wraps its worker in `xvfb-run` and it dies on `write EINVAL`.
 - **TWO suites, and what a failure is allowed to mean is the difference.** `webdriver/specs/*.e2e.js` is the
   **mock app only** — nothing outside the app is involved, so a failure can only mean the app is wrong; these
   always run and are **never gated on anything**. `webdriver/smoke/*.smoke.js` is **real integration** (real
@@ -162,8 +166,8 @@ How you build here, **per change** — not an end-of-task afterthought:
   href in the rendered DOM, or an id returned by the mock snapshot — never an invented path or a
   fabricated entity id (`.../mock-c-1/inspect` is a guess, not a route). Guessing sends you to a dead
   route, the screen never mounts, and you misread that as a broken feature. Grep the route first, then drive it.
-- **NEVER `xvfb-run` or spawn a second app instance to verify the UI.** Drive the running dev app
-  over WebDriver (above); that is the required verification path.
+- **NEVER `xvfb-run`, and never launch the app by hand to verify the UI.** Drive it over WebDriver (above);
+  that is the required verification path, and its harness gives the app its own display.
 - **Website capture (screenshots).** `support/cli/media/screenshots.ts` drives a `CaptureDriver` port over
   WebdriverIO/WebDriver (Tauri, reusing the `test:e2e:tauri` stack) and writes the published
   `website-src/static/**` images. The website **demo** is a

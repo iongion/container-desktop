@@ -207,6 +207,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Linux WebDriver runs no longer put a window on your desktop: the app runs on a private headless sway, on a GPU that is not NVIDIA's, and a killed run leaves nothing behind. `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows it; sway joins the e2e prerequisites
 - An assistant session is ONE container, not a pair. Inference travels the socket the app already has open to it, so the second container that used to hold the provider key is gone, along with its network and its env file
 - Turning network access off now means it: the session's container gets no route to the internet or to your machine at all, instead of the key-holding half being given a routable one. A turn still works, because the app dials INWARDS
 - A renewed sign-in takes effect on the next turn with nothing to deliver, including for a session started before it was renewed — and a renewal that fails on a busy engine is retried instead of silently ending every renewal after it

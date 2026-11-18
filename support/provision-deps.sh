@@ -168,19 +168,23 @@ install_tauri_linux_deps() {
 # WebKitWebDriver), NOT to build the app. Kept separate and best-effort so a distro that lacks them
 # (or names them differently) can never block the build. The WebKitWebDriver package name varies by
 # release, so try the known candidates and install whichever exists. On Arch it ships inside
-# `webkit2gtk-4.1`, already installed as a build dep, so there is nothing to add.
+# `webkit2gtk-4.1`, already installed as a build dep.
 #
-# No display server is installed. The specs and the screenshot capture need SOME display, and any
-# desktop session already provides one (`wdio.conf.js` uses the ambient DISPLAY / WAYLAND_DISPLAY). A
-# genuinely headless machine supplies its own — `Xvfb`, or a headless Wayland compositor such as
-# `cage` under `WLR_BACKEND=headless`. Pulling the whole Xorg chain in for everyone is not worth it.
+# sway is the display: `wdio.conf.js` runs the app on a private headless sway (webdriver/support/
+# headlessDisplay.js), so its window never reaches the desktop and the same run works on a machine with
+# no desktop at all. The screenshot capture still uses the ambient DISPLAY / WAYLAND_DISPLAY.
 install_tauri_test_deps() {
   case "$PM" in
     apt)
       install_first_available "WebKitWebDriver" webkit2gtk-driver webkitgtk-webdriver
+      install_group "WebDriver display" sway
       ;;
     dnf|yum)
       install_first_available "WebKitWebDriver" webkit2gtk-driver
+      install_group "WebDriver display" sway
+      ;;
+    pacman)
+      install_group "WebDriver display" sway
       ;;
   esac
 }
