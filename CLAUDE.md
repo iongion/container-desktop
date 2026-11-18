@@ -12,7 +12,7 @@ home-grown CLI (`yarn cli`, commander + tsx) in `support/cli/`.
 
 ## Stack
 
-Tauri 2 (Rust) · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) · Zustand (state) · TanStack Query +
+Tauri 2 (Rust) · React 19 · Vite 8 (rolldown) · TypeScript 7 (native `tsc`) · Blueprint 6 (UI) · Zustand (state) · TanStack Query +
 Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format). Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic).
 
 ## Layout
