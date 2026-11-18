@@ -1360,5 +1360,18 @@
   "The engine's own host": "The engine's own host",
   "Container name or id": "Container name or id",
   "Image reference": "Image reference",
-  "Where": "Where"
+  "Where": "Where",
+  "MCP server": "MCP-сервер",
+  "On": "Вкл.",
+  "Off": "Выкл.",
+  "Access": "Доступ",
+  "Allow changes": "Разрешить изменения",
+  "Endpoint": "Адрес",
+  "Token": "Токен",
+  "Regenerate token": "Создать новый токен",
+  "Listening on 127.0.0.1:{{port}}": "Ожидает подключений на 127.0.0.1:{{port}}",
+  "Clients using the current token stop working until they get the new one": "Клиенты с текущим токеном перестанут работать, пока не получат новый",
+  "Lets AI clients such as Claude Code, Cursor or VS Code work with your engines, from this computer only.": "Позволяет ИИ-клиентам, таким как Claude Code, Cursor или VS Code, работать с вашими движками, только с этого компьютера.",
+  "AI clients can list and inspect containers, images, networks and volumes, and read logs. Nothing changes.": "ИИ-клиенты могут просматривать и изучать контейнеры, образы, сети и тома, а также читать журналы. Ничего не меняется.",
+  "AI clients can also start, stop, pause, restart and remove, and pull images.": "ИИ-клиенты также могут запускать, останавливать, приостанавливать, перезапускать и удалять, а также скачивать образы."
 }

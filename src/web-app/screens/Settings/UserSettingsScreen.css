@@ -93,6 +93,7 @@
 }
 .AppSettingsForm[data-form="configuration"],
 .AppSettingsForm[data-form="logging"],
+.AppSettingsForm[data-form="mcp"],
 .AppSettingsForm[data-form="network"] {
   display: flex;
   flex-direction: column;
@@ -121,6 +122,23 @@
 .AppSettingsForm[data-form="network"] textarea {
   min-height: 86px;
   resize: vertical;
+}
+.AppSettingsForm[data-form="mcp"] .McpField--mode {
+  flex: 1 1 260px;
+}
+.AppSettingsForm[data-form="mcp"] .McpField--port {
+  flex: 0 0 120px;
+}
+.AppSettingsMcpStatus {
+  display: flex;
+  align-items: center;
+  column-gap: 6px;
+  color: var(--app-text-muted);
+}
+.AppSettingsMcpToken {
+  display: flex;
+  align-items: center;
+  column-gap: 4px;
 }
 .AppSettingsNetworkActions {
   display: flex;

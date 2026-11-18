@@ -1360,5 +1360,18 @@
   "The engine's own host": "The engine's own host",
   "Container name or id": "Container name or id",
   "Image reference": "Image reference",
-  "Where": "Where"
+  "Where": "Where",
+  "MCP server": "MCP 服务器",
+  "On": "开",
+  "Off": "关",
+  "Access": "访问权限",
+  "Allow changes": "允许更改",
+  "Endpoint": "端点",
+  "Token": "令牌",
+  "Regenerate token": "重新生成令牌",
+  "Listening on 127.0.0.1:{{port}}": "正在监听 127.0.0.1:{{port}}",
+  "Clients using the current token stop working until they get the new one": "使用当前令牌的客户端在获得新令牌之前将无法工作",
+  "Lets AI clients such as Claude Code, Cursor or VS Code work with your engines, from this computer only.": "让 Claude Code、Cursor 或 VS Code 等 AI 客户端使用你的引擎，仅限本机。",
+  "AI clients can list and inspect containers, images, networks and volumes, and read logs. Nothing changes.": "AI 客户端可以列出并检查容器、镜像、网络和卷，并读取日志。不会更改任何内容。",
+  "AI clients can also start, stop, pause, restart and remove, and pull images.": "AI 客户端还可以启动、停止、暂停、重启和删除，并拉取镜像。"
 }

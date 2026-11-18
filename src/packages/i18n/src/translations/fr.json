@@ -1360,5 +1360,18 @@
   "The engine's own host": "The engine's own host",
   "Container name or id": "Container name or id",
   "Image reference": "Image reference",
-  "Where": "Where"
+  "Where": "Where",
+  "MCP server": "Serveur MCP",
+  "On": "Activé",
+  "Off": "Désactivé",
+  "Access": "Accès",
+  "Allow changes": "Autoriser les modifications",
+  "Endpoint": "Point d'accès",
+  "Token": "Jeton",
+  "Regenerate token": "Régénérer le jeton",
+  "Listening on 127.0.0.1:{{port}}": "À l'écoute sur 127.0.0.1:{{port}}",
+  "Clients using the current token stop working until they get the new one": "Les clients qui utilisent le jeton actuel cessent de fonctionner jusqu'à ce qu'ils reçoivent le nouveau",
+  "Lets AI clients such as Claude Code, Cursor or VS Code work with your engines, from this computer only.": "Permet aux clients d'IA comme Claude Code, Cursor ou VS Code de travailler avec vos moteurs, depuis cet ordinateur uniquement.",
+  "AI clients can list and inspect containers, images, networks and volumes, and read logs. Nothing changes.": "Les clients d'IA peuvent lister et inspecter les conteneurs, images, réseaux et volumes, et lire les journaux. Rien n'est modifié.",
+  "AI clients can also start, stop, pause, restart and remove, and pull images.": "Les clients d'IA peuvent aussi démarrer, arrêter, mettre en pause, redémarrer et supprimer, et télécharger des images."
 }

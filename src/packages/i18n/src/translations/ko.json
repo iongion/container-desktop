@@ -1360,5 +1360,18 @@
   "The engine's own host": "The engine's own host",
   "Container name or id": "Container name or id",
   "Image reference": "Image reference",
-  "Where": "Where"
+  "Where": "Where",
+  "MCP server": "MCP 서버",
+  "On": "켜짐",
+  "Off": "꺼짐",
+  "Access": "접근",
+  "Allow changes": "변경 허용",
+  "Endpoint": "엔드포인트",
+  "Token": "토큰",
+  "Regenerate token": "토큰 다시 생성",
+  "Listening on 127.0.0.1:{{port}}": "127.0.0.1:{{port}}에서 수신 대기 중",
+  "Clients using the current token stop working until they get the new one": "현재 토큰을 사용하는 클라이언트는 새 토큰을 받을 때까지 작동하지 않습니다",
+  "Lets AI clients such as Claude Code, Cursor or VS Code work with your engines, from this computer only.": "Claude Code, Cursor, VS Code 같은 AI 클라이언트가 이 컴퓨터에서만 엔진을 다룰 수 있게 합니다.",
+  "AI clients can list and inspect containers, images, networks and volumes, and read logs. Nothing changes.": "AI 클라이언트는 컨테이너, 이미지, 네트워크, 볼륨을 나열하고 검사하며 로그를 읽을 수 있습니다. 아무것도 바뀌지 않습니다.",
+  "AI clients can also start, stop, pause, restart and remove, and pull images.": "AI 클라이언트는 시작, 중지, 일시 중지, 재시작, 제거와 이미지 가져오기도 할 수 있습니다."
 }

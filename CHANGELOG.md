@@ -90,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- An MCP server for AI clients: loopback only, off by default, read-only by default, its token kept in the OS keychain, and `container-desktop --mcp-stdio` for clients that only speak stdio
+- An MCP server for AI clients, set up in Settings → MCP server: loopback only, off by default, read-only by default, its token kept in the OS keychain, and `container-desktop --mcp-stdio` for clients that only speak stdio
 - Your conversations with the assistant are kept on your own machine: they stay readable with nothing running, survive every rebuild of the agent, and no longer live inside the container volume they used to disappear with
 
 - The provider key never leaves your machine, and never leaves the one place that can read it: a turn's inference is now signed by the app itself, from the OS keychain, per request. There is no longer a second container holding the key, no file with a credential in it for a session, and nothing to ship to a remote machine — which is what a session on a remote engine used to be unable to do at all

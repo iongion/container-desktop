@@ -1360,5 +1360,18 @@
   "The engine's own host": "The engine's own host",
   "Container name or id": "Container name or id",
   "Image reference": "Image reference",
-  "Where": "Where"
+  "Where": "Where",
+  "MCP server": "MCP サーバー",
+  "On": "オン",
+  "Off": "オフ",
+  "Access": "アクセス",
+  "Allow changes": "変更を許可",
+  "Endpoint": "エンドポイント",
+  "Token": "トークン",
+  "Regenerate token": "トークンを再生成",
+  "Listening on 127.0.0.1:{{port}}": "127.0.0.1:{{port}} で待ち受け中",
+  "Clients using the current token stop working until they get the new one": "現在のトークンを使うクライアントは、新しいトークンを受け取るまで動作しなくなります",
+  "Lets AI clients such as Claude Code, Cursor or VS Code work with your engines, from this computer only.": "Claude Code、Cursor、VS Code などの AI クライアントが、このコンピューターからのみ、エンジンを操作できるようにします。",
+  "AI clients can list and inspect containers, images, networks and volumes, and read logs. Nothing changes.": "AI クライアントはコンテナー、イメージ、ネットワーク、ボリュームの一覧表示と検査、ログの読み取りができます。何も変更されません。",
+  "AI clients can also start, stop, pause, restart and remove, and pull images.": "AI クライアントは開始、停止、一時停止、再起動、削除、イメージのプルもできます。"
 }

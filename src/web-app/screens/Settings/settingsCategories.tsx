@@ -2,6 +2,7 @@ import { AirGapPolicyPanel } from "./panels/AirGapPolicyPanel";
 import { AppearancePanel } from "./panels/AppearancePanel";
 import { ConfigPanel } from "./panels/ConfigPanel";
 import { LoggingPanel } from "./panels/LoggingPanel";
+import { McpServerPanel } from "./panels/McpServerPanel";
 import { NetworkPanel } from "./panels/NetworkPanel";
 import { StartupPanel } from "./panels/StartupPanel";
 
@@ -14,4 +15,5 @@ export const SETTINGS_PANELS: Record<string, React.FC> = {
   policy: AirGapPolicyPanel,
   config: ConfigPanel,
   logging: LoggingPanel,
+  mcp: McpServerPanel,
 };

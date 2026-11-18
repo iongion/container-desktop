@@ -1360,5 +1360,18 @@
   "The engine's own host": "The engine's own host",
   "Container name or id": "Container name or id",
   "Image reference": "Image reference",
-  "Where": "Where"
+  "Where": "Where",
+  "MCP server": "Server MCP",
+  "On": "Pornit",
+  "Off": "Oprit",
+  "Access": "Acces",
+  "Allow changes": "Permite modificări",
+  "Endpoint": "Endpoint",
+  "Token": "Token",
+  "Regenerate token": "Regenerează tokenul",
+  "Listening on 127.0.0.1:{{port}}": "Ascultă pe 127.0.0.1:{{port}}",
+  "Clients using the current token stop working until they get the new one": "Clienții care folosesc tokenul curent nu mai funcționează până nu primesc tokenul nou",
+  "Lets AI clients such as Claude Code, Cursor or VS Code work with your engines, from this computer only.": "Permite clienților AI precum Claude Code, Cursor sau VS Code să lucreze cu motoarele tale, doar de pe acest calculator.",
+  "AI clients can list and inspect containers, images, networks and volumes, and read logs. Nothing changes.": "Clienții AI pot lista și inspecta containere, imagini, rețele și volume și pot citi jurnalele. Nu se schimbă nimic.",
+  "AI clients can also start, stop, pause, restart and remove, and pull images.": "Clienții AI pot și porni, opri, suspenda, reporni și șterge, și pot descărca imagini."
 }
