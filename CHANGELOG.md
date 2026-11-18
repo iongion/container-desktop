@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Dependencies, Rust crates and pinned GitHub Actions moved to their latest patch releases
 - Linux WebDriver runs no longer put a window on your desktop: the app runs on a private headless sway, on a GPU that is not NVIDIA's, keeps its secrets out of your OS keychain, and a killed run leaves nothing behind. `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows it; sway joins the e2e prerequisites
 - The app now runs entirely in the system's own webview over a native backend, so it starts faster and ships a far smaller download
 - The left sidebar now starts collapsed, giving screens their full width until you expand it
