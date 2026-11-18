@@ -11,7 +11,6 @@
     { "screenshot": "ImageSecurity.png", "title": "Scan for vulnerabilities" },
     { "screenshot": "Build.png", "title": "Build images" },
     { "screenshot": "Pods.png", "title": "Pods for real stacks" },
-    { "screenshot": "ConnectionManager.png", "title": "Local, SSH, WSL & LIMA" },
-    { "screenshot": "AIAssistant.png", "title": "Built-in AI assistant" }
+    { "screenshot": "ConnectionManager.png", "title": "Local, SSH, WSL & LIMA" }
   ]
 }

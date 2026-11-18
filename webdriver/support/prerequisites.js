@@ -2,13 +2,13 @@
 // cannot run, or nothing at all.
 //
 // Only the smoke suite (webdriver/smoke/*.smoke.js) asks. Its subject IS the real integration — an engine, a
-// machine, an account, a model — so when the subject is absent there is nothing to prove: failing would blame the
+// machine — so when the subject is absent there is nothing to prove: failing would blame the
 // app for the operator's environment, and passing would claim coverage nobody has. It skips, and names what was
 // missing. The mock suite (webdriver/specs/*.e2e.js) never asks and must never be gated: nothing outside the app
 // is involved there, so a gate could only hide a real defect.
 //
-// Nothing here asserts, and nothing here starts anything: bringing a VM up, loading a model, standing up a
-// sandbox or building an image are the operator's decisions, never a side effect of running a test. A check that
+// Nothing here asserts, and nothing here starts anything: bringing a VM up or standing up a sandbox are the
+// operator's decisions, never a side effect of running a test. A check that
 // skips something which WOULD have run is worse than no check, because the report then looks like it ran.
 
 import { execFileSync } from "node:child_process";
@@ -16,9 +16,6 @@ import { existsSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { LM_STUDIO_BASE_URL, loadedContextLength } from "./lmstudioSession.js";
-import { PLUGIN_VOLUME, pluginVolumeExtensions } from "./pluginVolume.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -39,28 +36,6 @@ export function envReason(name, why) {
   return process.env[name] ? undefined : `${name} is not set — ${why}`;
 }
 
-// `info` rather than `--version`: a binary on PATH answers the version happily with no service running at all, and
-// every real call after that fails.
-export function engineReason(engine) {
-  try {
-    execFileSync(engine, ["info"], { stdio: "ignore", timeout: 30000 });
-    return undefined;
-  } catch {
-    return `${engine} is not answering on this machine — start it, or name another with CD_LIVE_ENGINE`;
-  }
-}
-
-// `image inspect` rather than podman's `image exists`, which docker has not got. An image built for one engine does
-// not exist for the other, which is why the engine is half the question.
-export function agentImageReason(engine, reference) {
-  try {
-    execFileSync(engine, ["image", "inspect", reference], { stdio: "ignore", timeout: 60000 });
-    return undefined;
-  } catch {
-    return `${engine} has no ${reference} — build it with \`yarn cli agent-image --engine ${engine}\``;
-  }
-}
-
 // A container the spec needs ALREADY RUNNING, looked for on either engine — a container on one does not exist on
 // the other. Guarded against an empty name on purpose: `--filter name=` matches everything, so an unnamed target
 // would read as present.
@@ -78,71 +53,6 @@ export function runningContainerReason(name, why) {
     }
   }
   return `no running container named ${name} on podman or docker — ${why}`;
-}
-
-export async function endpointReason(url, what) {
-  try {
-    await fetch(url, { signal: AbortSignal.timeout(5000) });
-    return undefined;
-  } catch {
-    return `${what} is not answering at ${url}`;
-  }
-}
-
-// What the server ITSELF reports it loaded. Under the session's own prompt cost a turn cannot be answered at all,
-// so such a run proves nothing about the app — and since the fix is a reload, it travels in the reason. The unload
-// is not optional: `lms load` fails outright while that model is already resident.
-export async function loadedModelReason(model, minimum, recommended = minimum) {
-  const origin = LM_STUDIO_BASE_URL.replace(/\/v\d+\/?$/, "");
-  const load = `\`lms load ${model} --context-length ${recommended} --yes\``;
-  const unreachable = await endpointReason(`${origin}/api/v0/models`, "LM Studio");
-  if (unreachable) {
-    return `${unreachable} — start it with \`lms server start --cors --bind 0.0.0.0\``;
-  }
-  const loaded = await loadedContextLength(model);
-  if (!loaded) {
-    return `LM Studio has no ${model} loaded — ${load}`;
-  }
-  if (loaded < minimum) {
-    return `${model} is loaded at ${loaded}, under the ${minimum} this needs — unload it first, then ${load}`;
-  }
-  return undefined;
-}
-
-// A session that will be asked to go QUIET, checked before it is started. The engine's plugin volume is shared and
-// persistent, so any extension in it loads into this session too — and one that writes a message is conversation input
-// the model answers, so the transcript never settles and the spec fails as "the turn never finished" with the app,
-// bridge, key and model all working. Measured: a fixture left behind by a killed run cost two unrelated specs their
-// runs and an hour of misdiagnosis. A spec that seeds its OWN extension names it in `allowed`.
-export function cleanPluginVolumeReason(engine, image, allowed = []) {
-  const installed = pluginVolumeExtensions(engine, image).filter((file) => !allowed.includes(file));
-  if (installed.length === 0) return undefined;
-  return `${engine}'s ${PLUGIN_VOLUME} volume still holds ${installed.join(", ")}, which every session loads — a plugin that writes a message keeps this one busy for good. Remove it with \`${engine} run --rm --user root --entrypoint sh -v ${PLUGIN_VOLUME}:/mnt ${image} -c "rm -f /mnt/extensions/${installed[0]}"\``;
-}
-
-// The cloud model a spec is about to drive, asked ONCE before it drives anything. Two absences are invisible from
-// inside a turn and both read as the app failing: an id OpenRouter has RETIRED answers 404 — its free roster churns,
-// and the id four specs shared had already gone — and a free model under load answers 429 "temporarily rate-limited
-// upstream", measured four times in five on one candidate. Neither is a defect in this app, so both SKIP with the
-// reason. Deliberately NOT a tool call or a judgement: one token settles whether the model can be served at all, and
-// whether it uses a tool well is what the spec itself is for.
-export async function openRouterModelReason(model) {
-  const key = process.env.OPENROUTER_API_KEY;
-  // The account is a separate question, answered by envReason — this one has nothing to ask without it.
-  if (!key) return undefined;
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ model, max_tokens: 1, messages: [{ role: "user", content: "ping" }] }),
-      signal: AbortSignal.timeout(30000),
-    });
-    if (response.ok) return undefined;
-    const detail = (await response.text()).replace(/\s+/g, " ").slice(0, 200);
-    return `OpenRouter will not serve ${model} (HTTP ${response.status}): ${detail} — name another with CD_LIVE_MODEL, or pick a live one from https://openrouter.ai/api/v1/models`;
-  } catch (failure) {
-    return `OpenRouter is not answering about ${model} — ${String(failure).slice(0, 160)}`;
-  }
 }
 
 // What ~/.ssh/config would dial for a host. A target's SSH_HOST is often an alias (`win11`), which DNS alone
@@ -253,7 +163,7 @@ export function skippedSuite(title, reason) {
   });
 }
 
-// The same answer once a suite has started, for a check that has to be awaited (a machine dialled, a model asked).
+// The same answer once a suite has started, for a check that has to be awaited (a machine dialled).
 // Mocha's skip() throws, so this ends the hook where it is called.
 export function skipSuite(context, reason) {
   console.warn(`[live] SKIP ${context.test?.parent?.title ?? "suite"} — ${reason}`);

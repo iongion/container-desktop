@@ -1,4 +1,3 @@
-import { normalizeAISettings } from "@/ai-system/core/settings";
 import {
   createComposedHostClient,
   createConnectorBy,
@@ -384,9 +383,6 @@ export class Application {
           }
         : await this.userConfiguration.getKey("connector"),
       connections: await this.getConnectionsFromConfiguration(),
-      // Always populate the AI section with safe defaults so older configs (and any partial
-      // ai blob) never surface `undefined` to the UI or the ai:* IPC handlers.
-      ai: normalizeAISettings(await this.userConfiguration.getKey("ai")),
       proxy: normalizeProxyConfig(await this.userConfiguration.getKey("proxy")),
       // First-run wizard state. Default skipAtStartup:false so a fresh config shows the wizard once
       // (the renderer gates on `skipAtStartup !== true`). Inlined so container-client need not import

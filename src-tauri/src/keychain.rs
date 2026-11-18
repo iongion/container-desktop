@@ -1,8 +1,7 @@
 // Generic OS secret-store (keychain) capability — a thin wrapper over the `keyring` crate's per-key vault
 // (Windows Credential Manager / macOS Keychain / Linux Secret Service). Each secret is a discrete entry keyed
-// by (service, account); the app never persists plaintext itself. Nothing here is AI-specific — the current
-// consumer is the AI provider-key store (the Rust side of the AIKeyStore port), but the primitive is a
-// standalone keychain usable by anything that needs to keep a secret out of app storage.
+// by (service, account); the app never persists plaintext itself. A standalone keychain usable by anything that
+// needs to keep a secret out of app storage (the Rust side of the IKeychain port).
 //
 // keyring's API is SYNCHRONOUS and, on Linux, a Secret-Service D-Bus round-trip (tens-to-hundreds of ms) — so
 // every command is async and does the blocking work on a blocking thread, never on the webview's main thread.
@@ -23,8 +22,7 @@ const KEYCHAIN_SERVICE: &str = "com.iongion.container-desktop.keychain";
 // A sentinel entry used ONLY to probe whether the OS secret store is reachable (the encryption-available check).
 const PROBE_SERVICE: &str = "com.iongion.container-desktop.keychain-probe";
 const PROBE_USER: &str = "probe";
-// Degraded-vault fallback store (see file header). A distinct filename from the AI credentials file
-// (different content) since both shells share the userData dir.
+// Degraded-vault fallback store (see file header).
 const FALLBACK_FILE: &str = "keychain-fallback.json";
 
 // Mirrors the EncryptionStatus the IKeychain port reports. `degraded` drives the renderer's "store the key
@@ -170,96 +168,6 @@ pub async fn keychain_has(account: String) -> bool {
             .unwrap_or(false)
 }
 
-/// The plaintext secret for `account` (None if unset) — from the OS vault, else the degraded fallback.
-/// Deliberately NOT a `#[tauri::command]`: the secret stays in this process, and the only caller is the native
-/// provider transport, which attaches it to the outbound request without the web view ever seeing it.
-pub(crate) async fn keychain_get(account: String) -> Result<Option<String>, String> {
-    let account_for_vault = account.clone();
-    let from_vault = tokio::task::spawn_blocking(move || -> Result<Option<String>, String> {
-        let e = entry(KEYCHAIN_SERVICE, &account_for_vault)?;
-        match e.get_password() {
-            Ok(secret) => Ok(Some(secret)),
-            Err(keyring::Error::NoEntry) => Ok(None),
-            Err(err) => Err(err.to_string()),
-        }
-    })
-    .await
-    .map_err(|e| e.to_string())?;
-    // Present in the vault → use it; otherwise (absent OR the vault is unreachable) consult the degraded fallback.
-    Ok(match from_vault {
-        Ok(Some(secret)) => Some(secret),
-        Ok(None) | Err(_) => fallback_get(&account),
-    })
-}
-
-/// The token a caller leaves where the secret belongs. The web view composes the file WITHOUT the secret and
-/// this process substitutes it, so the plaintext exists only here — the same rule the native provider
-/// transport follows. Deliberately not derived from anything the caller sends.
-pub const SECRET_PLACEHOLDER: &str = "__CD_KEYCHAIN_SECRET__";
-
-/// Keeps a caller to naming a FILE — never a directory, never a traversal. Shared by both writers into the
-/// protected agent directory.
-fn is_safe_agent_file_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= 128
-        && !name.starts_with('.')
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
-}
-
-/// Write a private (0600) file into the protected agent directory, substituting SECRET_PLACEHOLDER with the
-/// secret stored for `account`. This is how a credential reaches a container's env file without ever crossing
-/// into the web view: the caller supplies the SHAPE, this process supplies the secret.
-///
-/// The caller names only the FILE, never the directory, and every web-view-reachable read refuses that
-/// directory (host::fs) — otherwise "the key never enters this realm" would be one fs_read_text_file away.
-/// An absent secret writes an empty value, which is correct for a keyless local server.
-#[tauri::command]
-pub async fn keychain_write_secret_file(
-    account: String,
-    file_name: String,
-    contents: String,
-) -> Result<String, String> {
-    if !is_safe_agent_file_name(&file_name) {
-        return Err("invalid agent file name".into());
-    }
-    // Fail closed: a body with nowhere to put the secret would silently produce an unauthenticated env file,
-    // which surfaces later as a 401 from the provider rather than as the programming error it is.
-    if !contents.contains(SECRET_PLACEHOLDER) {
-        return Err("the agent environment carries no secret placeholder".into());
-    }
-    let secret = keychain_get(account).await?.unwrap_or_default();
-    if secret.contains('\n') || secret.contains('\r') {
-        return Err("a stored secret cannot contain a newline".into());
-    }
-    let path = crate::host::fs::agent_secrets_dir().join(&file_name);
-    crate::host::fs::write_private_file(&path, &contents.replace(SECRET_PLACEHOLDER, &secret))?;
-    Ok(path.to_string_lossy().to_string())
-}
-
-/// Write a private (0600) file into the same protected agent directory, with NO secret to substitute. This is the
-/// agent container's own env file: it carries the bridge token but never a provider credential.
-///
-/// It lives beside the credential-bearing one rather than in a directory of its own so that ONE guard covers both — the
-/// bridge token is a secret too, and a second directory would have been outside `host::fs`'s refusal. Deliberately
-/// separate from keychain_write_secret_file, whose placeholder requirement is a fail-closed check worth keeping:
-/// loosening it to accept a body with no placeholder would let an unauthenticated credential file through.
-#[tauri::command]
-pub async fn keychain_write_agent_file(file_name: String, contents: String) -> Result<String, String> {
-    if !is_safe_agent_file_name(&file_name) {
-        return Err("invalid agent file name".into());
-    }
-    // The opposite fail-closed check to the secret writer's: a placeholder HERE would mean a caller expected a
-    // credential to be substituted and it silently was not.
-    if contents.contains(SECRET_PLACEHOLDER) {
-        return Err("this file carries a secret placeholder and must be written as a secret file".into());
-    }
-    let path = crate::host::fs::agent_secrets_dir().join(&file_name);
-    crate::host::fs::write_private_file(&path, &contents)?;
-    Ok(path.to_string_lossy().to_string())
-}
-
 /// Store (or overwrite) the secret for `account` in the OS vault. If the vault write fails and the caller opted
 /// into degraded storage, fall back to the 0600 file instead; otherwise the vault
 /// error propagates.
@@ -317,14 +225,14 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::env::set_var("CONTAINER_DESKTOP_USER_DATA_DIR", &dir);
 
-        assert_eq!(fallback_get("openai"), None);
-        fallback_set("openai", "sk-secret").unwrap();
-        assert_eq!(fallback_get("openai"), Some("sk-secret".to_string()));
+        assert_eq!(fallback_get("service-token"), None);
+        fallback_set("service-token", "s3cret").unwrap();
+        assert_eq!(fallback_get("service-token"), Some("s3cret".to_string()));
 
         // Stored base64-encoded, never as plaintext on disk.
         let raw = std::fs::read_to_string(dir.join(FALLBACK_FILE)).unwrap();
         assert!(
-            !raw.contains("sk-secret"),
+            !raw.contains("s3cret"),
             "secret must not be on disk in plaintext: {raw}"
         );
 
@@ -336,8 +244,8 @@ mod tests {
             & 0o777;
         assert_eq!(mode, 0o600, "fallback file must be owner-only");
 
-        fallback_clear("openai");
-        assert_eq!(fallback_get("openai"), None);
+        fallback_clear("service-token");
+        assert_eq!(fallback_get("service-token"), None);
 
         std::env::remove_var("CONTAINER_DESKTOP_USER_DATA_DIR");
         let _ = std::fs::remove_dir_all(&dir);

@@ -1,4 +1,4 @@
-import type { IFileDiscoverySystem, IPath } from "@/host-contract/fs";
+import type { IFileSystem, IPath } from "@/host-contract/fs";
 import type { IPlatform } from "@/platform/contract";
 
 export type TauriInvoke = (command: string, args?: Record<string, unknown>) => Promise<any>;
@@ -90,23 +90,18 @@ export function createPath(osType: string): IPath {
   };
 }
 
-export function createFileSystem(invoke: TauriInvoke): IFileDiscoverySystem {
+export function createFileSystem(invoke: TauriInvoke): IFileSystem {
   return {
     readTextFile: (location: string) => invoke("fs_read_text_file", { path: location }),
     writeTextFile: (location: string, contents: string) => invoke("fs_write_text_file", { path: location, contents }),
-    // 0600 owner-only write for AI credentials/permissions/knowledge — the native Rust command hardens the mode
+    // 0600 owner-only write for credentials and permission records — the native Rust command hardens the mode
     // (fs_write_private_text_file in host.rs), matching the Node impl. Best-effort on Windows (no unix mode).
     writePrivateTextFile: (location: string, contents: string) =>
       invoke("fs_write_private_text_file", { path: location, contents }),
-    appendTextFile: (location: string, contents: string) => invoke("fs_append_text_file", { path: location, contents }),
     isFilePresent: (filePath: string) => invoke("fs_is_file_present", { path: filePath }),
     mkdir: (location: string, options?: any) =>
       invoke("fs_mkdir", { path: location, recursive: options?.recursive ?? true }),
     rename: (oldPath: string | URL, newPath: string | URL) =>
       invoke("fs_rename", { oldPath: String(oldPath), newPath: String(newPath) }),
-    listDirectory: (location: string) => invoke("fs_list_directory", { path: location }),
-    lstat: (location: string) => invoke("fs_lstat", { path: location }),
-    realPath: (location: string) => invoke("fs_real_path", { path: location }),
-    isPathWithin: (root: string, location: string) => invoke("fs_is_path_within", { root, path: location }),
   };
 }

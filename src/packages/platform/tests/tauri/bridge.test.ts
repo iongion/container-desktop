@@ -68,10 +68,6 @@ vi.mock("@/container-client/config", () => ({
   },
 }));
 
-vi.mock("@/platform/tauri/aiSystemHost", () => ({
-  createAISystemHost: vi.fn(async () => ({ ai: {}, aiBus: {} })),
-}));
-
 vi.mock("@/platform/tauri/command", () => ({
   ActivityBus: {},
   createCommand: vi.fn(() => ({})),

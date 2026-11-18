@@ -18,15 +18,6 @@ describe("nodeTestHost", () => {
     await FS.writeTextFile(file, "hello");
     expect(await FS.isFilePresent(file)).toBe(true);
     expect(await FS.readTextFile(file)).toBe("hello");
-    expect((await FS.listDirectory(root)).map((e) => e.name)).toEqual(["a.txt"]);
-    expect((await FS.lstat(file)).kind).toBe("file");
-  });
-
-  it("confines isPathWithin to the canonical root", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "cd-node-host-"));
-    roots.push(root);
-    expect(await FS.isPathWithin(root, root)).toBe(true);
-    expect(await FS.isPathWithin(root, tmpdir())).toBe(false);
   });
 
   it("reads env, honors an explicit user-data dir, and reports no SSH hosts", async () => {

@@ -1,7 +1,6 @@
 // Persisted app configuration — the origin. Owned by container-client (the config domain:
 // userConfiguration reads/writes it, Application.getGlobalUserSettings normalizes it). Import from
 // @/container-client/userSettings everywhere; no re-exports.
-import type { AISettings } from "@/ai-system/core/types";
 import type { Connection } from "@/container-client/types/connection";
 import type { ContainerEngineHost, Program } from "@/container-client/types/engine";
 import type { ProxyConfig } from "@/container-client/types/network";
@@ -49,9 +48,6 @@ export interface GlobalUserSettings {
     maxRetries?: number;
   };
   registries: Registry[];
-  // AI subsystem settings. Always populated at runtime by normalizeAISettings()
-  // in Application.getGlobalUserSettings — opt-in, off by default, local-first.
-  ai: AISettings;
   // Global app proxy. Optional for older configs; absence normalizes to disabled at runtime.
   proxy?: ProxyConfig;
   // First-run provisioning wizard state. Optional for back-compat; normalized to { skipAtStartup:false }

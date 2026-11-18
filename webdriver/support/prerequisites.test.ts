@@ -70,8 +70,8 @@ describe("envReason", () => {
 
   it("reports the variable by name, with why it is needed", () => {
     vi.stubEnv("CD_TEST_ABSENT_VAR", "");
-    expect(envReason("CD_TEST_ABSENT_VAR", "it drives a real model")).toBe(
-      "CD_TEST_ABSENT_VAR is not set — it drives a real model",
+    expect(envReason("CD_TEST_ABSENT_VAR", "it dials a real machine")).toBe(
+      "CD_TEST_ABSENT_VAR is not set — it dials a real machine",
     );
   });
 

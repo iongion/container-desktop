@@ -26,13 +26,6 @@ const SSH_API_HOSTS = new Set<ContainerEngineHost>([
 
 export type ProxyRequestRoute = "direct" | "wsl" | "ssh" | "unsupported";
 
-// Whether this engine runs on ANOTHER machine. One set answers both questions, because they are the same question:
-// an engine whose API has to be bridged over SSH is one whose filesystem, loopback and published ports are not this
-// machine's. A caller that needs to know keeps asking here rather than keeping a second copy of the set.
-export function engineIsRemote(host: ContainerEngineHost | undefined): boolean {
-  return !!host && SSH_API_HOSTS.has(host);
-}
-
 export function getProxyRequestRoute(host: ContainerEngineHost): ProxyRequestRoute {
   if (DIRECT_API_HOSTS.has(host)) {
     return "direct";

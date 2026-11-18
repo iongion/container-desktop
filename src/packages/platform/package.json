@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@container-desktop/ai-system": "*",
     "@container-desktop/container-client": "*",
     "@container-desktop/host-contract": "*",
     "@container-desktop/logger": "*",

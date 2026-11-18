@@ -248,6 +248,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The Electron and Wails builds — the app ships on Tauri only
 - The AI assistant: its screens, console, header menu, Settings section and the setup wizard's assistant option. Settings now opens on Air-gap & policy
+- Nothing the assistant left behind is deleted for you: its settings block, stored provider keys, conversations, and the agent images, containers and volume on your engines stay where they are
 - Installing the app no longer downloads a bundled browser, and provisioning a machine no longer pulls in a display server it does not need
 
 ### Fixed

@@ -1,5 +1,5 @@
 // Tauri host bridge — it populates the window.*
-// globals the renderer already reads (Platform / Path / FS / Command / MessageBus + the receive buses + AI),
+// globals the renderer already reads (Platform / Path / FS / Command / MessageBus + the receive buses),
 // backed by @tauri-apps/api `invoke` over the native Rust port. Because the
 // surface is identical, everything above it — container-client, the engine layer, the stores, the whole
 // renderer, and registerHostRuntimeFromGlobals() (which just reads window.*) — runs unchanged.
@@ -15,16 +15,12 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open as openFileDialog, save as saveFileDialog, message as showDialog } from "@tauri-apps/plugin-dialog";
 import { exit as processExit, relaunch as processRelaunch } from "@tauri-apps/plugin-process";
-import { normalizeAISettings } from "@/ai-system/core/settings";
 import { userConfiguration } from "@/container-client/config";
 import { normalizeProxyConfig, validateProxy } from "@/container-client/proxy";
 import { createLogger } from "@/logger";
-import { createConnectionExecAdapter } from "@/platform/capabilities/connectionExec";
 import type { IPlatform, IResourceBus } from "@/platform/contract";
-import { createEngineOpsAdapter } from "@/platform/engineOpsAdapter";
 import { installPlatformGlobals } from "@/platform/globals";
 import { shouldOpenExternally } from "@/platform/urlPolicy";
-import { createAISystemHost } from "./aiSystemHost";
 import { ActivityBus, type CommandProxyStreamEvent, createCommand, type ProcessEventMessage } from "./command";
 import { createFileSystem, createPath, createPlatform } from "./host";
 import { createMessageBus } from "./messageBus";
@@ -86,11 +82,6 @@ export async function installTauriHostBridge(): Promise<void> {
     // getMockEngines() decides autoStart there, and it is the only way to drive what the app does with nothing up.
     target.CONTAINER_DESKTOP_MOCK_CONNECTED =
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_CONNECTED" })) ?? "";
-    // The same flag that turns the single-instance guard off (lib.rs) so the harness runs beside a dev app. The
-    // webview needs it because work that assumes "only this app is running" — reaping orphaned agent sessions —
-    // must stand down when a second instance may hold a live one.
-    target.CONTAINER_DESKTOP_E2E =
-      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_E2E" })) ?? "";
     // CURRENT_DARWIN_MAJOR (uname-derived natively) so macOS Apple-Container network gating
     // (container-client runtime profiles) works under Tauri too; null/undefined off Darwin.
     const darwinMajor = (await invoke<number | null>("get_darwin_major")) ?? undefined;
@@ -155,25 +146,6 @@ export async function installTauriHostBridge(): Promise<void> {
       messageBus,
       extras: { ActivityBus, TrayBus: createTauriTrayBus(), ResourceBus: resourceBus },
     });
-    // Host the AI subsystem IN this realm too: the shared AIBroker +
-    // runtimes run here, reached through window.AI / window.AIBus. engineOps binds to
-    // the SAME in-realm engine service so the assistant's container tools act on live connections.
-    const aiHost = await createAISystemHost({
-      invoke,
-      fs: target.FS,
-      path: target.Path,
-      userDataDir: await invoke<string>("get_user_data_path"),
-      getAISettings: async () => normalizeAISettings(await userConfiguration.getKey("ai")),
-      engineOps: createEngineOpsAdapter(resourceSyncHost.service as any),
-      // Container execution: bind the AI system to the SAME in-realm engine service so a session's container or
-      // sandbox target runs where it should, not silently on this machine.
-      connectionExec: createConnectionExecAdapter(resourceSyncHost.service as any),
-      mock: !!target.CONTAINER_DESKTOP_MOCK,
-      logger: createLogger("tauri.ai"),
-    });
-    target.__aiSystemHost = aiHost; // teardown/live-debug handle (no CDP under WebKitGTK)
-    target.AI = aiHost.ai;
-    target.AIBus = aiHost.aiBus;
     // Native system tray, projected from the SAME in-realm engine service (rebuilds on change, routes clicks
     // back to performAction). Its presence also arms hide-to-tray on window close (lib.rs). Kept on the window
     // so a live-debug/teardown can reach it (no CDP under WebKitGTK).

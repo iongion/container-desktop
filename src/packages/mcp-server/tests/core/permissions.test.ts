@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { isFloorBlocked, toolCommandFloorBlocked } from "@/ai-system/core/commandFloor";
-
 import {
   type AIPermissionMode,
   cachedVerdict,
@@ -134,34 +132,5 @@ describe("resolveToolAction — injection resistance", () => {
   it("keeps the floor above everything in ask/remember, tainted or not", () => {
     expect(resolveToolAction({ mode: "remember", floorBlocked: true, cached: "allow", tainted: false })).toBe("reject");
     expect(resolveToolAction({ mode: "ask", floorBlocked: true, tainted: true })).toBe("reject");
-  });
-});
-
-describe("toolCommandFloorBlocked — the floor applied to typed tool calls by shape", () => {
-  it("blocks an exec-shaped tool call running a banned program", () => {
-    expect(toolCommandFloorBlocked({ program: "rm", args: ["-rf", "/"] })).toBe(true);
-    expect(toolCommandFloorBlocked({ program: "bash", args: ["-c", "x"] })).toBe(true);
-  });
-
-  it("blocks shell metacharacters and traversal in an argument", () => {
-    expect(toolCommandFloorBlocked({ program: "grep", args: ["$(whoami)"] })).toBe(true);
-    expect(toolCommandFloorBlocked({ program: "cat", args: ["../../etc/shadow"] })).toBe(true);
-  });
-
-  it("allows an ordinary workspace command", () => {
-    expect(toolCommandFloorBlocked({ program: "node", args: ["--version"] })).toBe(false);
-    expect(toolCommandFloorBlocked({ program: "yarn", args: ["test"] })).toBe(false);
-  });
-
-  it("ignores structured tool calls that run no program", () => {
-    expect(toolCommandFloorBlocked({ id: "abc123" })).toBe(false);
-    expect(toolCommandFloorBlocked({ path: "src/a.ts", oldString: "a", newString: "b" })).toBe(false);
-    expect(toolCommandFloorBlocked(undefined)).toBe(false);
-    expect(toolCommandFloorBlocked("nope")).toBe(false);
-  });
-
-  it("agrees with isFloorBlocked, which the sandbox path uses directly", () => {
-    expect(isFloorBlocked({ program: "rm", args: [] }).blocked).toBe(true);
-    expect(isFloorBlocked({ program: "podman", args: ["ps"] }).blocked).toBe(false);
   });
 });

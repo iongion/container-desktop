@@ -1,10 +1,9 @@
 import type { AxiosRequestConfig } from "axios";
-import type { IAI, IAIBus } from "@/ai-system/host/aiClientBridge";
 import type { ISSHClient } from "@/container-client/services";
 import type { EngineConnectorSettings, SSHHost } from "@/container-client/types/connection";
 import type { ServiceOpts } from "@/container-client/types/host";
 import type { OpenFileSelectorOptions, OpenTerminalOptions, OperatingSystem } from "@/container-client/types/os";
-import type { IFileDiscoverySystem, IPath } from "@/host-contract/fs";
+import type { IFileSystem, IPath } from "@/host-contract/fs";
 
 // Handle over a finite streamed process (see platform/tauri/exec/commander.ts). Unlike the
 // EventEmitter from ExecuteAsBackgroundService (a readiness/retry loop), this emits raw process events:
@@ -98,9 +97,6 @@ export interface IWindowControl {
   relaunch(): void;
   openDevTools(): void;
   openStorageFolder(): void;
-  // Reveal an arbitrary directory in the OS file manager. openStorageFolder's sibling, but the caller names
-  // the path — the session's workspace is chosen by the user, not fixed by the app.
-  openPath(path: string): void;
 }
 
 // Native dialogs / OS integrations exposed to the renderer (the Tauri dialog plugin).
@@ -108,9 +104,6 @@ export interface IDialogs {
   openFileSelector(options: OpenFileSelectorOptions): Promise<{ canceled: boolean; filePaths: string[] } | undefined>;
   saveFileSelector(options: SaveFileSelectorOptions): Promise<{ canceled: boolean; filePath?: string } | undefined>;
   openTerminal(options: OpenTerminalOptions): Promise<boolean | undefined>;
-  // Open a DIRECTORY as a VS Code workspace, through the vscode:// URI handler — so it needs neither the
-  // `code` CLI on PATH nor a general "run any program" capability. False when VS Code cannot be reached.
-  openInVSCode(path: string): Promise<boolean | undefined>;
 }
 
 export interface SaveFileSelectorOptions {
@@ -125,15 +118,13 @@ export interface IHostRuntime {
   command: ICommand;
   platform: IPlatform;
   path: IPath;
-  fs: IFileDiscoverySystem;
+  fs: IFileSystem;
   messageBus: IMessageBus;
   osType: OperatingSystem;
   darwinMajor?: number;
   activityBus: IActivityBus;
   trayBus: ITrayBus;
   resourceBus: IResourceBus;
-  ai: IAI;
-  aiBus: IAIBus;
   windowControl: IWindowControl;
   dialogs: IDialogs;
 }

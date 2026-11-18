@@ -5,9 +5,7 @@
     "types": ["node"],
     "paths": {
       "@/cli": ["."],
-      "@/cli/*": ["./*"],
-      "@/pi-bridge": ["../../src/packages/pi-bridge/src"],
-      "@/pi-bridge/*": ["../../src/packages/pi-bridge/src/*"]
+      "@/cli/*": ["./*"]
     }
   },
   "include": ["."]

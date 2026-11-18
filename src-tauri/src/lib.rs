@@ -8,9 +8,7 @@ mod child_guard;
 mod host;
 mod keychain;
 mod process;
-mod provider_transport;
 mod proxy;
-mod public_web_fetch;
 mod shell;
 mod spawn_hidden;
 mod ssh_config;
@@ -103,10 +101,6 @@ pub fn run() {
         .manage(proxy::ProxyState::default())
         // Live-process registry for ExecuteStreaming / ExecuteAsBackgroundService (kill by processId).
         .manage(process::ProcessState::default())
-        // Live-stream registry for the native AI provider transport (teardown by streamId).
-        .manage(provider_transport::ProviderTransportState::default())
-        // Live-stream registry for the address-pinned public web fetch (AI web-search; teardown by streamId).
-        .manage(public_web_fetch::PublicWebFetchState::default())
         // Persistent SSH/WSL dial-stdio bridge registry (survives webview reloads; keyed per connection).
         .manage(bridge::BridgeState::default())
         // The single native tray icon (built on first tray_update from the webview's projected menu).
@@ -133,43 +127,20 @@ pub fn run() {
             host::platform::get_user_data_path,
             host::fs::fs_read_text_file,
             host::fs::fs_write_text_file,
-            host::fs::fs_append_text_file,
             host::fs::fs_write_private_text_file,
             host::fs::fs_is_file_present,
             host::fs::fs_mkdir,
             host::fs::fs_rename,
-            host::fs::fs_list_directory,
-            host::fs::fs_lstat,
-            host::fs::fs_real_path,
-            host::fs::fs_is_path_within,
             host::command::command_execute,
-            host::dns::dns_lookup,
-            host::workspace::workspace_root,
-            host::workspace::workspace_read,
-            host::workspace::workspace_write,
-            host::workspace::workspace_write_new,
-            host::workspace::workspace_edit,
-            host::workspace::workspace_list,
-            host::workspace::workspace_stat,
-            host::workspace::workspace_remove,
-            host::workspace::workspace_glob,
-            host::workspace::workspace_grep,
-            host::workspace::workspace_exec,
             ssh_config::get_ssh_config,
             proxy::proxy_request,
             proxy::proxy_request_stream,
             proxy::proxy_stream_destroy,
             proxy::connectivity::proxy_test_connectivity,
-            provider_transport::provider_transport_request,
-            provider_transport::provider_transport_destroy,
-            public_web_fetch::public_web_fetch_request,
-            public_web_fetch::public_web_fetch_destroy,
             process::process_spawn,
             process::process_kill,
             bridge::proxy_bridge_stop,
             shell::open_storage_folder,
-            shell::open_path,
-            shell::open_in_vscode,
             shell::open_external,
             shell::toggle_devtools,
             shell::launch_terminal,
@@ -180,8 +151,6 @@ pub fn run() {
             keychain::keychain_has,
             keychain::keychain_set,
             keychain::keychain_clear,
-            keychain::keychain_write_secret_file,
-            keychain::keychain_write_agent_file,
             tray::tray_update,
         ])
         .run(tauri::generate_context!())

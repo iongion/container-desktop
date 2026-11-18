@@ -5,17 +5,13 @@ import path from "node:path";
 // src/packages/*; the app (web-app) and shared assets (resources) stay at src/. ORDER MATTERS: every specific
 // "@/<pkg>" precedes the generic "@" -> src fallback, because @rollup/plugin-alias matching is first-hit.
 const PACKAGES = [
-  "ai-system",
   "container-client",
   "container-provisioning",
   "host-contract",
   "logger",
   "mcp-server",
-  "pi-agent-host",
-  "pi-bridge",
   "i18n",
   "platform",
-  "template",
   "utils",
 ];
 

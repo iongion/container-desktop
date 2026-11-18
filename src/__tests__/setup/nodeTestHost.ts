@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { OperatingSystem } from "@/container-client/types/os";
-import type { FileSystemEntryKind, IFileDiscoverySystem, IPath } from "@/host-contract/fs";
+import type { IFileSystem, IPath } from "@/host-contract/fs";
 import { createLogger } from "@/logger";
 import type { IPlatform } from "@/platform/contract";
 import { getWindowsPipeName } from "@/utils";
@@ -19,13 +19,6 @@ export const CURRENT_OS_TYPE = os.type() as OperatingSystem;
 // undefined off Darwin or when the release string can't be parsed.
 export const CURRENT_DARWIN_MAJOR: number | undefined =
   os.type() === "Darwin" ? Number.parseInt(`${os.release()}`.split(".")[0], 10) || undefined : undefined;
-
-function fileSystemEntryKind(value: fs.Stats | fs.Dirent): FileSystemEntryKind {
-  if (value.isSymbolicLink()) return "symlink";
-  if (value.isFile()) return "file";
-  if (value.isDirectory()) return "directory";
-  return "other";
-}
 
 // The named-pipe filesystem, which is a real directory Windows lets you list.
 const WINDOWS_PIPE_DIRECTORY = "\\\\.\\pipe\\";
@@ -50,17 +43,13 @@ function isNamedPipeServed(name: string): boolean {
   }
 }
 
-export const FS: IFileDiscoverySystem = {
+export const FS: IFileSystem = {
   async readTextFile(location: string) {
     return await fs.readFileSync(location, { encoding: "utf-8" }).toString();
   },
 
   async writeTextFile(location: string, contents: string) {
     return await fs.writeFileSync(location, contents, { encoding: "utf-8" });
-  },
-
-  async appendTextFile(location: string, contents: string) {
-    fs.appendFileSync(location, contents, { encoding: "utf-8" });
   },
 
   async writePrivateTextFile(location: string, contents: string) {
@@ -84,30 +73,6 @@ export const FS: IFileDiscoverySystem = {
 
   async rename(oldPath: string, newPath: string, options?: any) {
     return await fs.renameSync(oldPath, newPath);
-  },
-
-  async listDirectory(location: string) {
-    return fs
-      .readdirSync(location, { withFileTypes: true })
-      .map((entry) => ({ name: entry.name, kind: fileSystemEntryKind(entry) }));
-  },
-
-  async lstat(location: string) {
-    const stat = fs.lstatSync(location);
-    return { kind: fileSystemEntryKind(stat), size: stat.size, modifiedMs: stat.mtimeMs };
-  },
-
-  async realPath(location: string) {
-    return fs.realpathSync.native(location);
-  },
-
-  async isPathWithin(root: string, location: string) {
-    const canonicalRoot = fs.realpathSync.native(root);
-    const canonicalLocation = fs.realpathSync.native(location);
-    const relative = path.relative(canonicalRoot, canonicalLocation);
-    return (
-      relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))
-    );
   },
 };
 
