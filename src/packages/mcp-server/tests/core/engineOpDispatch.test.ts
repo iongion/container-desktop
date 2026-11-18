@@ -1,111 +1,54 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EngineOps } from "@/container-client/engineOps";
-import { dispatchEngineOp, isEngineOpName, parseEngineOpRequest } from "@/mcp-server/core/engineOpDispatch";
-
-function fakeOps(overrides: Partial<Record<keyof EngineOps, unknown>> = {}): EngineOps {
-  const base = {
-    listConnections: vi.fn(() => [{ id: "primary", name: "Podman", engine: "podman", running: true }]),
-    listContainers: vi.fn(async () => [{ Id: "c1" }]),
-    inspectContainer: vi.fn(async () => ({ Id: "c1" })),
-    getContainerLogs: vi.fn(async () => "line"),
-    getContainerStats: vi.fn(async () => ({ name: "c1" })),
-    startContainer: vi.fn(async () => true),
-    stopContainer: vi.fn(async () => true),
-    restartContainer: vi.fn(async () => true),
-    pauseContainer: vi.fn(async () => true),
-    unpauseContainer: vi.fn(async () => true),
-    removeContainer: vi.fn(async () => true),
-    listImages: vi.fn(async () => []),
-    inspectImage: vi.fn(async () => undefined),
-    pullImage: vi.fn(async () => true),
-    removeImage: vi.fn(async () => true),
-    listNetworks: vi.fn(async () => []),
-    inspectNetwork: vi.fn(async () => ({ id: "n1", name: "bridge" })),
-    removeNetwork: vi.fn(async () => true),
-    listVolumes: vi.fn(async () => []),
-    inspectVolume: vi.fn(async () => ({ Name: "v1" })),
-    removeVolume: vi.fn(async () => true),
-  };
-  return { ...base, ...overrides } as unknown as EngineOps;
-}
-
-describe("isEngineOpName", () => {
-  it("accepts every container tool name", () => {
-    for (const op of ["listConnections", "listContainers", "startContainer", "pullImage", "removeVolume"]) {
-      expect(isEngineOpName(op)).toBe(true);
-    }
-  });
-
-  it("rejects anything else, including a pi built-in", () => {
-    for (const op of ["bash", "read", "", "constructor", "toString", "deployToProd"]) {
-      expect(isEngineOpName(op)).toBe(false);
-    }
-  });
-});
-
-describe("parseEngineOpRequest", () => {
-  it("reads the op and its arguments out of a host request payload", () => {
-    expect(parseEngineOpRequest({ op: "inspectContainer", args: { id: "c1" } })).toEqual({
-      op: "inspectContainer",
-      args: { id: "c1" },
-    });
-  });
-
-  it("defaults absent arguments to an empty object", () => {
-    expect(parseEngineOpRequest({ op: "listContainers" })).toEqual({ op: "listContainers", args: {} });
-  });
-
-  it("refuses a payload with no usable op", () => {
-    expect(parseEngineOpRequest({})).toBeUndefined();
-    expect(parseEngineOpRequest({ op: 42 })).toBeUndefined();
-    expect(parseEngineOpRequest({ op: "bash", args: { command: "rm -rf /" } })).toBeUndefined();
-  });
-});
+import { dispatchEngineOp } from "@/mcp-server/core/engineOpDispatch";
+import { fakeEngineOps } from "../support/fakeEngineOps";
 
 describe("dispatchEngineOp", () => {
-  it("invokes the named operation and returns its value", async () => {
-    const ops = fakeOps();
-    const result = await dispatchEngineOp(ops, { op: "inspectContainer", args: { id: "c1" } });
-    expect(result).toEqual({ ok: true, value: { Id: "c1" } });
-    expect(ops.inspectContainer).toHaveBeenCalledWith({ id: "c1" });
+  it("invokes the named operation with its arguments and returns its value", async () => {
+    const ops = fakeEngineOps();
+    const result = await dispatchEngineOp(ops, { op: "inspectContainer", args: { id: "web" } });
+    expect(result).toEqual({ ok: true, value: expect.objectContaining({ Id: "web" }) });
+    expect(ops.inspectContainer).toHaveBeenCalledWith({ id: "web" });
   });
 
-  it("defaults the connection to the session's, so a model that omits it acts where the session runs", async () => {
-    const ops = fakeOps();
-    await dispatchEngineOp(ops, { op: "listContainers", args: {} }, { connectionId: "session-conn" });
-    expect(ops.listContainers).toHaveBeenCalledWith({ connectionId: "session-conn" });
+  it("passes the arguments through as given, leaving the default connection to the engine layer", async () => {
+    const ops = fakeEngineOps();
+    await dispatchEngineOp(ops, { op: "listContainers", args: {} });
+    await dispatchEngineOp(ops, { op: "listContainers", args: { connectionId: "docker" } });
+    expect(ops.listContainers).toHaveBeenNthCalledWith(1, {});
+    expect(ops.listContainers).toHaveBeenNthCalledWith(2, { connectionId: "docker" });
   });
 
-  it("lets an explicit connection win over the session's", async () => {
-    const ops = fakeOps();
-    await dispatchEngineOp(ops, { op: "listContainers", args: { connectionId: "other" } }, { connectionId: "mine" });
-    expect(ops.listContainers).toHaveBeenCalledWith({ connectionId: "other" });
-  });
-
-  it("never scopes listConnections, whose point is discovering the other connections", async () => {
-    const ops = fakeOps();
-    const result = await dispatchEngineOp(ops, { op: "listConnections", args: {} }, { connectionId: "mine" });
+  it("calls listConnections with no arguments, since it spans every connection", async () => {
+    const ops = fakeEngineOps();
+    const result = await dispatchEngineOp(ops, { op: "listConnections", args: {} });
     expect(ops.listConnections).toHaveBeenCalledWith();
-    expect(result).toEqual({ ok: true, value: [{ id: "primary", name: "Podman", engine: "podman", running: true }] });
+    expect(result).toEqual({ ok: true, value: [{ id: "podman", name: "Podman", engine: "podman", running: true }] });
   });
 
-  it("reports an unknown op as a failure instead of throwing at the caller", async () => {
-    const result = await dispatchEngineOp(fakeOps(), { op: "deployToProd", args: {} });
-    expect(result).toEqual({ ok: false, error: expect.stringContaining("deployToProd") });
+  // Names are checked against the tool list, never looked up on the port, so a prototype member cannot be reached.
+  it("refuses a name outside the container tools, prototype members included", async () => {
+    for (const op of ["deployToProd", "constructor", "toString", "__proto__", ""]) {
+      const result = await dispatchEngineOp(fakeEngineOps(), { op, args: {} });
+      expect(result).toEqual({ ok: false, error: `Unknown container operation: ${op}` });
+    }
   });
 
   it("turns a rejected engine call into a failure carrying the engine's own message", async () => {
-    const ops = fakeOps({
+    const ops = fakeEngineOps({
       startContainer: vi.fn(async () => {
         throw new Error('Connection "gone" is not running.');
       }),
     });
-    const result = await dispatchEngineOp(ops, { op: "startContainer", args: { id: "c1" } });
+    const result = await dispatchEngineOp(ops, { op: "startContainer", args: { id: "web" } });
     expect(result).toEqual({ ok: false, error: 'Connection "gone" is not running.' });
   });
 
-  it("fails cleanly when the app has no engine operations bound at all", async () => {
-    const result = await dispatchEngineOp(undefined, { op: "listContainers", args: {} });
-    expect(result).toEqual({ ok: false, error: expect.stringContaining("no container engine") });
+  it("reports a thrown value that is not an Error as text", async () => {
+    const ops = fakeEngineOps({
+      listImages: vi.fn(async () => {
+        throw "socket closed";
+      }),
+    });
+    expect(await dispatchEngineOp(ops, { op: "listImages", args: {} })).toEqual({ ok: false, error: "socket closed" });
   });
 });

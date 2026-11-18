@@ -1,136 +1,41 @@
 import { describe, expect, it } from "vitest";
-
 import {
-  type AIPermissionMode,
-  cachedVerdict,
-  emptyPermissionsCache,
-  type PermissionDecisionContext,
-  type PermissionRule,
-  permissionKey,
-  resolveToolAction,
-  toolKey,
-  toolRule,
+  DEFAULT_MCP_PERMISSION_MODE,
+  isToolAllowed,
+  MCP_PERMISSION_MODES,
+  type McpPermissionMode,
 } from "@/mcp-server/core/permissions";
+import { GATED_CONTAINER_TOOLS } from "@/mcp-server/core/toolCatalogue";
+import { CONTAINER_TOOL_NAMES } from "@/mcp-server/core/toolNames";
 
-const CONTEXT: PermissionDecisionContext = {
-  workspaceId: "workspace-a",
-  targetId: "host",
-  subject: { kind: "access-profile", id: "operator" },
-  contentTrustEpoch: "application",
-};
+const READS = CONTAINER_TOOL_NAMES.filter((name) => !GATED_CONTAINER_TOOLS.has(name));
 
-describe("toolKey", () => {
-  it("keys a typed tool with its complete permission scope", () => {
-    expect(toolKey(CONTEXT, "removeContainer", { id: "abc" })).toBe(
-      permissionKey(toolRule(CONTEXT, "removeContainer", { id: "abc" })),
-    );
-  });
-
-  it("is stable across arg key order", () => {
-    expect(toolKey(CONTEXT, "pullImage", { reference: "nginx", connectionId: "c1" })).toBe(
-      toolKey(CONTEXT, "pullImage", { connectionId: "c1", reference: "nginx" }),
-    );
-  });
-
-  it("distinguishes tool name and args", () => {
-    expect(toolKey(CONTEXT, "removeContainer", { id: "a" })).not.toBe(toolKey(CONTEXT, "removeContainer", { id: "b" }));
-    expect(toolKey(CONTEXT, "startContainer", { id: "a" })).not.toBe(toolKey(CONTEXT, "stopContainer", { id: "a" }));
-  });
-
-  it("a persisted verdict matches the same tool scope", () => {
-    const key = toolKey(CONTEXT, "removeContainer", { id: "x" });
-    const blocked: PermissionRule[] = [toolRule(CONTEXT, "removeContainer", { id: "x" })];
-    expect(cachedVerdict({ allowed: [], blocked }, key)).toBe("block");
+describe("MCP permission modes", () => {
+  it("offers read-only and allow, and starts read-only", () => {
+    expect(MCP_PERMISSION_MODES).toEqual(["read-only", "allow"]);
+    expect(DEFAULT_MCP_PERMISSION_MODE).toBe("read-only");
   });
 });
 
-describe("resolveToolAction", () => {
-  const modes: AIPermissionMode[] = ["ask", "remember", "allow"];
-
-  it("always-allow runs everything — ignores floor and cache", () => {
-    expect(resolveToolAction({ mode: "allow", floorBlocked: true, cached: "block" })).toBe("run");
-    expect(resolveToolAction({ mode: "allow", floorBlocked: false, cached: undefined })).toBe("run");
-  });
-
-  it("floor blocks in ask + remember (but not allow)", () => {
-    expect(resolveToolAction({ mode: "ask", floorBlocked: true })).toBe("reject");
-    expect(resolveToolAction({ mode: "remember", floorBlocked: true, cached: "allow" })).toBe("reject");
-  });
-
-  it("always-ask prompts for everything, ignoring the cache", () => {
-    expect(resolveToolAction({ mode: "ask", floorBlocked: false, cached: "allow" })).toBe("ask");
-    expect(resolveToolAction({ mode: "ask", floorBlocked: false, cached: "block" })).toBe("ask");
-    expect(resolveToolAction({ mode: "ask", floorBlocked: false })).toBe("ask");
-  });
-
-  it("ask-and-remember runs cached-allow, rejects cached-block, asks the undecided", () => {
-    expect(resolveToolAction({ mode: "remember", floorBlocked: false, cached: "allow" })).toBe("run");
-    expect(resolveToolAction({ mode: "remember", floorBlocked: false, cached: "block" })).toBe("reject");
-    expect(resolveToolAction({ mode: "remember", floorBlocked: false, cached: undefined })).toBe("ask");
-  });
-
-  it("never throws for any mode", () => {
-    for (const mode of modes) {
-      expect(() => resolveToolAction({ mode, floorBlocked: false })).not.toThrow();
+describe("isToolAllowed", () => {
+  it("runs every read in either mode", () => {
+    for (const mode of MCP_PERMISSION_MODES) {
+      for (const name of READS) expect(isToolAllowed(mode, name)).toBe(true);
     }
   });
-});
 
-describe("cachedVerdict", () => {
-  const allowed: PermissionRule[] = [toolRule(CONTEXT, "stopContainer", { id: "web" })];
-  const blocked: PermissionRule[] = [toolRule(CONTEXT, "removeContainer", { id: "web" })];
-
-  it("returns allow for an allowed operation", () => {
-    expect(cachedVerdict({ allowed, blocked }, permissionKey(allowed[0]))).toBe("allow");
+  it("refuses every tool that changes an engine while read-only", () => {
+    for (const name of GATED_CONTAINER_TOOLS) expect(isToolAllowed("read-only", name)).toBe(false);
   });
 
-  it("returns block for a blocked operation", () => {
-    expect(cachedVerdict({ allowed, blocked }, permissionKey(blocked[0]))).toBe("block");
+  it("runs every tool that changes an engine once the user allows it", () => {
+    for (const name of GATED_CONTAINER_TOOLS) expect(isToolAllowed("allow", name)).toBe(true);
   });
 
-  it("returns undefined for an undecided command", () => {
-    expect(cachedVerdict({ allowed, blocked }, toolKey(CONTEXT, "startContainer", { id: "db" }))).toBeUndefined();
-  });
-
-  it("block wins over allow for the same key", () => {
-    const rule = toolRule(CONTEXT, "removeContainer", { id: "x" });
-    const key = permissionKey(rule);
-    const both = {
-      allowed: [rule],
-      blocked: [rule],
-    };
-    expect(cachedVerdict(both, key)).toBe("block");
-  });
-
-  it("empty cache decides nothing", () => {
-    const cache = emptyPermissionsCache();
-    expect(cache.allowed).toEqual([]);
-    expect(cachedVerdict(cache, toolKey(CONTEXT, "listContainers", {}))).toBeUndefined();
-  });
-});
-
-describe("resolveToolAction — injection resistance", () => {
-  const remembered = { mode: "remember" as const, floorBlocked: false, cached: "allow" as const };
-
-  it("honors a remembered allow on an untainted turn", () => {
-    expect(resolveToolAction({ ...remembered, tainted: false })).toBe("run");
-    expect(resolveToolAction(remembered)).toBe("run");
-  });
-
-  it("re-prompts for a remembered allow once the turn ingested untrusted content", () => {
-    expect(resolveToolAction({ ...remembered, tainted: true })).toBe("ask");
-  });
-
-  it("still rejects a remembered block on a tainted turn — taint never upgrades trust", () => {
-    expect(resolveToolAction({ mode: "remember", floorBlocked: false, cached: "block", tainted: true })).toBe("reject");
-  });
-
-  it("leaves always-allow alone: taint does not override the user's explicit max-trust choice", () => {
-    expect(resolveToolAction({ mode: "allow", floorBlocked: false, cached: "allow", tainted: true })).toBe("run");
-  });
-
-  it("keeps the floor above everything in ask/remember, tainted or not", () => {
-    expect(resolveToolAction({ mode: "remember", floorBlocked: true, cached: "allow", tainted: false })).toBe("reject");
-    expect(resolveToolAction({ mode: "ask", floorBlocked: true, tainted: true })).toBe("reject");
+  // A mode read from a hand-edited or older settings file can be anything; only an explicit allow opens the gate.
+  it("treats an unknown mode as read-only", () => {
+    const unknown = "ask" as McpPermissionMode;
+    expect(isToolAllowed(unknown, "removeVolume")).toBe(false);
+    expect(isToolAllowed(unknown, "listVolumes")).toBe(true);
   });
 });

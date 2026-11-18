@@ -1,7 +1,6 @@
-// Central secret redactor. Runs in the broker/runtime before any payload is sent to a provider and on every
-// tool output before it re-enters the model. Conservative by design: redact obvious secrets
-// (provider key prefixes, bearer tokens, JWTs, URL credentials, secret-looking env assignments)
-// without over-redacting ordinary diagnostic text. See security model.
+// Central secret redactor. Runs over build output and over every MCP tool result before it leaves the app.
+// Conservative by design: redact obvious secrets (provider key prefixes, bearer tokens, JWTs, URL credentials,
+// secret-looking env assignments) without over-redacting ordinary diagnostic text.
 
 export const REDACTED = "[REDACTED]";
 

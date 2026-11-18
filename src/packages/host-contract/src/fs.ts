@@ -1,5 +1,5 @@
 // Filesystem + path host PORTS — part of the host-contract leaf. Imports nothing internal, so consumers
-// (container-client, mcp-server) depend on it without pulling in the platform package. platform IMPLEMENTS these;
+// (container-client) depend on it without pulling in the platform package. platform IMPLEMENTS these;
 // IHostRuntime (platform/contract.ts) aggregates them.
 export interface IPath {
   join: (...paths: string[]) => Promise<string>;
