@@ -107,7 +107,10 @@ async fn respond(request: Request<Incoming>, config: &ServerConfig) -> Response<
         return text(StatusCode::SERVICE_UNAVAILABLE, "Container Desktop could not hand the request to its window");
     }
     match pending.wait(config.reply_timeout).await {
-        None => text(StatusCode::GATEWAY_TIMEOUT, "Container Desktop did not answer in time"),
+        None => text(
+            StatusCode::GATEWAY_TIMEOUT,
+            "Container Desktop did not answer: the call ran out of time, or its window reloaded",
+        ),
         Some(reply) if reply.is_empty() => response(StatusCode::ACCEPTED, None, Bytes::new()),
         Some(reply) => response(StatusCode::OK, Some("application/json"), Bytes::from(reply)),
     }

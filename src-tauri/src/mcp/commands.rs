@@ -26,6 +26,13 @@ pub struct McpState {
     lifecycle: tokio::sync::Mutex<Lifecycle>,
 }
 
+impl McpState {
+    /// The main window's page is loading again: the requests it had not answered never will be.
+    pub fn abandon_pending(&self) {
+        self.pending.abandon_all();
+    }
+}
+
 #[derive(Default)]
 struct Lifecycle {
     server: Option<RunningServer>,

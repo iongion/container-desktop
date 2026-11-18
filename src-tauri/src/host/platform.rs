@@ -124,6 +124,12 @@ fn user_data_override(explicit: Option<&str>, cwd: Option<&Path>) -> Option<Path
     Some(cwd.map_or_else(|| explicit.to_path_buf(), |cwd| cwd.join(explicit)))
 }
 
+/// Whether this run's user data is overridden: an isolated run (the WebDriver harness) that must leave the real app's
+/// state alone.
+pub fn user_data_is_overridden() -> bool {
+    std::env::var_os(USER_DATA_OVERRIDE).is_some_and(|value| !value.is_empty())
+}
+
 fn webview_data_dir_from(explicit: Option<&str>, cwd: Option<&Path>) -> Option<PathBuf> {
     user_data_override(explicit, cwd).map(|dir| dir.join("webview"))
 }

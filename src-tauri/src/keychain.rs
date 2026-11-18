@@ -40,6 +40,20 @@ fn entry(service: &str, user: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(service, user).map_err(|e| e.to_string())
 }
 
+// An isolated run (its user data overridden, as the WebDriver harness does) keeps its secrets in the 0600 file in its
+// own user-data dir and never reaches the OS vault, so it can neither read nor replace the real app's secrets.
+fn isolated() -> bool {
+    crate::host::platform::user_data_is_overridden()
+}
+
+/// The OS vault's entry for `account`; an Err in an isolated run.
+fn vault_entry(account: &str) -> Result<keyring::Entry, String> {
+    if isolated() {
+        return Err("an isolated run keeps its secrets in its own user-data dir".into());
+    }
+    entry(KEYCHAIN_SERVICE, account)
+}
+
 /// The OS secret-store backend name for the current platform — shown in the Settings degraded-security notice
 /// ("no OS keychain is available (…)").
 pub fn keychain_backend_name() -> Option<String> {
@@ -126,23 +140,22 @@ fn fallback_clear(account: &str) {
 /// command reads a stored secret, and a caller that hands one over (mcp_token) does so for its own account only.
 /// Blocking (a D-Bus round trip on Linux): call it off the async threads.
 pub fn keychain_get(account: &str) -> Option<String> {
-    let in_vault = entry(KEYCHAIN_SERVICE, account).ok().and_then(|e| e.get_password().ok());
+    let in_vault = vault_entry(account).ok().and_then(|e| e.get_password().ok());
     in_vault.filter(|s| !s.is_empty()).or_else(|| fallback_get(account).filter(|s| !s.is_empty()))
 }
 
 /// Store (or overwrite) the secret for `account` in the OS vault. If the vault write fails and the caller opted into
-/// degraded storage, fall back to the 0600 file instead; otherwise the vault error propagates. Blocking, like
-/// keychain_get.
+/// degraded storage, fall back to the 0600 file instead; otherwise the vault error propagates. An isolated run always
+/// stores in the file. Blocking, like keychain_get.
 pub fn store_secret(account: &str, secret: &str, allow_degraded: bool) -> Result<(), String> {
-    let vault_result = entry(KEYCHAIN_SERVICE, account)
-        .and_then(|e| e.set_password(secret).map_err(|e| e.to_string()));
+    let vault_result = vault_entry(account).and_then(|e| e.set_password(secret).map_err(|e| e.to_string()));
     match vault_result {
         Ok(()) => {
             // Vault write succeeded — drop any stale degraded copy so the two never diverge.
             fallback_clear(account);
             Ok(())
         }
-        Err(_) if allow_degraded => fallback_set(account, secret),
+        Err(_) if allow_degraded || isolated() => fallback_set(account, secret),
         Err(err) => Err(err),
     }
 }
@@ -154,6 +167,14 @@ pub fn store_secret(account: &str, secret: &str, allow_degraded: bool) -> Result
 /// degraded path). `backend` names the platform vault regardless of reachability.
 #[tauri::command]
 pub async fn keychain_status() -> KeychainStatus {
+    // An isolated run's own store is always there, and storing in it needs no consent.
+    if isolated() {
+        return KeychainStatus {
+            available: true,
+            backend: keychain_backend_name(),
+            degraded: false,
+        };
+    }
     let available = tokio::task::spawn_blocking(|| {
         let Ok(probe) = entry(PROBE_SERVICE, PROBE_USER) else {
             return false;
@@ -179,7 +200,7 @@ pub async fn keychain_status() -> KeychainStatus {
 pub async fn keychain_has(account: String) -> bool {
     let account_for_vault = account.clone();
     let in_vault = tokio::task::spawn_blocking(move || {
-        entry(KEYCHAIN_SERVICE, &account_for_vault)
+        vault_entry(&account_for_vault)
             .ok()
             .and_then(|e| e.get_password().ok())
             .map(|s| !s.is_empty())
@@ -211,7 +232,7 @@ pub async fn keychain_clear(account: String) -> Result<(), String> {
     let account_for_vault = account.clone();
     // Best-effort vault delete: a missing entry or an unreachable vault is not an error for "clear".
     let _ = tokio::task::spawn_blocking(move || {
-        if let Ok(e) = entry(KEYCHAIN_SERVICE, &account_for_vault) {
+        if let Ok(e) = vault_entry(&account_for_vault) {
             let _ = e.delete_credential();
         }
     })
@@ -254,6 +275,13 @@ mod tests {
 
         fallback_clear("service-token");
         assert_eq!(fallback_get("service-token"), None);
+
+        // An isolated run stores in its own file without the degraded opt-in, and never in the OS vault: a vault write
+        // would have cleared the file's copy.
+        store_secret("isolated-token", "s3cret", false).unwrap();
+        assert_eq!(fallback_get("isolated-token"), Some("s3cret".to_string()));
+        assert_eq!(keychain_get("isolated-token"), Some("s3cret".to_string()));
+        fallback_clear("isolated-token");
 
         std::env::remove_var("CONTAINER_DESKTOP_USER_DATA_DIR");
         let _ = std::fs::remove_dir_all(&dir);

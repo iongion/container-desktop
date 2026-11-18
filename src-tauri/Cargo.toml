@@ -66,7 +66,8 @@ serde_urlencoded = "0.7"
 # so Linux needs no libsecret C library at build or runtime.
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 # The MCP server's loopback listener (mcp/server.rs): hyper's HTTP/1 server over tokio, a size-capped body reader, a
-# constant-time token compare, and the OS randomness behind the token. All but httpdate are already in the tree.
+# constant-time token compare, and the OS randomness behind the token. All were already in the lock as transitive
+# dependencies, save httpdate, which hyper's server feature adds.
 hyper = { version = "1", features = ["server", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"

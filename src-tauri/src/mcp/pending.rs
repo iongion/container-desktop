@@ -39,6 +39,11 @@ impl PendingReplies {
         self.waiting.lock().unwrap().remove(&id);
     }
 
+    /// End every wait at once: the page that would have answered is gone (a reload), so none of them can be answered.
+    pub fn abandon_all(&self) {
+        self.waiting.lock().unwrap().clear();
+    }
+
     #[cfg(test)]
     pub fn waiting(&self) -> usize {
         self.waiting.lock().unwrap().len()
@@ -89,6 +94,16 @@ mod tests {
         assert_eq!(reply.wait(Duration::from_millis(10)).await, None);
         assert_eq!(pending.waiting(), 0);
         assert!(!pending.resolve(id, "late".into()), "a late answer finds nobody waiting");
+    }
+
+    #[tokio::test]
+    async fn mcp_pending_reply_abandoned_ends_its_wait_at_once() {
+        let pending = Arc::new(PendingReplies::default());
+        let reply = pending.register();
+        pending.abandon_all();
+        assert_eq!(pending.waiting(), 0);
+        let waited = tokio::time::timeout(Duration::from_secs(1), reply.wait(Duration::from_secs(60))).await;
+        assert_eq!(waited, Ok(None), "an abandoned request does not wait out its limit");
     }
 
     #[test]

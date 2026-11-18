@@ -15,6 +15,7 @@ mod spawn_hidden;
 mod ssh_config;
 mod tray;
 
+use tauri::webview::PageLoadEvent;
 use tauri::{Manager, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
 
@@ -135,6 +136,13 @@ pub fn run() {
         // The MCP server's listener and the requests waiting for the webview's answers.
         .manage(mcp::commands::McpState::default())
         .setup(|app| Ok(create_main_window(app)?))
+        // A reload drops the MCP requests the old page was answering; their clients get a 504 now, not after the
+        // reply timeout.
+        .on_page_load(|webview, payload| {
+            if webview.label() == MAIN_WINDOW && payload.event() == PageLoadEvent::Started {
+                webview.state::<mcp::commands::McpState>().abandon_pending();
+            }
+        })
         // Hide-to-tray: while the tray is up, closing the window HIDES it (keeps the webview + the in-realm
         // engine hub alive). A true quit goes through application.exit
         // (process.exit) or the tray's Quit item — both terminate without firing this.
