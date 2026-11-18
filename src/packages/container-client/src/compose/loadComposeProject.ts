@@ -1,6 +1,6 @@
 // Load + fully resolve a compose project into a ComposeProjectModel. This is the ONLY compose module
 // that does I/O — via the ambient FS/Path host ports (renderer-safe on both shells). It reads the file
-// (or takes raw text from the AI generator), applies `.env` interpolation, validates, pre-reads every
+// (or takes raw text), applies `.env` interpolation, validates, pre-reads every
 // referenced env_file, then hands everything to the pure normalizer.
 
 import { parseEnvFile } from "./envfile";

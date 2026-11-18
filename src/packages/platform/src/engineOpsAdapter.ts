@@ -1,7 +1,6 @@
-// EngineOps adapter (MAIN). Implements the neutral EngineOps port (ai-system/core/types) over the live
-// EngineDataService — the same host clients + container-client adapters the rest of the app uses. This is
-// the bridge that lets the assistant's typed tools drive the real engines while keys + execution stay in
-// MAIN. `connectionId` defaults to the primary connection; a missing/unconnected target throws a friendly
+// EngineOps adapter. Implements the EngineOps port (container-client/engineOps) over the live EngineDataService —
+// the same host clients + container-client adapters the rest of the app uses — so a typed tool layer can drive
+// the real engines. `connectionId` defaults to the primary connection; a missing/unconnected target throws a friendly
 // error the tool layer surfaces. Lifecycle ops route through performAction so the resource store refreshes;
 // other mutations (image/network/volume remove, image pull) trigger a domain refresh explicitly.
 

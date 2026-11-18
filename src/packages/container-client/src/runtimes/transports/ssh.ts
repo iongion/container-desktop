@@ -42,7 +42,7 @@ export class SSHTransport implements Transport {
   }
 
   // Bring the connection back rather than refusing the command. The app closes a remote connection whose engine API
-  // stopped answering, and EVERY engine command travels on this client — the assistant's session included — so a
+  // stopped answering, and EVERY engine command travels on this client, so a
   // closed client used to turn the user's next action into "SSH connection is not established" until something else
   // happened to reconnect. One reconnect is shared by whatever asked at the same time, and it deliberately does not go
   // through `getControllerScopes`: that asks whether the ENGINE is available, which runs a command, which would arrive

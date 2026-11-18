@@ -3,8 +3,8 @@
 // A remote's sshd refuses connections under a burst. Measured on a Windows remote: of 14 concurrent engine commands,
 // one came back `kex_exchange_identification: read: Connection reset by peer` — the other thirteen succeeded. That is
 // not the engine's answer and not the command's: the session was never established, so the command never ran and
-// running it again cannot repeat anything. The app used to hand that raw error to whoever asked, which on the AI
-// session's path read as the session failing.
+// running it again cannot repeat anything. The app used to hand that raw error to whoever asked, which read as the
+// command failing.
 //
 // Everything else is an ANSWER — a real engine error, a missing image, a name already in use — and is never retried
 // here. Nor is a timed-out or unreachable host: that one fails slowly, so retrying it would multiply a wait rather

@@ -434,7 +434,7 @@ export class HostClient implements HostContext {
     // Test reachability. Retried, and with a budget that reflects what this connection's ping has to cross: a scoped
     // engine answers over a bridge (an SSH remote in a machine is two SSH hops and a unix socket), so one unanswered
     // request is a hiccup and not a verdict — and the verdict is expensive, since the caller stops the API and an SSH
-    // transport's `stopApi` closes the ssh client every engine command travels on, the assistant's own session included.
+    // transport's `stopApi` closes the ssh client every engine command travels on.
     const driver = await this.getApiDriver();
     systemNotifier.transmit("engine.availability", {
       trace: "Performing api health check - start",

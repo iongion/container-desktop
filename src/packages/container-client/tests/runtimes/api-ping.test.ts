@@ -6,7 +6,7 @@ import { apiPingPolicy, pingUntilAnswered } from "@/container-client/runtimes/ap
 // in single-digit milliseconds; a SCOPED one answers across whatever the connection crosses — for an SSH remote whose
 // engine lives in a machine that is two SSH handshakes and a unix socket, measured at about 1.1s while idle. A single
 // 3s attempt is a coin toss against that, and losing it used to cost the whole connection: the caller stops the API,
-// which closes the SSH client every engine command travels on, so the assistant's own session died with it.
+// which closes the SSH client every engine command travels on, so every command in flight died with it.
 
 describe("apiPingPolicy", () => {
   it("keeps the native budget a local socket has always had", () => {

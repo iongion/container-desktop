@@ -2,7 +2,7 @@
 // they use are the shell's own Rust ports, installed as the globals by its host bridge. Every call goes through
 // container-client and the generic host ports, so the probe proves the shipping path.
 //
-// Registered only behind `import.meta.env.DEV` in index.tsx (same gate as installAssistantDemo), so the whole
+// Registered only behind `import.meta.env.DEV` in index.tsx, so the whole
 // module is tree-shaken out of a production bundle.
 //
 // Each probe returns plain JSON observations and asserts nothing — the spec owns the assertions, matching

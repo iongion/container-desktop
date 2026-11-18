@@ -157,8 +157,8 @@ pub async fn process_spawn(
         .stderr(Stdio::piped())
         // Safety net: if the pump task is dropped without a clean exit, the child is SIGKILLed.
         .kill_on_drop(true);
-    // A streamed child can be long-lived — the assistant's `ssh -NL` forward comes through here — and an app that is
-    // KILLED runs neither the drop above nor the registry's kill.
+    // A streamed child can be long-lived (a followed log, a port forward), and an app that is KILLED runs neither the
+    // drop above nor the registry's kill.
     let child = crate::child_guard::spawn_bound_to_app(&mut command).map_err(|e| e.to_string())?;
     let pid = child.id();
     let process_id = state.next_id();

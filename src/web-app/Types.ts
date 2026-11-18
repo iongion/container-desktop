@@ -29,8 +29,6 @@ export interface AppScreenMetadata {
   RightIcon: any;
   // Sidebar hover tooltip (defaults to the Title when absent).
   Tooltip: string;
-  // Marks a sidebar entry for the attention/warning tint, so a cross-cutting hub stands out from the engine screens.
-  SidebarHighlight: boolean;
   RequiresProvisioning: boolean;
   RequiresConnection: boolean;
 }
