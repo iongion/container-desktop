@@ -140,6 +140,8 @@ export const config = {
     // Rust path has no `-dev` suffix of its own, so without this the debug binary would
     // read/write ~/.config/container-desktop — the release app's dir).
     process.env.CONTAINER_DESKTOP_USER_DATA_DIR ??= E2E_USER_DATA;
+    // Links, the storage folder, the log file and terminals report success without opening on the desktop.
+    process.env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN = "1";
     let driverEnv = process.env;
     if (headlessWanted(process.env, process.platform)) {
       reapStaleDisplays();

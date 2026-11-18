@@ -5,7 +5,16 @@
 // The app keeps the real XDG_RUNTIME_DIR, because the rootless Podman/Docker sockets live there; only its display
 // changes, to the absolute path of the private socket. DISPLAY goes, so GTK cannot fall back onto the desktop's X.
 import { spawn } from "node:child_process";
-import { closeSync, existsSync, mkdtempSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdtempSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -126,6 +135,11 @@ function isAlive(pid) {
 
 // The kernel ends the child when this process dies, however it dies. An interrupted wdio SIGKILLs its worker, which
 // runs no exit handler, so nothing in JavaScript could do this. pagecast's Pdeathsig (src-go/internal/spawn/linux.go).
+/**
+ * @param {string} command
+ * @param {string[]} args
+ * @returns {[string, string[]]}
+ */
 export function diesWithParent(command, args) {
   return existsSync(SETPRIV) ? [SETPRIV, ["--pdeathsig", "KILL", command, ...args]] : [command, args];
 }
@@ -160,7 +174,10 @@ function isOurSway(pid, dir) {
 export function reapStaleDisplays(tmp = os.tmpdir()) {
   const displays = readdirSync(tmp)
     .filter((name) => name.startsWith(DIR_PREFIX))
-    .map((name) => ({ dir: path.join(tmp, name), ownerPid: Number(name.slice(DIR_PREFIX.length).split("-")[0]) || null }));
+    .map((name) => ({
+      dir: path.join(tmp, name),
+      ownerPid: Number(name.slice(DIR_PREFIX.length).split("-")[0]) || null,
+    }));
   for (const { dir } of staleDisplays(displays, isAlive)) {
     const swayPid = readPid(path.join(dir, "sway.pid"));
     if (swayPid && isOurSway(swayPid, dir)) signalGroup(swayPid, "SIGKILL");
