@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - AppImage tray-library probe no longer fails on distros whose appindicator pkg-config emits multiple `-L` flags (e.g. Void); `tauri build` injects a clean single-`-L` shim
+- AppImage `linuxdeploy` gtk plugin no longer fails on distros with a symlinked `libdir` (e.g. Void `/usr/lib64`→`/usr/lib`); the shim canonicalizes `gtk+-3.0`'s `libdir` so the immodules cache lands in a created directory
 
 ## [6.1.0] - 2026-11-17
 

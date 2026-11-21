@@ -22,7 +22,9 @@ On Void (and any distro whose appindicator `.pc` pulls in `gtk+-3.0`), the Tauri
 AppImage tray probe mis-parses the multiple `-L` flags pkg-config emits. `yarn tauri build`
 routes through `support/tauri-build.cjs`, which injects a clean single-`-L` pkg-config shim
 (`support/tauri-appindicator-shim.cjs`) so the AppImage bundles without extra devel packages
-or editing system files.
+or editing system files. The same shim also canonicalizes `gtk+-3.0`'s `libdir` when it is a
+symlink (Void `/usr/lib64`→`/usr/lib`), which otherwise makes Tauri's `linuxdeploy` gtk plugin
+write its immodules cache into a directory that was never created and abort the bundle.
 
 ## Setup
 
