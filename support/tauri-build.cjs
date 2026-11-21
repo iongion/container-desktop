@@ -2,6 +2,7 @@
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const { createAppIndicatorShimEnv } = require("./tauri-appindicator-shim.cjs");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const WINDOWS_MSVC_TARGETS = new Set(["x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc", "i686-pc-windows-msvc"]);
@@ -52,7 +53,18 @@ function createTauriBuildCommand(options = {}) {
   const lookupCommand = options.commandExists || commandExists;
   const runner = options.runner || process.env.TAURI_WINDOWS_RUNNER || "cargo-xwin";
   let resolvedArgs = args;
-  const env = options.env ? { ...options.env } : undefined;
+  let env = options.env ? { ...options.env } : undefined;
+
+  // AppImage bundling needs a clean appindicator pkg-config entry (see tauri-appindicator-shim.cjs).
+  // Apply it only to `build` — the bundling subcommand — so `dev`/compile are never touched. The shim
+  // is a no-op on non-Linux hosts and on distros whose pkg-config already resolves a single valid -L.
+  if (args[0] === "build") {
+    const shimFactory = options.createAppIndicatorShimEnv || createAppIndicatorShimEnv;
+    const shimEnv = shimFactory({ platform: hostPlatform, env: { ...process.env, ...(options.env || {}) } });
+    if (Object.keys(shimEnv).length > 0) {
+      env = { ...(env || {}), ...shimEnv };
+    }
+  }
 
   if (hostPlatform !== "win32" && WINDOWS_MSVC_TARGETS.has(target) && !hasOption(args, "--runner")) {
     if (runner.toLowerCase() !== "none") {

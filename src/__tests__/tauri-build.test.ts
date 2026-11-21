@@ -80,6 +80,8 @@ describe("Tauri build command planning", () => {
       hostArch: "arm64",
       commandExists: () => false,
       pathExists: () => false,
+      // Stub the appindicator shim so this asserts cross-compile planning only, not host pkg-config state.
+      createAppIndicatorShimEnv: () => ({}),
     });
 
     expect(command.args).toEqual(["build", "--target", "aarch64-unknown-linux-gnu"]);
