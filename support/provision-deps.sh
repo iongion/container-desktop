@@ -59,8 +59,9 @@ if command -v apt-get >/dev/null 2>&1; then PM="apt"
 elif command -v dnf >/dev/null 2>&1; then PM="dnf"
 elif command -v yum >/dev/null 2>&1; then PM="yum"
 elif command -v pacman >/dev/null 2>&1; then PM="pacman"
+elif command -v xbps-install >/dev/null 2>&1; then PM="xbps"
 else
-  echo "ERROR: no supported package manager found (apt/dnf/yum/pacman)." >&2
+  echo "ERROR: no supported package manager found (apt/dnf/yum/pacman/xbps)." >&2
   exit 1
 fi
 log "Detected package manager: $PM"
@@ -71,6 +72,7 @@ pm_install() {
     apt) $SUDO apt-get install -y "$@" ;;
     dnf|yum) $SUDO "$PM" install -y "$@" ;;
     pacman) $SUDO pacman -S --needed --noconfirm "$@" ;;
+    xbps) $SUDO xbps-install -Sy "$@" ;;
   esac
 }
 
@@ -140,6 +142,10 @@ install_build_toolchain() {
       $SUDO pacman -Sy --needed --noconfirm \
         base-devel git
       ;;
+    xbps)
+      $SUDO xbps-install -Sy \
+        base-devel git
+      ;;
   esac
 }
 
@@ -160,6 +166,15 @@ install_tauri_linux_deps() {
     pacman)
       install_group "Tauri build deps" \
         pkgconf webkit2gtk-4.1 gtk3 libayatana-appindicator librsvg openssl xdotool file
+      ;;
+    xbps)
+      # Void ships the runtime .so, but the CLI's pkg-config probe needs the -devel .pc — and even then
+      # its `Requires: gtk+-3.0` yields multiple -L flags the CLI mis-parses. tauri-build.cjs injects a
+      # clean single--L shim (support/tauri-appindicator-shim.cjs), so the AppImage bundles correctly.
+      # libxdo (libxdo.pc / xdo.h) comes from xdotool-devel on Void; there is no libxdo-devel package.
+      install_group "Tauri build deps" \
+        pkg-config libwebkit2gtk41-devel gtk+3-devel libayatana-appindicator-devel \
+        librsvg-devel openssl-devel xdotool-devel file
       ;;
   esac
 }
@@ -186,6 +201,10 @@ install_wails_linux_deps() {
       install_group "Wails build deps (GTK3 stack)" \
         gtk3 webkit2gtk-4.1 libayatana-appindicator
       ;;
+    xbps)
+      install_group "Wails build deps (GTK3 stack)" \
+        gtk+3-devel libwebkit2gtk41-devel libayatana-appindicator-devel
+      ;;
   esac
 }
 
@@ -207,6 +226,10 @@ install_tauri_test_deps() {
     pacman)
       install_group "e2e display server" xorg-server-xvfb
       ;;
+    xbps)
+      # WebKitWebDriver ships inside libwebkit2gtk41 (already a build dep); only Xvfb is added here.
+      install_group "e2e display server" xorg-server-xvfb
+      ;;
   esac
 }
 
@@ -226,6 +249,10 @@ install_packaging_tools() {
     pacman)
       # base-devel already provides bsdtar (libarchive) + fakeroot; add rpmbuild + xdg-open + nsis + zip.
       install_group "packaging tools" rpm-tools xdg-utils nsis zip
+      ;;
+    xbps)
+      # Void has no nsis in its repos; bsdtar/rpm/fakeroot/libicns cover the tar/deb/rpm/AppImage targets.
+      install_group "packaging tools" bsdtar rpm fakeroot libicns xdg-utils zip
       ;;
   esac
 }

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `support/provision-deps.sh` now provisions Void Linux (xbps) build and packaging dependencies
+
+### Fixed
+
+- AppImage tray-library probe no longer fails on distros whose appindicator pkg-config emits multiple `-L` flags (e.g. Void); `tauri build` injects a clean single-`-L` shim
+
 ## [6.1.0] - 2026-11-17
 
 ### Added
