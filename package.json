@@ -154,7 +154,7 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.1.7",
-    "vite-plugin-checker": "0.14.5",
+    "vite-plugin-checker": "1.1.0",
     "vite-plugin-ejs": "2.0.0",
     "vite-plugin-svgr": "5.2.0",
     "vitest": "5.1.2",
