@@ -252,3 +252,35 @@ describe("containerDialect.describeApiBridge — the live bridge, or the state a
     expect(await containerDialect.describeApiBridge?.(hostWith(silent), settingsFor())).toBeUndefined();
   });
 });
+
+// Apple's `machine list` has no start time; a running machine's Last up comes from its `inspect`, a stopped one's stays
+// empty (the screen shows "-").
+describe("containerDialect machines — Last up of a running Apple machine", () => {
+  it("reads the start time of each running machine from its inspect", async () => {
+    const list = JSON.stringify([
+      { id: "dev", status: "running", cpus: 2, memory: 1, diskSize: 1, createdDate: "2026-11-27T10:00:00Z" },
+      { id: "old", status: "stopped", cpus: 1, memory: 1, diskSize: 1, createdDate: "2026-11-20T10:00:00Z" },
+    ]);
+    const inspect = JSON.stringify([{ id: "dev", status: "running", startedDate: "2026-11-27T10:05:00Z" }]);
+    const runHostCommand = vi.fn(async (_program: string, args: string[]) =>
+      result(args[1] === "list" ? list : args[1] === "inspect" && args[2] === "dev" ? inspect : "[]", 0),
+    );
+    const host = {
+      isScoped: () => false,
+      runHostCommand,
+      getSettings: async () => ({ program: { name: "container", path: "/usr/local/bin/container" } }),
+    } as unknown as HostContext;
+
+    const machines = await containerDialect.bindExtensions(host).getPodmanMachines();
+
+    expect(machines.map((machine) => [machine.Name, machine.LastUp])).toEqual([
+      ["dev", "2026-11-27T10:05:00Z"],
+      ["old", ""],
+    ]);
+    expect(runHostCommand).not.toHaveBeenCalledWith(
+      expect.anything(),
+      ["machine", "inspect", "old"],
+      expect.anything(),
+    );
+  });
+});

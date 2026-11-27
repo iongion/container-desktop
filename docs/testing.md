@@ -1,6 +1,6 @@
 # Testing
 
-The verification gate is **type-check · lint · unit tests · production build** — all enforced on
+The verification gate is **type-check · lint · unit tests · production build · Tauri backend lint** — all enforced on
 every PR and push to `main` by
 [`.github/workflows/CIPipeline.yml`](../.github/workflows/CIPipeline.yml). That is the **CI**
 pipeline; `CDPipeline.Tauri.yml` is the separate **release/publish** pipeline and runs no checks.
@@ -184,9 +184,12 @@ pnpm test:run      # includes support/cli/**/*.test.ts
 
 [`CIPipeline.yml`](../.github/workflows/CIPipeline.yml) runs a single job:
 
-| Job     | Does                                                                                           |
-| ------- | ---------------------------------------------------------------------------------------------- |
-| **app** | `pnpm check-types` · `pnpm lint:check` · `pnpm test:run` · `ENVIRONMENT=production pnpm build` |
+| Job     | Does |
+| ------- | ---- |
+| **app** | `pnpm check-types` · `pnpm lint:check` · `pnpm test:run` · `ENVIRONMENT=production pnpm build` · `pnpm lint:tauri` |
+
+`pnpm lint:tauri` is rustfmt `--check` plus clippy `-D warnings` over `src-tauri`, after the build it embeds. `make test`
+runs the same steps in the same order, so a green local run is a green CI run.
 
 ## Source map
 

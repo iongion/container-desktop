@@ -89,7 +89,19 @@ function bindAppleMachines(
   return {
     getPodmanMachineInspect: async (name?: string) =>
       name ? parseAppleMachineInspect((await machine(["inspect", name])).stdout || "", name) : undefined,
-    getPodmanMachines: async () => parseAppleMachines((await machine(["list", "--format", "json"])).stdout || ""),
+    // `list` has no start time: a running machine's Last up comes from its `inspect`.
+    getPodmanMachines: async () => {
+      const machines = parseAppleMachines((await machine(["list", "--format", "json"])).stdout || "");
+      return Promise.all(
+        machines.map(async (item) => {
+          if (!item.Running) {
+            return item;
+          }
+          const inspect = parseAppleMachineInspect((await machine(["inspect", item.Name])).stdout || "", item.Name);
+          return { ...item, LastUp: inspect?.LastUp || item.LastUp };
+        }),
+      );
+    },
     createPodmanMachine: async (opts) =>
       (await runApple(host, await host.getSettings(), appleMachineCreateArgs(opts))).success,
     removePodmanMachine: async (name: string) => {
