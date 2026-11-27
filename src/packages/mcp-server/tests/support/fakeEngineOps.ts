@@ -10,7 +10,7 @@ export function fakeEngineOps(overrides: Partial<EngineOps> = {}): EngineOps {
     return true;
   };
   const ops: EngineOps = {
-    listConnections: vi.fn(() => [{ id: "podman", name: "Podman", engine: "podman", running: true }]),
+    listConnections: vi.fn(() => [{ id: "podman", name: "Podman", engine: "podman", running: true, current: true }]),
     listContainers: vi.fn(async () => [web]),
     inspectContainer: vi.fn(async ({ id }) => (id === web.Id ? web : undefined)),
     getContainerLogs: vi.fn(async () => "line 1\nline 2"),

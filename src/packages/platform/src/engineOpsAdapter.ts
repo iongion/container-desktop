@@ -34,11 +34,13 @@ export function createEngineOpsAdapter(service: EngineDataService): EngineOps {
 
   return {
     listConnections(): EngineConnectionInfo[] {
-      return service.getAppRuntimeSnapshot().connections.map((c) => ({
+      const snapshot = service.getAppRuntimeSnapshot();
+      return snapshot.connections.map((c) => ({
         id: c.id,
         name: c.name,
         engine: c.engine,
         running: !!service.getHost(c.id),
+        current: c.id === snapshot.currentConnector?.id,
       }));
     },
 

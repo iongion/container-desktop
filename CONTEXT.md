@@ -41,5 +41,7 @@ _Avoid_: channel, connection (a connection is an engine connection)
 ## Relationships
 
 - A **Client** reaches the **MCP server** over one **Transport** and presents the **Token**.
-- The **Mode** decides which **Tools** a **Client** sees; a **Gated tool** is hidden and refused in read-only.
-- Every **Tool** acts on an engine connection of the app; left unnamed, the current one.
+- The **Mode** decides which **Tools** run; a **Client** sees every **Tool**, and a **Gated tool** is refused in
+  read-only.
+- Every **Tool** acts on an engine connection of the app; left unnamed, the current one (`current` in
+  `listConnections`).

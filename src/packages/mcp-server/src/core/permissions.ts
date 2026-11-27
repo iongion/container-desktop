@@ -1,6 +1,6 @@
 // What an MCP client may do, by the mode the user picks in settings. Reads always run. The tools that change an
 // engine (GATED_CONTAINER_TOOLS) run only in `allow`, where their annotations tell the client to ask its own user;
-// in `read-only` they are left out of `tools/list` and a call to one is refused.
+// in `read-only` they are still listed, and a call to one is refused with where the user allows changes.
 
 import { GATED_CONTAINER_TOOLS } from "./toolCatalogue";
 import type { ContainerToolName } from "./toolNames";

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { EngineOps } from "@/container-client/engineOps";
 import { handleMcpMessage, MCP_PROTOCOL_VERSIONS, type McpServerDeps } from "@/mcp-server/core/protocol";
-import { GATED_CONTAINER_TOOLS } from "@/mcp-server/core/toolCatalogue";
 import { CONTAINER_TOOL_NAMES } from "@/mcp-server/core/toolNames";
 import { fakeEngineOps } from "../support/fakeEngineOps";
 
@@ -22,8 +21,6 @@ function request(id: number | string, method: string, params?: unknown) {
 async function callTool(name: string, args: unknown, using: McpServerDeps = deps()) {
   return send(request(7, "tools/call", { name, arguments: args }), using);
 }
-
-const READS = CONTAINER_TOOL_NAMES.filter((name) => !GATED_CONTAINER_TOOLS.has(name));
 
 describe("initialize", () => {
   it("supports the handshake-based MCP revisions, newest first", () => {
@@ -130,14 +127,13 @@ describe("JSON-RPC errors", () => {
 });
 
 describe("tools/list", () => {
-  it("lists only the reads while read-only", async () => {
-    const reply = await send(request(1, "tools/list"));
-    expect(reply.result.tools.map((tool: { name: string }) => tool.name)).toEqual(READS);
-  });
-
-  it("lists every tool once the user allows changes", async () => {
-    const reply = await send(request(1, "tools/list", {}), deps({ mode: "allow" }));
-    expect(reply.result.tools.map((tool: { name: string }) => tool.name)).toEqual([...CONTAINER_TOOL_NAMES]);
+  // A client reads the list once per session, so a list that followed the mode would hide the changing tools until
+  // it reconnected; the mode is enforced on the call instead.
+  it("lists every tool in either mode", async () => {
+    for (const mode of ["read-only", "allow"] as const) {
+      const reply = await send(request(1, "tools/list", {}), deps({ mode }));
+      expect(reply.result.tools.map((tool: { name: string }) => tool.name)).toEqual([...CONTAINER_TOOL_NAMES]);
+    }
   });
 
   it("describes each tool with a title, a description, an input schema and annotations", async () => {
@@ -154,7 +150,7 @@ describe("tools/call", () => {
     const reply = await callTool("listContainers", {});
     const result = reply.result;
     expect(result.structuredContent).toEqual({
-      result: [{ Id: "web", Name: "web", Image: "nginx", State: "running" }],
+      result: [{ id: "web", name: "web", image: "nginx", state: "running" }],
     });
     expect(result.content).toEqual([{ type: "text", text: JSON.stringify(result.structuredContent) }]);
     expect(result.isError).toBeUndefined();
@@ -167,7 +163,7 @@ describe("tools/call", () => {
 
   it("treats omitted arguments as none", async () => {
     const reply = await send(request(7, "tools/call", { name: "listVolumes" }));
-    expect(reply.result.structuredContent).toEqual({ result: [{ Name: "data" }] });
+    expect(reply.result.structuredContent).toEqual({ result: [{ name: "data" }] });
   });
 
   it("redacts secrets in both the structured content and the text", async () => {
@@ -190,6 +186,8 @@ describe("tools/call", () => {
     const reply = await callTool("stopContainer", { id: "web" }, deps({ engineOps }));
     expect(reply.result.isError).toBe(true);
     expect(reply.result.content[0].text).toMatch(/read-only/);
+    // The client cannot change the mode itself, so the refusal names where the user does.
+    expect(reply.result.content[0].text).toContain('"Allow changes" in Settings → MCP server');
     expect(engineOps.stopContainer).not.toHaveBeenCalled();
   });
 

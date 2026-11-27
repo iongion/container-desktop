@@ -78,7 +78,7 @@ const TOOLS: Readonly<Record<ContainerToolName, { inputSchema: TSchema; annotati
   pullImage: { inputSchema: PULL, annotations: { ...CHANGE, idempotentHint: false, openWorldHint: true } },
 };
 
-// The tools that change an engine: the permission mode decides whether these are listed and run.
+// The tools that change an engine: the permission mode decides whether these run.
 export const GATED_CONTAINER_TOOLS: ReadonlySet<ContainerToolName> = new Set(
   CONTAINER_TOOL_NAMES.filter((name) => !TOOLS[name].annotations.readOnlyHint),
 );

@@ -73,7 +73,7 @@ describe("createMcpHost: answering the listener's requests", () => {
   it("runs tool calls on the in-realm engine", async () => {
     const { request, deps } = makeHost();
     const reply = await request(2, call(9, "listContainers"));
-    expect(reply.body.result.structuredContent).toEqual({ result: [{ Id: "web", Name: "web", State: "running" }] });
+    expect(reply.body.result.structuredContent).toEqual({ result: [{ id: "web", name: "web", state: "running" }] });
     expect(deps.engineOps.listContainers).toHaveBeenCalledTimes(1);
   });
 

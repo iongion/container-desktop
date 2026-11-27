@@ -10,6 +10,7 @@ import { isToolAllowed, type McpPermissionMode } from "./permissions";
 import { validateToolArguments } from "./toolArguments";
 import { shippedMcpTools } from "./toolCatalogue";
 import { isContainerToolName } from "./toolNames";
+import { summarizeToolResult } from "./toolResultSummaries";
 
 // Newest first: a client asking for a version not in this list is answered with the first one.
 export const MCP_PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"] as const;
@@ -84,8 +85,10 @@ function initialize(params: Params, deps: McpServerDeps) {
   };
 }
 
-function listTools(_params: Params, deps: McpServerDeps) {
-  return { tools: shippedMcpTools().filter((tool) => isToolAllowed(deps.mode, tool.name)) };
+// Every tool, whatever the mode: a client reads this list once per session, so a list that followed the mode would
+// keep the changing tools from it until it reconnected. The mode is enforced on each call instead.
+function listTools() {
+  return { tools: shippedMcpTools() };
 }
 
 function toolError(text: string): ToolResult {
@@ -110,13 +113,14 @@ async function callTool(params: Params, deps: McpServerDeps): Promise<ToolResult
   if (!isToolAllowed(deps.mode, name)) {
     return toolError(
       `${name} changes a container engine, and Container Desktop's MCP server is read-only. ` +
-        "The user can allow changes in Container Desktop's MCP server settings.",
+        `The user can turn on "Allow changes" in Settings → MCP server in Container Desktop; ${name} then works ` +
+        "without reconnecting.",
     );
   }
   const invalid = validateToolArguments(name, args);
   if (invalid) return toolError(`Invalid arguments for ${name}: ${invalid}`);
   const outcome = await dispatchEngineOp(deps.engineOps, { op: name, args });
-  return outcome.ok ? toolSuccess(outcome.value) : toolError(redactText(outcome.error));
+  return outcome.ok ? toolSuccess(summarizeToolResult(name, outcome.value)) : toolError(redactText(outcome.error));
 }
 
 const METHODS: Readonly<Record<string, (params: Params, deps: McpServerDeps) => unknown>> = {

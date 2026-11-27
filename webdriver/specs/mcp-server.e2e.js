@@ -63,8 +63,9 @@ describe("mcp-server over the mock app", () => {
     for (const connection of connections.filter((candidate) => candidate.running)) {
       const listed = await callTool("listContainers", { connectionId: connection.id });
       expect(listed.isError).toBeFalsy();
-      const match = listed.structuredContent.result.find((container) => running.includes(container.Id));
-      if (match) return { id: match.Id, connectionId: connection.id };
+      // listContainers answers with summaries: id, name, image, state.
+      const match = listed.structuredContent.result.find((container) => running.includes(container.id));
+      if (match) return { id: match.id, connectionId: connection.id };
     }
     throw new Error(`no connection lists a container running on screen (${running.length} running rows)`);
   }
@@ -89,7 +90,7 @@ describe("mcp-server over the mock app", () => {
     post = mcpClient(url, token);
   });
 
-  it("answers the handshake and lists only the read-only tools", async () => {
+  it("answers the handshake and lists every tool, the changing ones included, while read-only", async () => {
     const init = await post({
       method: "initialize",
       params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: "e2e", version: "1" } },
@@ -101,7 +102,8 @@ describe("mcp-server over the mock app", () => {
     const listed = await post({ method: "tools/list" });
     const names = listed.json.result.tools.map((tool) => tool.name);
     expect(names).toContain("listContainers");
-    expect(names).not.toContain("stopContainer");
+    // A client reads the list once per session, so the changing tools are there before the UI allows them.
+    expect(names).toContain("stopContainer");
   });
 
   it("refuses a change in read-only, then makes it once the UI allows changes", async () => {
@@ -110,6 +112,7 @@ describe("mcp-server over the mock app", () => {
     const refused = await callTool("stopContainer", target);
     expect(refused.isError).toBe(true);
     expect(refused.content[0].text).toContain("read-only");
+    expect(refused.content[0].text).toContain('"Allow changes"');
 
     await navigate(browser, SETTINGS_ROUTE);
     await waitUntilIdle();

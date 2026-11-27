@@ -99,7 +99,7 @@ The app must be running with the server on: otherwise every request gets an erro
 - **Read-only** (the default): list connections, list and inspect containers, images, networks and volumes, read container logs and stats. Nothing changes.
 - **Allow changes**: also start, stop, restart, pause, resume and remove containers, remove images, networks and volumes, and pull images.
 
-In read-only the changing tools are not even offered to the client, and a call to one is refused with an explanation. Anything a client changes shows in the app at once, and secrets are redacted from everything the server returns.
+In read-only a client still sees the changing tools, but a call to one is refused with an explanation of where to allow changes. Switching Access needs no reconnect: the next call already follows it. Anything a client changes shows in the app at once, and secrets are redacted from everything the server returns.
 
 </section>
 

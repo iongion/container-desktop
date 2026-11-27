@@ -44,6 +44,8 @@ export interface EngineConnectionInfo {
   name: string;
   engine: string;
   running: boolean;
+  // The connection a call without a connectionId goes to: the one selected in the app.
+  current: boolean;
 }
 
 export interface EngineConnectionRef {

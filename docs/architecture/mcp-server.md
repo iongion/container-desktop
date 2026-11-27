@@ -49,8 +49,12 @@ flowchart LR
 - **read-only** (default): `listConnections`, and list or inspect for containers, images, networks and volumes, plus
   container logs and stats.
 - **allow** adds the gated tools: start, stop, restart, pause, unpause and remove a container; remove an image, network
-  or volume; pull an image. In read-only they are not listed, and a call to one is refused as a tool error.
-- The mode is read from the settings for each request, so a change in Settings applies to the next call.
+  or volume; pull an image. They are listed in both modes; in read-only a call to one is refused as a tool error that
+  names the setting to change.
+- The mode is read from the settings for each request, so a change in Settings applies to the next call, with no
+  client reconnect (clients read `tools/list` once per session).
+- The list tools answer with a summary per item (`toolResultSummaries.ts`); the inspect tools return the full object.
+- `listConnections` marks the `current` connection, the one a call without `connectionId` goes to.
 - Tool descriptions live in `src/resources/prompts/mcp-tool-descriptions.md`; every result is passed through the
   secret redactor (`@/utils/redact`) before it leaves the app.
 

@@ -22,7 +22,10 @@ describe("dispatchEngineOp", () => {
     const ops = fakeEngineOps();
     const result = await dispatchEngineOp(ops, { op: "listConnections", args: {} });
     expect(ops.listConnections).toHaveBeenCalledWith();
-    expect(result).toEqual({ ok: true, value: [{ id: "podman", name: "Podman", engine: "podman", running: true }] });
+    expect(result).toEqual({
+      ok: true,
+      value: [{ id: "podman", name: "Podman", engine: "podman", running: true, current: true }],
+    });
   });
 
   // Names are checked against the tool list, never looked up on the port, so a prototype member cannot be reached.

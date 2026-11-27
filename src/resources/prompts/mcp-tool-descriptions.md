@@ -2,7 +2,7 @@
 
 ## listConnections
 
-List the container-engine connections configured in Container Desktop (id, name, engine, running). Pass a connection's id as `connectionId` to any other tool to reach that engine; leave it out to use the current connection.
+List the container-engine connections configured in Container Desktop (id, name, engine, running, current). Pass a connection's id as `connectionId` to any other tool to reach that engine; leave it out to use the current connection, the one marked `current`.
 
 ## listContainers
 
