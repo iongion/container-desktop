@@ -135,3 +135,4 @@ webdriver/artifacts/
 
 # e2e-isolated app data (never the release app's dir)
 webdriver/.e2e-user-data/
+webdriver/.capture-user-data/

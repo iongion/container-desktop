@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -71,8 +71,23 @@ function portIsOpen(port: number, host = "127.0.0.1", timeoutMs = 1000): Promise
   });
 }
 
+// Like the WebDriver harness (webdriver/wdio.conf.js), the capture app keeps its settings, webview storage and secrets
+// in its own fresh user-data dir, never the installed app's: seeded per launch, with the setup wizard skipped.
+const CAPTURE_USER_DATA = path.join(ROOT, "webdriver", ".capture-user-data");
+
+function freshCaptureUserData(): string {
+  rmSync(CAPTURE_USER_DATA, { recursive: true, force: true });
+  mkdirSync(CAPTURE_USER_DATA, { recursive: true });
+  writeFileSync(
+    path.join(CAPTURE_USER_DATA, "user-settings.json"),
+    `${JSON.stringify({ wizard: { skipAtStartup: true } }, null, 2)}\n`,
+  );
+  return CAPTURE_USER_DATA;
+}
+
 function tauriEnv(engine: string): NodeJS.ProcessEnv {
   const env = { ...process.env };
+  env.CONTAINER_DESKTOP_USER_DATA_DIR = freshCaptureUserData();
   // Gate single-instance OFF and select the mock engine on the launched app's own process env.
   env.CONTAINER_DESKTOP_E2E = "1";
   env.CONTAINER_DESKTOP_MOCK = engine;

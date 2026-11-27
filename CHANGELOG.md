@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Capturing the website screenshots no longer reads or writes your installed app's settings, webview storage or keychain: the capture app runs on its own fresh user data, as the WebDriver suites do
 - A container command that fails lists its errors in the notification; the Notification Center showed "[object Object]"
 - The swarm smoke spec's manager half skips when the sandbox is down, as its lifecycle half does, instead of failing
 - A WebDriver run no longer reads or writes your installed app's webview storage (localStorage, HTTP cache). With `CONTAINER_DESKTOP_USER_DATA_DIR` set, the webview keeps its own under that directory; a normal launch is unchanged

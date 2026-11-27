@@ -76,9 +76,24 @@ export const screenshotManifest = [
     waitFor: '[data-screen="settings-settings"] [data-form="network"]',
   },
   {
+    // Settings → MCP server, switched on: its status, endpoint and token, the feature card's picture.
+    file: "McpServer.png",
+    route: "/screens/settings/user-settings?category=mcp",
+    pre: [{ action: "enableMcpServer" }],
+    waitFor: '.AppSettingsMcpStatus[data-running="yes"]',
+  },
+  {
     file: "SystemInfo.png",
-    route: "/screens/connections/system-info",
-    waitFor: '[data-screen="connections.system-info"] .CodeEditor .monaco-editor',
+    // System info lives under its connection; the current one, read from the Connections list.
+    route: "/screens/connections/$connectionId/system-info",
+    resolve: {
+      connectionId: {
+        route: "/screens/connections/manage",
+        selector: 'tr[data-connection-is-current="yes"]',
+        attr: "data-connection-id",
+      },
+    },
+    waitFor: '[data-screen="connections.system-info"] [data-table="system-info.summary"]',
   },
   {
     file: "ConnectionManager.png",
@@ -98,7 +113,7 @@ export const screenshotManifest = [
     file: "003-ContainerInspect.png",
     route: "/screens/container/$containerId/inspect",
     resolve: { containerId: { route: "/screens/containers", selector: "[data-container]", attr: "data-container" } },
-    waitFor: '[data-table="container.inspect"]',
+    waitFor: '[data-table="container.inspect-summary"]',
   },
   {
     file: "003-ContainerActions.png",
@@ -135,12 +150,25 @@ export const screenshotManifest = [
     file: "015-VolumeActions.png",
     route: "/screens/volumes",
     waitFor: ".bp6-portal .bp6-menu",
-    pre: [{ action: "openRowActions", rowSelector: '[data-table="volumes"] tbody tr' }],
+    // A volume row, not a connection group header (the unified view groups by connection).
+    pre: [
+      {
+        action: "openRowActions",
+        rowSelector: '[data-table="volumes"] tbody tr[data-prefix-group]:not(.AppDataTableGroupRow)',
+      },
+    ],
   },
   {
     file: "ImageSecurity.png",
     route: "/screens/image/$imageId/security",
     resolve: { imageId: { route: "/screens/images", selector: "[data-image]", attr: "data-image" } },
+    // The Trivy scan is button-triggered, and the table shows Critical and High until more severities are switched on;
+    // the mock's first image has Medium and Low findings.
+    pre: [
+      { action: "click", selector: '[data-action="image.scan"]' },
+      { action: "click", selector: '.SecuritySeverityFilter:has([data-severity="MEDIUM"])' },
+      { action: "click", selector: '.SecuritySeverityFilter:has([data-severity="LOW"])' },
+    ],
     waitFor: '[data-table="image.scanning.report"] tbody tr[data-severity]',
     minCount: 2,
   },

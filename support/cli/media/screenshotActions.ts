@@ -232,9 +232,18 @@ export async function runBuild(driver: CaptureDriver) {
   await driver.waitForSelector('[data-region="run"][data-build-status="succeeded"]', { timeout: 60_000 });
 }
 
+// Switch the MCP server on in Settings → MCP server and wait until it runs, so the shot shows its endpoint and how a
+// client connects. The capture run's isolated user-data dir holds its own throwaway token.
+export async function enableMcpServer(driver: CaptureDriver) {
+  // The switch's checkbox is visually hidden (Blueprint draws the control), so wait for the form and click its label.
+  await driver.waitForSelector('[data-form="mcp"]', { timeout: 30_000 });
+  await driver.evaluate(() => (document.querySelector("#mcpEnabled")?.parentElement as HTMLElement | null)?.click());
+  await driver.waitForSelector('.AppSettingsMcpStatus[data-running="yes"]', { timeout: 30_000 });
+}
+
 export async function runPreActions(
   driver: CaptureDriver,
-  actions: Array<{ action: string; rowSelector?: string; expanded?: boolean }> = [],
+  actions: Array<{ action: string; rowSelector?: string; selector?: string; expanded?: boolean }> = [],
 ) {
   for (const action of actions) {
     if (action.action === "openRowActions") {
@@ -243,6 +252,11 @@ export async function runPreActions(
       await openNetworkCreate(driver);
     } else if (action.action === "runBuild") {
       await runBuild(driver);
+    } else if (action.action === "click") {
+      await driver.waitForSelector(action.selector!, { timeout: 30_000 });
+      await driver.click(action.selector!);
+    } else if (action.action === "enableMcpServer") {
+      await enableMcpServer(driver);
     } else if (action.action === "setSidebarExpanded") {
       await setSidebarExpanded(driver, action.expanded !== false);
     } else {

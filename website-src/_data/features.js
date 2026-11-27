@@ -45,8 +45,8 @@ export default {
         "Loopback only, token kept in the OS keychain",
         "HTTP for most clients, stdio for the rest",
       ],
-      img: "/img/podman/003-ContainerInspect.png",
-      alt: "Container inspection, as an MCP client sees it",
+      img: "/img/podman/McpServer.png",
+      alt: "Settings → MCP server, switched on",
       flip: true,
     },
     {

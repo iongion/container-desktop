@@ -543,6 +543,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <span className="SecurityPanelHint">Trivy</span>
               <Button
                 className="SecurityPanelScan"
+                data-action="image.scan"
                 intent={Intent.PRIMARY}
                 icon={IconNames.SEARCH_TEMPLATE}
                 text={scanned ? t("Rescan") : t("Scan for vulnerabilities")}
