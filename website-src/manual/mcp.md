@@ -11,7 +11,6 @@ sections:
   - { id: mcp-http, label: "Connect a client" }
   - { id: mcp-stdio, label: "Clients that only speak stdio" }
   - { id: mcp-access, label: "What clients may do" }
-  - { id: mcp-assistant, label: "After the old assistant" }
 ---
 
 <section class="guide-sec" id="mcp-what">
@@ -106,18 +105,5 @@ The app must be running with the server on: otherwise every request gets an erro
 - **Allow changes**: also start, stop, restart, pause, resume and remove containers, remove images, networks and volumes, and pull images.
 
 In read-only a client still sees the changing tools, but a call to one is refused with an explanation of where to allow changes. Switching Access needs no reconnect: the next call already follows it. Anything a client changes shows in the app at once, and secrets are redacted from everything the server returns.
-
-</section>
-
-<section class="guide-sec" id="mcp-assistant">
-
-### After the old assistant
-
-Versions 6.0 and 6.1 had a built-in AI assistant; it is gone, and the MCP server takes its place. What it left behind stays where it was, untouched, for you to keep or remove:
-
-- the `ai` block in `user-settings.json`, and `ai-permissions.json` and the conversations folder, in the app's data folder;
-- `agent/` and `keychain-fallback.json` in the same folder, which can hold provider keys: delete them if you no longer need those keys;
-- provider keys in your OS keychain, under the service `com.iongion.container-desktop.keychain`, removable with your keychain's own tool;
-- the assistant's images, containers and plugin volume on your engines, removable from the app like any other.
 
 </section>

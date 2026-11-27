@@ -89,7 +89,7 @@
       <div class="grp"><i class="fab fa-linux"></i> Linux</div><a href="#linux-req">Requirements</a><a href="#linux-quick">1 · Quick guide</a><a href="#linux-podman-docker">2 · Podman as Docker</a><a href="#linux-dd-alt">3 · Docker Desktop alternative</a><a href="#linux-share">4 · Sharing connection</a>
       <div class="grp"><i class="fab fa-apple"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-apple-container">5 · Apple™ Container</a><a href="#macos-share">6 · Sharing connection</a>
       <div class="grp"><i class="fab fa-windows"></i> Windows</div><a href="#windows-req">Requirements</a><a href="#windows-quick">1 · Quick guide</a><a href="#windows-best">2 · Best experience</a><a href="#windows-podman-docker">3 · Podman as Docker</a><a href="#windows-dd-alt">4 · Docker Desktop alternative</a><a href="#windows-podman-custom">5 · Podman custom install</a><a href="#windows-share">6 · Sharing connection</a><a href="#windows-tips">7 · Tips &amp; tricks</a>
-      <div class="grp"><i class="fas fa-plug"></i> AI clients (MCP)</div><a href="#mcp-what">What it is</a><a href="#mcp-enable">Turn it on</a><a href="#mcp-http">Connect a client</a><a href="#mcp-stdio">Clients that only speak stdio</a><a href="#mcp-access">What clients may do</a><a href="#mcp-assistant">After the old assistant</a>
+      <div class="grp"><i class="fas fa-plug"></i> AI clients (MCP)</div><a href="#mcp-what">What it is</a><a href="#mcp-enable">Turn it on</a><a href="#mcp-http">Connect a client</a><a href="#mcp-stdio">Clients that only speak stdio</a><a href="#mcp-access">What clients may do</a>
       <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-build">Building images</a>
       <div class="grp"><i class="fas fa-keyboard"></i> Keyboard shortcuts</div><a href="#shortcuts-find">Find</a><a href="#shortcuts-all">All shortcuts</a>
     </aside>
@@ -461,6 +461,12 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
   }
 }
 </code></pre>
+<p>Where the program is, by how you installed it:</p>
+<ul>
+<li><strong>Linux</strong> (<code>.deb</code>, <code>.rpm</code>): <code>/usr/bin/container-desktop</code>; the AppImage: the <code>.AppImage</code> file itself.</li>
+<li><strong>Windows</strong> (the <code>.exe</code> installer): <code>%LOCALAPPDATA%\Container Desktop\container-desktop.exe</code>; the <code>.msi</code>: <code>C:\Program Files\Container Desktop\container-desktop.exe</code>.</li>
+<li><strong>macOS</strong>: <code>/Applications/Container Desktop.app/Contents/MacOS/container-desktop</code>.</li>
+</ul>
 <p>The app must be running with the server on: otherwise every request gets an error saying so.</p>
 </section>
 <section class="guide-sec" id="mcp-access">
@@ -471,16 +477,6 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <li><strong>Allow changes</strong>: also start, stop, restart, pause, resume and remove containers, remove images, networks and volumes, and pull images.</li>
 </ul>
 <p>In read-only a client still sees the changing tools, but a call to one is refused with an explanation of where to allow changes. Switching Access needs no reconnect: the next call already follows it. Anything a client changes shows in the app at once, and secrets are redacted from everything the server returns.</p>
-</section>
-<section class="guide-sec" id="mcp-assistant">
-<h3>After the old assistant</h3>
-<p>Versions 6.0 and 6.1 had a built-in AI assistant; it is gone, and the MCP server takes its place. What it left behind stays where it was, untouched, for you to keep or remove:</p>
-<ul>
-<li>the <code>ai</code> block in <code>user-settings.json</code>, and <code>ai-permissions.json</code> and the conversations folder, in the app's data folder;</li>
-<li><code>agent/</code> and <code>keychain-fallback.json</code> in the same folder, which can hold provider keys: delete them if you no longer need those keys;</li>
-<li>provider keys in your OS keychain, under the service <code>com.iongion.container-desktop.keychain</code>, removable with your keychain's own tool;</li>
-<li>the assistant's images, containers and plugin volume on your engines, removable from the app like any other.</li>
-</ul>
 </section>
 
       <div class="guide-os" id="using"><i class="fas fa-book-open"></i><h2>Using the app</h2></div>
