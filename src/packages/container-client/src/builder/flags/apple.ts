@@ -1,8 +1,9 @@
 // Pure options → `container build …` argv for Apple Container (everything AFTER the `container` program;
-// context dir last). Apple's `container build` is BuildKit-backed but exposes a REDUCED surface: it supports
-// -t/--target/--build-arg/--secret/--platform, the resource flags (-a/--arch, --os, -c/--cpus, -m/--memory),
-// -l/--label, --no-cache/--pull and -o/--output — but NOT --ssh, --cache-from/--cache-to, or --build-context.
-// Single-platform (arm64) only. Unsupported options are dropped here so a stray field never reaches the CLI.
+// context dir last). Apple's `container build` (1.7) is BuildKit-backed but exposes a REDUCED surface: it supports
+// -t/--target/--build-arg/--secret, a repeated --platform, the resource flags (-a/--arch, --os, -c/--cpus,
+// -m/--memory), -l/--label, --no-cache/--pull, -o/--output and `--ssh default` — but NOT other ssh mounts,
+// --cache-from/--cache-to, --build-context or --push. Unsupported options are dropped here so a stray field never
+// reaches the CLI.
 
 import type { BuildSecret, ImageBuildOptions } from "../types";
 
@@ -34,12 +35,16 @@ export function buildAppleArgs(opts: ImageBuildOptions): string[] {
   if (opts.target) {
     args.push("--target", opts.target);
   }
-  // Single-platform only — take the first requested platform, if any.
-  if (opts.platforms.length > 0) {
-    args.push("--platform", opts.platforms[0]);
+  // One image with every platform: --platform repeats.
+  for (const platform of opts.platforms) {
+    args.push("--platform", platform);
   }
   for (const secret of opts.secrets) {
     args.push("--secret", secretArg(secret));
+  }
+  // The SSH agent is the only mount `container build --ssh` takes.
+  if (opts.sshMounts.some((mount) => mount.id === "default")) {
+    args.push("--ssh", "default");
   }
   if (opts.arch) {
     args.push("--arch", opts.arch);
@@ -62,8 +67,8 @@ export function buildAppleArgs(opts: ImageBuildOptions): string[] {
   if (opts.pull) {
     args.push("--pull");
   }
-  // Deliberately NOT emitted (unsupported by `container build`): --ssh, --cache-from/--cache-to,
-  // --build-context. These are gated off in the config panel too (see FEATURE_MATRIX.apple).
+  // Deliberately NOT emitted (unsupported by `container build`): --cache-from/--cache-to, --build-context, --push.
+  // These are gated off in the config panel too (see FEATURE_MATRIX.apple).
   args.push(opts.contextDir);
   return args;
 }

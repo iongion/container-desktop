@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apple Container requires macOS 26 or later; macOS 15 and its degraded networking are no longer supported
 - Apple Container: the connection's API line names the socktainer and Apple service versions the socket serves; when the socket is silent, it says which part is down (Apple's service or socktainer) and how to fix it
 - Apple Container: a socktainer run by `brew services` is found when your home has no socktainer socket
+- Apple Container builds forward the SSH agent (`--ssh default`) and build several platforms into one image, amd64 through Rosetta
+
+### Fixed
+
+- Build: "Push after build" no longer fails a Podman build with an unknown `--push` flag, nor does nothing on Apple; only Docker, whose build command pushes, offers it
+- Build: a link to Build for another connection opens on that connection, also when Build is already open
 
 ## [7.1.0] - 2026-11-27
 

@@ -1,6 +1,6 @@
 import { Button, Divider, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pane, SplitPane } from "react-split-pane";
 
@@ -61,6 +61,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [connections, activeRuntime],
   );
   const [selectedConnId, setSelectedConnId] = useState(connIdParam ?? "");
+  // A deep link to another connection wins over the earlier choice, also while this screen stays mounted.
+  useEffect(() => {
+    if (connIdParam) {
+      setSelectedConnId(connIdParam);
+    }
+  }, [connIdParam]);
   // Default to a non-Apple native host — the Apple engine is experimental, so it shouldn't be auto-selected
   // when a Podman/Docker connection is available. An explicit connId (deep link) or the user's picker choice
   // still wins; this only steers the zero-config default.

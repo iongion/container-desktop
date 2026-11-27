@@ -35,7 +35,11 @@ export function buildRedactedPreview(options: ImageBuildOptions): string {
   return redactText(buildArgvPreview(options));
 }
 
-// A single-platform build with no push can be --load'ed into the local image store; multi-platform cannot.
+// A single-platform build with no push can be --load'ed into the local image store; multi-platform cannot, except on
+// Apple, whose image store keeps every platform.
 export function canLoadLocally(options: ImageBuildOptions): boolean {
-  return options.platforms.length <= 1 && !options.push;
+  if (options.push) {
+    return false;
+  }
+  return options.engine === "apple" || options.platforms.length <= 1;
 }

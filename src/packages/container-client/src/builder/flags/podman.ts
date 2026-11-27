@@ -60,9 +60,7 @@ export function buildPodmanArgs(opts: ImageBuildOptions): string[] {
   if (opts.pull) {
     args.push("--pull");
   }
-  if (opts.push) {
-    args.push("--push");
-  }
+  // No --push: `podman build` has none, and it fails the build (FEATURE_MATRIX.podman.push gates the switch off).
   args.push(opts.contextDir);
   return args;
 }

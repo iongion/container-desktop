@@ -22,7 +22,7 @@ const options = (over: Partial<ImageBuildOptions> = {}): ImageBuildOptions => ({
 });
 
 describe("buildArgvPreview", () => {
-  it("reflects Apple's reduced surface (no ssh/cache/build-context even if requested)", () => {
+  it("reflects Apple's reduced surface (no cache/build-context even if requested)", () => {
     const preview = buildArgvPreview(
       options({
         engine: "apple",
@@ -32,7 +32,7 @@ describe("buildArgvPreview", () => {
       }),
     );
     expect(preview.startsWith("container build --progress=plain")).toBe(true);
-    expect(preview).not.toContain("--ssh");
+    expect(preview).toContain("--ssh default");
     expect(preview).not.toContain("--cache-from");
     expect(preview).not.toContain("--build-context");
   });
@@ -55,5 +55,10 @@ describe("canLoadLocally", () => {
     expect(canLoadLocally(options())).toBe(true);
     expect(canLoadLocally(options({ platforms: ["linux/amd64", "linux/arm64"] }))).toBe(false);
     expect(canLoadLocally(options({ push: true }))).toBe(false);
+  });
+
+  // Apple keeps a multi-platform image in its own image store.
+  it("is true for an Apple multi-platform build", () => {
+    expect(canLoadLocally(options({ engine: "apple", platforms: ["linux/arm64", "linux/amd64"] }))).toBe(true);
   });
 });

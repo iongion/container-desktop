@@ -129,7 +129,7 @@ export const BuildConfigPanel: React.FC<BuildConfigPanelProps> = ({
       platforms: form.platforms,
       noCache: form.noCache,
       pull: form.pull,
-      push: form.push,
+      push: features.push && form.push,
       secrets: features.secrets ? form.secrets.filter((secret) => secret.id.trim()) : [],
       sshMounts: features.ssh ? form.sshMounts.filter(Boolean).map((id) => ({ id })) : [],
       namedContexts: features.namedContexts ? form.namedContexts.filter((context) => context.name.trim()) : [],
@@ -313,11 +313,13 @@ export const BuildConfigPanel: React.FC<BuildConfigPanelProps> = ({
             label={t("Always pull base")}
             onChange={(event) => patch({ pull: event.currentTarget.checked })}
           />
-          <Switch
-            checked={form.push}
-            label={t("Push after build")}
-            onChange={(event) => patch({ push: event.currentTarget.checked })}
-          />
+          {features.push ? (
+            <Switch
+              checked={form.push}
+              label={t("Push after build")}
+              onChange={(event) => patch({ push: event.currentTarget.checked })}
+            />
+          ) : null}
         </Collapse>
 
         <div className="cmd">

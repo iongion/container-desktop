@@ -38,4 +38,9 @@ describe("buildPodmanArgs", () => {
     expect(s).toContain("--build-arg VER=9");
     expect(argv).toContain("--no-cache");
   });
+
+  // `podman build` has no --push (Podman 5.7 and 6.0.2: "unknown flag: --push"); a stray push must not fail the build.
+  it("never emits --push", () => {
+    expect(buildPodmanArgs(base({ push: true }))).not.toContain("--push");
+  });
 });
