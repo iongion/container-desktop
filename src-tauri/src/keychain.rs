@@ -1,4 +1,4 @@
-// Generic OS secret-store (keychain) capability — a thin wrapper over the `keyring` crate's per-key vault
+// Generic OS secret-store (keychain) capability — a thin wrapper over the `keyring-core` crate's per-key vault
 // (Windows Credential Manager / macOS Keychain / Linux Secret Service). Each secret is a discrete entry keyed
 // by (service, account); the app never persists plaintext itself. A standalone keychain usable by anything that
 // needs to keep a secret out of app storage (the Rust side of the IKeychain port).
@@ -15,6 +15,7 @@ use base64::Engine as _;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 // One service namespace for every stored account; the account id is the entry "username". Matches the bundle-id
 // convention (tauri.conf.json identifier) plus the consumer's own id validation, as defense in depth.
@@ -36,8 +37,22 @@ pub struct KeychainStatus {
     degraded: bool,
 }
 
-fn entry(service: &str, user: &str) -> Result<keyring::Entry, String> {
-    keyring::Entry::new(service, user).map_err(|e| e.to_string())
+// keyring-core resolves every Entry through a default store, set once per process: the platform's own vault. A store
+// that cannot start fails every vault call with its error, and the callers fall back as for any unreachable vault.
+static VAULT_STORE: LazyLock<Result<(), String>> = LazyLock::new(|| {
+    #[cfg(target_os = "macos")]
+    let store = apple_native_keyring_store::keychain::Store::new();
+    #[cfg(windows)]
+    let store = windows_native_keyring_store::Store::new();
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let store = dbus_secret_service_keyring_store::Store::new();
+    keyring_core::set_default_store(store.map_err(|e| e.to_string())?);
+    Ok(())
+});
+
+fn entry(service: &str, user: &str) -> Result<keyring_core::Entry, String> {
+    VAULT_STORE.clone()?;
+    keyring_core::Entry::new(service, user).map_err(|e| e.to_string())
 }
 
 // An isolated run (its user data overridden, as the WebDriver harness does) keeps its secrets in the 0600 file in its
@@ -47,7 +62,7 @@ fn isolated() -> bool {
 }
 
 /// The OS vault's entry for `account`; an Err in an isolated run.
-fn vault_entry(account: &str) -> Result<keyring::Entry, String> {
+fn vault_entry(account: &str) -> Result<keyring_core::Entry, String> {
     if isolated() {
         return Err("an isolated run keeps its secrets in its own user-data dir".into());
     }

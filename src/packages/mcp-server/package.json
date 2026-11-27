@@ -6,6 +6,6 @@
   "dependencies": {
     "@container-desktop/container-client": "*",
     "@container-desktop/utils": "*",
-    "typebox": "1.3.37"
+    "typebox": "1.4.7"
   }
 }

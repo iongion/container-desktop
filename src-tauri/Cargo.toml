@@ -62,9 +62,9 @@ futures-util = { version = "0.3", default-features = false }
 # default-features = false, so we build the query onto the URL directly).
 serde_urlencoded = "0.7"
 # OS secret store (keychain.rs): one entry per account in the OS vault — Windows Credential Manager, macOS
-# Keychain, Linux Secret Service. The Secret Service backend is pure-Rust (zbus + RustCrypto via crypto-rust),
-# so Linux needs no libsecret C library at build or runtime.
-keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+# Keychain, Linux Secret Service. keyring-core is the API; each OS links its own store crate (below), each keying an
+# entry exactly as keyring 3 did, so secrets stored before keep resolving.
+keyring-core = "1"
 # The MCP server's loopback listener (mcp/server.rs): hyper's HTTP/1 server over tokio, a size-capped body reader, a
 # constant-time token compare, and the OS randomness behind the token. All were already in the lock as transitive
 # dependencies, save httpdate, which hyper's server feature adds.
@@ -79,6 +79,14 @@ getrandom = "0.4"
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+# keychain.rs stores: Secret Service over libdbus with RustCrypto (no libsecret), the macOS Keychain, and the Windows
+# Credential Manager (in the windows section).
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+dbus-secret-service-keyring-store = { version = "1", features = ["crypto-rust"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { version = "1", features = ["keychain"] }
+
 # Job objects for the child guard: the Windows half of "a child does not outlive an app that was KILLED"
 # (child_guard.rs), where Linux uses PR_SET_PDEATHSIG. Already in the tree at this version (tauri pulls it), and
 # these are link declarations only — nothing is added to the binary but the four kernel32 calls.
@@ -89,3 +97,4 @@ windows-sys = { version = "0.61", features = [
   "Win32_System_JobObjects",
   "Win32_System_Threading",
 ] }
+windows-native-keyring-store = "1"
