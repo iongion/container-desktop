@@ -27,7 +27,7 @@ function clampNumber(value: unknown, fallback: number, min: number, max: number)
   if (!Number.isFinite(n) || n < min) {
     return fallback;
   }
-  return n > max ? max : n;
+  return Math.min(n, max);
 }
 
 export function normalizeLoggingFileSettings(file?: Partial<LoggingFileSettings> | null): LoggingFileSettings {

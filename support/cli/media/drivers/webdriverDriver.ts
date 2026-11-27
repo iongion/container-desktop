@@ -187,6 +187,7 @@ export function createWebdriverDriver(browser: any): CaptureDriver {
           } else {
             element = nodes[0];
           }
+          // biome-ignore lint/performance/useDomNodeTextContent: the capture port reads rendered text, as Playwright's innerText does
           return element ? element.innerText || element.textContent || "" : "";
         },
         selector,

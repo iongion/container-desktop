@@ -145,6 +145,7 @@ export async function resolveFirstId(driver: CaptureDriver, resolver: any) {
   await navigate(driver, resolver.route);
   await waitForSelectorCount(driver, resolver.selector, 1);
   if (resolver.attr === "text") {
+    // biome-ignore lint/performance/useDomNodeTextContent: a CaptureDriver method, not the DOM property
     const text = await driver.innerText(resolver.selector, { nth: "first" });
     return text.trim();
   }
