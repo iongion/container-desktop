@@ -210,6 +210,7 @@ function signatureRows(
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
+  const translate: TranslateFn = (key, options) => t(key, options ?? {});
   const [selectedSeverities, setSelectedSeverities] = useState<string[]>(["CRITICAL", "HIGH"]);
   const [expandedDescriptions, setExpandedDescriptions] = useState<string[]>([]);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -473,10 +474,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <>
                       <div className="SecurityStatusLine" data-signature={signature.state}>
                         <Icon icon={signatureIcon(signature.state)} />
-                        <span>{signatureLabel(signature, t)}</span>
+                        <span>{signatureLabel(signature, translate)}</span>
                       </div>
                       <dl className="SecurityKv">
-                        {signatureRows(signature, t).map((row) =>
+                        {signatureRows(signature, translate).map((row) =>
                           row.code ? (
                             <div className="SecurityKvRow" data-align="top" key={row.label}>
                               <dt>{row.label}</dt>

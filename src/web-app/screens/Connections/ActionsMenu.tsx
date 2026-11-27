@@ -128,7 +128,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
     <ConfirmMenu
       onConfirm={onRemove}
       tag={connection.id}
-      title={isConnected ? t("A connected connection cannot be removed") : null}
+      title={isConnected ? t("A connected connection cannot be removed") : undefined}
       disabled={connection.readonly || lifecyclePending || isConnected || disabledAction === "connection.remove"}
     >
       <MenuItem

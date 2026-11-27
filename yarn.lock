@@ -283,11 +283,6 @@
   dependencies:
     "@babel/types" "^7.29.7"
 
-"@babel/runtime@^7.29.7":
-  version "7.29.14"
-  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.29.14.tgz#9ad0cc2addbbc8c46adaec9e90b21bb76d42b483"
-  integrity sha512-Y5tqevQaUAZhhj82BpYMNC1ssvLQTVAfwKdm8iy8qwmhvC2/CpcAu8OC+QEtjM7pMk7knx83u1Qj8gzkicyelw==
-
 "@babel/runtime@^7.5.5", "@babel/runtime@^7.8.7":
   version "7.28.4"
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.28.4.tgz#a70226016fabe25c5783b2f22d3e1c9bc5ca3326"
@@ -1912,6 +1907,11 @@
     convert-source-map "^2.0.0"
     tinyrainbow "^3.1.0"
 
+"@vscode/diff@0.0.2-145":
+  version "0.0.2-145"
+  resolved "https://registry.yarnpkg.com/@vscode/diff/-/diff-0.0.2-145.tgz#e7980d81e30a8408033d36f1daadff056761855d"
+  integrity sha512-atPcmNrAU4B8OsbrmqYlHbZREt//m8z52o400YA8uuvq3Be5wnmIhLoLqhMum7Jv7kRC0FE+m3WAUbaZF681wg==
+
 "@wdio/cli@9.30.1":
   version "9.30.1"
   resolved "https://registry.yarnpkg.com/@wdio/cli/-/cli-9.30.1.tgz#a6c491049d401e47b958317bbd145443b6936f5c"
@@ -3131,7 +3131,7 @@ domhandler@^5.0.2, domhandler@^5.0.3:
   dependencies:
     domelementtype "^2.3.0"
 
-dompurify@3.4.18, dompurify@3.4.8:
+dompurify@3.4.17, dompurify@3.4.18:
   version "3.4.18"
   resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-3.4.18.tgz#82161003672c8780ad1db0335787e6aa6587e5d2"
   integrity sha512-ofe3wI/uNm68HInABYFJYqQxRw1EaKAjNdrFVKqjUY+UZurvNd2L/HuQe097s/4RivWiZyP6tT7aoT8atjfhwg==
@@ -3985,10 +3985,10 @@ human-signals@^8.0.1:
   resolved "https://registry.yarnpkg.com/human-signals/-/human-signals-8.0.1.tgz#f08bb593b6d1db353933d06156cedec90abe51fb"
   integrity sha512-eKCa6bwnJhvxj14kZk5NCPc6Hb6BdsU9DZcOnmQKSnO1VKrfV0zCvtttPZUsBvjmNDn8rpcJfpwSYnHBjc95MQ==
 
-i18next@26.3.6:
-  version "26.3.6"
-  resolved "https://registry.yarnpkg.com/i18next/-/i18next-26.3.6.tgz#599db275c50b66d28a69d8f6c5162c245ce9296b"
-  integrity sha512-Bu5Z2nAXgfVyM8xvW3jk9EKRIuX37PudsrBViThNFx7CR7aaYTpP01cxNB/E4c4UUzTDiAZRstEhsRfPOL/8xA==
+i18next@27.2.9:
+  version "27.2.9"
+  resolved "https://registry.yarnpkg.com/i18next/-/i18next-27.2.9.tgz#2a0bef580497c8b97786c4bbd0f9a5aecc920643"
+  integrity sha512-GOWWofCGYPSPEzUKJnRLJSoHrSUDa/NzYWqAOJJDZUaM7faLPd9VABlbHDZ+jv8uadu/fq1wsHFfZP6+0tFPkg==
 
 iconv-lite@0.6.3, iconv-lite@^0.6.3:
   version "0.6.3"
@@ -4772,12 +4772,13 @@ modern-tar@^0.7.3:
   resolved "https://registry.yarnpkg.com/modern-tar/-/modern-tar-0.7.7.tgz#ca71d79603630076b10733b0751ccab284bbc1ef"
   integrity sha512-t9VmxaqrmANnEOBhpSDI6HD192Ge48k8vmWqQQL7hSFEqHEYwZbbsu49+aKLWZeRvFs3j1pMhXOqqF4kPlvjkQ==
 
-monaco-editor@0.56.0:
-  version "0.56.0"
-  resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.56.0.tgz#e85ac00b7ab7092ca1d077894504919af5073cf0"
-  integrity sha512-sXboRm3BeBeLm938eaiyLMe0OxzfXIlZvbv4ir/jVgQy1zDhWjgmny0WoN45fuDKhCCQsYMbBJrv/A6jd8aCUg==
+monaco-editor@0.58.0:
+  version "0.58.0"
+  resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.58.0.tgz#d0d8b439b377c46829daf1cf7a06510c7afcabb2"
+  integrity sha512-Lj5hlfT4zdM5GSG9VxTHslWnwibGBvO6d9Mq/+9zmb1CkTZnib4+uAZUKl1zg+tMHRgY2OGax6hHKZNBtldR1g==
   dependencies:
-    dompurify "3.4.8"
+    "@vscode/diff" "0.0.2-145"
+    dompurify "3.4.17"
     marked "14.0.0"
 
 moo@0.5.2:
@@ -5369,14 +5370,12 @@ react-hook-form@7.82.0:
   resolved "https://registry.yarnpkg.com/react-hook-form/-/react-hook-form-7.82.0.tgz#9e8d504fe99ddd5a26a1d858bb6a03de45abff3e"
   integrity sha512-Zw/uFZ2dO+02GHlBn7JFGn8kZJ7LdM33B/0BXOovzFay+CMhf94JMw5BVu+F1tVkUKjNvBuaE3fz5BJhga10Tg==
 
-react-i18next@17.0.21:
-  version "17.0.21"
-  resolved "https://registry.yarnpkg.com/react-i18next/-/react-i18next-17.0.21.tgz#2856adb20e8853ce53e8ebc6aed1cc5b08d995af"
-  integrity sha512-bcOTaZQKsNb4KKIc+T6Dx1Cf0x3UTV5io8X1PyaC38oOeNEbU5CNkW+5QmOGEyDSEbK/QC2kLXOgL9zeCIxR3g==
+react-i18next@18.0.3:
+  version "18.0.3"
+  resolved "https://registry.yarnpkg.com/react-i18next/-/react-i18next-18.0.3.tgz#1d85c7a09454f2163acad1bc830d14801f9c500a"
+  integrity sha512-S84rtVuaKuiRtoCOspbGEaDlFjka+KvK/A5YCOr4LQ41XF3iJOrJ5rqQTD/jJHFVUf6X1i4ZMN5PGGgpz8NN6g==
   dependencies:
-    "@babel/runtime" "^7.29.7"
     html-parse-stringify "^4.0.1"
-    use-sync-external-store "^1.6.0"
 
 "react-is-18@npm:react-is@^18.3.1":
   version "18.3.1"

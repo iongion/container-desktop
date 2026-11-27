@@ -19,7 +19,7 @@ export function useBulkRunner<T>() {
       setRunningKey(action.key);
       try {
         const summary = await runBulk(items, action.run, { concurrency: 4 });
-        const { intent, message } = summarize(action.label, summary, t);
+        const { intent, message } = summarize(action.label, summary, (key, vars) => t(key, vars ?? {}));
         Notification.show({ message, intent });
         return summary;
       } finally {

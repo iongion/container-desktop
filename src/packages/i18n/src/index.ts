@@ -146,7 +146,7 @@ export const ensureI18nInitialized = (plugins: I18nPlugin[] = []) => {
     (i18n as any).init({
       debug: false,
       returnNull: false,
-      initImmediate: false,
+      initAsync: false,
       preload: [],
       fallbackLng: DEFAULT_LANGUAGE,
       lng: getCurrentLanguage(),

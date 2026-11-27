@@ -5,7 +5,6 @@ import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type Container, ContainerStateList } from "@/container-client/types/container";
-import { randomUUID } from "@/utils/randomUUID";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
@@ -145,30 +144,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         }
       } catch (error: any) {
         logger.error("Command execution failed", error);
-        const message = t("Command did not complete properly");
-        const details: { message: string; guid: string }[] = [{ message: `${error.message}`, guid: randomUUID() }];
-        if (error.name === "AxiosError") {
-          if (error.response?.data?.message) {
-            details.push({
-              message: error.response.data.message,
-              guid: randomUUID(),
-            });
-          }
+        const lines = [`${error.message}`];
+        if (error.name === "AxiosError" && error.response?.data?.message) {
+          lines.push(error.response.data.message);
         }
         Notification.show({
-          message:
-            details.length > 0 ? (
-              <div className="NotificationAdvancedDetails">
-                <h1>{message}</h1>
-                <ul>
-                  {details.map((detail) => (
-                    <li key={detail.guid}>{detail.message}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              message
-            ),
+          message: t("Command did not complete properly"),
+          detail: lines.join("\n"),
+          detailInToast: true,
           intent: Intent.DANGER,
         });
       } finally {

@@ -106,31 +106,31 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
   );
 
   const labels = useMemo(() => {
-    const controllerPath = t("Path to {{name}} executable", controller);
+    const controllerPath = t("Path to {{name}} executable", { name: controller?.name });
     let apiConnectionUri = t("UNIX socket");
     let controllerScope = t("Controller scopes");
-    let programPath = program ? t("Path to {{name}} executable", program) : t("Path to executable");
+    let programPath = program ? t("Path to {{name}} executable", { name: program?.name }) : t("Path to executable");
     if (osType === OperatingSystem.Windows) {
       apiConnectionUri = t("Windows named pipe");
     }
     switch (host) {
       case ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR:
-        programPath = t("Path to {{name}} executable inside the podman machine", program);
+        programPath = t("Path to {{name}} executable inside the podman machine", { name: program?.name });
         controllerScope = t("Podman machine");
         break;
       case ContainerEngineHost.PODMAN_VIRTUALIZED_WSL:
       case ContainerEngineHost.DOCKER_VIRTUALIZED_WSL:
-        programPath = t("Path to {{name}} executable inside the distribution", program);
+        programPath = t("Path to {{name}} executable inside the distribution", { name: program?.name });
         controllerScope = t("WSL distribution");
         break;
       case ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA:
       case ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA:
-        programPath = t("Path to {{name}} executable inside the instance", program);
+        programPath = t("Path to {{name}} executable inside the instance", { name: program?.name });
         controllerScope = t("LIMA instance");
         break;
       case ContainerEngineHost.PODMAN_REMOTE:
       case ContainerEngineHost.DOCKER_REMOTE:
-        programPath = t("Path to {{name}} executable inside the ssh connection", program);
+        programPath = t("Path to {{name}} executable inside the ssh connection", { name: program?.name });
         controllerScope = t("SSH Host");
         break;
       default:
@@ -454,19 +454,19 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         const performed = await startControllerScope(scope);
         if (performed) {
           Notification.show({
-            message: t("{{Name}} has been started", scope),
+            message: t("{{Name}} has been started", { Name: scope.Name }),
             intent: Intent.SUCCESS,
           });
         } else {
           Notification.show({
-            message: t("{{Name}} could not be started", scope),
+            message: t("{{Name}} could not be started", { Name: scope.Name }),
             intent: Intent.DANGER,
           });
         }
       } catch (error: any) {
         logger.error("<< Starting", error);
         Notification.show({
-          message: t("{{Name}} could not be started", scope),
+          message: t("{{Name}} could not be started", { Name: scope.Name }),
           intent: Intent.DANGER,
         });
       } finally {
@@ -482,19 +482,19 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         const performed = await stopControllerScope(scope);
         if (performed) {
           Notification.show({
-            message: t("{{Name}} has been stopped", scope),
+            message: t("{{Name}} has been stopped", { Name: scope.Name }),
             intent: Intent.SUCCESS,
           });
         } else {
           Notification.show({
-            message: t("{{Name}} could not be stopped", scope),
+            message: t("{{Name}} could not be stopped", { Name: scope.Name }),
             intent: Intent.DANGER,
           });
         }
       } catch (error: any) {
         logger.error("<< Stopping", error);
         Notification.show({
-          message: t("{{Name}} could not be stopped", scope),
+          message: t("{{Name}} could not be stopped", { Name: scope.Name }),
           intent: Intent.DANGER,
         });
       } finally {
@@ -706,7 +706,9 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       disabled={pending}
       label={labels.programPath}
       labelFor="settings.program.path"
-      helperText={program?.version ? t("Detected version {{version}}", program) : t("No version detected")}
+      helperText={
+        program?.version ? t("Detected version {{version}}", { version: program?.version }) : t("No version detected")
+      }
     >
       <Controller
         control={control}
@@ -733,7 +735,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                       <Button
                         disabled={pending}
                         size="small"
-                        title={t("Managed by {{name}} - click to override", program)}
+                        title={t("Managed by {{name}} - click to override", { name: program?.name })}
                         icon={isCustomProgramPathEditable ? IconNames.UNLOCK : IconNames.LOCK}
                         intent={Intent.NONE}
                         data-target="program"
@@ -892,9 +894,13 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         {flags.withCustomControllerPath && host ? (
           <FormGroup
             disabled={pending}
-            label={t("Path to {{name}} executable", controller)}
+            label={t("Path to {{name}} executable", { name: controller?.name })}
             labelFor="settings.controller.path"
-            helperText={controller?.version ? t("Detected version {{version}}", controller) : t("No version detected")}
+            helperText={
+              controller?.version
+                ? t("Detected version {{version}}", { version: controller?.version })
+                : t("No version detected")
+            }
           >
             <Controller
               control={control}
@@ -1287,7 +1293,9 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                                           <Button
                                             disabled={pending}
                                             size="small"
-                                            title={t("Managed by {{name}} - click to override", program)}
+                                            title={t("Managed by {{name}} - click to override", {
+                                              name: program?.name,
+                                            })}
                                             icon={isCustomApiConnectionUriEditable ? IconNames.UNLOCK : IconNames.LOCK}
                                             intent={Intent.NONE}
                                             data-target="program"
@@ -1345,7 +1353,9 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                                             <Button
                                               disabled={pending}
                                               size="small"
-                                              title={t("Managed by {{name}} - click to override", program)}
+                                              title={t("Managed by {{name}} - click to override", {
+                                                name: program?.name,
+                                              })}
                                               icon={
                                                 isCustomApiConnectionRelayEditable ? IconNames.UNLOCK : IconNames.LOCK
                                               }

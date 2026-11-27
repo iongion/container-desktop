@@ -23,18 +23,34 @@ export const Notification = {
     timeout = 3000,
     silent = false,
     detail,
+    detailInToast = false,
   }: {
     message: string;
     intent: Intent;
     timeout?: number;
     silent?: boolean;
     detail?: string;
+    // Also lists the detail's lines in the toast, under the message; the Notification Center always has them.
+    detailInToast?: boolean;
   }) => {
     // `silent` records the entry in the Notification Center but suppresses the popup toast — used for routine
     // boot / auto-start connection failures so they don't burst as toasts. Only the toast is suppressed.
     if (!silent) {
+      const body =
+        detailInToast && detail ? (
+          <div className="NotificationAdvancedDetails">
+            <h1>{message}</h1>
+            <ul>
+              {[...new Set(detail.split("\n"))].map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          message
+        );
       void getToaster()
-        .then((t) => t.show({ message, intent, timeout }))
+        .then((t) => t.show({ message: body, intent, timeout }))
         .catch(() => {});
     }
     // Tee every notification into the in-memory activity bus so the Notification Center keeps a history —
