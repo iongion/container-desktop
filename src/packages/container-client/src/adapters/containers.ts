@@ -1,6 +1,7 @@
 // adapters/containers.ts — container REST operations over the active HostClient driver.
 
 import { Application } from "@/container-client/Application";
+import { type ContainerLifecycleEvent, getContainerLifecycleHooks } from "@/container-client/lifecycleHooks";
 import { decodeContainerLogPayload } from "@/container-client/logs";
 import { normalizeContainerName } from "@/container-client/normalizers/shared";
 import type { Container, ContainerStateList, ContainerStats } from "@/container-client/types/container";
@@ -172,7 +173,23 @@ export class ContainersAdapter extends ResourceAdapter {
     return this.isOk(result);
   }
 
+  // The user's lifecycle hooks see every start and stop that goes through here: screens, tray, bulk actions and the MCP
+  // server alike. The name is looked up only if the runner finds a hook that could match.
+  private lifecycleEvent(id: string): ContainerLifecycleEvent {
+    const containerId = normalizeContainerName(id);
+    return {
+      connectionId: this.host.id,
+      engine: `${this.host.ENGINE}`,
+      containerId,
+      containerName: async () => {
+        const container = await this.get(containerId);
+        return normalizeContainerName(`${container?.Name ?? container?.Names?.[0] ?? ""}`) || undefined;
+      },
+    };
+  }
+
   async start(id: string): Promise<boolean> {
+    await getContainerLifecycleHooks()?.beforeStart(this.lifecycleEvent(id));
     const driver = await this.driver();
     const result = await driver.post<boolean>(`/containers/${pathId(id)}/start`);
     return this.isOk(result);
@@ -185,10 +202,16 @@ export class ContainersAdapter extends ResourceAdapter {
     const result = await driver.post<boolean>(`/containers/${pathId(id)}/stop`, undefined, {
       timeout: LIFECYCLE_TIMEOUT_MS,
     });
-    return this.isOk(result);
+    const stopped = this.isOk(result);
+    if (stopped) {
+      await getContainerLifecycleHooks()?.afterStop(this.lifecycleEvent(id));
+    }
+    return stopped;
   }
 
+  // A restart counts as a start: the before-start hook runs first and can refuse it.
   async restart(id: string): Promise<boolean> {
+    await getContainerLifecycleHooks()?.beforeStart(this.lifecycleEvent(id));
     const driver = await this.driver();
     try {
       await driver.post<boolean>(`/containers/${pathId(id)}/stop`, undefined, {

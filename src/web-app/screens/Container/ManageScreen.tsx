@@ -39,6 +39,7 @@ import {
   useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
 import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
+import { lifecycleHookRunner } from "@/web-app/lifecycleHooks";
 import { pathTo } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -46,7 +47,7 @@ import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ActionsMenu } from ".";
 import { useContainerBulkActions } from "./bulkActions";
-import { isComposeGroup } from "./composeGroups";
+import { isComposeGroup, stackHookTargetOf } from "./composeGroups";
 import { tearDownStack } from "./composeQueries";
 import { type ContainerConnectionGroup, type ContainerRowDescriptor, flattenGroups } from "./flattenGroups";
 import { groupContainers, groupContainersAcrossConnections } from "./grouping";
@@ -189,9 +190,25 @@ export const Screen: AppScreen<ScreenProps> = () => {
         return;
       }
       const eligible = action.eligible ?? (() => true);
+      // A stack's own lifecycle hooks run once around the group action: before-start can refuse a start or restart.
+      const stack = stackHookTargetOf(containers);
       markGroupBusy(groupKey, true);
       try {
+        if (stack && (actionKey === "start" || actionKey === "restart")) {
+          try {
+            await lifecycleHookRunner().stackBeforeStart(stack);
+          } catch (error) {
+            Notification.show({
+              message: error instanceof Error ? error.message : String(error),
+              intent: Intent.DANGER,
+            });
+            return;
+          }
+        }
         const results = await Promise.allSettled(containers.filter(eligible).map((container) => action.run(container)));
+        if (stack && actionKey === "stop") {
+          await lifecycleHookRunner().stackAfterStop(stack);
+        }
         await bulkRefresh();
         const failed = results.filter((r) => r.status === "rejected").length;
         if (failed > 0) {
@@ -226,10 +243,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, []);
   // Tear a stack down from its compose-group header — removes the project's containers, networks and pod.
   const onStackTeardown = useCallback(
-    async (project: string, connId: string, groupKey: string) => {
+    async (project: string, connId: string, groupKey: string, containers: MergedContainer[]) => {
       markGroupBusy(groupKey, true);
       try {
         await tearDownStack(connId, project);
+        const stack = stackHookTargetOf(containers);
+        if (stack) {
+          await lifecycleHookRunner().stackAfterStop(stack);
+        }
         await bulkRefresh();
         Notification.show({ message: t("Stack {{name}} removed", { name: project }), intent: Intent.SUCCESS });
       } catch (_error) {
@@ -531,7 +552,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <ConfirmMenu
                             onConfirm={(_tag, confirmed) => {
                               if (confirmed) {
-                                onStackTeardown(groupName, containers[0].connectionId, groupKey);
+                                onStackTeardown(groupName, containers[0].connectionId, groupKey, containers);
                               }
                             }}
                             tag={groupName}

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Lifecycle hooks (Settings → Lifecycle hooks): a command of your own runs before a container or a compose stack starts, or after it stops, whoever starts or stops it, AI clients through the MCP server included; a failing before-start hook cancels the start
+
 ### Changed
 
 - Setup wizard: a failed step says what went wrong in one sentence, with Retry; the command and its output sit in a collapsed Details section, each copyable
@@ -16,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Setup wizard: installing Apple Container asks for the administrator password in macOS's own dialog, and Linux installs use the desktop's password dialog (pkexec); neither fails any more for lack of a terminal
 - German: "Volumes" is no longer translated as "Bände"
-
 - The Linux AppImage and packages run again on distros older than Ubuntu 26.04 (Void, Debian, Ubuntu 24.04, Fedora): they are built on Ubuntu 22.04, glibc 2.35
 - macOS: engines installed by Homebrew, the Podman installer or Apple's package (Apple Container) are found when the app is opened from Finder or the Dock; it now uses the login shell's PATH
 - Transitive dependencies refreshed to their newest compatible releases, clearing the Dependabot alerts: undici 7.30.2; minimatch 11 and glob 14 for the test tooling that still asked for 10 and 13

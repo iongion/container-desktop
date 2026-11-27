@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { ContainersAdapter } from "@/container-client/adapters/containers";
+import { setContainerLifecycleHooks } from "@/container-client/lifecycleHooks";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 
 // The engine reports a container's name with Docker's historical leading slash (`Names: ["/web"]`), and that payload is
@@ -87,5 +88,47 @@ describe("ContainersAdapter — the id the engine itself published", () => {
     const { adapter, paths } = recordingHost();
     await adapter.remove("//odd name");
     expect(paths).toEqual(["/containers/odd%20name"]);
+  });
+});
+
+describe("ContainersAdapter — lifecycle hooks", () => {
+  function hookedHost(failBeforeStart = false) {
+    const { adapter, paths } = recordingHost();
+    const seen: string[] = [];
+    setContainerLifecycleHooks({
+      beforeStart: async (event) => {
+        seen.push(`before:${event.containerId}:${await event.containerName()}`);
+        if (failBeforeStart) throw new Error("hook said no");
+      },
+      afterStop: async (event) => {
+        seen.push(`after:${event.containerId}`);
+      },
+    });
+    return { adapter, paths, seen };
+  }
+
+  afterEach(() => setContainerLifecycleHooks(undefined));
+
+  it("runs the before-start hook first and the after-stop hook last", async () => {
+    const { adapter, paths, seen } = hookedHost();
+    await adapter.start("/web");
+    await adapter.stop("web");
+    expect(seen[0]).toMatch(/^before:web:/);
+    expect(seen[1]).toBe("after:web");
+    expect(paths).toContain("/containers/web/start");
+  });
+
+  it("does not start a container whose before-start hook fails", async () => {
+    const { adapter, paths } = hookedHost(true);
+    await expect(adapter.start("web")).rejects.toThrow("hook said no");
+    expect(paths.filter((path) => path.endsWith("/start"))).toEqual([]);
+  });
+
+  it("treats a restart as a start: the before-start hook runs, and can refuse it", async () => {
+    const { adapter, paths, seen } = hookedHost(true);
+    await expect(adapter.restart("web")).rejects.toThrow("hook said no");
+    expect(seen[0]).toMatch(/^before:web/);
+    // Only the name lookup ran: nothing was stopped or restarted.
+    expect(paths).toEqual(["/containers/web/json"]);
   });
 });

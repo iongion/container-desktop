@@ -1392,5 +1392,22 @@
   "Retry and enter it when the system asks, or install the packages yourself with sudo.": "请重试并在系统要求时输入，或自行用 sudo 安装软件包。",
   "The step was stopped before it finished.": "该步骤在完成前被停止。",
   "The step failed.": "该步骤失败。",
-  "Open Details for the command and its output.": "打开“细节”查看命令及其输出。"
+  "Open Details for the command and its output.": "打开“细节”查看命令及其输出。",
+  "Lifecycle hooks": "生命周期钩子",
+  "Stack": "栈",
+  "compose project, e.g. shop": "compose 项目，例如 shop",
+  "container name, e.g. web": "容器名称，例如 web",
+  "Before start": "启动前",
+  "After stop": "停止后",
+  "If it fails, the start is cancelled.": "如果失败，启动将被取消。",
+  "A failure is reported; nothing else happens.": "失败会被报告，其他不受影响。",
+  "A quote is not closed.": "有引号未闭合。",
+  "Save hook": "保存钩子",
+  "stack": "栈",
+  "Remove this hook?": "删除此钩子？",
+  "Run a command before a container or stack starts, or after it stops.": "在容器或栈启动前、或停止后运行一条命令。",
+  "Hooks run on this computer, as you, whoever starts or stops the container: you, the tray, or an AI client through the MCP server.": "无论由谁启动或停止容器（你、托盘或通过 MCP 服务器的 AI 客户端），钩子都会以你的身份在这台电脑上运行。",
+  "{{count}} hooks": "{{count}} 个钩子",
+  "Add hook": "添加钩子",
+  "A hook is a program and its arguments, run without a shell (wrap it in sh -c \"…\" for pipes or redirects), for up to 60 seconds. It gets CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION and CD_ENGINE, and CD_STACK for a stack. A stack hook runs once, from the stack's Start all, Stop all, Restart all and Teardown; each container's own hooks still run. Restart counts as a start.": "钩子是一个程序及其参数，不经过 shell 运行（需要管道或重定向时用 sh -c \"…\" 包起来），最长 60 秒。它会收到 CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION, CD_ENGINE，对栈还会收到 CD_STACK。栈钩子只运行一次，由栈的“全部启动”“全部停止”“全部重启”和“拆除”触发；每个容器自己的钩子仍会运行。重启视为启动。"
 }

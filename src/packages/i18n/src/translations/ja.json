@@ -1392,5 +1392,22 @@
   "Retry and enter it when the system asks, or install the packages yourself with sudo.": "再試行し、システムに求められたら入力してください。または sudo で自分でパッケージをインストールしてください。",
   "The step was stopped before it finished.": "手順は完了前に停止されました。",
   "The step failed.": "手順が失敗しました。",
-  "Open Details for the command and its output.": "コマンドとその出力は「詳細」で確認できます。"
+  "Open Details for the command and its output.": "コマンドとその出力は「詳細」で確認できます。",
+  "Lifecycle hooks": "ライフサイクルフック",
+  "Stack": "スタック",
+  "compose project, e.g. shop": "compose プロジェクト (例: shop)",
+  "container name, e.g. web": "コンテナー名 (例: web)",
+  "Before start": "開始前",
+  "After stop": "停止後",
+  "If it fails, the start is cancelled.": "失敗すると開始は取り消されます。",
+  "A failure is reported; nothing else happens.": "失敗は通知されますが、それ以外は何も起こりません。",
+  "A quote is not closed.": "引用符が閉じられていません。",
+  "Save hook": "フックを保存",
+  "stack": "スタック",
+  "Remove this hook?": "このフックを削除しますか?",
+  "Run a command before a container or stack starts, or after it stops.": "コンテナーやスタックの開始前、または停止後にコマンドを実行します。",
+  "Hooks run on this computer, as you, whoever starts or stops the container: you, the tray, or an AI client through the MCP server.": "フックは、誰がコンテナーを開始・停止しても、このコンピューター上であなたとして実行されます: あなた、トレイ、または MCP サーバー経由の AI クライアント。",
+  "{{count}} hooks": "{{count}} 個のフック",
+  "Add hook": "フックを追加",
+  "A hook is a program and its arguments, run without a shell (wrap it in sh -c \"…\" for pipes or redirects), for up to 60 seconds. It gets CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION and CD_ENGINE, and CD_STACK for a stack. A stack hook runs once, from the stack's Start all, Stop all, Restart all and Teardown; each container's own hooks still run. Restart counts as a start.": "フックはプログラムとその引数で、シェルを介さずに最長 60 秒実行されます (パイプやリダイレクトには sh -c \"…\" で囲みます)。CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION, CD_ENGINE を受け取り、スタックでは CD_STACK も受け取ります。スタックのフックは、スタックの「すべて開始」「すべて停止」「すべて再起動」「破棄」から一度だけ実行され、各コンテナー自身のフックも引き続き実行されます。再起動は開始として扱われます。"
 }

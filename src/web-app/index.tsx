@@ -26,6 +26,9 @@ async function boot() {
   const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
   await installTauriHostBridge();
   bootTimeline.mark("tauri-bridge-installed");
+  // Before anything can start or stop a container (the MCP server included), so the user's lifecycle hooks see it.
+  const { installLifecycleHooks } = await import("@/web-app/lifecycleHooks");
+  installLifecycleHooks();
   // Route the façade's persisted records to the native Rust file sink (@tauri-apps/plugin-log).
   const { tauriLogBackend } = await import("@/platform/tauri/log/tauriLog");
   const loggerBackend: LoggerBackend = tauriLogBackend;

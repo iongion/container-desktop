@@ -46,15 +46,16 @@ Inspect one volume by name.
 
 ## startContainer
 
-Start a container by id or name.
+Start a container by id or name. The user's before-start hook for it, if any, runs first; when the hook fails the
+container is not started and the error says why.
 
 ## stopContainer
 
-Stop a running container by id or name.
+Stop a running container by id or name. The user's after-stop hook for it, if any, runs afterwards.
 
 ## restartContainer
 
-Restart a container by id or name.
+Restart a container by id or name. A restart counts as a start: the user's before-start hook can refuse it.
 
 ## pauseContainer
 

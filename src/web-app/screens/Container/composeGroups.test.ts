@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Container } from "@/container-client/types/container";
 import type { ContainerGroup } from "@/web-app/Types";
 
-import { composeProjectOf, isComposeContainer, isComposeGroup } from "./composeGroups";
+import { composeProjectOf, isComposeContainer, isComposeGroup, stackHookTargetOf } from "./composeGroups";
 
 const withLabels = (labels?: Record<string, string>): Container => ({ Labels: labels }) as unknown as Container;
 
@@ -47,5 +47,25 @@ describe("isComposeGroup", () => {
 
   it("is false for an empty group", () => {
     expect(isComposeGroup(group([]))).toBe(false);
+  });
+});
+
+describe("stackHookTargetOf", () => {
+  const member = (labels: Record<string, string> | undefined, connectionId = "c1") =>
+    ({ Labels: labels, connectionId, engine: "podman" }) as unknown as Container & {
+      connectionId: string;
+      engine: string;
+    };
+
+  it("names the stack, its connection and engine from the first member with a project label", () => {
+    expect(stackHookTargetOf([member(undefined), member({ "com.docker.compose.project": "shop" })])).toEqual({
+      connectionId: "c1",
+      engine: "podman",
+      name: "shop",
+    });
+  });
+
+  it("is undefined for a name-prefix group", () => {
+    expect(stackHookTargetOf([member(undefined), member({ other: "x" })])).toBeUndefined();
   });
 });

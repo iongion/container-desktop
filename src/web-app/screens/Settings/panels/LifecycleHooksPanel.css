@@ -1,0 +1,76 @@
+.LifecycleHooksLead {
+  margin: 0 0 12px;
+  color: var(--app-text-muted);
+}
+.LifecycleHooksWarning {
+  margin-bottom: 14px;
+  max-width: 760px;
+}
+.LifecycleHooksToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
+}
+.LifecycleHooksCount {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+.LifecycleHooksTable {
+  width: 100%;
+}
+.LifecycleHookTarget {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.LifecycleHookKind {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+.LifecycleHooksTable td.LifecycleHookCell--command {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  word-break: break-all;
+}
+.LifecycleHooksTable td.LifecycleHookCell--none {
+  color: var(--app-text-muted);
+  font-style: italic;
+}
+.LifecycleHooksTable .LifecycleHookCell--actions {
+  width: 1%;
+  white-space: nowrap;
+}
+.LifecycleHookEditor {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background-color: var(--app-surface);
+}
+.LifecycleHookEditorTarget {
+  display: grid;
+  grid-template-columns: 140px 1fr 1fr;
+  gap: 0 12px;
+}
+.LifecycleHookEditorCommands {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+.LifecycleHookCommand .bp6-input {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+.LifecycleHookEditorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.LifecycleHooksNotes {
+  margin: 14px 0 0;
+  max-width: 760px;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}

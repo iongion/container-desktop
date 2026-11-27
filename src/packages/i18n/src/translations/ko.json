@@ -1392,5 +1392,22 @@
   "Retry and enter it when the system asks, or install the packages yourself with sudo.": "다시 시도하고 시스템이 요청하면 입력하거나, sudo로 직접 패키지를 설치하세요.",
   "The step was stopped before it finished.": "단계가 끝나기 전에 중지되었습니다.",
   "The step failed.": "단계가 실패했습니다.",
-  "Open Details for the command and its output.": "명령과 출력은 세부에서 확인하세요."
+  "Open Details for the command and its output.": "명령과 출력은 세부에서 확인하세요.",
+  "Lifecycle hooks": "라이프사이클 훅",
+  "Stack": "스택",
+  "compose project, e.g. shop": "compose 프로젝트(예: shop)",
+  "container name, e.g. web": "컨테이너 이름(예: web)",
+  "Before start": "시작 전",
+  "After stop": "중지 후",
+  "If it fails, the start is cancelled.": "실패하면 시작이 취소됩니다.",
+  "A failure is reported; nothing else happens.": "실패는 알려 주며, 그 밖에는 아무 일도 일어나지 않습니다.",
+  "A quote is not closed.": "따옴표가 닫히지 않았습니다.",
+  "Save hook": "훅 저장",
+  "stack": "스택",
+  "Remove this hook?": "이 훅을 제거할까요?",
+  "Run a command before a container or stack starts, or after it stops.": "컨테이너나 스택이 시작되기 전이나 중지된 후에 명령을 실행합니다.",
+  "Hooks run on this computer, as you, whoever starts or stops the container: you, the tray, or an AI client through the MCP server.": "훅은 누가 컨테이너를 시작하거나 중지하든 이 컴퓨터에서 사용자 권한으로 실행됩니다: 사용자, 트레이, 또는 MCP 서버를 통한 AI 클라이언트.",
+  "{{count}} hooks": "훅 {{count}}개",
+  "Add hook": "훅 추가",
+  "A hook is a program and its arguments, run without a shell (wrap it in sh -c \"…\" for pipes or redirects), for up to 60 seconds. It gets CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION and CD_ENGINE, and CD_STACK for a stack. A stack hook runs once, from the stack's Start all, Stop all, Restart all and Teardown; each container's own hooks still run. Restart counts as a start.": "훅은 프로그램과 그 인수로, 셸 없이 최대 60초 동안 실행됩니다(파이프나 리디렉션은 sh -c \"…\"로 감싸세요). CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION, CD_ENGINE를 받고, 스택에서는 CD_STACK도 받습니다. 스택 훅은 스택의 모두 시작, 모두 중지, 모두 다시 시작, 해체에서 한 번 실행되며, 각 컨테이너의 자체 훅도 계속 실행됩니다. 다시 시작은 시작으로 간주합니다."
 }

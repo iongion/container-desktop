@@ -19,6 +19,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   { id: "policy", title: i18n.t("Air-gap & policy"), icon: IconNames.SHIELD },
   { id: "appearance", title: i18n.t("Appearance"), icon: IconNames.STYLE },
   { id: "config", title: i18n.t("Configuration"), icon: IconNames.COG },
+  { id: "hooks", title: i18n.t("Lifecycle hooks"), icon: IconNames.FLOW_LINEAR },
   { id: "logging", title: i18n.t("Logging"), icon: IconNames.CONSOLE },
   { id: "mcp", title: i18n.t("MCP server"), icon: IconNames.DATA_CONNECTION },
   { id: "network", title: i18n.t("Network"), icon: IconNames.GLOBE_NETWORK },

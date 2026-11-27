@@ -1392,5 +1392,22 @@
   "Retry and enter it when the system asks, or install the packages yourself with sudo.": "Riprova e inseriscila quando il sistema la chiede, oppure installa i pacchetti da te con sudo.",
   "The step was stopped before it finished.": "Il passaggio è stato interrotto prima di finire.",
   "The step failed.": "Il passaggio non è riuscito.",
-  "Open Details for the command and its output.": "Apri Dettagli per vedere il comando e il suo output."
+  "Open Details for the command and its output.": "Apri Dettagli per vedere il comando e il suo output.",
+  "Lifecycle hooks": "Hook del ciclo di vita",
+  "Stack": "Stack",
+  "compose project, e.g. shop": "progetto compose, es. shop",
+  "container name, e.g. web": "nome del container, es. web",
+  "Before start": "Prima dell'avvio",
+  "After stop": "Dopo l'arresto",
+  "If it fails, the start is cancelled.": "Se fallisce, l'avvio viene annullato.",
+  "A failure is reported; nothing else happens.": "Un errore viene segnalato; non succede altro.",
+  "A quote is not closed.": "Una virgoletta non è chiusa.",
+  "Save hook": "Salva hook",
+  "stack": "stack",
+  "Remove this hook?": "Rimuovere questo hook?",
+  "Run a command before a container or stack starts, or after it stops.": "Esegui un comando prima che un container o uno stack si avvii, o dopo che si ferma.",
+  "Hooks run on this computer, as you, whoever starts or stops the container: you, the tray, or an AI client through the MCP server.": "Gli hook vengono eseguiti su questo computer, come te, chiunque avvii o fermi il container: tu, la tray o un client IA tramite il server MCP.",
+  "{{count}} hooks": "{{count}} hook",
+  "Add hook": "Aggiungi hook",
+  "A hook is a program and its arguments, run without a shell (wrap it in sh -c \"…\" for pipes or redirects), for up to 60 seconds. It gets CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION and CD_ENGINE, and CD_STACK for a stack. A stack hook runs once, from the stack's Start all, Stop all, Restart all and Teardown; each container's own hooks still run. Restart counts as a start.": "Un hook è un programma con i suoi argomenti, eseguito senza shell (racchiudilo in sh -c \"…\" per pipe o reindirizzamenti), per al massimo 60 secondi. Riceve CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION, CD_ENGINE, e CD_STACK per uno stack. Un hook di stack viene eseguito una volta, da Avvia tutto, Ferma tutto, Riavvia tutto e Smantella dello stack; gli hook di ogni container continuano a essere eseguiti. Un riavvio conta come un avvio."
 }

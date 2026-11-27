@@ -88,6 +88,13 @@ async function runCli(launcher: string, args: string[]): Promise<CommandExecutio
   const engine = engineForLauncher(launcher);
   const normalizedLauncher = `${launcher}`.toLowerCase();
   const firstArg = `${flat[0] || ""}`.toLowerCase();
+  // `true` / `false` answer as the real programs do, so a lifecycle hook can be made to pass or to fail.
+  if (normalizedLauncher === "true" || normalizedLauncher.endsWith("/true")) {
+    return okResult();
+  }
+  if (normalizedLauncher === "false" || normalizedLauncher.endsWith("/false")) {
+    return okResult({ code: 1, success: false });
+  }
   // `echo <x>` (used by the WSL/LIMA scope start-checks) echoes its argument.
   if (normalizedLauncher === "echo" || normalizedLauncher.endsWith("/echo")) {
     return okResult({ stdout: `${flat.join(" ")}\n` });

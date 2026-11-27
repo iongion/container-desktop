@@ -30,3 +30,17 @@ export function isComposeContainer(container: Container): boolean {
 export function isComposeGroup(group: ContainerGroup): boolean {
   return (group.Items as Container[]).some(isComposeContainer);
 }
+
+// The stack a group's lifecycle hooks are keyed by: its compose project, on the connection and engine of the member
+// that carries the label. Undefined for a name-prefix group, which has no stack hooks.
+export function stackHookTargetOf(
+  containers: (Container & { connectionId: string; engine: string })[],
+): { connectionId: string; engine: string; name: string } | undefined {
+  for (const container of containers) {
+    const name = composeProjectOf(container);
+    if (name) {
+      return { connectionId: container.connectionId, engine: `${container.engine}`, name };
+    }
+  }
+  return undefined;
+}

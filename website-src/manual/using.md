@@ -8,6 +8,7 @@ permalink: false
 sections:
   - { id: using-notifications, label: "Notification center & activity log" }
   - { id: using-build, label: "Building images" }
+  - { id: using-hooks, label: "Lifecycle hooks" }
 ---
 
 <section class="guide-sec" id="using-notifications">
@@ -36,5 +37,18 @@ The Activity tab doubles as a **learning tool** — it shows exactly how Contain
 Container Desktop builds container images for you — no terminal required. Open the **Build Studio** from the **Build image** button on the **Images** screen: author a Containerfile in the built-in editor (it **lints as you type**), set your tags, build args, target stage and platforms in the configuration panel, then hit **Build image** to run it on a native Podman or Docker engine. The **Build run** panel streams a **Timeline** — every step with a cache **hit / miss** badge and its duration — and, after a successful build, a **Layers** tab with a dive-style waterfall of the image's layers and sizes.
 
 <img src="/img/podman/Build.png" alt="Building an image in the Build Studio" />
+
+</section>
+
+<section class="guide-sec" id="using-hooks">
+
+### Lifecycle hooks
+
+Run a command of your own before a container or a compose stack starts, or after it stops: mount a share, seed a database, take a backup. Add them in **Settings → Lifecycle hooks**: pick the container (by name) or the stack (by compose project), its connection, and a **Before start** and/or **After stop** command.
+
+- A hook runs **on this computer, as you**, for every start and stop: from the screens, the tray, bulk actions, or an AI client through the MCP server. A restart counts as a start.
+- A failing **Before start** hook cancels the start and says why; a failing **After stop** hook is only reported.
+- A stack hook runs once, from the stack's **Start all**, **Stop all**, **Restart all** and **Teardown**; each container's own hooks still run.
+- A hook is a program and its arguments, run without a shell (wrap it in `sh -c "…"` for pipes or redirects), for up to 60 seconds. It gets `CD_HOOK` (`before-start` / `after-stop`), `CD_CONTAINER_ID`, `CD_CONTAINER_NAME`, `CD_CONNECTION`, `CD_ENGINE`, and `CD_STACK` for a stack.
 
 </section>

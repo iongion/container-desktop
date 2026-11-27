@@ -12,6 +12,7 @@ describe("settingsCategoryModel", () => {
       "policy",
       "appearance",
       "config",
+      "hooks",
       "logging",
       "mcp",
       "network",
