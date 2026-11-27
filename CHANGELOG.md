@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.2.1] - 2026-11-27
+
 ### Fixed
 
 - Containers, images and the other lists no longer stay empty when an engine is slow to answer at startup (Docker starting many containers at login): lists wait up to 30 s instead of 3 s, and a list that fails while its engine still answers is read again with back-off until it loads
