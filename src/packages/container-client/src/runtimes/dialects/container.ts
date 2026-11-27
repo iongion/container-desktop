@@ -9,26 +9,123 @@ import type { EngineConnectorSettings } from "@/container-client/types/connectio
 import { ContainerEngine } from "@/container-client/types/engine";
 import { StartupStatus } from "@/container-client/types/host";
 import type { SystemInfo } from "@/container-client/types/system";
-import { SOCKTAINER_PROGRAM } from "../../connection";
+import { APPLE_PROGRAM, SOCKTAINER_PROGRAM } from "../../connection";
 import type { EngineDialect, EngineExtensionMethods, HostContext, ServiceSpec } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 import { DOCKER_SORT_CAPABILITIES } from "../sort-capabilities";
-import { readScopedHome } from "./shared";
+import { parseJSON, readScopedHome, runScopedSocketCommand } from "./shared";
 
 const SOCKTAINER_SOCKET_NAME = "container.sock";
+const RESTART_SERVICE = "run `container system stop`, then `container system start`";
+
+// `container system status --format json`: "running" with the CLI (client) and the running apiserver (server)
+// versions, or only "unregistered" / "not running", printed with exit code 1.
+export interface AppleSystemStatus {
+  status: string;
+  clientVersion?: string;
+  serverVersion?: string;
+}
+
+interface AppleSystemStatusPayload {
+  status?: unknown;
+  client?: { version?: string };
+  server?: { version?: string };
+}
+
+// Undefined when the CLI printed no status (not installed, or not Apple's).
+export function parseAppleSystemStatus(stdout: string): AppleSystemStatus | undefined {
+  const payload = parseJSON(`${stdout || ""}`.trim()) as AppleSystemStatusPayload | undefined;
+  if (typeof payload?.status !== "string") {
+    return undefined;
+  }
+  const status: AppleSystemStatus = { status: payload.status };
+  if (payload.client?.version) {
+    status.clientVersion = payload.client.version;
+  }
+  if (payload.server?.version) {
+    status.serverVersion = payload.server.version;
+  }
+  return status;
+}
+
+// The connection's own `container`, on this computer or over the SSH scope.
+async function readAppleSystemStatus(
+  host: HostContext,
+  settings: EngineConnectorSettings,
+): Promise<AppleSystemStatus | undefined> {
+  const program = settings.program?.path || settings.program?.name || APPLE_PROGRAM;
+  const args = ["system", "status", "--format", "json"];
+  const output = host.isScoped()
+    ? await host.runScopeCommand(program, args, settings.controller?.scope || "", settings)
+    : await host.runHostCommand(program, args, settings);
+  return parseAppleSystemStatus(output.stdout || "");
+}
+
+// What the socktainer socket serves: socktainer's own version (`/version` Components) and the running apiserver's
+// (`/info` ServerVersion). Undefined when the socket does not answer.
+async function readLiveBridge(host: HostContext): Promise<{ socktainer?: string; server?: string } | undefined> {
+  try {
+    const driver = await host.getApiDriver();
+    const [version, info] = await Promise.all([
+      driver.request<{ Components?: Array<{ Name?: string; Version?: string }> }>({
+        method: "GET",
+        url: "/version",
+        timeout: 5000,
+      }),
+      driver.request<{ ServerVersion?: string }>({ method: "GET", url: "/info", timeout: 5000 }),
+    ]);
+    const components = Array.isArray(version?.data?.Components) ? version.data.Components : [];
+    return {
+      socktainer: components.find((component) => component?.Name === SOCKTAINER_PROGRAM)?.Version,
+      server: info?.data?.ServerVersion,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+// Which part is down when the socket is silent, and its fix; undefined when the CLI cannot say.
+function describeSilentBridge(status: AppleSystemStatus | undefined): string | undefined {
+  switch (status?.status) {
+    case undefined:
+      return undefined;
+    case "running":
+      return "socktainer is not running: turn on auto-start for this connection, or start socktainer";
+    case "unregistered":
+      return "Apple's container service is not started: run `container system start`";
+    default:
+      return `Apple's container service is not answering: ${RESTART_SERVICE}`;
+  }
+}
 
 // A failed command result used by the no-op extension methods on Apple.
 function noopCommandResult(): CommandExecutionResult {
   return { pid: null, code: null, success: false, stdout: "", stderr: "" };
 }
 
-// Resolve the socktainer socket path from `$HOME/.socktainer/container.sock` (local) or the scoped home
-// (remote). Does NOT honor raw DOCKER_HOST — on macOS it commonly points to a non-Apple daemon.
+// `brew services start socktainer` runs it with a Homebrew-owned HOME, so its socket lives under the Homebrew prefix.
+const HOMEBREW_SOCKTAINER_SOCKET = `/opt/homebrew/var/run/socktainer/.socktainer/${SOCKTAINER_SOCKET_NAME}`;
+
+async function isSocketPresent(host: HostContext, settings: EngineConnectorSettings, path: string): Promise<boolean> {
+  if (host.isScoped()) {
+    return (await runScopedSocketCommand(host, settings, "test", ["-S", path])).success;
+  }
+  return await FS.isFilePresent(path);
+}
+
+// The user's own socktainer (the one the app starts) at `$HOME/.socktainer/container.sock`, the remote home over SSH;
+// else Homebrew's service socket; else the user's, where the app starts one. NEVER raw DOCKER_HOST: on macOS it
+// commonly points to a non-Apple daemon.
 async function resolveSocktainerSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
-  // Remote (scoped): the remote $HOME via printenv; native: the local home. NEVER raw DOCKER_HOST — on
-  // macOS it commonly points to a non-Apple daemon.
   const home = (await readScopedHome(host, settings)) || (await Platform.getHomeDir());
-  return `${home}/.socktainer/${SOCKTAINER_SOCKET_NAME}`;
+  const own = `${home}/.socktainer/${SOCKTAINER_SOCKET_NAME}`;
+  if (await isSocketPresent(host, settings, own)) {
+    return own;
+  }
+  if (await isSocketPresent(host, settings, HOMEBREW_SOCKTAINER_SOCKET)) {
+    return HOMEBREW_SOCKTAINER_SOCKET;
+  }
+  return own;
 }
 
 export const containerDialect: EngineDialect = {
@@ -61,19 +158,21 @@ export const containerDialect: EngineDialect = {
     return "";
   },
 
-  // Apple's own service first, by the connection's `container` and without the kernel prompt a GUI app cannot answer.
-  // Then socktainer, the API the app talks to, supervised while the app runs; it never auto-starts a service itself,
-  // because it would pick whichever `container` is first on PATH and refuses one other than its pairing.
+  // Apple's own service first, unless it runs already, by the connection's `container` and without the kernel prompt a
+  // GUI app cannot answer. Then socktainer, the API the app talks to, supervised while the app runs; it never
+  // auto-starts a service itself, because it would pick whichever `container` is first on PATH and refuses one other
+  // than its pairing.
   async buildService(host: HostContext, settings: EngineConnectorSettings): Promise<ServiceSpec | null> {
     const socktainer = await host.findHostProgram({ name: SOCKTAINER_PROGRAM, path: "" }, settings);
     if (!socktainer?.path) {
       return null;
     }
-    return {
-      prepare: { args: ["system", "start", "--enable-kernel-install"] },
-      program: socktainer.path,
-      args: ["--no-auto-start"],
-    };
+    const service: ServiceSpec = { program: socktainer.path, args: ["--no-auto-start"] };
+    const status = await readAppleSystemStatus(host, settings);
+    if (status?.status !== "running") {
+      service.prepare = { args: ["system", "start", "--enable-kernel-install"] };
+    }
+    return service;
   },
 
   async getSystemInfo(host: HostContext): Promise<SystemInfo> {
@@ -91,24 +190,19 @@ export const containerDialect: EngineDialect = {
     return info;
   },
 
-  // Apple has no native Docker REST API — socktainer is the bridge. Surface its presence/version in the
-  // availability report (host-client.getAvailability folds this into report.api) so a missing or lagging
-  // socktainer is visible in the UI, not just the logs.
+  // Apple has no native Docker REST API — socktainer is the bridge. The availability report (host-client folds this
+  // into report.api) names what the live socket serves, or, when it is silent, which part is down and its fix.
   async describeApiBridge(host: HostContext, settings: EngineConnectorSettings): Promise<string | undefined> {
-    const containerVersion = settings.program?.version || "";
-    const suffix = containerVersion ? ` · container ${containerVersion}` : "";
-    try {
-      const program = host.isScoped()
-        ? await host.findScopeProgram({ name: SOCKTAINER_PROGRAM, path: "" }, settings)
-        : await host.findHostProgram({ name: SOCKTAINER_PROGRAM, path: "" }, settings);
-      if (!program?.path) {
-        return "socktainer not found — install it (`brew install socktainer`) to expose the Apple Container API";
-      }
-      const version = program.version ? `socktainer ${program.version}` : "socktainer (version unknown)";
-      return `${version}${suffix}`;
-    } catch {
-      return "socktainer not found — install it (`brew install socktainer`) to expose the Apple Container API";
+    const live = await readLiveBridge(host);
+    if (!live) {
+      return describeSilentBridge(await readAppleSystemStatus(host, settings));
     }
+    const note = `socktainer ${live.socktainer || "(version unknown)"} · container ${live.server || "(version unknown)"}`;
+    const cli = settings.program?.version || "";
+    if (cli && live.server && cli !== live.server) {
+      return `${note} · the container CLI is ${cli}: ${RESTART_SERVICE}`;
+    }
+    return note;
   },
 
   bindExtensions(_host: HostContext): EngineExtensionMethods {

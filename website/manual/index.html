@@ -282,7 +282,7 @@ curl -sf --unix-socket &quot;$HOME/.socktainer/container.sock&quot; http://local
 <pre><code class="language-bash">curl --unix-socket &quot;$HOME/.socktainer/container.sock&quot; http://localhost/_ping
 curl --unix-socket &quot;$HOME/.socktainer/container.sock&quot; http://localhost/version
 </code></pre>
-<p>Homebrew also prints a service-mode option after installing <code>socktainer</code>. In that mode, <code>socktainer</code> runs with a Homebrew-owned <code>HOME</code>, so the socket is not under your user home. Use this if you want <code>socktainer</code> to start at login:</p>
+<p>Homebrew also prints a service-mode option after installing <code>socktainer</code>. In that mode, <code>socktainer</code> runs with a Homebrew-owned <code>HOME</code>, so the socket is not under your user home; Container Desktop finds it there when your home has none. Use this if you want <code>socktainer</code> to start at login:</p>
 <pre><code class="language-bash">brew services start socktainer
 
 SOCKTAINER_HOME=&quot;$(brew --prefix)/var/run/socktainer&quot;

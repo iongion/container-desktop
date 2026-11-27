@@ -735,9 +735,10 @@ export class HostClient implements HostContext {
         ? "Not checked - program not available"
         : "Not checked - host not available";
     }
-    // Optional API-bridge note (e.g. Apple/socktainer presence/version) folded into the api report line,
-    // so a missing/lagging bridge is visible — not just logged. No-op for Docker/Podman (native REST).
-    if (this.dialect.describeApiBridge) {
+    // Optional API-bridge note (Apple: what socktainer serves, or which part is down) folded into the api report line,
+    // so a missing/lagging bridge is visible — not just logged. No-op for Docker/Podman (native REST). Gated like the
+    // api check: on a host or program not available it would only dial for a line nobody reads.
+    if (canCheckApi && this.dialect.describeApiBridge) {
       try {
         const note = await this.dialect.describeApiBridge(this, settings);
         if (note) {

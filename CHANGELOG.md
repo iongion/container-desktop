@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Apple Container: the app starts Apple's container service and socktainer itself when it connects, and stops the socktainer it started when it disconnects; no terminal step needed. A new Apple Container connection auto-starts by default
 - Apple Container requires macOS 26 or later; macOS 15 and its degraded networking are no longer supported
+- Apple Container: the connection's API line names the socktainer and Apple service versions the socket serves; when the socket is silent, it says which part is down (Apple's service or socktainer) and how to fix it
+- Apple Container: a socktainer run by `brew services` is found when your home has no socktainer socket
 
 ## [7.1.0] - 2026-11-27
 
