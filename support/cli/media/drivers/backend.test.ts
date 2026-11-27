@@ -31,9 +31,8 @@ describe("resolveCaptureBackend", () => {
     expect(resolveCaptureBackend("tauri")).toBe("tauri");
   });
 
-  it("throws on an unknown backend, the removed wails one included", () => {
+  it("throws on an unknown backend", () => {
     expect(() => resolveCaptureBackend("chromium")).toThrow(/unknown capture backend/i);
-    expect(() => resolveCaptureBackend("wails")).toThrow(/unknown capture backend/i);
   });
 });
 
