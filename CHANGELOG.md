@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `support/provision-deps.sh` provisions Void Linux (xbps)
 - An MCP server for AI clients, set up in Settings → MCP server: loopback only, off by default, read-only by default, its token kept in the OS keychain, and `container-desktop --mcp-stdio` for clients that only speak stdio
 - Branding and packaging details now come from one shared source
 
@@ -36,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Linux AppImage bundles on Void and other distros whose appindicator pkg-config emits several `-L` flags or whose `libdir` is a symlink: the Tauri build gets a clean pkg-config shim
 - Capturing the website screenshots no longer reads or writes your installed app's settings, webview storage or keychain: the capture app runs on its own fresh user data, as the WebDriver suites do
 - A container command that fails lists its errors in the notification; the Notification Center showed "[object Object]"
 - The swarm smoke spec's manager half skips when the sandbox is down, as its lifecycle half does, instead of failing

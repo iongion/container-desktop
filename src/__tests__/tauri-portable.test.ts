@@ -118,7 +118,9 @@ describe("Tauri portable package parity", () => {
     );
     expect(rootPkg.scripts["package:tauri:mac_arm"]).toContain("tauri build --target aarch64-apple-darwin");
     expect(rootPkg.scripts["package:tauri:mac_arm"]).toContain("node support/tauri-portable.cjs pack");
-    expect(rootPkg.scripts["package:tauri:linux_x86"]).toContain("tauri build --target x86_64-unknown-linux-gnu");
+    expect(rootPkg.scripts["package:tauri:linux_x86"]).toContain(
+      "node support/tauri-build.cjs build --target x86_64-unknown-linux-gnu",
+    );
     expect(rootPkg.scripts["package:tauri:linux_x86"]).toContain("node support/tauri-portable.cjs pack");
     expect(rootPkg.scripts["package:tauri:linux_arm"]).toContain(
       "node support/tauri-build.cjs build --target aarch64-unknown-linux-gnu",

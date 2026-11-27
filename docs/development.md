@@ -15,8 +15,16 @@ The build/dev/release tooling is a TypeScript CLI in [`support/cli/`](../support
 run via `tsx` — both installed by `pnpm install`); there is no Python toolchain.
 
 **Linux one-shot:** `bash support/provision-deps.sh` installs the build toolchain
-(auto-detects apt/dnf/pacman). On macOS use [Homebrew](https://brew.sh/); native
-Windows is on you (for WSL, follow the Linux path).
+(auto-detects apt/dnf/yum/pacman/xbps — including Void). On macOS use
+[Homebrew](https://brew.sh/); native Windows is on you (for WSL, follow the Linux path).
+
+On Void (and any distro whose appindicator `.pc` pulls in `gtk+-3.0`), the Tauri CLI's
+AppImage tray probe mis-parses the multiple `-L` flags pkg-config emits. `pnpm tauri:build` and
+`pnpm package:tauri:linux_*` route through `support/tauri-build.cjs`, which injects a clean single-`-L`
+pkg-config shim (`support/tauri-appindicator-shim.cjs`) so the AppImage bundles without editing system
+files. The same shim also canonicalizes `gtk+-3.0`'s `libdir` when it is a
+symlink (Void `/usr/lib64`→`/usr/lib`), which otherwise makes Tauri's `linuxdeploy` gtk plugin
+write its immodules cache into a directory that was never created and abort the bundle.
 
 ## Setup
 
