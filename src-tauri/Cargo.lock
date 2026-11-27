@@ -641,7 +641,7 @@ checksum = "be95d4a884358a21a199689323c29e9256b4a1b315e22f183d155422041d3a9a"
 
 [[package]]
 name = "container-desktop"
-version = "7.1.0"
+version = "7.2.0"
 dependencies = [
  "apple-native-keyring-store",
  "base64 0.23.1",
