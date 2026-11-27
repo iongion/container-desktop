@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-version="7.0.0" data-theme="unified">
+<html lang="en" data-version="7.1.0" data-theme="unified">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +7,11 @@
 <title>The Manual — Container Desktop setup guides for Podman, Docker &amp; Apple™ Container</title>
 <meta name="description" content="Set up Podman, Docker and Apple™ Container on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready.">
 <link rel="canonical" href="https://iongion.github.io/container-desktop/manual/">
-<link rel="icon" href="/container-desktop/favicon.ico?v=7.0.0" type="image/x-icon">
-<link rel="icon" type="image/png" sizes="32x32" href="/container-desktop/favicon-32x32.png?v=7.0.0">
-<link rel="icon" type="image/png" sizes="16x16" href="/container-desktop/favicon-16x16.png?v=7.0.0">
-<link rel="apple-touch-icon" href="/container-desktop/apple-touch-icon.png?v=7.0.0">
-<link rel="mask-icon" href="/container-desktop/safari-pinned-tab.svg?v=7.0.0" color="#14b8a6">
+<link rel="icon" href="/container-desktop/favicon.ico?v=7.1.0" type="image/x-icon">
+<link rel="icon" type="image/png" sizes="32x32" href="/container-desktop/favicon-32x32.png?v=7.1.0">
+<link rel="icon" type="image/png" sizes="16x16" href="/container-desktop/favicon-16x16.png?v=7.1.0">
+<link rel="apple-touch-icon" href="/container-desktop/apple-touch-icon.png?v=7.1.0">
+<link rel="mask-icon" href="/container-desktop/safari-pinned-tab.svg?v=7.1.0" color="#14b8a6">
 <link rel="manifest" href="/container-desktop/site.webmanifest">
 <meta name="theme-color" content="#0f1521">
 <meta name="msapplication-config" content="/container-desktop/browserconfig.xml">
@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" referrerpolicy="no-referrer">
-<link rel="stylesheet" href="/container-desktop/assets/css/site.css?v=7.0.0">
+<link rel="stylesheet" href="/container-desktop/assets/css/site.css?v=7.1.0">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -47,7 +47,7 @@
 </script>
 </head>
 <body>
-  <div class="announce"><span class="mono">★ v7.0.0</span><span>Open-source desktop UI for Podman, Docker &amp; Apple™ Container —</span><a href="/container-desktop/#download">download free →</a></div>
+  <div class="announce"><span class="mono">★ v7.1.0</span><span>Open-source desktop UI for Podman, Docker &amp; Apple™ Container —</span><a href="/container-desktop/#download">download free →</a></div>
   <header class="nav"><div class="wrap">
   <a class="brand" href="/container-desktop/"><span class="mark"><svg class="brand-mark" viewBox="0 0 270.93334 270.93334" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <rect x="14" y="14" width="242.93334" height="242.93334" rx="58" fill="var(--mark-bg, #0f1420)"></rect>
@@ -90,7 +90,7 @@
       <div class="grp"><i class="fab fa-apple"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-apple-container">5 · Apple™ Container</a><a href="#macos-share">6 · Sharing connection</a>
       <div class="grp"><i class="fab fa-windows"></i> Windows</div><a href="#windows-req">Requirements</a><a href="#windows-quick">1 · Quick guide</a><a href="#windows-best">2 · Best experience</a><a href="#windows-podman-docker">3 · Podman as Docker</a><a href="#windows-dd-alt">4 · Docker Desktop alternative</a><a href="#windows-podman-custom">5 · Podman custom install</a><a href="#windows-share">6 · Sharing connection</a><a href="#windows-tips">7 · Tips &amp; tricks</a>
       <div class="grp"><i class="fas fa-plug"></i> AI clients (MCP)</div><a href="#mcp-what">What it is</a><a href="#mcp-enable">Turn it on</a><a href="#mcp-http">Connect a client</a><a href="#mcp-stdio">Clients that only speak stdio</a><a href="#mcp-access">What clients may do</a>
-      <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-build">Building images</a>
+      <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-build">Building images</a><a href="#using-hooks">Lifecycle hooks</a>
       <div class="grp"><i class="fas fa-keyboard"></i> Keyboard shortcuts</div><a href="#shortcuts-find">Find</a><a href="#shortcuts-all">All shortcuts</a>
     </aside>
 
@@ -249,35 +249,34 @@ limactl shell docker   # login to the docker VM
 <ul>
 <li>Apple silicon Mac.</li>
 <li>macOS 26 Tahoe recommended. macOS 15 can run Apple <code>container</code>, but networking is degraded and some network commands are unavailable.</li>
-<li>Apple's <code>container</code> CLI installed from the <a href="https://github.com/apple/container/releases">official GitHub releases</a>.</li>
-<li>A compatible <code>socktainer</code> installation to expose a Docker Engine API socket.</li>
+<li>Apple's <code>container</code> CLI from the <a href="https://github.com/apple/container/releases">official GitHub releases</a>, or Homebrew's.</li>
+<li><code>socktainer</code>, which exposes a Docker Engine API socket, from its <a href="https://github.com/socktainer/socktainer/releases">releases</a> or Homebrew.</li>
 </ul>
 <h4>Install Apple™ Container</h4>
-<p>Download the signed installer package from the <a href="https://github.com/apple/container/releases">Apple container releases</a>, verify it, install it, then start the system service. The example below pins Apple™ Container <code>1.0.0</code>; if you choose a newer release, use that release's package name and checksum instead.</p>
-<pre><code class="language-bash">mkdir -p ~/Downloads/container-desktop-provision
-cd ~/Downloads/container-desktop-provision
+<p>The setup wizard does all of this for you. By hand: download Apple's signed package and socktainer's (the Docker-compatible API bridge), verify both, install both, then start the system service. The example pins Apple™ Container <code>1.7.1</code> and socktainer <code>1.6.1</code>; for newer releases use their package names and checksums. Use either these packages or Homebrew's <code>container</code> and <code>socktainer</code>, never both: two installs fight over one service.</p>
+<pre><code class="language-bash">cd &quot;$(mktemp -d)&quot;
 
-curl -L -o container-1.0.0-installer-signed.pkg \
-  https://github.com/apple/container/releases/download/1.0.0/container-1.0.0-installer-signed.pkg
+curl -L -o container-1.7.1-installer-signed.pkg \
+  https://github.com/apple/container/releases/download/1.7.1/container-1.7.1-installer-signed.pkg
+curl -L -o socktainer-installer.pkg \
+  https://github.com/socktainer/socktainer/releases/download/v1.6.1/socktainer-installer.pkg
 
-shasum -a 256 container-1.0.0-installer-signed.pkg
-# expect: 13f45f26da94c354adcbefe1e8f7631e7f126e93c5d4dd6a5a538aa66b4f479d
+shasum -a 256 container-1.7.1-installer-signed.pkg socktainer-installer.pkg
+# expect: b6739caf3d47ca53a78f1a7edf32521420a75c7941838c3cefa75f30b80f5a97  container-1.7.1-installer-signed.pkg
+# expect: d27a3ed4d37b421b17a1609e4575e3f227f1fcffb692b1a340d6e14ea178e9dc  socktainer-installer.pkg
 
-sudo installer -pkg container-1.0.0-installer-signed.pkg -target /
+sudo installer -pkg container-1.7.1-installer-signed.pkg -target /
+sudo installer -pkg socktainer-installer.pkg -target /
 
-container system start
+container system start --enable-kernel-install
 </code></pre>
-<h4>Install socktainer</h4>
-<p>Install the Docker-compatible API bridge:</p>
-<pre><code class="language-bash">brew tap socktainer/tap
-brew install socktainer
-</code></pre>
-<p>Start <code>socktainer</code> in the background and confirm that it exposes the Docker-compatible Unix socket:</p>
+<h4>Start socktainer</h4>
+<p>Start <code>socktainer</code> in the background, on the service already running, and confirm that its socket answers:</p>
 <pre><code class="language-bash">mkdir -p ~/.socktainer
-nohup socktainer &gt; ~/.socktainer/socktainer.log 2&gt;&amp;1 &amp;
+nohup /opt/socktainer/bin/socktainer --no-auto-start &gt; ~/.socktainer/socktainer.log 2&gt;&amp;1 &amp;
 
 sleep 2
-test -S &quot;$HOME/.socktainer/container.sock&quot; &amp;&amp; echo &quot;socktainer socket OK&quot;
+curl -sf --unix-socket &quot;$HOME/.socktainer/container.sock&quot; http://localhost/_ping &amp;&amp; echo &quot; socktainer OK&quot;
 </code></pre>
 <p>Verify the socket with the Docker Engine API endpoints Container Desktop uses:</p>
 <pre><code class="language-bash">curl --unix-socket &quot;$HOME/.socktainer/container.sock&quot; http://localhost/_ping
@@ -497,6 +496,17 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <p>Container Desktop builds container images for you — no terminal required. Open the <strong>Build Studio</strong> from the <strong>Build image</strong> button on the <strong>Images</strong> screen: author a Containerfile in the built-in editor (it <strong>lints as you type</strong>), set your tags, build args, target stage and platforms in the configuration panel, then hit <strong>Build image</strong> to run it on a native Podman or Docker engine. The <strong>Build run</strong> panel streams a <strong>Timeline</strong> — every step with a cache <strong>hit / miss</strong> badge and its duration — and, after a successful build, a <strong>Layers</strong> tab with a dive-style waterfall of the image's layers and sizes.</p>
 <img src="/container-desktop/img/podman/Build.png" alt="Building an image in the Build Studio">
 </section>
+<section class="guide-sec" id="using-hooks">
+<h3>Lifecycle hooks</h3>
+<p>Run a command of your own before a container or a compose stack starts, or after it stops: mount a share, seed a database, take a backup. Add them in <strong>Settings → Lifecycle hooks</strong>: pick the container (by name) or the stack (by compose project), its connection, and a <strong>Before start</strong> and/or <strong>After stop</strong> command.</p>
+<ul>
+<li>A hook runs <strong>on this computer, as you</strong>, for every start and stop: from the screens, the tray, bulk actions, or an AI client through the MCP server. A restart counts as a start.</li>
+<li>A failing <strong>Before start</strong> hook cancels the start and says why; a failing <strong>After stop</strong> hook is only reported.</li>
+<li>A stack hook runs once around the stack's <strong>Start all</strong>, <strong>Stop all</strong> and <strong>Restart all</strong>, where each container's own hooks run too. <strong>Import stack</strong>, tearing a stack down, and starting or stopping its pod run only the stack hook.</li>
+<li>Removing or unpausing a container runs no hook.</li>
+<li>A hook is a program and its arguments, run without a shell (wrap it in <code>sh -c &quot;…&quot;</code> for pipes or redirects), for up to 60 seconds. It gets <code>CD_HOOK</code> (<code>before-start</code> / <code>after-stop</code>), <code>CD_CONTAINER_ID</code>, <code>CD_CONTAINER_NAME</code>, <code>CD_CONNECTION</code>, <code>CD_ENGINE</code>, and <code>CD_STACK</code> for a stack.</li>
+</ul>
+</section>
 
       <div class="guide-os" id="shortcuts"><i class="fas fa-keyboard"></i><h2>Keyboard shortcuts</h2></div>
       <section class="guide-sec" id="shortcuts-find">
@@ -585,9 +595,9 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 </div></footer>
 
   <script async="" defer="" src="https://buttons.github.io/buttons.js"></script>
-  <script src="/container-desktop/assets/js/os-detect.js?v=7.0.0"></script>
-  <script src="/container-desktop/assets/js/manual-nav.js?v=7.0.0"></script>
-  <script src="/container-desktop/assets/js/theme-switcher.js?v=7.0.0"></script>
+  <script src="/container-desktop/assets/js/os-detect.js?v=7.1.0"></script>
+  <script src="/container-desktop/assets/js/manual-nav.js?v=7.1.0"></script>
+  <script src="/container-desktop/assets/js/theme-switcher.js?v=7.1.0"></script>
 
 </body>
 </html>

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.0] - 2026-11-27
+
 ### Added
 
 - Lifecycle hooks (Settings → Lifecycle hooks): a command of your own runs before a container or a compose stack starts, or after it stops, whoever starts or stops it, AI clients through the MCP server included; a failing before-start hook cancels the start
