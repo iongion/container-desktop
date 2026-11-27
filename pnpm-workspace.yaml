@@ -7,6 +7,10 @@ overrides:
   lodash: "4.18.1"
   fast-uri: "3.1.9"
   tmp: "0.2.7"
+  # mocha 12, glob 13 and readdir-glob 3 (test tooling) still ask for minimatch 10; GHSA-g3hv-75wg-m249 is fixed in 11.
+  "minimatch@10": "11.0.9"
+  # mocha 12 asks for glob 13; GHSA-3g3m-2fjr-6pw4 is fixed in 14.0.2 (mocha uses hasMagic and Glob, both kept).
+  "glob@13": "14.0.6"
 
 # Dependency install scripts: esbuild's swaps in its native binary; the Edge and Firefox driver downloads are never used
 # (WebDriver runs go through tauri-driver).

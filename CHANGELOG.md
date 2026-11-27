@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Transitive dependencies refreshed to their newest compatible releases, clearing the Dependabot alerts: undici 7.30.2; minimatch 11 and glob 14 for the test tooling that still asked for 10 and 13
+
 ## [7.0.0] - 2026-11-27
 
 ### Added
