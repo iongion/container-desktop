@@ -5,7 +5,7 @@ import { PROJECT_HOME } from "@/cli/lib/paths";
 // Build the website demo "pseudo-player" manifests from the already-captured screenshots. Each engine's
 // replays/<engine>.json is a plain ordered list of screenshot frames + titles that demo-replay.js pages
 // through with the transport controls. There is no separate recording step: the demo is just a curated
-// slideshow of the shots, so writeDemoManifests() runs as the final step of `yarn screenshots`. The frame
+// slideshow of the shots, so writeDemoManifests() runs as the final step of `pnpm screenshots`. The frame
 // list lives in demoScenario.json; the images come from website-src/static/img/<engine>/*.png.
 
 const ROOT = PROJECT_HOME;

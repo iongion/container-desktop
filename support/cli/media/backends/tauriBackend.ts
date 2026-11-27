@@ -39,7 +39,7 @@ function assertPrereqs() {
   if (!existsSync(APP_BINARY)) {
     throw new Error(
       `Tauri app binary not found: ${APP_BINARY}\n` +
-        "A running `yarn tauri dev` keeps the debug binary fresh, or set CONTAINER_DESKTOP_E2E_APP to a built binary.",
+        "A running `pnpm tauri dev` keeps the debug binary fresh, or set CONTAINER_DESKTOP_E2E_APP to a built binary.",
     );
   }
   if (!existsSync(NATIVE_DRIVER)) {
@@ -104,7 +104,7 @@ export const tauriBackend: CaptureBackend = {
     if (USES_DEV_URL && !(await portIsOpen(DEV_URL_PORT))) {
       throw new Error(
         `The Tauri debug binary loads the renderer from http://localhost:${DEV_URL_PORT}, but nothing is serving it.\n` +
-          "Start it first:  CONTAINER_DESKTOP_MOCK=1 yarn tauri:serve\n" +
+          "Start it first:  CONTAINER_DESKTOP_MOCK=1 pnpm tauri:serve\n" +
           "Or point CONTAINER_DESKTOP_E2E_APP at a self-contained release binary.",
       );
     }

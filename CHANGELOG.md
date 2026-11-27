@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Dependencies, Rust crates and pinned GitHub Actions moved to their latest releases
 - Major upgrades: Tauri 2.12, WebdriverIO 10, i18next 27 with react-i18next 18, Vitest 5 with jsdom 31, vite-plugin-checker 1, path-to-regexp 9, dotenv 18, actions checkout and setup-node 7, download-artifact 8; in the core crates OpenTelemetry 0.33, nix 0.32, ssh2-config 0.9; Node 24.22.3
+- pnpm replaces yarn: `pnpm-workspace.yaml` holds the workspaces, the transitive security pins and which dependency install scripts may run; CI installs the exact `packageManager` version
 - The OS keychain is reached through `keyring-core` and one store per OS (keyring 4); secrets stored before keep working
 - Linux WebDriver runs no longer put a window on your desktop: the app runs on a private headless sway, on a GPU that is not NVIDIA's, keeps its secrets out of your OS keychain, and a killed run leaves nothing behind. `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows it; sway joins the e2e prerequisites
 - The app now runs entirely in the system's own webview over a native backend, so it starts faster and ships a far smaller download

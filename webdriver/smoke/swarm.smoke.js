@@ -5,7 +5,7 @@
 // Swarm is Docker-only. Point the target's DOCKER_SOCKET at the disposable dind sandbox
 // (support/swarm-sandbox.sh up | up-multi), NEVER your primary daemon. Needs a NON-mock app:
 //   support/swarm-sandbox.sh up
-//   CONTAINER_DESKTOP_TEST_TARGETS=swarm yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js
+//   CONTAINER_DESKTOP_TEST_TARGETS=swarm pnpm test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js
 import { selectLiveTargets, toProbeTarget } from "../support/liveTargets.js";
 import { appModeReason, skippedSuite, skipSuite, targetReason } from "../support/prerequisites.js";
 

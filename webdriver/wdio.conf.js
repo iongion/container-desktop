@@ -2,14 +2,14 @@
 //   WebdriverIO ──4444──▶ tauri-driver ──▶ WebKitWebDriver ──▶ container-desktop (the Tauri app)
 // tauri-driver is the official Tauri harness (https://v2.tauri.app/develop/tests/webdriver/example/webdriverio/).
 //
-// Run:  yarn test:e2e:tauri
+// Run:  pnpm test:e2e:tauri
 // Prereqs (all already provisioned on this box):
 //   • tauri-driver     → ~/.cargo/bin/tauri-driver          (cargo install tauri-driver --locked)
 //   • WebKitWebDriver  → /usr/bin/WebKitWebDriver           (sudo apt install webkitgtk-webdriver)
-//   • the app binary   → src-tauri/target/debug/container-desktop (kept fresh by a running `yarn tauri dev`)
+//   • the app binary   → src-tauri/target/debug/container-desktop (kept fresh by a running `pnpm tauri dev`)
 //
 // The DEBUG binary loads the renderer from the Vite dev server (devUrl http://localhost:3000), so a
-// `yarn tauri dev` (or `yarn tauri:serve`) must be serving :3000 during the run. Point at a self-contained
+// `pnpm tauri dev` (or `pnpm tauri:serve`) must be serving :3000 during the run. Point at a self-contained
 // RELEASE binary instead with CONTAINER_DESKTOP_E2E_APP=…/target/release/container-desktop (no Vite needed).
 //
 // Single-instance: the app skips tauri-plugin-single-instance when CONTAINER_DESKTOP_E2E is set (see
@@ -102,7 +102,7 @@ export const config = {
     if (!existsSync(APP_BINARY)) {
       throw new Error(
         `Tauri app binary not found: ${APP_BINARY}\n` +
-          "A running `yarn tauri dev` keeps the debug binary fresh, or set CONTAINER_DESKTOP_E2E_APP to a built binary.",
+          "A running `pnpm tauri dev` keeps the debug binary fresh, or set CONTAINER_DESKTOP_E2E_APP to a built binary.",
       );
     }
     if (!existsSync(NATIVE_DRIVER)) {

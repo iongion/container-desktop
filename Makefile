@@ -34,12 +34,14 @@ clean:
 prepare-node:
 	@echo "Preparing the Node.js environment"
 	@# nvm is a shell function — it must be sourced from $$NVM_DIR before use. Source it when present
-	@# (install the .nvmrc version if missing), then install deps with whatever node is on PATH.
+	@# (install the .nvmrc version if missing), then install deps with whatever node is on PATH. pnpm comes at the
+	@# packageManager version when that node has none.
 	@if [ -s "$$NVM_DIR/nvm.sh" ]; then \
 		. "$$NVM_DIR/nvm.sh"; \
 		nvm use || nvm install; \
 	fi; \
-	yarn install --frozen-lockfile --production=false
+	command -v pnpm >/dev/null 2>&1 || npm install -g "$$(node -p "require('./package.json').packageManager")"; \
+	pnpm install --frozen-lockfile
 
 prepare:
 	@echo "Preparing the project - synchronizing dependencies - $(PROJECT_ROOT)"
@@ -48,16 +50,16 @@ prepare:
 
 check:
 	@echo "Checking the project (Biome lint + fix, incl. support/cli)"
-	yarn lint
+	pnpm lint
 
 format:
 	@echo "Formatting the project (Biome, incl. support/cli)"
-	yarn format
+	pnpm format
 
 build-website:
 	@echo "Building the website (website-src -> website)"
 	rm -fr website
-	yarn build:website
+	pnpm build:website
 
 screenshots:
 	@echo "Regenerating website screenshots"
@@ -66,7 +68,7 @@ screenshots:
 		. "$$NVM_DIR/nvm.sh"; \
 		nvm use || nvm install; \
 	fi; \
-	yarn screenshots
+	pnpm screenshots
 
 build-assets:
 	$(MAKE) screenshots
@@ -84,21 +86,21 @@ trigger-cd-pipeline:
 # site from the mock backend, then commits/tags/pushes everything as one release
 # commit and triggers the cloud pipeline for that tag. CDPipeline.Tauri no longer rebuilds
 # or commits the website — it just deploys the website/ committed here. Unlike
-# `yarn cli release` (which builds/bundles locally), this drives the cloud pipeline that
+# `pnpm cli release` (which builds/bundles locally), this drives the cloud pipeline that
 # builds every OS target and publishes the GitHub release. Override the bump size with
 # `make release PART=minor` (default: patch). Aborts if CHANGELOG.md [Unreleased] is
 # empty, so document the release first.
 release: test
 	@echo "Releasing: bump ($(PART)) → build-assets → commit → trigger CDPipeline"
 	@if [ -s "$$NVM_DIR/nvm.sh" ]; then . "$$NVM_DIR/nvm.sh"; nvm use || nvm install; fi; \
-	yarn cli bump --part=$(PART) --perform --no-commit
+	pnpm cli bump --part=$(PART) --perform --no-commit
 	$(MAKE) build-assets
 	@if [ -s "$$NVM_DIR/nvm.sh" ]; then . "$$NVM_DIR/nvm.sh"; nvm use || nvm install; fi; \
-	yarn cli commit-release
+	pnpm cli commit-release
 	$(MAKE) trigger-cd-pipeline
 
 # Run the same verification set as CIPipeline.yml, locally. The CLI unit tests, type-check and
-# lint of support/cli all run inside test-app (yarn test:run / check-types / lint:check), so a
+# lint of support/cli all run inside test-app (pnpm test:run / check-types / lint:check), so a
 # single app job mirrors CI. Run `make prepare` first if dependencies are not installed.
 test: test-app
 	@echo "All CI checks passed locally"
@@ -150,7 +152,7 @@ test-app:
 		. "$$NVM_DIR/nvm.sh"; \
 		nvm use || nvm install; \
 	fi; \
-	yarn check-types && \
-	yarn lint:check && \
-	yarn test:run && \
-	ENVIRONMENT=production yarn build
+	pnpm check-types && \
+	pnpm lint:check && \
+	pnpm test:run && \
+	ENVIRONMENT=production pnpm build

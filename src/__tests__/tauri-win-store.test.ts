@@ -211,7 +211,7 @@ describe("Tauri Windows Store packaging", () => {
   });
 
   it("exposes explicit Tauri Store package scripts with AppX as the default", () => {
-    expect(rootPkg.scripts["package:tauri:win_store"]).toBe("yarn package:tauri:win_store:appx");
+    expect(rootPkg.scripts["package:tauri:win_store"]).toBe("pnpm package:tauri:win_store:appx");
     expect(rootPkg.scripts["package:tauri:win_store:msix"]).toContain("node support/tauri-win-store.cjs pack");
     expect(rootPkg.scripts["package:tauri:win_store:msix"]).toContain("--format msix");
     expect(rootPkg.scripts["package:tauri:win_store:msix:arm64"]).toContain("--arch arm64");

@@ -9,7 +9,7 @@ cd "$PROJECT_HOME"
 
 if ! node_modules/.bin/biome lint ./src >/tmp/container-desktop-verify-clean.out 2>&1; then
     tail -30 /tmp/container-desktop-verify-clean.out
-    printf '%s\n' '{"systemMessage":"⚠️ verify-clean: biome lint reports issues in src/ — run yarn lint to fix before finishing."}'
+    printf '%s\n' '{"systemMessage":"⚠️ verify-clean: biome lint reports issues in src/ — run pnpm lint to fix before finishing."}'
     exit 0
 fi
 

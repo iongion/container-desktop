@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@container-desktop/container-client": "*",
-    "@container-desktop/host-contract": "*",
-    "@container-desktop/logger": "*",
-    "@container-desktop/mcp-server": "*",
-    "@container-desktop/utils": "*"
+    "@container-desktop/container-client": "workspace:*",
+    "@container-desktop/host-contract": "workspace:*",
+    "@container-desktop/logger": "workspace:*",
+    "@container-desktop/mcp-server": "workspace:*",
+    "@container-desktop/utils": "workspace:*"
   }
 }

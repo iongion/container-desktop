@@ -5,7 +5,7 @@ import { PROJECT_HOME } from "@/cli/lib/paths";
 
 // Recolor the unified duotone app-icon template into per-engine SVG + PNG variants. Uses a headless
 // Chromium (or an attached CDP endpoint) to rasterize the SVG at OUTPUT_SIZE. Run via
-// `yarn cli generate-engine-icons` (needs a Chrome on PATH or a CDP endpoint at CDP_URL).
+// `pnpm cli generate-engine-icons` (needs a Chrome on PATH or a CDP endpoint at CDP_URL).
 
 const ICONS_DIR = path.join(PROJECT_HOME, "src/resources/icons");
 const CDP = process.env.CDP_URL || "http://localhost:9222";

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@container-desktop/container-client": "*",
-    "@container-desktop/logger": "*"
+    "@container-desktop/container-client": "workspace:*",
+    "@container-desktop/logger": "workspace:*"
   }
 }

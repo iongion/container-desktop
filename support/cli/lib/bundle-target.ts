@@ -1,7 +1,7 @@
 import { hostMachine, hostSystem } from "@/cli/lib/host";
 
 // Maps a release TARGET (fine-grained like `linux-arm64`, or coarse like `linux`) to the
-// `package:tauri:*` yarn script that builds it, falling back to the host system/machine for the
+// `package:tauri:*` pnpm script that builds it, falling back to the host system/machine for the
 // coarse targets. Pure so the mapping is unit-tested (see __tests__/bundle-target.test.ts).
 
 const DEFAULT_TARGET = "linux";

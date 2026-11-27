@@ -3,14 +3,14 @@
   // The renderer runs in a native webview, not Chromium, so there is no Chrome DevTools Protocol to attach to
   // and no Node main process either. Inspect the frontend with the WebKit Web Inspector from the running app
   // (right-click -> Inspect Element on the debug build), and drive it programmatically over W3C WebDriver
-  // (`yarn test:e2e:tauri`). Rust breakpoints need a native debugger extension (CodeLLDB) against
+  // (`pnpm test:e2e:tauri`). Rust breakpoints need a native debugger extension (CodeLLDB) against
   // src-tauri/target/debug/container-desktop.
   "configurations": [
     {
       "name": "Run Tauri (mock)",
       "type": "node",
       "request": "launch",
-      "runtimeExecutable": "yarn",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev:mock"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",

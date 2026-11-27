@@ -97,8 +97,8 @@ describe("Tauri release matrix", () => {
     expect(workflow).toContain("matrix.cdJobsForTarget(process.env.TARGET)");
     expect(workflow).toContain("matrix: ${{");
     expect(workflow).toContain("PACKAGE_SCRIPT: ${{");
-    expect(workflow).toContain("yarn cli bundle");
-    expect(workflow).not.toContain("yarn cli build");
+    expect(workflow).toContain("pnpm cli bundle");
+    expect(workflow).not.toContain("pnpm cli build");
     expect(workflow).not.toContain("uv run");
   });
 });

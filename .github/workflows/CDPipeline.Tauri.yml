@@ -103,9 +103,11 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
-          registry-url: "https://npm.pkg.github.com"
+      - name: Use pnpm (the packageManager version in package.json)
+        shell: bash
+        run: npm install -g "$(node -p "require('./package.json').packageManager")"
       - name: Prepare app ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: yarn install --frozen-lockfile --production=false
+        run: pnpm install --frozen-lockfile
       - name: Use Rust ${{ matrix.rustTarget }}
         run: |
           rustup toolchain install stable --profile minimal
@@ -115,12 +117,12 @@ jobs:
         if: startsWith(matrix.target, 'linux-')
         run: bash support/provision-deps.sh
       - name: Bundle ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: yarn cli bundle
+        run: pnpm cli bundle
         env:
           TARGET: ${{matrix.target}}
           PACKAGE_SCRIPT: ${{ matrix.packageScript }}
       - name: Checksum ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
-        run: yarn cli checksums
+        run: pnpm cli checksums
       - name: Publish ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -153,7 +155,6 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
-          registry-url: "https://npm.pkg.github.com"
       - name: Download build artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:

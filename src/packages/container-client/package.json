@@ -5,8 +5,8 @@
   "type": "module",
   "main": "./src/index.ts",
   "dependencies": {
-    "@container-desktop/host-contract": "*",
-    "@container-desktop/logger": "*",
-    "@container-desktop/utils": "*"
+    "@container-desktop/host-contract": "workspace:*",
+    "@container-desktop/logger": "workspace:*",
+    "@container-desktop/utils": "workspace:*"
   }
 }

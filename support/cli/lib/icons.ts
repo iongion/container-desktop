@@ -5,7 +5,7 @@ import { spawnArgs } from "@/cli/lib/process";
 
 // Rasterize the vector master (support/resources/appIcon-source.svg) into the full icon set via
 // external CLI tools (resvg / svgo / png2icons / ImageMagick). Port of support/create-icons.py; run
-// with `yarn cli create-icons` (full set) or `yarn cli create-icons --appx` (Store tiles only).
+// with `pnpm cli create-icons` (full set) or `pnpm cli create-icons --appx` (Store tiles only).
 
 const SOURCE_PATH = path.join(PROJECT_HOME, "support/resources/appIcon-source.svg");
 const SOURCE_MONOCHROME_PATH = path.join(PROJECT_HOME, "support/resources/appIcon-monochrome.svg");

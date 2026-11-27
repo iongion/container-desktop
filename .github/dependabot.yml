@@ -7,7 +7,7 @@
 #     which now exist within each major and keep glob@7 / chokidar@3 working).
 version: 2
 updates:
-  # JavaScript / TypeScript (root package.json, yarn)
+  # JavaScript / TypeScript (root package.json, pnpm)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

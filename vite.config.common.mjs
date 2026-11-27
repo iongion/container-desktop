@@ -81,7 +81,7 @@ export function getCommonViteConfig({
     plugins: [
       // TypeScript 7 no longer exposes the old compiler API from the root `typescript` import. The current
       // vite-plugin-checker dev worker still expects that API, so keep checker on builds (where it shells out to
-      // `tsc`) and rely on `yarn check-types` for dev type verification until the plugin catches up.
+      // `tsc`) and rely on `pnpm check-types` for dev type verification until the plugin catches up.
       ...(command === "serve"
         ? []
         : [

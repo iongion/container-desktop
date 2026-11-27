@@ -1,0 +1,25 @@
+packages:
+  - "src/packages/*"
+
+# Transitive security pins. Fix a transitive advisory here, then review pnpm-lock.yaml.
+overrides:
+  dompurify: "3.5.0"
+  lodash: "4.18.1"
+  fast-uri: "3.1.9"
+  tmp: "0.2.7"
+
+# Dependency install scripts: esbuild's swaps in its native binary; the Edge and Firefox driver downloads are never used
+# (WebDriver runs go through tauri-driver).
+allowBuilds:
+  esbuild: true
+  edgedriver: false
+  geckodriver: false
+
+permissions:
+  '@tanstack/react-router':
+    skills: false
+
+minimumReleaseAgeExclude:
+  - postcss@8.5.34
+  - recharts@3.11.2
+  - tar@7.5.24

@@ -8,7 +8,7 @@
 # It is idempotent: re-running only installs what is missing.
 #
 # It does NOT manage node/nvm - that is a per-user, version-pinned toolchain
-# (see DEVELOPMENT.md). Presence of node/yarn is only reported at the end.
+# (see DEVELOPMENT.md). Presence of node/pnpm is only reported at the end.
 #
 # Usage:
 #   bash support/provision-deps.sh
@@ -266,9 +266,9 @@ report_tool() {
   fi
 }
 report_tool node "via nvm: https://github.com/nvm-sh/nvm  (project pins .nvmrc)"
-report_tool yarn "install yarn 1.22.22 through your pinned Node toolchain"
+report_tool pnpm "npm install -g pnpm@<packageManager version in package.json>, with the pinned Node"
 # e2e/WebDriver toolchain (only needed to run the Tauri capture/e2e suite, not to build).
 report_tool WebKitWebDriver "provisioned above via webkit2gtk-driver / webkitgtk-webdriver"
 report_tool tauri-driver "cargo install tauri-driver --locked (lands in ~/.cargo/bin)"
 
-log "Done. System packages provisioned. Next: 'make prepare' then 'yarn cli release'."
+log "Done. System packages provisioned. Next: 'make prepare' then 'pnpm cli release'."

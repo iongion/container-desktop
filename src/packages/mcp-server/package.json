@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@container-desktop/container-client": "*",
-    "@container-desktop/utils": "*",
+    "@container-desktop/container-client": "workspace:*",
+    "@container-desktop/utils": "workspace:*",
     "typebox": "1.4.7"
   }
 }

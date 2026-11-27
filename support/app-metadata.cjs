@@ -1,5 +1,5 @@
 // Single source of truth for app branding + packaging metadata, so nothing can drift:
-//   • src-tauri/tauri.conf.json            — a DERIVED file, kept in sync by `yarn cli sync-manifests`,
+//   • src-tauri/tauri.conf.json            — a DERIVED file, kept in sync by `pnpm cli sync-manifests`,
 //                                            which writes productName / identifier / window title from here
 //
 // Values that already live in package.json (name, title, description, author, version, license) are read

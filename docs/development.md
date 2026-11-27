@@ -9,10 +9,10 @@ internals and conventions, the canonical guide is [`CLAUDE.md`](../CLAUDE.md).
 | Tool | Version           | Notes                                           |
 | ---- | ----------------- | ----------------------------------------------- |
 | Node | **24.22.3**       | pinned in [`.nvmrc`](../.nvmrc) — run `nvm use` |
-| Yarn | **1.x** (classic) | the package manager; do not use npm             |
+| pnpm | **12** (`packageManager`) | the package manager; do not use npm or yarn |
 
 The build/dev/release tooling is a TypeScript CLI in [`support/cli/`](../support/cli/) (commander,
-run via `tsx` — both installed by `yarn`); there is no Python toolchain.
+run via `tsx` — both installed by `pnpm install`); there is no Python toolchain.
 
 **Linux one-shot:** `bash support/provision-deps.sh` installs the build toolchain
 (auto-detects apt/dnf/pacman). On macOS use [Homebrew](https://brew.sh/); native
@@ -22,7 +22,7 @@ Windows is on you (for WSL, follow the Linux path).
 
 ```bash
 nvm use                                   # Node 24.22.3
-yarn install --frozen-lockfile            # or: make prepare
+pnpm install --frozen-lockfile            # or: make prepare
 ```
 
 Installs with the lockfile respected — don't use floating installs.
@@ -30,8 +30,8 @@ Installs with the lockfile respected — don't use floating installs.
 ## Run (hot reload)
 
 ```bash
-yarn dev          # Tauri (Rust) — the default shell
-yarn dev:mock     # …with the deterministic mock backend, no engine required
+pnpm dev          # Tauri (Rust) — the default shell
+pnpm dev:mock     # …with the deterministic mock backend, no engine required
 ```
 
 It serves the Vite renderer on :3000 and rebuilds on change. Kill it by PID —
@@ -40,10 +40,10 @@ never `pkill -f <pattern>` from a one-liner containing that pattern, or it match
 ## Verify — run all four before claiming done
 
 ```bash
-yarn check-types   # tsc
-yarn lint          # Biome (auto-fixes); yarn lint:check = no writes (CI); yarn format to format only
-yarn test:run      # Vitest (hermetic) — see testing.md
-yarn build         # the renderer bundle
+pnpm check-types   # tsc
+pnpm lint          # Biome (auto-fixes); pnpm lint:check = no writes (CI); pnpm format to format only
+pnpm test:run      # Vitest (hermetic) — see testing.md
+pnpm build         # the renderer bundle
 ```
 
 These four are the gate CI enforces
@@ -51,15 +51,15 @@ These four are the gate CI enforces
 also cover the `support/cli/` tooling). For the test model — the headless harness and the `fakeCommand` recording fake
 that let the connection layer run without a shell — see [testing.md](testing.md). Also verify
 behaviour in the real app: a native webview has no CDP, so drive it over **W3C WebDriver**
-(`yarn test:e2e:tauri`). Navigating bare `http://localhost:3000` in a browser won't work — it needs
+(`pnpm test:e2e:tauri`). Navigating bare `http://localhost:3000` in a browser won't work — it needs
 the shell's host bridge.
 
 ## Build & package
 
 ```bash
-yarn build                       # production bundles (ENVIRONMENT=production implied)
-yarn package:linux_x86           # also: mac_arm · win_x86 · linux_arm  (Tauri bundles)
-yarn cli release                 # full release: build + bundle with production settings
+pnpm build                       # production bundles (ENVIRONMENT=production implied)
+pnpm package:linux_x86           # also: mac_arm · win_x86 · linux_arm  (Tauri bundles)
+pnpm cli release                 # full release: build + bundle with production settings
 ```
 
 > **Production needs `ENVIRONMENT=production`** (the `build:*` scripts set it). Without
@@ -67,7 +67,7 @@ yarn cli release                 # full release: build + bundle with production 
 > [`CLAUDE.md`](../CLAUDE.md) → *Build / runtime model* for the single-bundle layout and
 > the webview browser baseline.
 
-**Website:** `yarn build:website` (preview `yarn dev:website`). Never hand-edit the
+**Website:** `pnpm build:website` (preview `pnpm dev:website`). Never hand-edit the
 generated `website/` — edit `website-src/` (see `CLAUDE.md` → *Website*).
 
 ## Working with the engine API directly
@@ -96,8 +96,8 @@ export DOCKER_HOST='unix:///tmp/podman.sock'
 
 ## Remote engines via `.env` (dev)
 
-Seed `podman.remote` / `docker.remote` connections from the multi-stage `.env` chain so `yarn dev`
-develops against a remote engine and `yarn test:live` exercises the same hosts — one scheme, both.
+Seed `podman.remote` / `docker.remote` connections from the multi-stage `.env` chain so `pnpm dev`
+develops against a remote engine and `pnpm test:live` exercises the same hosts — one scheme, both.
 Put real values in `.env.development.local` (gitignored); the committed `.env.development` carries the
 commented reference. **Dev only:** a packaged build never loads `.env` at runtime, so production
 connections still come from `user-settings.json` / the UI.
@@ -118,7 +118,7 @@ CONTAINER_DESKTOP_REMOTE_MAC_DOCKER_SOCKET=/var/run/docker.sock   # optional rel
 - The **socket** is optional — `mode.automatic` auto-detects it over SSH; a `*_SOCKET` value is only a
   fallback. For the live test it is unused (the bounded SSH pre-flight runs `podman info` / `docker info`
   over SSH; `SSH_USER`/`SSH_KEY` are required there because the pre-flight does not read `~/.ssh/config`).
-- Run a configured host: `CONTAINER_DESKTOP_TEST_TARGETS=mac yarn test:live` (id = the lowercased `<ID>`).
+- Run a configured host: `CONTAINER_DESKTOP_TEST_TARGETS=mac pnpm test:live` (id = the lowercased `<ID>`).
 
 ## See also
 

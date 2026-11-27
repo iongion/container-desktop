@@ -117,7 +117,7 @@ describe("Tauri build command planning", () => {
       { script: "package:tauri:win_arm", triple: "aarch64-pc-windows-msvc" },
     ]) {
       const value = rootPkg.scripts[script];
-      expect(value.match(/yarn tauri:renderer/g) ?? []).toHaveLength(1);
+      expect(value.match(/pnpm tauri:renderer/g) ?? []).toHaveLength(1);
       expect(value.match(/tauri-build\.cjs build/g) ?? []).toHaveLength(1);
       expect(value).toContain(`--bundles nsis --target ${triple}`);
       // All four Windows artifacts produced from that single build, reusing the compiled exe.

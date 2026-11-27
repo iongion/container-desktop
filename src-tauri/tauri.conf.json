@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../build/6.1.0",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "yarn tauri:serve"
+    "beforeDevCommand": "pnpm tauri:serve"
   },
   "app": {
     "windows": [

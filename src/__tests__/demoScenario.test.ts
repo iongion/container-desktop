@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 // The website demo is a screenshot slideshow: demoScenario.json is the ordered frame list and
-// demoManifest.ts expands it per engine (at the end of `yarn screenshots`). Guard that every frame
+// demoManifest.ts expands it per engine (at the end of `pnpm screenshots`). Guard that every frame
 // points at a screenshot the capture actually produces, so the demo can never reference a missing image.
 const scenario = JSON.parse(readFileSync(path.resolve("support/cli/media/demoScenario.json"), "utf8"));
 const IMG_DIR = path.resolve("website-src/static/img");

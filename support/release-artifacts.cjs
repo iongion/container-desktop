@@ -118,7 +118,7 @@ function sha256File(filePath) {
 // Write the bare-hex `<file>.sha256` sidecar for a single freshly built artifact. Each Tauri packager
 // calls this as it finishes a file, so building one `package:tauri:*` script by hand yields the same
 // artifact+checksum pairs the full release sweep (writeChecksums) and CI already produce — without a
-// separate `yarn cli checksums` pass. Same format as writeChecksums (64-char hex digest, no newline).
+// separate `pnpm cli checksums` pass. Same format as writeChecksums (64-char hex digest, no newline).
 function writeChecksum(filePath) {
   const checksumPath = `${filePath}.sha256`;
   fs.writeFileSync(checksumPath, sha256File(filePath), "utf8");

@@ -21,7 +21,7 @@ function jsonLineOf(output) {
 
 export function loadLiveTargets() {
   try {
-    const out = execFileSync("yarn", ["-s", "tsx", "src/__tests__/live/printTargets.ts"], {
+    const out = execFileSync("pnpm", ["exec", "tsx", "src/__tests__/live/printTargets.ts"], {
       cwd: repoRoot,
       encoding: "utf8",
       env: { ...process.env, DOTENVX_QUIET: "true", DOTENV_CONFIG_QUIET: "true" },

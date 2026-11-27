@@ -64,7 +64,7 @@ export function run(cmd: string, env?: EnvOverrides, cwd: string = PROJECT_HOME)
   }
 }
 
-// Run a yarn/tooling command with the project env, sourcing nvm the way tasks.py `run_env` did.
+// Run a pnpm/tooling command with the project env, sourcing nvm the way tasks.py `run_env` did.
 export function runEnv(cmd: string, env?: EnvOverrides, cwd: string = PROJECT_HOME): void {
   const childEnv = { ...process.env, ...getEnv(), ...(env || {}) };
   const nvmDir = process.env.NVM_DIR || path.join(os.homedir(), ".nvm");

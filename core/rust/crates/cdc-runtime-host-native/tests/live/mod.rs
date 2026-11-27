@@ -34,7 +34,7 @@ use serde_json::json;
 /// duplicated — a machine is declared once, in the place the owner already fills in, and this suite is
 /// a second reader of it rather than a second convention.
 const TARGETS_ENV: &str = "../../../../src/__tests__/live/targets.env";
-/// Narrow to one target id (comma-separated), exactly as `yarn test:live` does.
+/// Narrow to one target id (comma-separated), exactly as `pnpm test:live` does.
 const SELECT_VAR: &str = "CONTAINER_DESKTOP_TEST_TARGETS";
 /// Overrides, and they WIN over the file — a `~/.ssh/config` alias or a bare hostname.
 const SCOPE_VAR: &str = "CDC_LIVE_SSH_SCOPE";

@@ -133,15 +133,17 @@ describe("remote scripts", () => {
     expect(prepare.trimEnd().endsWith("exit 0")).toBe(true);
   });
 
-  it("falls back to corepack yarn", () => {
+  it("installs with pnpm, falling back to npx at the pinned packageManager version", () => {
     const windowsScript = windowsBuildScript("package:tauri:win_x64");
     const posixScript = posixBuildScript("package:tauri:linux_x86");
 
-    expect(windowsScript).toContain("function Invoke-Yarn");
-    expect(windowsScript).toContain("corepack yarn @Arguments");
+    expect(windowsScript).toContain("function Invoke-Pnpm");
+    expect(windowsScript).toContain("& npx --yes $pm @Arguments");
     expect(windowsScript).toContain("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }");
-    expect(posixScript).toContain("remote_yarn() {");
-    expect(posixScript).toContain('corepack yarn "$@"');
+    expect(windowsScript).toContain("Invoke-Pnpm install --frozen-lockfile");
+    expect(posixScript).toContain("remote_pnpm() {");
+    expect(posixScript).toContain(`npx --yes "$(node -p 'require("./package.json").packageManager')" "$@"`);
+    expect(posixScript).toContain("remote_pnpm install --frozen-lockfile");
   });
 });
 

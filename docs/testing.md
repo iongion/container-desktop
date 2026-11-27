@@ -11,8 +11,8 @@ Config: [`vitest.config.mts`](../vitest.config.mts) — jsdom, `@ → src`, coll
 `src/**/*.{test,spec}.{ts,tsx}`, excludes `*.live.test.ts`.
 
 ```bash
-yarn test        # watch
-yarn test:run    # one-shot (what CI runs)
+pnpm test        # watch
+pnpm test:run    # one-shot (what CI runs)
 ```
 
 Tests import explicitly (`import { describe, it, expect } from "vitest"` — `globals: false`).
@@ -51,7 +51,7 @@ and `ProxyRequest` returns `200`/`"OK"` by default. Shape per-call results to si
 ### The real-machine target registry
 
 Every real-engine and real-model check now runs on WebDriver against the shipped shell (below), so the
-node-level live project ([`vitest.live.config.mts`](../vitest.live.config.mts), `yarn test:live`) is **empty** —
+node-level live project ([`vitest.live.config.mts`](../vitest.live.config.mts), `pnpm test:live`) is **empty** —
 it stays as the home for a future `*.live.test.ts`, and passes with no tests rather than failing.
 
 What survives, and what the WebDriver live specs read, is the machine registry: copy
@@ -64,7 +64,7 @@ What survives, and what the WebDriver live specs read, is the machine registry: 
 
 ```bash
 support/swarm-sandbox.sh up          # single-node (docker:dind); or `up-multi` for node ops
-yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js
+pnpm test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js
 support/swarm-sandbox.sh down
 ```
 
@@ -93,17 +93,17 @@ On Linux the app never shows a window on your desktop
   handler, so sway and tauri-driver start under `setpriv --pdeathsig KILL` and the kernel ends them with it. The
   next session removes the dead run's directory.
 
-One entry point per suite — `yarn test:e2e:tauri` runs the mock suite ([below](#two-suites-told-apart-by-what-a-failure-is-allowed-to-mean));
+One entry point per suite — `pnpm test:e2e:tauri` runs the mock suite ([below](#two-suites-told-apart-by-what-a-failure-is-allowed-to-mean));
 `--spec` selects one and the scenario travels in the environment, so there is no script per combination:
 
 ```bash
-CONTAINER_DESKTOP_MOCK=podman yarn test:e2e:tauri --spec webdriver/specs/mock-inventory.e2e.js
-CONTAINER_DESKTOP_MOCK=docker yarn test:e2e:tauri --spec webdriver/specs/mock-inventory.e2e.js
-CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=manager yarn test:e2e:tauri --spec webdriver/specs/swarm-ui.e2e.js
-CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=none yarn test:e2e:tauri --spec webdriver/specs/swarm-ui.e2e.js
+CONTAINER_DESKTOP_MOCK=podman pnpm test:e2e:tauri --spec webdriver/specs/mock-inventory.e2e.js
+CONTAINER_DESKTOP_MOCK=docker pnpm test:e2e:tauri --spec webdriver/specs/mock-inventory.e2e.js
+CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=manager pnpm test:e2e:tauri --spec webdriver/specs/swarm-ui.e2e.js
+CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=none pnpm test:e2e:tauri --spec webdriver/specs/swarm-ui.e2e.js
 ```
 
-On Windows, prefix with `yarn cross-env` instead of a shell assignment.
+On Windows, prefix with `pnpm cross-env` instead of a shell assignment.
 
 A spec whose scenario knob has a default asserts what EACH scenario should produce, naming it in the
 `describe` title — `swarm-ui.e2e.js` and `landing-ui.e2e.js` are the two, so a default suite run is never
@@ -111,17 +111,17 @@ vacuous and neither needs a gate:
 
 ```bash
 CONTAINER_DESKTOP_MOCK=podman CONTAINER_DESKTOP_MOCK_CONNECTED=none \
-  yarn test:e2e:tauri --spec webdriver/specs/landing-ui.e2e.js
+  pnpm test:e2e:tauri --spec webdriver/specs/landing-ui.e2e.js
 ```
 
-Real-engine specs live in the **smoke** suite, which has its own entry point (`yarn test:smoke:tauri` clears
+Real-engine specs live in the **smoke** suite, which has its own entry point (`pnpm test:smoke:tauri` clears
 `CONTAINER_DESKTOP_MOCK` for you) and a configured target in `src/__tests__/live/targets.env`. They drive
 `window.__cdLiveProbe` — a DEV-gated seam that runs the SHIPPED ports inside the webview, so one probe covers
 both backends:
 
 ```bash
-yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js   # the connectivity matrix
-yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js               # real Docker Swarm
+pnpm test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js   # the connectivity matrix
+pnpm test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js               # real Docker Swarm
 ```
 
 ## Two suites, told apart by what a failure is allowed to mean
@@ -130,7 +130,7 @@ yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js               # real
 | --- | --- | --- |
 | Runs against | the **mock app only** — fixtures, no engine, no account, no network | **real integration**: real engines, real machines |
 | A failure means | the app is wrong. Nothing else is involved | either the app is wrong **or** something outside it was missing — so it must not be allowed to mean the first by default |
-| Entry point | `yarn test:e2e:tauri` | `yarn test:smoke:tauri` (clears `CONTAINER_DESKTOP_MOCK`) |
+| Entry point | `pnpm test:e2e:tauri` | `pnpm test:smoke:tauri` (clears `CONTAINER_DESKTOP_MOCK`) |
 | Gating | **none, ever.** Nothing is absent, so nothing may be skipped | **skips** when its subject is absent, naming what was missing |
 
 A mock spec carries no gate because there is nothing for it to be missing: gating one would only hide a
@@ -147,9 +147,9 @@ decisions, never a test's — and a gate that skips something
 which *would* have run is worse than no gate at all, because the report then looks like it ran.
 
 ```bash
-yarn test:e2e:tauri                                                    # the mock suite; must be green
-yarn test:smoke:tauri                                                  # real integration; skips what is absent
-yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js
+pnpm test:e2e:tauri                                                    # the mock suite; must be green
+pnpm test:smoke:tauri                                                  # real integration; skips what is absent
+pnpm test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js
 ```
 
 ## MCP server
@@ -166,18 +166,18 @@ Three bands, cheapest first:
   proven by its result, not by the row changing. The run keeps its token in its own data dir, never the OS keychain.
 
 ```bash
-yarn test:e2e:tauri --spec webdriver/specs/mcp-server.e2e.js
+pnpm test:e2e:tauri --spec webdriver/specs/mcp-server.e2e.js
 ```
 
 ## Build tooling (`support/cli/`)
 
-The `yarn cli` build/dev/release CLI has its own Vitest specs (`support/cli/**/*.test.ts`) that run
-as part of `yarn test:run`, and is type-checked and linted by the same gate:
+The `pnpm cli` build/dev/release CLI has its own Vitest specs (`support/cli/**/*.test.ts`) that run
+as part of `pnpm test:run`, and is type-checked and linted by the same gate:
 
 ```bash
-yarn check-types   # tsc (app) + tsc -p support/cli/tsconfig.json
-yarn lint:check    # biome check ./src ./support/cli
-yarn test:run      # includes support/cli/**/*.test.ts
+pnpm check-types   # tsc (app) + tsc -p support/cli/tsconfig.json
+pnpm lint:check    # biome check ./src ./support/cli
+pnpm test:run      # includes support/cli/**/*.test.ts
 ```
 
 ## CI jobs
@@ -186,7 +186,7 @@ yarn test:run      # includes support/cli/**/*.test.ts
 
 | Job     | Does                                                                                           |
 | ------- | ---------------------------------------------------------------------------------------------- |
-| **app** | `yarn check-types` · `yarn lint:check` · `yarn test:run` · `ENVIRONMENT=production yarn build` |
+| **app** | `pnpm check-types` · `pnpm lint:check` · `pnpm test:run` · `ENVIRONMENT=production pnpm build` |
 
 ## Source map
 

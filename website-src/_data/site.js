@@ -11,7 +11,7 @@ const { homepage } = require("../../support/app-metadata.cjs");
 // Engine color themes — single source of truth for the swatch picker and the per-engine media that
 // swaps with it. `id` matches the CSS html[data-theme="…"] blocks in assets/css/site.css; `swatch`
 // is the nav dot; `tagline` is the brand sub-line under the logo; `shots` is the screenshot folder
-// under static/img/; `replay`/`poster` are the demo manifest + its poster frame. `yarn screenshots`
+// under static/img/; `replay`/`poster` are the demo manifest + its poster frame. `pnpm screenshots`
 // captures per-engine images and writes the demo manifests to /replays/<id>.json (screenshots.ts +
 // demoManifest.ts); until an engine has its own, point it at unified's. Add an engine = one
 // entry here + one [data-theme] block in site.css; the nav loop, theme-switcher.js and

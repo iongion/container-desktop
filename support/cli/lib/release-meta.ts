@@ -40,7 +40,7 @@ export async function publishMeta(options: { version?: string; perform?: boolean
   console.log(`Render published metadata for ${version}${perform ? "" : "  (dry-run; pass --perform)"}`);
   if (perform) {
     fs.rmSync(path.join(PROJECT_HOME, "website"), { recursive: true, force: true });
-    runEnv("yarn build:website");
+    runEnv("pnpm build:website");
     console.log("  rebuilt: website/ (generated from website-src/)");
     const shaArm = await artifactSha256(version);
     writeText(HOMEBREW_CASK, renderHomebrewRb(readText(HOMEBREW_CASK), version, shaArm));

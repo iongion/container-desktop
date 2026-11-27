@@ -8,8 +8,8 @@
 //
 // Everything else — the driver pipeline, the isolated user-data dir, the timeouts — is the base config's.
 //
-//   yarn test:smoke:tauri
-//   yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js
+//   pnpm test:smoke:tauri
+//   pnpm test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js
 //
 // A spec here SKIPS when its subject is absent (webdriver/support/prerequisites.js): a powered-off machine, an
 // engine with no service or a container nobody started is the operator's environment, not a defect in the app.

@@ -122,7 +122,7 @@ flowchart TB
 
 ### Build/runtime note (don't relearn the hard way)
 
-`yarn build` emits **one** bundle, the ESM renderer — the native side is compiled
+`pnpm build` emits **one** bundle, the ESM renderer — the native side is compiled
 by `cargo`, not by vite. Production needs `ENVIRONMENT=production`. The
 renderer's browser baseline is the real webview floor (`safari 17` + `chrome 120`),
 not a bundled browser version. Full details live in

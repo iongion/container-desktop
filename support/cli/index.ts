@@ -32,7 +32,7 @@ program
 
 program.command("clean").description("Remove node_modules, bin, build and release").action(runClean);
 
-program.command("prepare").description("Install Node dependencies (yarn --frozen-lockfile)").action(runPrepare);
+program.command("prepare").description("Install Node dependencies (pnpm install --frozen-lockfile)").action(runPrepare);
 
 program
   .command("build")
@@ -133,7 +133,7 @@ program
   .option("--kill-stray", "kill orphaned capture apps/drivers first", false)
   .action((options) => runUpdateScreenshots(options));
 
-program.command("start").description("Run the app in development (yarn dev)").action(runStart);
+program.command("start").description("Run the app in development (pnpm dev)").action(runStart);
 
 program.command("build-website").description("Compile website-src/ into website/ (Eleventy)").action(runBuildWebsite);
 

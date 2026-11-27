@@ -25,12 +25,12 @@ export function runClean(): void {
 }
 
 export function runPrepare(): void {
-  runEnv("yarn install --frozen-lockfile --production=false");
+  runEnv("pnpm install --frozen-lockfile");
 }
 
 export function runBuild(env?: EnvOverrides): void {
   fs.rmSync(path.join(PROJECT_HOME, "build"), { recursive: true, force: true });
-  runEnv("yarn build", env);
+  runEnv("pnpm build", env);
   // Icons are loaded from __dirname at runtime, so co-locate them with the versioned build output.
   const buildDir = path.join(PROJECT_HOME, "build", projectVersion());
   const iconsDir = path.join(PROJECT_HOME, "src/resources/icons");
@@ -70,12 +70,12 @@ export function runChecksums(): void {
 }
 
 export function runStart(): void {
-  runEnv("yarn dev");
+  runEnv("pnpm dev");
 }
 
 export function runBuildWebsite(): void {
   fs.rmSync(path.join(PROJECT_HOME, "website"), { recursive: true, force: true });
-  runEnv("yarn build:website");
+  runEnv("pnpm build:website");
 }
 
 // Translate commander options into the argv the media capture scripts parse. `--backend` (or the

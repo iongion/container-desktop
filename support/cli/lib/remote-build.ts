@@ -258,19 +258,16 @@ export function windowsBuildScript(script: string, remoteRoot: string = REMOTE_B
   return [
     "$ErrorActionPreference = 'Stop'",
     "$ProgressPreference = 'SilentlyContinue'",
-    "function Invoke-Yarn {",
+    // pnpm on PATH, else npx at the packageManager version (pnpm ships native binaries that corepack cannot install).
+    "function Invoke-Pnpm {",
     "  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)",
-    "  if (Get-Command yarn -ErrorAction SilentlyContinue) {",
-    "    & yarn @Arguments",
-    "    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
-    "    return",
+    "  if (Get-Command pnpm -ErrorAction SilentlyContinue) {",
+    "    & pnpm @Arguments",
+    "  } else {",
+    "    $pm = node -p \"require('./package.json').packageManager\"",
+    "    & npx --yes $pm @Arguments",
     "  }",
-    "  if (Get-Command corepack -ErrorAction SilentlyContinue) {",
-    "    & corepack yarn @Arguments",
-    "    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
-    "    return",
-    "  }",
-    "  throw 'Remote build requires yarn or corepack on PATH'",
+    "  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
     "}",
     `$root = ${root}`,
     "$source = Join-Path $root 'source'",
@@ -280,8 +277,8 @@ export function windowsBuildScript(script: string, remoteRoot: string = REMOTE_B
     "New-Item -ItemType Directory -Force -Path $source | Out-Null",
     "tar -xzf $sourceArchive -C $source",
     "Set-Location $source",
-    "Invoke-Yarn install --frozen-lockfile --production=false",
-    `Invoke-Yarn ${packageScript}`,
+    "Invoke-Pnpm install --frozen-lockfile",
+    `Invoke-Pnpm ${packageScript}`,
     "if (-not (Test-Path 'release')) { throw 'Remote build did not create release directory' }",
     "tar -czf $artifactsArchive -C release .",
   ].join("\n");
@@ -303,19 +300,17 @@ export function posixBuildScript(script: string, remoteRoot: string = REMOTE_BUI
   return [
     "set -euo pipefail",
     `root=${root}`,
-    "remote_yarn() {",
-    '  if command -v yarn >/dev/null 2>&1; then yarn "$@"; return; fi',
-    '  if command -v corepack >/dev/null 2>&1; then corepack yarn "$@"; return; fi',
-    "  echo 'Remote build requires yarn or corepack on PATH' >&2",
-    "  exit 127",
+    "remote_pnpm() {",
+    '  if command -v pnpm >/dev/null 2>&1; then pnpm "$@"; return; fi',
+    '  npx --yes "$(node -p \'require("./package.json").packageManager\')" "$@"',
     "}",
     'source_dir="$root/source"',
     'rm -rf "$source_dir"',
     'mkdir -p "$source_dir"',
     'tar -xzf "$root/source.tar.gz" -C "$source_dir"',
     'cd "$source_dir"',
-    "remote_yarn install --frozen-lockfile --production=false",
-    `remote_yarn ${packageScript}`,
+    "remote_pnpm install --frozen-lockfile",
+    `remote_pnpm ${packageScript}`,
     "test -d release",
     'tar -czf "$root/artifacts.tar.gz" -C release .',
   ].join("\n");
@@ -443,7 +438,7 @@ export interface BundleDeps {
   runLocal?: (script: string, env?: EnvOverrides) => void;
 }
 
-// Resolve the package script, then either build locally (`yarn <script>`) or dispatch to the
+// Resolve the package script, then either build locally (`pnpm <script>`) or dispatch to the
 // configured remote box. Deps are injectable so the dispatch is unit-tested without real ssh.
 export async function executeBundle(
   env: EnvOverrides = {},
@@ -451,7 +446,7 @@ export async function executeBundle(
 ): Promise<{ script: string; remote: boolean }> {
   const resolveRemote = deps.resolveRemote ?? resolveRemoteBundle;
   const runRemote = deps.runRemote ?? runRemoteBundle;
-  const runLocal = deps.runLocal ?? ((script, overrides) => runEnv(`yarn ${script}`, overrides));
+  const runLocal = deps.runLocal ?? ((script, overrides) => runEnv(`pnpm ${script}`, overrides));
 
   const script = env.PACKAGE_SCRIPT || process.env.PACKAGE_SCRIPT || bundleScriptForTarget(env.TARGET);
   const remotePlan = resolveRemote(script, env);

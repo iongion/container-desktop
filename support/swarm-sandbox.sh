@@ -92,7 +92,7 @@ cmd_up() {
   echo "Swarm sandbox up (single dind daemon, NOT in a swarm)."
   echo "  socket: ${SOCK}"
   echo "  live target CDT_TARGET_SWARM_* written to ${TARGETS_ENV}"
-  echo "  run:    yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js"
+  echo "  run:    pnpm test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js"
 }
 
 cmd_up_multi() {

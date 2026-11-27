@@ -1,6 +1,6 @@
 // Env-driven remote SSH connections (DEV ONLY). Lets the multi-stage `.env` chain seed
-// `podman.remote` / `docker.remote` / `container.remote` connections so `yarn dev` can develop against a remote engine and
-// `yarn test:live` can exercise the same hosts. Inert in production builds (the chain is never loaded at
+// `podman.remote` / `docker.remote` / `container.remote` connections so `pnpm dev` can develop against a remote engine and
+// `pnpm test:live` can exercise the same hosts. Inert in production builds (the chain is never loaded at
 // runtime there). Parser is pure so it can be unit-tested without a shell, like live/targets.ts.
 
 import type { Connection, Connector } from "@/container-client/types/connection";

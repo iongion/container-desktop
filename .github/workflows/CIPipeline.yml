@@ -27,15 +27,18 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
+      - name: Use pnpm (the packageManager version in package.json)
+        shell: bash
+        run: npm install -g "$(node -p "require('./package.json').packageManager")"
       - name: Install dependencies
-        run: yarn install --frozen-lockfile --production=false
+        run: pnpm install --frozen-lockfile
       - name: Type-check
-        run: yarn check-types
+        run: pnpm check-types
       - name: Lint (biome check, no writes)
-        run: yarn lint:check
+        run: pnpm lint:check
       - name: Unit tests (hermetic; live suite excluded by config)
-        run: yarn test:run
+        run: pnpm test:run
       - name: Production build
         # ENVIRONMENT=production exercises the packaged single-file layout (CLAUDE.md). A plain
-        # `yarn build` defaults to development and would give false confidence.
-        run: ENVIRONMENT=production yarn build
+        # `pnpm build` defaults to development and would give false confidence.
+        run: ENVIRONMENT=production pnpm build

@@ -94,7 +94,7 @@ export function runBump(options: { part?: string; perform?: boolean; commit?: bo
   }
   if (!commit) {
     console.log(
-      `Wrote bumped files for ${version}; skipping git (--no-commit) -- finish with \`yarn cli commit-release\`.`,
+      `Wrote bumped files for ${version}; skipping git (--no-commit) -- finish with \`pnpm cli commit-release\`.`,
     );
     return;
   }

@@ -8,7 +8,7 @@
 // combos are skipped LOUDLY — never silently passed.
 //
 // Needs a NON-mock app: run with CONTAINER_DESKTOP_MOCK= (empty) so fixtures are off.
-//   yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js
+//   pnpm test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js
 import { strict as assert } from "node:assert";
 import { engineOfHost, isNativeHost, isRemoteHost, selectLiveTargets, toProbeTarget } from "../support/liveTargets.js";
 import { appModeReason, remoteEngineReason, skippedSuite, skipSuite, targetReason } from "../support/prerequisites.js";

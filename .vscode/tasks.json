@@ -5,9 +5,9 @@
       // The normal dev flow on the shell that ships: `tauri dev` builds the Rust binary and serves the renderer
       // from Vite. Kept as a background task so stopping it fully shuts the app down.
       "label": "dev: tauri (mock)",
-      "detail": "yarn dev:mock — Tauri with the deterministic mock backend",
+      "detail": "pnpm dev:mock — Tauri with the deterministic mock backend",
       "type": "shell",
-      "command": "yarn dev:mock",
+      "command": "pnpm dev:mock",
       "isBackground": true,
       "presentation": {
         "reveal": "always",
