@@ -158,8 +158,8 @@ export const podmanDialect: EngineDialect = {
     return host || alias || "";
   },
 
-  buildServiceArgs(socketPath: string, logLevel: string): string[] | null {
-    return ["system", "service", "--time=0", `unix://${socketPath}`, `--log-level=${logLevel}`];
+  async buildService(_host: HostContext, _settings: EngineConnectorSettings, socketPath: string, logLevel: string) {
+    return { args: ["system", "service", "--time=0", `unix://${socketPath}`, `--log-level=${logLevel}`] };
   },
 
   async getSystemInfo(

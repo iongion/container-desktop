@@ -45,12 +45,6 @@ export function withControllerVersion(base: CapabilityDescriptor, controllerVers
   return { ...base, extensions: { ...base.extensions, controllerVersion } };
 }
 
-// Returns a COPY of the descriptor with resources.networks overridden. Copy (not in-place) so the per-host
-// capability object never aliases the shared dialect singleton — callers may later mutate it per connection.
-export function withNetworks(base: CapabilityDescriptor, networks: boolean): CapabilityDescriptor {
-  return { ...base, resources: { ...base.resources, networks } };
-}
-
 // shared getApiConnection bodies (engine-agnostic; the socket read is the dialect's)
 
 // LIMA: the API socket is the one LIMA forwards for this instance, and LIMA is asked for it. The engine's

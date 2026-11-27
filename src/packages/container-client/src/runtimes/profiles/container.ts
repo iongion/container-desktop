@@ -3,9 +3,7 @@
 // Apple NATIVE: local macOS Apple-silicon, socktainer socket directly.
 // Apple REMOTE: remote macOS Apple-silicon over SSH, forwarding the remote socktainer socket.
 //
-// Networks are macOS-gated: full on macOS 26 (Darwin ≥ 25); off on macOS 15 (degraded — no
-// `container network`). Native gates synchronously at construction from the LOCAL Darwin major; remote
-// gates after the scoped `sw_vers` probe (the remote macOS version isn't known at construction).
+// Apple Container needs macOS 26: socktainer, its only API, runs on nothing older, and Apple no longer fixes macOS 15.
 //
 // socktainer presence/version/compat is owned by the dialect (`describeApiBridge` → availability.report.api),
 // not these profiles — so detection here only finds the `container` engine binary + scope.
@@ -17,14 +15,19 @@ import { isEmpty } from "@/utils";
 import { APPLE_PROGRAM } from "../../connection";
 import type { HostContext, HostProfile } from "../composition";
 import { isScopedMacOS, runScopedSocketCommand } from "../dialects/shared";
-import type { CapabilityDescriptor } from "../facade";
-import { availableAlways, sshApiConnection, withNetworks } from "./shared";
+import { availableAlways, sshApiConnection } from "./shared";
+
+// macOS 26 "Tahoe" is Darwin 25.
+const APPLE_MIN_DARWIN = 25;
 
 // Per-host OS-availability gate (exported for testing)
 
 export async function availableOnAppleContainer(host: HostContext): Promise<{ success: boolean; details: string }> {
   if (host.osType !== OperatingSystem.MacOS) {
     return { success: false, details: `Apple Container requires macOS (current: ${host.osType})` };
+  }
+  if (CURRENT_DARWIN_MAJOR != null && CURRENT_DARWIN_MAJOR < APPLE_MIN_DARWIN) {
+    return { success: false, details: "Apple Container requires macOS 26 or later" };
   }
   try {
     const arch = await Platform.getOsArch();
@@ -35,37 +38,6 @@ export async function availableOnAppleContainer(host: HostContext): Promise<{ su
     return { success: false, details: "Apple Container requires Apple silicon (unable to detect architecture)" };
   }
   return { success: true, details: "Apple Container is available" };
-}
-
-// Networks capability gating by macOS version (Apple Container needs macOS 26 / Darwin ≥ 25)
-
-const APPLE_NETWORKS_MIN_DARWIN = 25; // macOS 26 "Tahoe"; macOS 15 = Darwin 24 (degraded, no `container network`)
-const APPLE_NETWORKS_MIN_MACOS = 26;
-
-// Pure gate (exported for testing): networks only on macOS ≥ 26. Off-platform / unknown major → keep on.
-export function appleNetworksEnabled(osType: OperatingSystem, darwinMajor: number | undefined): boolean {
-  if (osType !== OperatingSystem.MacOS) {
-    return true; // off-platform the engine is unavailable anyway — don't over-restrict the base
-  }
-  if (darwinMajor == null) {
-    return true; // unknown version — don't disable on a guess
-  }
-  return darwinMajor >= APPLE_NETWORKS_MIN_DARWIN;
-}
-
-// Returns a COPY of base with networks gated by the local macOS version (used by the native profile).
-export function gateNetworksForMacOS(
-  base: CapabilityDescriptor,
-  osType: OperatingSystem,
-  darwinMajor: number | undefined,
-): CapabilityDescriptor {
-  return withNetworks(base, appleNetworksEnabled(osType, darwinMajor));
-}
-
-// Maps a `sw_vers -productVersion` string ("26.0", "15.5", …) to its major; undefined if unparseable.
-export function parseMacOsProductMajor(productVersion: string): number | undefined {
-  const major = Number.parseInt(`${productVersion}`.trim().split(".")[0], 10);
-  return Number.isNaN(major) ? undefined : major;
 }
 
 // Native automatic-settings (detects the `container` engine binary; socktainer is the dialect's job)
@@ -108,21 +80,14 @@ async function appleRemoteDetectSettings(
     }
 
     if (settings.controller?.scope) {
-      // Verify the remote is Apple-silicon macOS — clearer diagnostics than a bare "container not found",
-      // and the signal for gating remote networks. Non-fatal: the program check still fails closed below.
+      // Verify the remote is Apple-silicon macOS — clearer diagnostics than a bare "container not found".
+      // Non-fatal: the program check still fails closed below.
       try {
         const isMac = await isScopedMacOS(host, settings);
         const archProbe = await runScopedSocketCommand(host, settings, "uname", ["-m"]);
         const arch = `${archProbe.stdout || ""}`.trim();
         if (!isMac || arch !== "arm64") {
           host.logger.warn(host.id, `Remote is not Apple silicon macOS (darwin=${isMac}, arch=${arch || "?"})`);
-        }
-        const verProbe = await runScopedSocketCommand(host, settings, "sw_vers", ["-productVersion"]);
-        const major = verProbe.success ? parseMacOsProductMajor(verProbe.stdout || "") : undefined;
-        if (major != null) {
-          // Mutating the per-host capabilities is safe: appleSSHProfile.adjustCapabilities returns a COPY
-          // (never the shared dialect singleton), and connectOne snapshots capabilities AFTER this runs.
-          host.capabilities.resources.networks = major >= APPLE_NETWORKS_MIN_MACOS;
         }
       } catch (error: any) {
         host.logger.warn(host.id, "Remote macOS/arch probe failed — continuing", error);
@@ -163,9 +128,7 @@ export const appleNativeProfile: HostProfile = {
     return appleNativeDetectSettings(host, settings);
   },
   adjustCapabilities(base) {
-    // The local client IS the Mac for a native connection — gate networks synchronously by the local
-    // Darwin major. Returns a COPY (via withNetworks), never the shared dialect singleton.
-    return gateNetworksForMacOS(base, Platform.OPERATING_SYSTEM, CURRENT_DARWIN_MAJOR);
+    return base;
   },
 };
 
@@ -182,8 +145,6 @@ export const appleSSHProfile: HostProfile = {
     return appleRemoteDetectSettings(host, settings);
   },
   adjustCapabilities(base) {
-    // Remote macOS version is unknown at construction — start networks:true on a COPY (never the shared
-    // singleton), then appleRemoteDetectSettings narrows it from the scoped `sw_vers` probe.
-    return withNetworks(base, true);
+    return base;
   },
 };

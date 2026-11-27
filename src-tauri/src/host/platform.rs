@@ -29,8 +29,8 @@ pub fn get_os_arch() -> String {
 }
 
 /// The Darwin kernel major version on macOS (e.g. "24.3.0" → 24), else None. Mirrors the JS host's
-/// CURRENT_DARWIN_MAJOR (Number.parseInt(os.release().split(".")[0])), which gates Apple-Container networks
-/// (full only on Darwin ≥ 25 / macOS 26). Off Darwin it is None so the renderer keeps the feature gated.
+/// CURRENT_DARWIN_MAJOR (Number.parseInt(os.release().split(".")[0])), which Apple Container's macOS 26
+/// requirement (Darwin ≥ 25) reads. Off Darwin it is None.
 #[tauri::command]
 pub fn get_darwin_major() -> Option<u32> {
     darwin_major()
@@ -196,8 +196,8 @@ mod tests {
         assert_eq!(webview_data_dir_from(Some(""), Some(Path::new("/work"))), None);
     }
 
-    // Parses the Darwin kernel major from uname's release string — the value that gates
-    // Apple-Container networks. Only the parse is platform-independent (uname itself is macOS-only).
+    // Parses the Darwin kernel major from uname's release string — the value behind Apple Container's macOS 26
+    // requirement. Only the parse is platform-independent (uname itself is macOS-only).
     #[test]
     fn parse_darwin_major_reads_the_kernel_release_prefix() {
         assert_eq!(parse_darwin_major("24.3.0"), Some(24));

@@ -2,15 +2,15 @@ import type { CommandExecutionResult } from "@/host-contract/exec";
 // runtimes/dialects/container.ts — AppleDialect: Apple `container` engine commands via socktainer.
 //
 // Apple's `container` engine speaks the Docker REST API via socktainer, so apiSurface is "docker".
-// This dialect mirrors Docker's structure: socktainer socket (NOT raw DOCKER_HOST), no managed service
-// (user runs `container system start` + socktainer), getSystemInfo best-effort via socktainer /info.
+// This dialect mirrors Docker's structure: socktainer socket (NOT raw DOCKER_HOST), a service the app starts
+// (Apple's own, then socktainer), getSystemInfo best-effort via socktainer /info.
 
 import type { EngineConnectorSettings } from "@/container-client/types/connection";
 import { ContainerEngine } from "@/container-client/types/engine";
 import { StartupStatus } from "@/container-client/types/host";
 import type { SystemInfo } from "@/container-client/types/system";
 import { SOCKTAINER_PROGRAM } from "../../connection";
-import type { EngineDialect, EngineExtensionMethods, HostContext } from "../composition";
+import type { EngineDialect, EngineExtensionMethods, HostContext, ServiceSpec } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 import { DOCKER_SORT_CAPABILITIES } from "../sort-capabilities";
 import { readScopedHome } from "./shared";
@@ -61,9 +61,19 @@ export const containerDialect: EngineDialect = {
     return "";
   },
 
-  buildServiceArgs(): string[] | null {
-    // Apple has no managed service — user runs `container system start` + socktainer.
-    return null;
+  // Apple's own service first, by the connection's `container` and without the kernel prompt a GUI app cannot answer.
+  // Then socktainer, the API the app talks to, supervised while the app runs; it never auto-starts a service itself,
+  // because it would pick whichever `container` is first on PATH and refuses one other than its pairing.
+  async buildService(host: HostContext, settings: EngineConnectorSettings): Promise<ServiceSpec | null> {
+    const socktainer = await host.findHostProgram({ name: SOCKTAINER_PROGRAM, path: "" }, settings);
+    if (!socktainer?.path) {
+      return null;
+    }
+    return {
+      prepare: { args: ["system", "start", "--enable-kernel-install"] },
+      program: socktainer.path,
+      args: ["--no-auto-start"],
+    };
   },
 
   async getSystemInfo(host: HostContext): Promise<SystemInfo> {

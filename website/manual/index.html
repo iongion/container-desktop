@@ -248,7 +248,7 @@ limactl shell docker   # login to the docker VM
 <h4>Requirements</h4>
 <ul>
 <li>Apple silicon Mac.</li>
-<li>macOS 26 Tahoe recommended. macOS 15 can run Apple <code>container</code>, but networking is degraded and some network commands are unavailable.</li>
+<li>macOS 26 Tahoe or later.</li>
 <li>Apple's <code>container</code> CLI from the <a href="https://github.com/apple/container/releases">official GitHub releases</a>, or Homebrew's.</li>
 <li><code>socktainer</code>, which exposes a Docker Engine API socket, from its <a href="https://github.com/socktainer/socktainer/releases">releases</a> or Homebrew.</li>
 </ul>
@@ -271,7 +271,7 @@ sudo installer -pkg socktainer-installer.pkg -target /
 container system start --enable-kernel-install
 </code></pre>
 <h4>Start socktainer</h4>
-<p>Start <code>socktainer</code> in the background, on the service already running, and confirm that its socket answers:</p>
+<p>Container Desktop starts Apple's service and <code>socktainer</code> itself when it connects, and stops the <code>socktainer</code> it started when it disconnects; a <code>socktainer</code> already running is used as it is. The connection's &quot;Auto-start the engine host&quot; option, on by default for Apple™ Container, controls this. To run them by hand instead, start <code>socktainer</code> in the background, on the service already running, and confirm that its socket answers:</p>
 <pre><code class="language-bash">mkdir -p ~/.socktainer
 nohup /opt/socktainer/bin/socktainer --no-auto-start &gt; ~/.socktainer/socktainer.log 2&gt;&amp;1 &amp;
 

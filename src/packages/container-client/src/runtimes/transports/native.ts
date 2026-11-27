@@ -2,8 +2,9 @@ import type { CommandExecutionResult } from "@/host-contract/exec";
 // runtimes/transports/native.ts — NativeTransport: the host runs the engine directly (no scope).
 //
 // Every Transport method is present; the scope operations are no-ops (maximize symmetry). Lifts
-// podman/native.ts + docker/native.ts + the base.ts stopApi. The engine-specific service command comes from
-// host.dialect.buildServiceArgs (Podman → service args, Docker → null = "start the host manually").
+// podman/native.ts + docker/native.ts + the base.ts stopApi. The engine-specific service comes from
+// host.dialect.buildService (Podman → `system service`, Apple → its service then socktainer, Docker → null =
+// "start the host manually").
 
 import type { AxiosInstance } from "axios";
 
@@ -81,11 +82,18 @@ export class NativeTransport implements Transport {
     const settings = customSettings || (await host.getSettings());
     const programPath = settings.program.path || settings.program.name || "";
     const socketPath = `${settings.api.connection.uri || ""}`.replace("unix://", "");
-    const serviceArgs = host.dialect.buildServiceArgs(socketPath, logLevel);
-    if (!serviceArgs) {
-      // Docker native: there is no managed service - the host must be started manually.
+    const service = await host.dialect.buildService(host, settings, socketPath, logLevel);
+    if (!service) {
+      // Docker native, or Apple without socktainer: there is no service to start - the host must be started manually.
       host.logger.error(host.id, "Start api failed - must start host manually");
       return false;
+    }
+    if (service.prepare) {
+      const prepared = await Command.Execute(service.prepare.program || programPath, service.prepare.args);
+      if (!prepared.success) {
+        host.logger.error(host.id, "Start api failed - the service could not be prepared", prepared);
+        return false;
+      }
     }
     if (socketPath) {
       const baseDir = await Path.dirname(socketPath);
@@ -109,8 +117,8 @@ export class NativeTransport implements Transport {
       }
     }
     const started = await host.runner.startApi(opts, {
-      path: programPath,
-      args: serviceArgs,
+      path: service.program || programPath,
+      args: service.args,
       proxyEnv: true,
     });
     host.logger.debug("Start API complete", started);

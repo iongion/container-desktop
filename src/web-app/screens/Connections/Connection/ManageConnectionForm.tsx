@@ -29,7 +29,7 @@ import { ContainerEngineOptions, createConnectorBy, type HostClientFacade } from
 import { Application } from "@/container-client/Application";
 import { normalizeProxyConfig, validateProxy } from "@/container-client/proxy";
 import type { Connection, Connector } from "@/container-client/types/connection";
-import { ContainerEngine, ContainerEngineHost, type Program } from "@/container-client/types/engine";
+import { type ContainerEngine, ContainerEngineHost, type Program } from "@/container-client/types/engine";
 import type { ControllerScope } from "@/container-client/types/machine";
 import type { ConnectionProxyMode, ConnectionProxySettings } from "@/container-client/types/network";
 import { OperatingSystem } from "@/container-client/types/os";
@@ -423,16 +423,15 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         setPending(true);
         const connector = await createConnectorBy(osType, engine, host);
         const updated = await fetchControllerScopes(connector, true);
-        if (engine === ContainerEngine.PODMAN) {
-          // These should default to auto-start
-          const autoStartHosts = [
-            ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
-            ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
-            ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
-          ];
-          if (autoStartHosts.includes(host)) {
-            updated.settings.api.autoStart = true;
-          }
+        // Hosts whose API service the app runs default to auto-start: Podman's machines and Apple's socktainer.
+        const autoStartHosts = [
+          ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
+          ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+          ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+          ContainerEngineHost.APPLE_NATIVE,
+        ];
+        if (autoStartHosts.includes(host)) {
+          updated.settings.api.autoStart = true;
         }
         resetFormData(updated);
       } catch (error: any) {

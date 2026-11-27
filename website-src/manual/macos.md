@@ -184,7 +184,7 @@ Apple's [`container`](https://github.com/apple/container) engine is a native mac
 #### Requirements
 
 - Apple silicon Mac.
-- macOS 26 Tahoe recommended. macOS 15 can run Apple `container`, but networking is degraded and some network commands are unavailable.
+- macOS 26 Tahoe or later.
 - Apple's `container` CLI from the [official GitHub releases](https://github.com/apple/container/releases), or Homebrew's.
 - `socktainer`, which exposes a Docker Engine API socket, from its [releases](https://github.com/socktainer/socktainer/releases) or Homebrew.
 
@@ -212,7 +212,7 @@ container system start --enable-kernel-install
 
 #### Start socktainer
 
-Start `socktainer` in the background, on the service already running, and confirm that its socket answers:
+Container Desktop starts Apple's service and `socktainer` itself when it connects, and stops the `socktainer` it started when it disconnects; a `socktainer` already running is used as it is. The connection's "Auto-start the engine host" option, on by default for Apple™ Container, controls this. To run them by hand instead, start `socktainer` in the background, on the service already running, and confirm that its socket answers:
 
 ```bash
 mkdir -p ~/.socktainer

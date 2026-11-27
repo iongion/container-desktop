@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Apple Container: the app starts Apple's container service and socktainer itself when it connects, and stops the socktainer it started when it disconnects; no terminal step needed. A new Apple Container connection auto-starts by default
+- Apple Container requires macOS 26 or later; macOS 15 and its degraded networking are no longer supported
+
 ## [7.1.0] - 2026-11-27
 
 ### Added

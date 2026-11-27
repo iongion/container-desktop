@@ -214,7 +214,7 @@ export const dockerDialect: EngineDialect = {
     return (await Platform.getEnvironmentVariable("DOCKER_HOST")) || "";
   },
 
-  buildServiceArgs(): string[] | null {
+  async buildService() {
     // Docker manages its own service - there is nothing to launch (start the host manually).
     return null;
   },

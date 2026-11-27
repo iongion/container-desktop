@@ -126,6 +126,7 @@ describe("appleContainerInstallCommands", () => {
   // package path specified was invalid" after the password was given.
   it("downloads into a fresh temporary folder the installer can read, never ~/Downloads", () => {
     const install = appleContainerInstallCommands()[0].args[1];
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: asserts the literal shell parameter expansion
     expect(install).toContain('mktemp -d "${TMPDIR:-/tmp}/container-desktop-provision.XXXXXX"');
     expect(install).not.toContain("Downloads");
   });

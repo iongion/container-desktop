@@ -89,8 +89,8 @@ export async function installTauriHostBridge(): Promise<void> {
     mockKnobs.forEach((name, index) => {
       target[name] = knobValues[index] ?? "";
     });
-    // CURRENT_DARWIN_MAJOR (uname-derived natively) so macOS Apple-Container network gating
-    // (container-client runtime profiles) works under Tauri too; null/undefined off Darwin.
+    // CURRENT_DARWIN_MAJOR (uname-derived natively) for Apple Container's macOS 26 requirement (container-client
+    // runtime profiles); null/undefined off Darwin.
     const darwinMajor = (await invoke<number | null>("get_darwin_major")) ?? undefined;
     const platform = createPlatform(invoke, osType);
     const path = createPath(osType);

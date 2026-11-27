@@ -124,6 +124,15 @@ export interface Transport {
 }
 
 // EngineDialect — engine commands/endpoints + extension implementations. One per engine: Podman / Docker.
+// A long-running engine service the app starts with a connection and stops with it.
+export interface ServiceSpec {
+  // Defaults to the connection's engine program.
+  program?: string;
+  args: string[];
+  // A one-shot command run first, by the engine program unless named; when it fails, nothing starts.
+  prepare?: { program?: string; args: string[] };
+}
+
 export interface EngineDialect {
   readonly ENGINE: ContainerEngine;
   // The REST API shape this dialect speaks ("docker" for Docker/Apple-socktainer, "libpod" for Podman).
@@ -138,8 +147,14 @@ export interface EngineDialect {
   resolveDialStdioBridge?(host: HostContext, settings: EngineConnectorSettings): Promise<DialStdioBridge | undefined>;
   // Native/unscoped URI env-seed (Podman `PODMAN_HOST`/`DOCKER_HOST`; Docker `DOCKER_HOST`).
   resolveNativeURISeed(host: HostContext, settings: EngineConnectorSettings): Promise<string>;
-  // startApi service args (Podman `system service --time=0 unix://<sock> --log-level=<lvl>`; Docker → null = manual).
-  buildServiceArgs(socketPath: string, logLevel: string): string[] | null;
+  // The engine service startApi runs and supervises: Podman `system service --time=0 unix://<sock>`; Apple
+  // `container system start`, then socktainer; Docker → null (it manages its own service).
+  buildService(
+    host: HostContext,
+    settings: EngineConnectorSettings,
+    socketPath: string,
+    logLevel: string,
+  ): Promise<ServiceSpec | null>;
   // getSystemInfo (Podman overrides for the vendor scope; Docker uses the base host-command form).
   getSystemInfo(
     host: HostContext,

@@ -1,80 +1,39 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HostContext } from "@/container-client/runtimes/composition";
 import { containerDialect } from "@/container-client/runtimes/dialects/container";
-import type { CapabilityDescriptor } from "@/container-client/runtimes/facade";
-import {
-  appleNetworksEnabled,
-  availableOnAppleContainer,
-  gateNetworksForMacOS,
-  parseMacOsProductMajor,
-} from "@/container-client/runtimes/profiles/container";
+import { availableOnAppleContainer } from "@/container-client/runtimes/profiles/container";
 import { OperatingSystem } from "@/container-client/types/os";
 
-const BASE: CapabilityDescriptor = {
-  resources: { pods: false, secrets: false, networks: true },
-  events: true,
-  sort: {},
-  extensions: {
-    machines: false,
-    kube: false,
-    contexts: false,
-    swarm: false,
-    builders: false,
-    compose: false,
-    registries: false,
-    registryTrust: false,
-    controllerVersion: false,
-  },
-};
-
-describe("appleNetworksEnabled — macOS-version networks gate", () => {
-  it("macOS 15 (Darwin 24) → networks off (degraded, no `container network`)", () => {
-    expect(appleNetworksEnabled(OperatingSystem.MacOS, 24)).toBe(false);
-  });
-  it("macOS 26 (Darwin 25) → networks on", () => {
-    expect(appleNetworksEnabled(OperatingSystem.MacOS, 25)).toBe(true);
-  });
-  it("non-macOS host → networks on (engine unavailable anyway, don't over-restrict)", () => {
-    expect(appleNetworksEnabled(OperatingSystem.Linux, 24)).toBe(true);
-  });
-  it("unknown Darwin major → networks on (no guess)", () => {
-    expect(appleNetworksEnabled(OperatingSystem.MacOS, undefined)).toBe(true);
-  });
-});
-
-describe("gateNetworksForMacOS — returns a COPY, never mutates the shared base", () => {
-  it("macOS 15 → copy has networks:false and the base singleton stays untouched", () => {
-    const gated = gateNetworksForMacOS(BASE, OperatingSystem.MacOS, 24);
-    expect(gated.resources.networks).toBe(false);
-    expect(gated).not.toBe(BASE);
-    expect(gated.resources).not.toBe(BASE.resources);
-    expect(BASE.resources.networks).toBe(true);
-  });
-});
-
-describe("parseMacOsProductMajor", () => {
-  it("parses sw_vers product versions", () => {
-    expect(parseMacOsProductMajor("26.0")).toBe(26);
-    expect(parseMacOsProductMajor("15.5")).toBe(15);
-  });
-  it("undefined on unparseable input", () => {
-    expect(parseMacOsProductMajor("not-a-version")).toBeUndefined();
-  });
-});
-
-describe("availableOnAppleContainer — Apple silicon + macOS gate", () => {
+describe("availableOnAppleContainer — Apple silicon on macOS 26 or later", () => {
   const host = (osType: OperatingSystem) => ({ osType }) as unknown as HostContext;
+  const darwin = globalThis.CURRENT_DARWIN_MAJOR;
 
-  it("macOS + arm64 → available", async () => {
-    const spy = vi.spyOn(globalThis.Platform, "getOsArch").mockResolvedValue("arm64");
+  afterEach(() => {
+    globalThis.CURRENT_DARWIN_MAJOR = darwin;
+    vi.restoreAllMocks();
+  });
+
+  it("macOS 26 (Darwin 25) on arm64 → available", async () => {
+    globalThis.CURRENT_DARWIN_MAJOR = 25;
+    vi.spyOn(globalThis.Platform, "getOsArch").mockResolvedValue("arm64");
     expect((await availableOnAppleContainer(host(OperatingSystem.MacOS))).success).toBe(true);
-    spy.mockRestore();
   });
-  it("macOS + x64 (Intel) → unavailable", async () => {
-    const spy = vi.spyOn(globalThis.Platform, "getOsArch").mockResolvedValue("x64");
+
+  // socktainer, the only API Apple Container has, needs macOS 26; Apple itself no longer fixes macOS 15 issues.
+  it("macOS 15 (Darwin 24) → unavailable, naming the macOS it needs", async () => {
+    globalThis.CURRENT_DARWIN_MAJOR = 24;
+    vi.spyOn(globalThis.Platform, "getOsArch").mockResolvedValue("arm64");
+    const result = await availableOnAppleContainer(host(OperatingSystem.MacOS));
+    expect(result.success).toBe(false);
+    expect(result.details).toContain("macOS 26");
+  });
+
+  it("macOS on Intel → unavailable", async () => {
+    globalThis.CURRENT_DARWIN_MAJOR = 25;
+    vi.spyOn(globalThis.Platform, "getOsArch").mockResolvedValue("x64");
     expect((await availableOnAppleContainer(host(OperatingSystem.MacOS))).success).toBe(false);
-    spy.mockRestore();
   });
+
   it("non-macOS → unavailable", async () => {
     expect((await availableOnAppleContainer(host(OperatingSystem.Linux))).success).toBe(false);
   });
@@ -100,5 +59,33 @@ describe("containerDialect.readEngineSocket — socket safety (never honors raw 
         process.env.DOCKER_HOST = prev;
       }
     }
+  });
+});
+
+// The app starts Apple's side itself: Apple's service first, by the connection's own `container`, without the kernel
+// prompt a GUI cannot answer; then socktainer, supervised for as long as the app runs, never auto-starting a service.
+describe("containerDialect.buildService — Apple's service, then socktainer", () => {
+  const settings = { program: { name: "container", path: "/usr/local/bin/container" } } as never;
+
+  it("prepares Apple's service and runs socktainer as the service", async () => {
+    const host = {
+      findHostProgram: async () => ({ name: "socktainer", path: "/opt/socktainer/bin/socktainer", version: "1.6.1" }),
+    } as unknown as HostContext;
+    expect(await containerDialect.buildService(host, settings, "/Users/me/.socktainer/container.sock", "warn")).toEqual(
+      {
+        prepare: { args: ["system", "start", "--enable-kernel-install"] },
+        program: "/opt/socktainer/bin/socktainer",
+        args: ["--no-auto-start"],
+      },
+    );
+  });
+
+  it("names nothing to start when socktainer is not installed", async () => {
+    const host = {
+      findHostProgram: async () => ({ name: "socktainer", path: "" }),
+    } as unknown as HostContext;
+    expect(await containerDialect.buildService(host, settings, "/Users/me/.socktainer/container.sock", "warn")).toBe(
+      null,
+    );
   });
 });

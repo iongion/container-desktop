@@ -39,10 +39,10 @@ Notes:
 - **Apple Container is macOS/Apple-silicon only** and has no WSL/Lima/vendor/machine
   host — just native and SSH-remote. It exposes **no native REST API**; the
   **socktainer** bridge serves a Docker-compatible socket
-  (`~/.socktainer/container.sock`), so it reuses the Docker API surface.
-  `container.native` is gated to macOS; `container.remote` shows on all OSes (the remote
-  must itself be an Apple-silicon Mac). Networks are gated by macOS version (full on
-  macOS 26 / Darwin ≥ 25; degraded on macOS 15), and pods/secrets/compose/swarm/
+  (`~/.socktainer/container.sock`), so it reuses the Docker API surface; the app starts
+  Apple's service and socktainer itself (`buildService`). `container.native` is gated to
+  macOS 26 or later (Darwin ≥ 25) on Apple silicon; `container.remote` shows on all OSes
+  (the remote must itself be an Apple-silicon Mac). Pods/secrets/compose/swarm/
   builders/contexts/kube/machines are unsupported.
 - **Scope type** (`ControllerScopeType`) names the kind of thing the controller
   starts: a Podman machine, a WSL distribution, a Lima instance, or an SSH

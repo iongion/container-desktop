@@ -134,8 +134,8 @@ export class WSLTransport implements Transport {
     }
     const settings = customSettings || (await host.getSettings());
     const socketPath = `${settings.api.connection.relay}`.replace("unix://", "");
-    const serviceArgs = host.dialect.buildServiceArgs(socketPath, logLevel);
-    if (!serviceArgs) {
+    const service = await host.dialect.buildService(host, settings, socketPath, logLevel);
+    if (!service) {
       // Docker on WSL: the engine manages its own service - nothing to start here.
       host.logger.debug(host.id, "Start api skipped - not required");
       return true;
@@ -144,7 +144,7 @@ export class WSLTransport implements Transport {
     const scope = settings?.controller?.scope || "";
     const programPath = program.path || program.name;
     const launcherPath = controller?.path || controller?.name || "";
-    const launcherArgs = [programPath, ...serviceArgs];
+    const launcherArgs = [programPath, ...service.args];
     host.logger.debug(host.id, "Starting API ", { socketPath, logLevel });
     try {
       // Bug on WSL - podman is unable to create the base directory for the unix socket

@@ -138,6 +138,7 @@ export function appleContainerInstallCommands(
   const installScript = [
     "set -e;",
     // A fresh folder under $TMPDIR: the root-run installer cannot read ~/Downloads (macOS privacy protection).
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: shell parameter expansion, not a JS template
     'dir=$(mktemp -d "${TMPDIR:-/tmp}/container-desktop-provision.XXXXXX"); pkgs="";',
     // Download and verify against the pinned checksum before anything is installed (fail-closed).
     "fetch() {",
