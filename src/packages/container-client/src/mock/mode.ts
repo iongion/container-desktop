@@ -86,6 +86,13 @@ export function mockConnectsNothing(): boolean {
   return mockEnvValue("CONTAINER_DESKTOP_MOCK_CONNECTED").toLowerCase() === "none";
 }
 
+// `CONTAINER_DESKTOP_MOCK_PROVISION_EXIT=<code>` — every mock provisioning command exits with that code, the only way
+// to drive the wizard's failure panel. Absent, zero or not a number ⇒ 0, every command succeeds (the default).
+export function mockProvisionExitCode(): number {
+  const code = Number.parseInt(mockEnvValue("CONTAINER_DESKTOP_MOCK_PROVISION_EXIT"), 10);
+  return Number.isInteger(code) && code > 0 ? code : 0;
+}
+
 // True when the mock boots more than one engine — i.e. the merged/unified workspace.
 export function isUnifiedMock(): boolean {
   return getMockEngines().length > 1;

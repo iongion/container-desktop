@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ContainerEngine } from "@/container-client/types/engine";
+import { ProvisionExit } from "@/container-provisioning/failures";
 
 import {
   appleContainerInstallCommands,
@@ -33,6 +34,20 @@ describe("linuxInstallCommands", () => {
     const script = linuxInstallCommands(ContainerEngine.DOCKER)[0].args[1];
     expect(script).toMatch(/docker/);
     expect(script).toMatch(/compose/);
+  });
+
+  it("elevates through the desktop's polkit dialog, never a bare sudo that needs a terminal", () => {
+    const script = linuxInstallCommands(ContainerEngine.PODMAN)[0].args[1];
+    expect(script).toMatch(/pkexec/);
+    // sudo only when it needs no password
+    expect(script).toContain("sudo -n true");
+    expect(script).not.toMatch(/sudo apt-get/);
+  });
+
+  it("tags its failures: no admin rights, no supported package manager", () => {
+    const script = linuxInstallCommands(ContainerEngine.PODMAN)[0].args[1];
+    expect(script).toContain(`exit ${ProvisionExit.Elevation}`);
+    expect(script).toContain(`exit ${ProvisionExit.PackageManager}`);
   });
 });
 
@@ -95,6 +110,13 @@ describe("appleContainerInstallCommands", () => {
     expect(install).toContain("abc123");
     expect(install).toMatch(/shasum -a 256/);
     expect(install).toMatch(/installer -pkg/);
+    // macOS's own admin dialog: a GUI app has no terminal for sudo to ask in
+    expect(install).toContain("with administrator privileges");
+    expect(install).not.toMatch(/sudo /);
+    // each failure is tagged so the wizard can say what went wrong
+    expect(install).toContain(`exit ${ProvisionExit.Download}`);
+    expect(install).toContain(`exit ${ProvisionExit.Checksum}`);
+    expect(install).toContain(`exit ${ProvisionExit.Elevation}`);
     // brings the runtime up
     expect(install).toContain("container system start");
     // idempotent: skip the download/install when the CLI is already present
@@ -107,12 +129,13 @@ describe("appleContainerInstallCommands", () => {
     expect(socktainer).toContain("container.sock");
     // idempotent guard: don't re-install when brew already has it
     expect(socktainer).toMatch(/brew list socktainer/);
+    expect(socktainer).toContain(`exit ${ProvisionExit.Homebrew}`);
+    expect(socktainer).toContain(`exit ${ProvisionExit.Socket}`);
   });
 
-  it("pins a real default version + checksum when called with no arguments", () => {
+  it("pins Apple's 1.7.1 release and its published checksum when called with no arguments", () => {
     const install = appleContainerInstallCommands()[0].args[1];
-    expect(install).toMatch(/container-\d+\.\d+\.\d+-installer-signed\.pkg/);
-    // a 64-hex sha256 is present
-    expect(install).toMatch(/[0-9a-f]{64}/);
+    expect(install).toContain("container-1.7.1-installer-signed.pkg");
+    expect(install).toContain("b6739caf3d47ca53a78f1a7edf32521420a75c7941838c3cefa75f30b80f5a97");
   });
 });

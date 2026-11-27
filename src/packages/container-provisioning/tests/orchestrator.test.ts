@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { ProvisionStepError } from "@/container-provisioning/failures";
 import { runSteps, type StepExecutor } from "@/container-provisioning/orchestrator";
 import type { ProvisionStep, StepEvent } from "@/container-provisioning/types";
 
@@ -54,6 +55,27 @@ describe("runSteps", () => {
     const fail = events.find((e) => e.type === "step.fail");
     expect(fail && "error" in fail && fail.error).toBe("boom");
     expect(overall).toBe("failed");
+  });
+
+  it("carries a step error's hint, command and exit code into the failure event", async () => {
+    const events: StepEvent[] = [];
+    const execute: StepExecutor = async () => {
+      throw new ProvisionStepError({
+        message: "The download failed.",
+        hint: "retry",
+        command: "sh -c x",
+        exitCode: 10,
+      });
+    };
+    await runSteps([step("a")], execute, (e) => events.push(e));
+    expect(events.find((e) => e.type === "step.fail")).toEqual({
+      type: "step.fail",
+      id: "a",
+      error: "The download failed.",
+      hint: "retry",
+      command: "sh -c x",
+      exitCode: 10,
+    });
   });
 
   it("stringifies a non-Error throw for the failure detail", async () => {

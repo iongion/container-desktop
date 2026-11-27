@@ -3,12 +3,13 @@
 // on real hardware and is covered by the future *.live.test.ts suite, not the hermetic one. Keeping them
 // pure lets the command SHAPES be verified here without a real VM.
 //
-// Elevation note: Linux installs use `sudo` inline (mirroring support/provision-deps.sh). Non-interactive
-// elevation (pkexec / an askpass prompt) is an open design point tracked for Phase 4 — the shape is correct;
-// the wizard will wire the elevation front-end separately.
+// Elevation: the app has no terminal, so root comes from the OS's own password dialog — `osascript … with
+// administrator privileges` on macOS, polkit's `pkexec` on Linux (sudo only when it needs no password). Every failure
+// a script can name exits with a ProvisionExit tag, which the wizard turns into a plain sentence (failures.ts).
 
 import { ContainerEngine } from "@/container-client/types/engine";
 import type { CreateMachineOptions } from "@/container-client/types/machine";
+import { ProvisionExit } from "./failures";
 
 export interface StreamCommand {
   program: string;
@@ -33,20 +34,34 @@ const LINUX_PACKAGES: Record<ContainerEngine, { apt: string; dnf: string; pacman
   [ContainerEngine.APPLE]: { apt: "", dnf: "", pacman: "" }, // Apple Container is macOS-only; never installed on Linux.
 };
 
+// Root for the install, from a GUI app with no terminal: already root; else the desktop's polkit dialog (pkexec)
+// when a display is up; else sudo only if it needs no password (a VM's or a NOPASSWD user's). Otherwise stop with
+// the elevation tag. `elevated` runs one root command line; pkexec's 126/127 mean the dialog was dismissed or denied.
+const LINUX_ELEVATION = [
+  'if [ "$(id -u)" = 0 ]; then SUDO="";',
+  'elif command -v pkexec >/dev/null 2>&1 && [ -n "$DISPLAY$WAYLAND_DISPLAY" ]; then SUDO="pkexec";',
+  'elif sudo -n true 2>/dev/null; then SUDO="sudo";',
+  `else echo "Administrator rights are needed and no password dialog is available" >&2; exit ${ProvisionExit.Elevation}; fi;`,
+  'elevated() { $SUDO /bin/sh -c "$1" || { rc=$?;',
+  `if [ "$SUDO" = pkexec ] && [ $rc -ge 126 ]; then exit ${ProvisionExit.Elevation}; fi; exit $rc; }; };`,
+].join(" ");
+
 // A single sh -c script that detects the package manager at runtime (apt/dnf/pacman) and installs the engine
-// + compose, then does rootless setup for Podman. Mirrors provision-deps.sh's distro-detect idiom.
+// + compose as root in one elevation, then does rootless setup for Podman as the user. Mirrors provision-deps.sh's
+// distro-detect idiom.
 export function linuxInstallCommands(engine: ContainerEngine): StreamCommand[] {
   const pkgs = LINUX_PACKAGES[engine];
   const rootless = engine === ContainerEngine.PODMAN ? " && podman system migrate 2>/dev/null || true" : "";
   const script = [
     "set -e;",
+    LINUX_ELEVATION,
     "if command -v apt-get >/dev/null 2>&1; then",
-    `sudo apt-get update -y && sudo apt-get install -y ${pkgs.apt};`,
+    `elevated "apt-get update -y && apt-get install -y ${pkgs.apt}";`,
     "elif command -v dnf >/dev/null 2>&1; then",
-    `sudo dnf install -y ${pkgs.dnf};`,
+    `elevated "dnf install -y ${pkgs.dnf}";`,
     "elif command -v pacman >/dev/null 2>&1; then",
-    `sudo pacman -Sy --needed --noconfirm ${pkgs.pacman};`,
-    'else echo "No supported package manager (apt/dnf/pacman)" >&2; exit 1; fi',
+    `elevated "pacman -Sy --needed --noconfirm ${pkgs.pacman}";`,
+    `else echo "No supported package manager (apt/dnf/pacman)" >&2; exit ${ProvisionExit.PackageManager}; fi`,
     rootless,
   ].join(" ");
   return [{ program: "sh", args: ["-c", script] }];
@@ -79,8 +94,18 @@ export function limaCreateCommands(name: string, engine: ContainerEngine): Strea
 // Pinned Apple Container release (github.com/apple/container). Bump the version + checksum together per
 // release; the checksum is verified before install so a tampered/wrong download fails closed. See the
 // provisioning recipe in website-src/manual/macos.md §5.
-const APPLE_CONTAINER_VERSION = "1.0.0";
-const APPLE_CONTAINER_SHA256 = "13f45f26da94c354adcbefe1e8f7631e7f126e93c5d4dd6a5a538aa66b4f479d";
+const APPLE_CONTAINER_VERSION = "1.7.1";
+const APPLE_CONTAINER_SHA256 = "b6739caf3d47ca53a78f1a7edf32521420a75c7941838c3cefa75f30b80f5a97";
+
+// macOS's own administrator dialog for installing the package: a GUI app has no terminal for sudo to ask in. The
+// package path is passed as an argument and quoted by AppleScript, never spliced into the script text.
+const MACOS_INSTALL_PKG = [
+  "osascript",
+  "-e 'on run argv'",
+  `-e 'do shell script "/usr/sbin/installer -pkg " & quoted form of (item 1 of argv) & " -target /" with administrator privileges'`,
+  "-e 'end run'",
+  '"$pkg"',
+].join(" ");
 
 // Provision Apple's native `container` runtime on an Apple-silicon Mac: install the signed CLI package
 // (checksum-verified), start its system service, then install + start `socktainer` (the Docker-compatible
@@ -101,10 +126,11 @@ export function appleContainerInstallCommands(
     "else",
     '  dir="$HOME/Downloads/container-desktop-provision"; mkdir -p "$dir";',
     `  pkg="$dir/${pkg}";`,
-    `  curl -L -o "$pkg" ${url};`,
+    `  echo "Downloading ${pkg}";`,
+    `  curl -fL -o "$pkg" ${url} || exit ${ProvisionExit.Download};`,
     // Verify the signed package against the pinned checksum before installing (fail-closed).
-    `  echo "${sha256}  $pkg" | shasum -a 256 -c -;`,
-    '  sudo installer -pkg "$pkg" -target /;',
+    `  echo "${sha256}  $pkg" | shasum -a 256 -c - || exit ${ProvisionExit.Checksum};`,
+    `  ${MACOS_INSTALL_PKG} || exit ${ProvisionExit.Elevation};`,
     "fi;",
     // Safe to re-run; brings the runtime up whether freshly installed or already present.
     "container system start",
@@ -112,7 +138,7 @@ export function appleContainerInstallCommands(
   const socktainerScript = [
     "set -e;",
     "if ! command -v brew >/dev/null 2>&1; then",
-    '  echo "Homebrew is required to install socktainer (https://brew.sh)" >&2; exit 1;',
+    `  echo "Homebrew is required to install socktainer (https://brew.sh)" >&2; exit ${ProvisionExit.Homebrew};`,
     "fi;",
     // Idempotent: only tap + install when brew doesn't already have socktainer.
     "if brew list socktainer >/dev/null 2>&1; then",
@@ -127,7 +153,8 @@ export function appleContainerInstallCommands(
     "else",
     '  nohup socktainer > "$HOME/.socktainer/socktainer.log" 2>&1 & sleep 2;',
     "fi;",
-    'test -S "$HOME/.socktainer/container.sock" && echo "socktainer socket OK"',
+    `test -S "$HOME/.socktainer/container.sock" || exit ${ProvisionExit.Socket};`,
+    'echo "socktainer socket OK"',
   ].join(" ");
   return [
     { program: "sh", args: ["-c", installScript] },

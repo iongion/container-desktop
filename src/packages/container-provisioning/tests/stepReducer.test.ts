@@ -63,6 +63,12 @@ describe("reduce", () => {
     expect(s.overall).toBe("failed");
   });
 
+  it("step.fail keeps the hint, command and exit code for the Details section", () => {
+    let s = reduce(twoSteps(), { type: "step.start", id: "detect" });
+    s = reduce(s, { type: "step.fail", id: "detect", error: "boom", hint: "retry", command: "sh -c x", exitCode: 12 });
+    expect(s.steps[0]).toMatchObject({ error: "boom", hint: "retry", command: "sh -c x", exitCode: 12 });
+  });
+
   it("is pure — does not mutate the previous state", () => {
     const prev = twoSteps();
     const snapshot = JSON.stringify(prev);

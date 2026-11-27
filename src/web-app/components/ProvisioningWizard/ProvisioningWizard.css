@@ -299,10 +299,12 @@
   max-width: 620px;
 }
 .PWizRunStep {
+  padding: 7px 0;
+}
+.PWizRunStepRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 0;
 }
 .PWizRunStep.is-pending .PWizRunStepTitle {
   color: var(--app-text-muted);
@@ -310,10 +312,41 @@
 .PWizRunStepTitle {
   font-weight: 500;
 }
-.PWizRunStepError {
-  margin-left: auto;
-  color: var(--app-intent-danger-rest, #db3737);
+.PWizRunStepFailure {
+  margin: 8px 0 0 26px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--app-intent-danger-rest) 35%, transparent);
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--app-intent-danger-rest) 8%, transparent);
+}
+.PWizRunStepMessage {
+  color: var(--app-intent-danger-text);
+}
+.PWizRunStepHint {
+  margin-top: 4px;
+  color: var(--app-text-muted);
   font-size: 12px;
+}
+.PWizRunStepActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.PWizRunStepDetails {
+  margin-top: 8px;
+}
+.PWizRunStepDetailsLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 4px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.PWizRunStepDetails .PWizLog {
+  max-height: 180px;
 }
 .PWizLog {
   margin: 0;

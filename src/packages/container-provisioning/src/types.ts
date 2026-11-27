@@ -91,7 +91,11 @@ export interface StepRunState {
   id: string;
   status: StepStatus;
   lines: string[];
+  // A failure: the plain sentence (an i18n key), a hint, and the command + exit code for the Details section.
   error?: string;
+  hint?: string;
+  command?: string;
+  exitCode?: number | null;
 }
 export type Overall = "idle" | "running" | "done" | "failed";
 export interface ProvisionRunState {
@@ -103,7 +107,7 @@ export type StepEvent =
   | { type: "step.start"; id: string }
   | { type: "step.line"; id: string; line: string }
   | { type: "step.ok"; id: string }
-  | { type: "step.fail"; id: string; error: string }
+  | { type: "step.fail"; id: string; error: string; hint?: string; command?: string; exitCode?: number | null }
   | { type: "step.skip"; id: string; reason: string };
 
 // Readiness — derived from EngineConnectorAvailability + a volume ownership probe.

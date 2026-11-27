@@ -85,6 +85,10 @@ export async function installTauriHostBridge(): Promise<void> {
     // getMockEngines() decides autoStart there, and it is the only way to drive what the app does with nothing up.
     target.CONTAINER_DESKTOP_MOCK_CONNECTED =
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_CONNECTED" })) ?? "";
+    // An exit code ⇒ every mock provisioning command fails with it (mock/MockCommand.ts), so the wizard's failure
+    // panel can be driven; absent ⇒ "" ⇒ they all succeed.
+    target.CONTAINER_DESKTOP_MOCK_PROVISION_EXIT =
+      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_PROVISION_EXIT" })) ?? "";
     // CURRENT_DARWIN_MAJOR (uname-derived natively) so macOS Apple-Container network gating
     // (container-client runtime profiles) works under Tauri too; null/undefined off Darwin.
     const darwinMajor = (await invoke<number | null>("get_darwin_major")) ?? undefined;

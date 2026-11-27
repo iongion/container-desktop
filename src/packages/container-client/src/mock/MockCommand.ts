@@ -11,7 +11,7 @@ import { EventEmitter } from "eventemitter3";
 import { ContainerEngine } from "@/container-client/types/engine";
 import { loadEngineFixtures } from "./fixturesLoader";
 import { mockApiAdapter } from "./mockApiAdapter";
-import { getMockEngine } from "./mode";
+import { getMockEngine, mockProvisionExitCode } from "./mode";
 
 function okResult(over?: Partial<CommandExecutionResult>): CommandExecutionResult {
   return { pid: 1, code: 0, success: true, stdout: "", stderr: "", ...over };
@@ -237,8 +237,9 @@ export function createMockCommand(): ICommand {
             emitter.emit("data", { from: "stdout", data: `${line}\n` });
           }
         }
-        emitter.emit("exit", { code: 0 });
-        emitter.emit("close", { code: 0 });
+        const code = provisioningLines.length > 0 ? mockProvisionExitCode() : 0;
+        emitter.emit("exit", { code });
+        emitter.emit("close", { code });
       }, 0);
       return {
         on: (event: string, listener: any) => emitter.on(event as any, listener),

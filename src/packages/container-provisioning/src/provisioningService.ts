@@ -12,6 +12,7 @@ import { findProgramPath, findProgramVersion } from "@/container-client/detector
 import { ContainerEngine, Presence } from "@/container-client/types/engine";
 import type { OperatingSystem } from "@/container-client/types/os";
 import { createLogger } from "@/logger";
+import { describeCommandFailure, ProvisionStepError } from "./failures";
 import { runSteps, type StepExecutor } from "./orchestrator";
 import {
   appleContainerInstallCommands,
@@ -248,7 +249,7 @@ export class ProvisioningService {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`Command failed (exit ${code}): ${cmd.program} ${cmd.args.join(" ")}`));
+          reject(new ProvisionStepError(describeCommandFailure(cmd, code, this.osType)));
         }
       });
     });

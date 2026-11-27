@@ -3,6 +3,7 @@
 // (installs, VM create, probes) and reports lines, and an `emit` sink the wizard store folds into run
 // state (see stepReducer). Keeping this pure lets the whole run be tested without any real Command.
 
+import { ProvisionStepError } from "./failures";
 import type { Overall, ProvisionStep, StepEvent } from "./types";
 
 // The outcome of executing one step. Throwing (or a rejected promise) is treated as a failure and halts
@@ -30,7 +31,16 @@ export async function runSteps(
         emit({ type: "step.ok", id: step.id });
       }
     } catch (error) {
-      emit({ type: "step.fail", id: step.id, error: error instanceof Error ? error.message : String(error) });
+      const details =
+        error instanceof ProvisionStepError
+          ? { hint: error.hint, command: error.command, exitCode: error.exitCode }
+          : undefined;
+      emit({
+        type: "step.fail",
+        id: step.id,
+        error: error instanceof Error ? error.message : String(error),
+        ...details,
+      });
       return "failed";
     }
   }

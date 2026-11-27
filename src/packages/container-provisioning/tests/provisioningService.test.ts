@@ -5,6 +5,7 @@ import { installFakeCommand } from "@/__tests__/setup/fakeCommand";
 import { ContainerEngine, ContainerEngineHost, Presence } from "@/container-client/types/engine";
 import { OperatingSystem } from "@/container-client/types/os";
 
+import { ProvisionExit } from "@/container-provisioning/failures";
 import { buildPlan } from "@/container-provisioning/planBuilder";
 import {
   commandsForStep,
@@ -168,6 +169,26 @@ describe("ProvisioningService.run", () => {
       expect(overall).toBe("failed");
       const fail = events.find((e) => e.type === "step.fail");
       expect(fail?.id).toBe("create-vm");
+    } finally {
+      restore();
+    }
+  });
+
+  it("reports a tagged exit as its plain sentence, keeping the command and exit code for Details", async () => {
+    const restore = installStreamingCommand(ProvisionExit.Elevation);
+    try {
+      const plan = buildPlan(
+        detection(OperatingSystem.MacOS),
+        target({ engine: ContainerEngine.APPLE, strategy: "apple.container" }),
+      );
+      const events: StepEvent[] = [];
+      await new ProvisioningService(OperatingSystem.MacOS).run(plan, (e) => events.push(e));
+      const fail = events.find((e) => e.type === "step.fail");
+      expect(fail).toMatchObject({
+        error: "The administrator password was not given, so nothing was installed.",
+        exitCode: ProvisionExit.Elevation,
+      });
+      expect(fail && "command" in fail && fail.command).toMatch(/^sh -c /);
     } finally {
       restore();
     }

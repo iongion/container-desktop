@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { getMockEngine, getMockEngines, isMockMode, isUnifiedMock } from "@/container-client/mock/mode";
+import {
+  getMockEngine,
+  getMockEngines,
+  isMockMode,
+  isUnifiedMock,
+  mockProvisionExitCode,
+} from "@/container-client/mock/mode";
 import { ContainerEngine } from "@/container-client/types/engine";
 
 const ORIGINAL = process.env.CONTAINER_DESKTOP_MOCK;
@@ -47,5 +53,24 @@ describe("mock mode flag", () => {
     withFlag("nonsense");
     expect(isMockMode()).toBe(false);
     expect(getMockEngines()).toEqual([]);
+  });
+});
+
+describe("mock provisioning exit knob", () => {
+  afterEach(() => {
+    delete process.env.CONTAINER_DESKTOP_MOCK_PROVISION_EXIT;
+  });
+
+  it("is 0 (every provisioning command succeeds) when unset, zero or not a number", () => {
+    expect(mockProvisionExitCode()).toBe(0);
+    for (const value of ["0", "abc", "-3"]) {
+      process.env.CONTAINER_DESKTOP_MOCK_PROVISION_EXIT = value;
+      expect(mockProvisionExitCode()).toBe(0);
+    }
+  });
+
+  it("is the given code otherwise", () => {
+    process.env.CONTAINER_DESKTOP_MOCK_PROVISION_EXIT = "12";
+    expect(mockProvisionExitCode()).toBe(12);
   });
 });

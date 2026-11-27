@@ -1,13 +1,14 @@
-import { Button, Icon, ProgressBar, Spinner } from "@blueprintjs/core";
+import { Button, Collapse, Icon, ProgressBar, Spinner } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { runLog, runProgress } from "@/container-provisioning/runView";
-import type { StepStatus } from "@/container-provisioning/types";
+import type { StepRunState, StepStatus } from "@/container-provisioning/types";
+import { CopyButton } from "@/web-app/components/CopyButton";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 
-import { cancelRun, runPlan } from "../useProvisioning";
+import { cancelRun, retryRun, runPlan } from "../useProvisioning";
 
 function StepStatusIcon({ status }: { status: StepStatus }) {
   if (status === "running") {
@@ -23,6 +24,64 @@ function StepStatusIcon({ status }: { status: StepStatus }) {
     return <Icon icon={IconNames.MINUS} color="var(--app-text-muted)" />;
   }
   return <Icon icon={IconNames.CIRCLE} color="var(--app-text-muted)" />;
+}
+
+// A failed step: the plain sentence and its hint, Retry, and a collapsed Details section with the command (and its
+// exit code) and the step's output, each copyable. The raw command never shows by default.
+function StepFailurePanel({ step }: { step: StepRunState }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const output = step.lines.join("\n");
+  const commandLabel = step.exitCode == null ? t("Command") : t("Command · exit {{code}}", { code: step.exitCode });
+  return (
+    <div className="PWizRunStepFailure">
+      <div className="PWizRunStepMessage">{t(step.error ?? "The step failed.")}</div>
+      {step.hint ? <div className="PWizRunStepHint">{t(step.hint)}</div> : null}
+      <div className="PWizRunStepActions">
+        <Button
+          size="small"
+          intent="primary"
+          icon={IconNames.REFRESH}
+          text={t("Retry")}
+          data-action="provision.retry"
+          onClick={() => void retryRun()}
+        />
+        {step.command || output ? (
+          <Button
+            size="small"
+            variant="minimal"
+            active={open}
+            icon={open ? IconNames.CHEVRON_DOWN : IconNames.CHEVRON_RIGHT}
+            text={t("Details")}
+            data-action="provision.details"
+            onClick={() => setOpen((value) => !value)}
+          />
+        ) : null}
+      </div>
+      <Collapse isOpen={open}>
+        <div className="PWizRunStepDetails">
+          {step.command ? (
+            <>
+              <div className="PWizRunStepDetailsLabel">
+                <span>{commandLabel}</span>
+                <CopyButton text={step.command} />
+              </div>
+              <pre className="PWizLog">{step.command}</pre>
+            </>
+          ) : null}
+          {output ? (
+            <>
+              <div className="PWizRunStepDetailsLabel">
+                <span>{t("Output")}</span>
+                <CopyButton text={output} />
+              </div>
+              <pre className="PWizLog">{output}</pre>
+            </>
+          ) : null}
+        </div>
+      </Collapse>
+    </div>
+  );
 }
 
 // Step 6 — run the prepared plan, streaming each step's output. Auto-starts once on entry (idle run) and
@@ -74,13 +133,15 @@ export function ExecuteStep() {
       <ul className="PWizRunSteps">
         {run.steps.map((step, index) => (
           <li key={step.id} className={`PWizRunStep is-${step.status}`}>
-            <StepStatusIcon status={step.status} />
-            <span className="PWizRunStepTitle">{t(plan.steps[index]?.title ?? step.id)}</span>
-            {step.status === "failed" && step.error ? <span className="PWizRunStepError">{step.error}</span> : null}
+            <div className="PWizRunStepRow">
+              <StepStatusIcon status={step.status} />
+              <span className="PWizRunStepTitle">{t(plan.steps[index]?.title ?? step.id)}</span>
+            </div>
+            {step.status === "failed" ? <StepFailurePanel step={step} /> : null}
           </li>
         ))}
       </ul>
-      {log.length > 0 ? <pre className="PWizLog">{log.join("\n")}</pre> : null}
+      {log.length > 0 && run.overall !== "failed" ? <pre className="PWizLog">{log.join("\n")}</pre> : null}
     </div>
   );
 }

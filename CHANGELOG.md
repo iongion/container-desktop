@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Setup wizard: a failed step says what went wrong in one sentence, with Retry; the command and its output sit in a collapsed Details section, each copyable
+- Setup wizard installs Apple Container 1.7.1
+
 ### Fixed
+
+- Setup wizard: installing Apple Container asks for the administrator password in macOS's own dialog, and Linux installs use the desktop's password dialog (pkexec); neither fails any more for lack of a terminal
+- German: "Volumes" is no longer translated as "Bände"
 
 - The Linux AppImage and packages run again on distros older than Ubuntu 26.04 (Void, Debian, Ubuntu 24.04, Fedora): they are built on Ubuntu 22.04, glibc 2.35
 - macOS: engines installed by Homebrew, the Podman installer or Apple's package (Apple Container) are found when the app is opened from Finder or the Dock; it now uses the login shell's PATH

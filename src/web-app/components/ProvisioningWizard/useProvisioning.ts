@@ -44,6 +44,17 @@ export async function runPlan(): Promise<Overall> {
   return service().run(plan, (event) => useProvisioningStore.getState().applyEvent(event));
 }
 
+// Run the same plan again from a fresh run state. Every step is idempotent (an installed engine or a live socket is
+// skipped), so a retry picks up where the failure stopped.
+export async function retryRun(): Promise<Overall> {
+  const { plan, setPlan } = useProvisioningStore.getState();
+  if (!plan) {
+    return "failed";
+  }
+  setPlan(plan);
+  return runPlan();
+}
+
 // Cancel an in-flight run: kill the active command and mark the run canceled so the UI can reflect it.
 export function cancelRun(): void {
   service().cancel();

@@ -190,19 +190,19 @@ Apple's [`container`](https://github.com/apple/container) engine is a native mac
 
 #### Install Apple™ Container
 
-Download the signed installer package from the [Apple container releases](https://github.com/apple/container/releases), verify it, install it, then start the system service. The example below pins Apple™ Container `1.0.0`; if you choose a newer release, use that release's package name and checksum instead.
+Download the signed installer package from the [Apple container releases](https://github.com/apple/container/releases), verify it, install it, then start the system service. The example below pins Apple™ Container `1.7.1`; if you choose a newer release, use that release's package name and checksum instead.
 
 ```bash
 mkdir -p ~/Downloads/container-desktop-provision
 cd ~/Downloads/container-desktop-provision
 
-curl -L -o container-1.0.0-installer-signed.pkg \
-  https://github.com/apple/container/releases/download/1.0.0/container-1.0.0-installer-signed.pkg
+curl -L -o container-1.7.1-installer-signed.pkg \
+  https://github.com/apple/container/releases/download/1.7.1/container-1.7.1-installer-signed.pkg
 
-shasum -a 256 container-1.0.0-installer-signed.pkg
-# expect: 13f45f26da94c354adcbefe1e8f7631e7f126e93c5d4dd6a5a538aa66b4f479d
+shasum -a 256 container-1.7.1-installer-signed.pkg
+# expect: b6739caf3d47ca53a78f1a7edf32521420a75c7941838c3cefa75f30b80f5a97
 
-sudo installer -pkg container-1.0.0-installer-signed.pkg -target /
+sudo installer -pkg container-1.7.1-installer-signed.pkg -target /
 
 container system start
 ```
