@@ -22,7 +22,7 @@ export type Nth = "first" | "last" | number;
 export interface CaptureDriver {
   evaluate<T = unknown>(fn: (arg: any) => T, arg?: any): Promise<T>;
   // Like evaluate, but the page function returns a Promise that must be awaited in-page (e.g. a
-  // MutationObserver settle). Playwright's evaluate awaits it natively; WebdriverIO needs executeAsync.
+  // MutationObserver settle). Playwright's evaluate awaits it natively; WebdriverIO needs an async execute.
   evaluateAsync<T = unknown>(fn: (arg: any) => Promise<T>, arg?: any): Promise<T>;
   waitForFunction(fn: (arg: any) => any, arg?: any, opts?: { timeout?: number }): Promise<void>;
   pause(ms: number): Promise<void>;

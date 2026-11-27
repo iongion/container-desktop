@@ -3,8 +3,8 @@ import type { Box, CaptureDriver, Nth, Viewport } from "./types";
 // CaptureDriver over a WebdriverIO `browser` (W3C WebDriver → tauri-driver → WebKitWebDriver → the Tauri
 // app). WebKitGTK has no CDP, so this is the Tauri counterpart of the Playwright adapter. Notable seams:
 //  - execute() passes the single arg positionally to match Playwright's evaluate(fn, arg) semantics.
-//  - evaluateAsync() reconstructs the promise-returning page function via indirect eval, because
-//    browser.execute does NOT await a returned Promise (only executeAsync's done-callback does).
+//  - evaluateAsync() reconstructs the promise-returning page function via indirect eval and awaits it inside an
+//    async browser.execute script.
 //  - pointerMove() drives the pointer via the W3C Actions API (performActions) so screenshot
 //    pre-actions can position the cursor over a computed box before clicking (e.g. row action menus).
 // The __name shim (see runtimeShim.ts) must already be injected in the page before any of these run.
@@ -24,7 +24,8 @@ async function elementFor(browser: any, selector: string, nth?: Nth) {
     const elements = await browser.$$(selector);
     return elements[nth];
   }
-  return browser.$(selector);
+  // The port's "first" is Playwright's first(): the first match, never WebdriverIO 10's strict single match.
+  return browser.$(selector, { strict: false });
 }
 
 // Resolve the nth match of a selector and return its viewport-relative box (optionally scrolling it into
@@ -72,18 +73,16 @@ export function createWebdriverDriver(browser: any): CaptureDriver {
 
     async evaluateAsync(fn, arg) {
       const source = fn.toString();
-      const result = await browser.executeAsync(
-        (src: string, pageArg: any, done: (value: any) => void) => {
+      const result = await browser.execute(
+        async (src: string, pageArg: any) => {
           try {
             // Reconstruct the (tsx-transpiled) page function from its source and run it in the app realm.
             // biome-ignore lint/security/noGlobalEval: runs in the app's own page via WebDriver, not our Node process
             const rebuilt = eval(`(${src})`);
-            Promise.resolve(rebuilt(pageArg)).then(
-              (value) => done(value === undefined ? null : value),
-              (error) => done({ __captureError: String(error?.message || error) }),
-            );
+            const value = await rebuilt(pageArg);
+            return value === undefined ? null : value;
           } catch (error) {
-            done({ __captureError: String((error as any)?.message || error) });
+            return { __captureError: String((error as any)?.message || error) };
           }
         },
         source,
@@ -147,7 +146,7 @@ export function createWebdriverDriver(browser: any): CaptureDriver {
     },
 
     async waitForSelector(selector, opts) {
-      const element = await browser.$(selector);
+      const element = await browser.$(selector, { strict: false });
       await element.waitForDisplayed({ timeout: opts?.timeout ?? 30_000 });
     },
 
@@ -239,7 +238,7 @@ export function createWebdriverDriver(browser: any): CaptureDriver {
 
     async screenshotElement(selector, path) {
       try {
-        const element = await browser.$(selector);
+        const element = await browser.$(selector, { strict: false });
         await element.waitForExist({ timeout: 5_000 });
         await element.saveScreenshot(path);
       } catch {

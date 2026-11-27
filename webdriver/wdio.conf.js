@@ -79,9 +79,9 @@ export const config = {
   // narrowing anything, and on that suite a full run dials every real machine.
   specs: [path.join(__dirname, "specs", "**", "*.e2e.js")],
   maxInstances: 1,
-  // WebdriverIO wraps its worker in xvfb-run whenever DISPLAY is unset on Linux; the app has its own headless
-  // display, and under xvfb-run the worker dies at start on `write EINVAL`.
-  autoXvfb: false,
+  // WebdriverIO starts its own display server (Weston, else Xvfb) whenever DISPLAY is unset on Linux; the app has its
+  // own headless sway, and under WebdriverIO's display the worker died at start on `write EINVAL`.
+  displayServerEnabled: false,
   capabilities: [
     {
       // tauri-driver reads this to launch the app under WebKitWebDriver.

@@ -39,11 +39,14 @@ function mcpClient(url, token) {
 
 async function runningContainerIds() {
   await navigate(browser, CONTAINERS_ROUTE);
-  await browser.$('tr[data-container][data-state="running"]').waitForExist({ timeout: 30000 });
-  return browser.execute(() =>
-    [...document.querySelectorAll('tr[data-container][data-state="running"]')].map((row) =>
-      row.getAttribute("data-container"),
-    ),
+  const rows = 'tr[data-container][data-state="running"]';
+  await browser.waitUntil(async () => (await browser.$$(rows)).length > 0, {
+    timeout: 30000,
+    timeoutMsg: "no running container row on the Containers screen",
+  });
+  return browser.execute(
+    (selector) => [...document.querySelectorAll(selector)].map((row) => row.getAttribute("data-container")),
+    rows,
   );
 }
 

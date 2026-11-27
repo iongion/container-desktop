@@ -13,7 +13,7 @@ home-grown CLI (`yarn cli`, commander + tsx) in `support/cli/`.
 ## Stack
 
 Tauri 2 (Rust) · React 19 · Vite 8 (rolldown) · TypeScript 7 (native `tsc`) · Blueprint 6 (UI) · Zustand (state) · TanStack Query +
-Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format). Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic).
+Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format). Node **24.22.3** (`.nvmrc`), **yarn 1.x** (classic).
 
 ## Layout
 
@@ -40,7 +40,7 @@ Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format). Node **24.16.
 
 ## Commands
 
-Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
+Use the project Node first: `nvm use` (24.22.3). Package manager is **yarn**.
 
 - Install: `yarn install --frozen-lockfile` (or `make prepare`)
 - **Verify — run all before claiming done:** `yarn check-types` (tsc — app + `support/cli`) · `yarn lint` (Biome;
@@ -99,8 +99,8 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   data, use screenshots for paint.
 - **On Linux the WebDriver app never reaches your desktop.** Each session runs it on a private headless **sway**
   (`webdriver/support/headlessDisplay.js`, prereq `sway`), no `DISPLAY`, on the first GPU that is not NVIDIA's.
-  `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows the window. Keep `autoXvfb: false`: WebdriverIO otherwise wraps its worker
-  in `xvfb-run` and it dies on `write EINVAL`.
+  `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows the window. Keep `displayServerEnabled: false`: WebdriverIO otherwise starts
+  its own display server and the worker dies on `write EINVAL`.
 - **TWO suites; what a failure may mean is the difference.** `webdriver/specs/*.e2e.js` is the **mock app only** — a
   failure can only mean the app is wrong; always run, **never gated**. `webdriver/smoke/*.smoke.js` is **real
   integration** (real engines, machines): an absent subject must **skip**, not fail and not pass.

@@ -8,7 +8,7 @@ internals and conventions, the canonical guide is [`CLAUDE.md`](../CLAUDE.md).
 
 | Tool | Version           | Notes                                           |
 | ---- | ----------------- | ----------------------------------------------- |
-| Node | **24.16.0**       | pinned in [`.nvmrc`](../.nvmrc) — run `nvm use` |
+| Node | **24.22.3**       | pinned in [`.nvmrc`](../.nvmrc) — run `nvm use` |
 | Yarn | **1.x** (classic) | the package manager; do not use npm             |
 
 The build/dev/release tooling is a TypeScript CLI in [`support/cli/`](../support/cli/) (commander,
@@ -21,7 +21,7 @@ Windows is on you (for WSL, follow the Linux path).
 ## Setup
 
 ```bash
-nvm use                                   # Node 24.16.0
+nvm use                                   # Node 24.22.3
 yarn install --frozen-lockfile            # or: make prepare
 ```
 

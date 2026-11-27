@@ -87,8 +87,8 @@ On Linux the app never shows a window on your desktop
 - It renders on the first GPU that is not NVIDIA's (mesa-only EGL), or in software when there is none.
 - `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows the window, to watch a spec. Without sway the run stops and names the
   fix (`bash support/provision-deps.sh`).
-- `autoXvfb: false` is load-bearing: WebdriverIO otherwise wraps its worker in `xvfb-run` whenever `DISPLAY` is
-  unset, and the worker dies on `write EINVAL`.
+- `displayServerEnabled: false` is load-bearing: WebdriverIO otherwise starts its own display server whenever
+  `DISPLAY` is unset, and the worker died on `write EINVAL`.
 - A run killed mid-way leaves nothing running. Ctrl-C makes WebdriverIO SIGKILL its worker, which runs no exit
   handler, so sway and tauri-driver start under `setpriv --pdeathsig KILL` and the kernel ends them with it. The
   next session removes the dead run's directory.

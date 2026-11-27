@@ -32,7 +32,7 @@ process.env.CONTAINER_DESKTOP_MOCK = "";
 const SPEC_WAIT_HEADROOM_MS = 60000;
 
 // W3C's default script timeout is 30 SECONDS, and the specs here drive real engines from inside
-// `browser.executeAsync`. When that runs long WebdriverIO does not fail — it RETRIES the script, which starts the same
+// `browser.execute` scripts. When that runs long WebdriverIO does not fail — it RETRIES the script, which starts the same
 // work again on top of the first and reports a timeout nowhere near the cause. It is the suite's business rather than
 // each spec's, because what makes a script slow here is real machines; a slower spec can raise its own on top.
 const SCRIPT_TIMEOUT_MS = 600000;
