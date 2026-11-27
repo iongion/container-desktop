@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apple Container builds forward the SSH agent (`--ssh default`) and build several platforms into one image, amd64 through Rosetta
 - Apple Container: Pause and Resume are no longer offered on its containers (row actions, bulk actions, tray), since socktainer cannot pause one
 - Apple Container: compose stacks (Import stack, tear down) deploy through the Docker CLI's `docker compose` against the socktainer socket; without Docker's CLI the deploy says so
+- Apple Container machines (`container machine`) in the Machines screen: list, create from an image, start, stop, restart, delete, inspect, and a shell in the terminal
 
 ### Fixed
 

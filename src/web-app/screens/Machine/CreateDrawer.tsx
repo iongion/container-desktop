@@ -13,10 +13,14 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useId, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import type { Connection } from "@/container-client/types/connection";
+import { ContainerEngine } from "@/container-client/types/engine";
 import { createLogger } from "@/logger";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
-import { ConnectionSelect, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
+import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { FormLayout } from "@/web-app/components/FormLayout";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { useCreateMachine } from "./queries";
 
 const logger = createLogger("web.machine");
@@ -31,6 +35,16 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
   const [pending, setPending] = useState(false);
   const [connectionId, setConnectionId] = useState("");
   const machineCreate = useCreateMachine(connectionId);
+  const connections = useAppStore((state) => state.connections);
+  const activeRuntime = useResourceStore((state) => state.activeRuntime);
+  // Every connection whose engine runs machines: Podman's, and Apple's `container machine`.
+  const runsMachines = useCallback(
+    (connection: Connection) =>
+      activeRuntime.some((info) => info.id === connection.id && info.capabilities?.extensions?.machines === true),
+    [activeRuntime],
+  );
+  // An Apple machine boots from an image and has no disk size of its own.
+  const isApple = connections.find((connection) => connection.id === connectionId)?.engine === ContainerEngine.APPLE;
   const onDrawerClose = useCallback(() => {
     onClose();
   }, [onClose]);
@@ -39,6 +53,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
     machineCPUs: number;
     machineRAMSize: number;
     machineDiskSize: number;
+    machineImage: string;
   }>();
   const onSubmit = handleSubmit(async (data) => {
     try {
@@ -48,6 +63,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
         cpus: data.machineCPUs,
         ramSize: data.machineRAMSize,
         diskSize: data.machineDiskSize,
+        image: isApple ? data.machineImage : undefined,
       };
       await machineCreate.mutateAsync(creator);
       onClose();
@@ -71,12 +87,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
     >
       <div className={Classes.DRAWER_BODY}>
         <form id={formId} className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
-          <ConnectionSelect
-            value={connectionId}
-            onChange={setConnectionId}
-            filter={isPodmanConnection}
-            disabled={pending}
-          />
+          <ConnectionSelect value={connectionId} onChange={setConnectionId} filter={runsMachines} disabled={pending} />
           <div className="AppDataForm" data-form="machine.create">
             <FormGroup disabled={pending} label={t("Name")} labelFor="machineName">
               <Controller
@@ -105,6 +116,31 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
                 }}
               />
             </FormGroup>
+            {isApple ? (
+              <FormGroup disabled={pending} label={t("Image")} labelFor="machineImage">
+                <Controller
+                  control={control}
+                  name="machineImage"
+                  rules={{ required: true }}
+                  defaultValue=""
+                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => (
+                    <InputGroup
+                      fill
+                      disabled={pending}
+                      id={name}
+                      placeholder="alpine:3.22"
+                      name={name}
+                      value={value}
+                      required
+                      onBlur={onBlur}
+                      onChange={onChange}
+                      inputRef={ref}
+                      intent={invalid ? Intent.DANGER : Intent.NONE}
+                    />
+                  )}
+                />
+              </FormGroup>
+            ) : null}
             <FormLayout>
               <FormGroup disabled={pending} label={t("CPUs")} labelFor="machineCPUs">
                 <Controller
@@ -165,36 +201,38 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
                   }}
                 />
               </FormGroup>
-              <FormGroup disabled={pending} label={t("Disk size")} labelFor="machineDiskSize">
-                <Controller
-                  control={control}
-                  name="machineDiskSize"
-                  rules={{ required: true }}
-                  defaultValue={10}
-                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-                    return (
-                      <NumericInput
-                        fill
-                        autoFocus
-                        disabled={pending}
-                        id={name}
-                        name={name}
-                        value={value}
-                        allowNumericCharactersOnly
-                        min={1}
-                        stepSize={1}
-                        minorStepSize={1}
-                        rightElement={<div className="AppFormFieldMeasureUnit">{t("GB")}</div>}
-                        required
-                        onBlur={onBlur}
-                        onValueChange={onChange}
-                        inputRef={ref}
-                        intent={invalid ? Intent.DANGER : Intent.NONE}
-                      />
-                    );
-                  }}
-                />
-              </FormGroup>
+              {isApple ? null : (
+                <FormGroup disabled={pending} label={t("Disk size")} labelFor="machineDiskSize">
+                  <Controller
+                    control={control}
+                    name="machineDiskSize"
+                    rules={{ required: true }}
+                    defaultValue={10}
+                    render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                      return (
+                        <NumericInput
+                          fill
+                          autoFocus
+                          disabled={pending}
+                          id={name}
+                          name={name}
+                          value={value}
+                          allowNumericCharactersOnly
+                          min={1}
+                          stepSize={1}
+                          minorStepSize={1}
+                          rightElement={<div className="AppFormFieldMeasureUnit">{t("GB")}</div>}
+                          required
+                          onBlur={onBlur}
+                          onValueChange={onChange}
+                          inputRef={ref}
+                          intent={invalid ? Intent.DANGER : Intent.NONE}
+                        />
+                      );
+                    }}
+                  />
+                </FormGroup>
+              )}
             </FormLayout>
           </div>
           {pendingIndicator}

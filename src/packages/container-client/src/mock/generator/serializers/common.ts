@@ -58,6 +58,29 @@ export function serializeMachines(machines: LogicalMachine[]): unknown[] {
   }));
 }
 
+const APPLE_MACHINE_IMAGES = [
+  "docker.io/library/alpine:3.22",
+  "docker.io/library/debian:13",
+  "docker.io/library/ubuntu:26.04",
+];
+
+// Apple's `container machine inspect` items (1.7); `list` prints the same without the inspect-only fields.
+export function serializeAppleMachines(machines: LogicalMachine[]): unknown[] {
+  return machines.map((machine, index) => ({
+    id: machine.name,
+    status: machine.running ? "running" : "stopped",
+    default: machine.isDefault,
+    cpus: machine.cpus,
+    memory: machine.memory,
+    diskSize: machine.diskSize,
+    createdDate: iso(machine.createdAt),
+    ...(machine.running ? { ipAddress: `192.168.64.${index + 2}`, startedDate: iso(machine.lastUp) } : {}),
+    image: { reference: APPLE_MACHINE_IMAGES[index % APPLE_MACHINE_IMAGES.length] },
+    platform: { architecture: "arm64", os: "linux" },
+    homeMount: "rw",
+  }));
+}
+
 // Well-known public registries → realistic sign-in state for the demo (Hub rate-limits anonymous pulls,
 // quay uses a user login, ghcr a PAT, gcr/gitlab a CI robot). Everything else defaults to anonymous.
 const DEMO_REGISTRY_AUTH: Record<string, RegistryAuthInfo> = {

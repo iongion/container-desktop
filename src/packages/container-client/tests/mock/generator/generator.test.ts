@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildEngineDataset } from "@/container-client/mock/generator/index";
+import { parseAppleMachines } from "@/container-client/runtimes/dialects/apple-machines";
 import { ContainerStateList } from "@/container-client/types/container";
 import { ContainerEngine } from "@/container-client/types/engine";
 import { PodStatusList } from "@/container-client/types/pod";
@@ -55,11 +56,21 @@ describe("generator counts (per-engine stress targets)", () => {
     expect(list(ds.machines).length).toBe(0);
   });
 
-  it("apple mirrors docker (no pods or machines)", () => {
+  it("apple mirrors docker (no pods) and has `container machine` machines", () => {
     const ds = buildEngineDataset(ContainerEngine.APPLE);
     expect(list(ds.containers).length).toBeGreaterThanOrEqual(60);
     expect(list(ds.pods).length).toBe(0);
-    expect(list(ds.machines).length).toBe(0);
+    expect(list(ds.machines).length).toBeGreaterThanOrEqual(30);
+  });
+
+  it("apple machines are Apple's inspect JSON, which the dialect's parser reads", () => {
+    const machines = list(buildEngineDataset(ContainerEngine.APPLE).machines);
+    expect(machines[0]).toMatchObject({ id: expect.any(String), default: true, status: "running" });
+    expect(machines[0].image.reference).toBeTruthy();
+    expect(machines[0].Name).toBeUndefined();
+    const parsed = parseAppleMachines(JSON.stringify(machines));
+    expect(parsed.length).toBe(machines.length);
+    expect(parsed[0]).toMatchObject({ Name: machines[0].id, Running: true, Default: true, VMType: "apple" });
   });
 });
 

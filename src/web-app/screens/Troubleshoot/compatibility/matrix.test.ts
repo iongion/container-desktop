@@ -51,7 +51,7 @@ const containerCaps = (): ConnectorCapabilities => ({
   pause: false,
   sort: {},
   extensions: {
-    machines: false,
+    machines: true,
     kube: false,
     contexts: false,
     swarm: false,

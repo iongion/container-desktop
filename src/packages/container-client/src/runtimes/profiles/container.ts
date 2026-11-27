@@ -15,7 +15,7 @@ import { isEmpty } from "@/utils";
 import { APPLE_PROGRAM } from "../../connection";
 import type { HostContext, HostProfile } from "../composition";
 import { isScopedMacOS, runScopedSocketCommand } from "../dialects/shared";
-import { availableAlways, sshApiConnection } from "./shared";
+import { availableAlways, sshApiConnection, withMachines } from "./shared";
 
 // macOS 26 "Tahoe" is Darwin 25.
 const APPLE_MIN_DARWIN = 25;
@@ -144,7 +144,8 @@ export const appleSSHProfile: HostProfile = {
   getAutomaticSettings(host, settings) {
     return appleRemoteDetectSettings(host, settings);
   },
+  // A remote machine's shell would need its own SSH terminal; machines stay on the Mac they run on.
   adjustCapabilities(base) {
-    return base;
+    return withMachines(base, false);
   },
 };

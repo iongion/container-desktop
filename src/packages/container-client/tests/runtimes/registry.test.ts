@@ -26,7 +26,7 @@ const { Linux, Windows, MacOS } = OperatingSystem;
 
 // The full map: every (engine, host) → transport × program × controller, plus the two
 // host-adjusted facts that bite in production — whether the transport is scoped (needs a
-// controller/distro/instance) and whether `machines` is a real capability (Podman native/vendor only).
+// controller/distro/instance) and whether `machines` is a real capability (Podman native/vendor, Apple native).
 const MATRIX: MatrixRow[] = [
   {
     engine: ContainerEngine.PODMAN,
@@ -136,7 +136,7 @@ const MATRIX: MatrixRow[] = [
     controller: "container",
     transport: NativeTransport,
     scoped: false,
-    machines: false,
+    machines: true,
     osType: MacOS,
   },
   {
@@ -171,7 +171,7 @@ describe("host client registry — the engine × host matrix", () => {
       expect(client.ENGINE).toBe(row.engine);
       expect(client.HOST).toBe(row.host);
       expect(client.isScoped()).toBe(row.scoped);
-      // `machines` is real only on Podman native/vendor; no-op everywhere else.
+      // `machines` is real only on Podman native/vendor and Apple native; no-op everywhere else.
       expect(client.capabilities.extensions.machines).toBe(row.machines);
     });
   }

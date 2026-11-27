@@ -188,6 +188,7 @@ Apple's [`container`](https://github.com/apple/container) engine is a native mac
 - Apple's `container` CLI from the [official GitHub releases](https://github.com/apple/container/releases), or Homebrew's.
 - `socktainer`, which exposes a Docker Engine API socket, from its [releases](https://github.com/socktainer/socktainer/releases) or Homebrew.
 - For compose stacks only: Docker's CLI with its compose plugin (`brew install docker docker-compose`); the app runs `docker compose` against the socktainer socket.
+- Machines: Apple's `container machine` Linux VMs show in the Machines screen; create one from an image (for example `alpine:3.22`).
 - Not available on Apple™ Container: pausing a container, pods, secrets and swarm.
 
 #### Install Apple™ Container

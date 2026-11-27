@@ -13,6 +13,7 @@ import { APPLE_PROGRAM, SOCKTAINER_PROGRAM } from "../../connection";
 import type { EngineDialect, EngineExtensionMethods, HostContext, ServiceSpec } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 import { DOCKER_SORT_CAPABILITIES } from "../sort-capabilities";
+import { appleMachineCreateArgs, parseAppleMachineInspect, parseAppleMachines } from "./apple-machines";
 import { parseJSON, readScopedHome, runScopedSocketCommand } from "./shared";
 
 const SOCKTAINER_SOCKET_NAME = "container.sock";
@@ -49,16 +50,68 @@ export function parseAppleSystemStatus(stdout: string): AppleSystemStatus | unde
 }
 
 // The connection's own `container`, on this computer or over the SSH scope.
+async function runApple(
+  host: HostContext,
+  settings: EngineConnectorSettings,
+  args: string[],
+): Promise<CommandExecutionResult> {
+  const program = settings.program?.path || settings.program?.name || APPLE_PROGRAM;
+  return host.isScoped()
+    ? await host.runScopeCommand(program, args, settings.controller?.scope || "", settings)
+    : await host.runHostCommand(program, args, settings);
+}
+
 async function readAppleSystemStatus(
   host: HostContext,
   settings: EngineConnectorSettings,
 ): Promise<AppleSystemStatus | undefined> {
-  const program = settings.program?.path || settings.program?.name || APPLE_PROGRAM;
-  const args = ["system", "status", "--format", "json"];
-  const output = host.isScoped()
-    ? await host.runScopeCommand(program, args, settings.controller?.scope || "", settings)
-    : await host.runHostCommand(program, args, settings);
+  const output = await runApple(host, settings, ["system", "status", "--format", "json"]);
   return parseAppleSystemStatus(output.stdout || "");
+}
+
+// The machines extension over `container machine` (apple-machines.ts holds the pure mappings).
+function bindAppleMachines(
+  host: HostContext,
+): Pick<
+  EngineExtensionMethods,
+  | "getPodmanMachineInspect"
+  | "getPodmanMachines"
+  | "createPodmanMachine"
+  | "removePodmanMachine"
+  | "startPodmanMachine"
+  | "stopPodmanMachine"
+  | "restartPodmanMachine"
+  | "connectToPodmanMachine"
+> {
+  const machine = async (args: string[]) => runApple(host, await host.getSettings(), ["machine", ...args]);
+  // `run` boots a stopped machine; `true` makes it return at once.
+  const start = async (name: string) => (await machine(["run", "-n", name, "true"])).success;
+  return {
+    getPodmanMachineInspect: async (name?: string) =>
+      name ? parseAppleMachineInspect((await machine(["inspect", name])).stdout || "", name) : undefined,
+    getPodmanMachines: async () => parseAppleMachines((await machine(["list", "--format", "json"])).stdout || ""),
+    createPodmanMachine: async (opts) =>
+      (await runApple(host, await host.getSettings(), appleMachineCreateArgs(opts))).success,
+    removePodmanMachine: async (name: string) => {
+      await machine(["stop", name]);
+      return (await machine(["delete", name])).success;
+    },
+    startPodmanMachine: async (name: string) => ((await start(name)) ? StartupStatus.STARTED : StartupStatus.ERROR),
+    stopPodmanMachine: async (name: string) => (await machine(["stop", name])).success,
+    restartPodmanMachine: async (name: string) => {
+      await machine(["stop", name]);
+      return await start(name);
+    },
+    // The machine's login shell, with a TTY, in the user's terminal.
+    connectToPodmanMachine: async (name: string, title?: string) => {
+      const settings = await host.getSettings();
+      const program = settings.program?.path || settings.program?.name || APPLE_PROGRAM;
+      const output = await Platform.launchTerminal(program, ["machine", "run", "-i", "-t", "-n", name], {
+        title: title || "Apple machine",
+      });
+      return output.success;
+    },
+  };
 }
 
 // What the socktainer socket serves: socktainer's own version (`/version` Components) and the running apiserver's
@@ -138,7 +191,8 @@ export const containerDialect: EngineDialect = {
     pause: false,
     sort: DOCKER_SORT_CAPABILITIES,
     extensions: {
-      machines: false,
+      // `container machine` — real on Apple native (the SSH profile turns it off).
+      machines: true,
       kube: false,
       contexts: false,
       swarm: false,
@@ -208,17 +262,11 @@ export const containerDialect: EngineDialect = {
     return note;
   },
 
-  bindExtensions(_host: HostContext): EngineExtensionMethods {
+  bindExtensions(host: HostContext): EngineExtensionMethods {
     return {
+      // Apple machines (`container machine`), REAL on Apple native
+      ...bindAppleMachines(host),
       // Podman-domain groups — no-op on Apple
-      getPodmanMachineInspect: async () => undefined,
-      getPodmanMachines: async () => [],
-      createPodmanMachine: async () => false,
-      removePodmanMachine: async () => false,
-      startPodmanMachine: async () => StartupStatus.ERROR,
-      stopPodmanMachine: async () => false,
-      restartPodmanMachine: async () => false,
-      connectToPodmanMachine: async () => false,
       generateKube: async () => noopCommandResult(),
       getPodLogs: async () => noopCommandResult(),
 

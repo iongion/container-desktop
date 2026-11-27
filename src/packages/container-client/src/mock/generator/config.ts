@@ -32,8 +32,8 @@ const ENGINE_SEED_OFFSET: Record<ContainerEngine, number> = {
   [ContainerEngine.APPLE]: 3,
 };
 
-// Per-engine stress volumes. Pods, secrets, and machines are Podman-only — the Docker/Apple dialects declare
-// `resources: { pods: false, secrets: false }` and have no machines — so they stay 0 there; every other
+// Per-engine stress volumes. Pods and secrets are Podman-only — the Docker/Apple dialects declare
+// `resources: { pods: false, secrets: false }` — and Docker has no machines, so those stay 0 there; every other
 // resource is generated on each engine. Bump any value to scale the stress test.
 export const COUNTS: Record<ContainerEngine, EngineCounts> = {
   [ContainerEngine.PODMAN]: {
@@ -63,7 +63,7 @@ export const COUNTS: Record<ContainerEngine, EngineCounts> = {
     networks: 30,
     pods: 0,
     secrets: 0,
-    machines: 0,
+    machines: 30,
     registries: 30,
   },
 };

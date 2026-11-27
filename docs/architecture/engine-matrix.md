@@ -43,8 +43,9 @@ Notes:
   Apple's service and socktainer itself (`buildService`). `container.native` is gated to
   macOS 26 or later (Darwin ≥ 25) on Apple silicon; `container.remote` shows on all OSes
   (the remote must itself be an Apple-silicon Mac). Compose runs through the Docker
-  CLI's `docker compose` against the socktainer socket; pause, pods/secrets/swarm/
-  builders/contexts/kube/machines are unsupported.
+  CLI's `docker compose` against the socktainer socket; machines are `container
+  machine` (native only); pause, pods/secrets/swarm/builders/contexts/kube are
+  unsupported.
 - **Scope type** (`ControllerScopeType`) names the kind of thing the controller
   starts: a Podman machine, a WSL distribution, a Lima instance, or an SSH
   connection.

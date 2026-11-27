@@ -9,6 +9,7 @@ import {
   dockerImageName,
   dockerImageRef,
   iso,
+  serializeAppleMachines,
   serializeLogs,
   serializeMachines,
   serializeRegistriesMap,
@@ -286,7 +287,7 @@ export function serializeDocker(dataset: LogicalDataset): EngineFixtures {
     networks: dataset.networks.map(listNetwork),
     pods: [],
     secrets: serializeSecrets(dataset.secrets),
-    machines: serializeMachines(dataset.machines),
+    machines: apple ? serializeAppleMachines(dataset.machines) : serializeMachines(dataset.machines),
     registries: serializeRegistriesMap(dataset),
     extras: {
       versionText: "Docker version 27.3.1, build 41ca978",

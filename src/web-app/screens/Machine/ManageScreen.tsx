@@ -14,7 +14,7 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
-import { connectedConnections, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
+import { connectedConnections } from "@/web-app/components/ConnectionSelect";
 import { EngineCell, engineLabel } from "@/web-app/components/EngineCell";
 import type { ConnectionGroup } from "@/web-app/components/groupedTable/flattenConnectionGroups";
 import { useGroupedVirtualRows } from "@/web-app/components/groupedTable/useGroupedVirtualRows";
@@ -104,12 +104,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [activeRuntime],
   );
   const machineConnections = useMemo(
-    () =>
-      connectedConnections(
-        connections,
-        activeRuntime,
-        (connection) => isPodmanConnection(connection) && machineRuntimeIds.has(connection.id),
-      ),
+    () => connectedConnections(connections, activeRuntime, (connection) => machineRuntimeIds.has(connection.id)),
     [activeRuntime, connections, machineRuntimeIds],
   );
   const machineQueries = useQueries({
@@ -392,7 +387,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </td>
                     <td>{machine.Default ? t("Yes") : t("No")}</td>
                     <td>{machine.Running ? t("Yes") : t("No")}</td>
-                    <td>{dayjs(machine.LastUp).format("DD MMM YYYY HH:mm")}</td>
+                    <td>{machine.LastUp ? dayjs(machine.LastUp).format("DD MMM YYYY HH:mm") : "-"}</td>
                     <td>{dayjs(machine.Created).format("DD MMM YYYY HH:mm")}</td>
                     <td data-column="Actions">
                       <ActionsMenu withoutCreate machine={machine} connectionId={machine.connectionId} />

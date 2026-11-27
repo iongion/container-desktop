@@ -530,14 +530,15 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     secrets.push({ idHex: hex(faker, 24), name, createdAt, updatedAt: createdAt });
   }
 
-  // Machines (Podman only)
+  // Machines: Podman's VMs and Apple's `container machine` VMs
   const machines: LogicalMachine[] = [];
+  const machinePrefix = engine === ContainerEngine.APPLE ? "machine" : "podman-machine";
   for (let machineIndex = 0; machineIndex < counts.machines; machineIndex += 1) {
     const isDefault = machineIndex === 0;
     const running = isDefault || faker.datatype.boolean({ probability: 0.55 });
     const createdAt = faker.date.recent({ days: 120 });
     machines.push({
-      name: isDefault ? "podman-machine-default" : `podman-machine-${machineIndex}`,
+      name: isDefault ? `${machinePrefix}-default` : `${machinePrefix}-${machineIndex}`,
       active: running && (isDefault || faker.datatype.boolean({ probability: 0.5 })),
       running,
       vmType: faker.helpers.arrayElement(["qemu", "applehv", "wsl", "krun"]),

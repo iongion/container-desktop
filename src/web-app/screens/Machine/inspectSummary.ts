@@ -5,7 +5,7 @@ import { t } from "@/i18n";
 import type { InspectSummaryRow } from "@/web-app/components/InspectSummary";
 import { inspectDate, yesNo } from "@/web-app/components/inspectSummary.helpers";
 
-// Machines are Podman-only. The detail hook returns a PodmanMachineInspect but seeds from the
+// Machines are Podman's and Apple's (mapped to Podman's shapes). The detail hook returns a PodmanMachineInspect but seeds from the
 // PodmanMachine list item, whose field names differ (nested `Resources.*` + `State` vs top-level
 // `CPUs`/`Memory`/`DiskSize` + `Running`) — so read BOTH shapes with fallbacks.
 export function buildMachineSummary(machine: PodmanMachineInspect | PodmanMachine): InspectSummaryRow[] {

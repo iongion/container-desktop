@@ -29,7 +29,8 @@ export interface PodmanMachineInspect {
   };
   State: string;
   UserModeNetworking: boolean;
-  Rootful: boolean;
+  // Podman's; an Apple machine has none.
+  Rootful?: boolean;
   Rosetta: boolean;
 }
 
@@ -90,6 +91,8 @@ export interface CreateMachineOptions {
   diskSize: number;
   ramSize: number;
   name: string;
+  // The image an Apple machine boots (Apple only; Podman machines bring their own OS).
+  image?: string;
 }
 
 export interface FetchMachineOptions {

@@ -79,6 +79,23 @@ function unwrapScopeCommand(launcher: string, flat: string[]): { program: string
   return undefined;
 }
 
+interface AppleMachineFixture {
+  id: string;
+  [field: string]: unknown;
+}
+
+// Apple's `container machine`: the fixtures hold `inspect` items; `list` prints them without the inspect-only fields.
+function appleMachineCli(machines: AppleMachineFixture[], flat: string[]): CommandExecutionResult {
+  if (flat[1] === "list") {
+    const listed = machines.map(({ startedDate, image, platform, homeMount, ...item }) => item);
+    return okResult({ stdout: JSON.stringify(listed) });
+  }
+  if (flat[1] === "inspect") {
+    return okResult({ stdout: JSON.stringify(machines.filter((machine) => machine.id === flat[2])) });
+  }
+  return okResult();
+}
+
 async function runCli(launcher: string, args: string[]): Promise<CommandExecutionResult> {
   const flat = (args || []).map((a) => `${a}`);
   const unwrapped = unwrapScopeCommand(launcher, flat);
@@ -138,6 +155,9 @@ async function runCli(launcher: string, args: string[]): Promise<CommandExecutio
   }
   if (flat[0] === "machine") {
     const fx = await loadEngineFixtures(engine);
+    if (engine === ContainerEngine.APPLE) {
+      return appleMachineCli(fx.machines as AppleMachineFixture[], flat);
+    }
     if (engine !== ContainerEngine.PODMAN) {
       return okResult({ stdout: "[]" });
     }
