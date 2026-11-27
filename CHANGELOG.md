@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Linux AppImage and packages run again on distros older than Ubuntu 26.04 (Void, Debian, Ubuntu 24.04, Fedora): they are built on Ubuntu 22.04, glibc 2.35
+- macOS: engines installed by Homebrew, the Podman installer or Apple's package (Apple Container) are found when the app is opened from Finder or the Dock; it now uses the login shell's PATH
 - Transitive dependencies refreshed to their newest compatible releases, clearing the Dependabot alerts: undici 7.30.2; minimatch 11 and glob 14 for the test tooling that still asked for 10 and 13
 
 ## [7.0.0] - 2026-11-27

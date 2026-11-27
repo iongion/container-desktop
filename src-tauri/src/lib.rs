@@ -47,6 +47,10 @@ pub fn run_mcp_stdio() -> i32 {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // First, before any thread or command: a Finder/Dock launch has launchd's bare PATH, which hides every engine CLI.
+    #[cfg(unix)]
+    host::user_path::extend_process_path();
+
     // Dev ergonomics: start from the project root so RELATIVE paths — e.g. the
     // ./support/image-builders sample build context, or a "." build context — resolve against the sources dir,
     // not the src-tauri/ dir where `tauri dev` / `cargo run` launches the binary. Without this an image build's
