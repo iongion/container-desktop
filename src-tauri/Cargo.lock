@@ -607,9 +607,9 @@ dependencies = [
 name = "container-desktop"
 version = "6.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "futures-util",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "http-body-util",
  "hyper",
  "hyper-util",

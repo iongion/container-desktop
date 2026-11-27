@@ -33,7 +33,7 @@ serde_json = "1"
 # Obfuscate secrets in the degraded-vault keychain fallback file — NOT encryption,
 # the 0600 perms are the real protection; base64 just keeps keys off disk in plaintext. Already in the tree
 # (tauri/reqwest pull it), so declaring it direct adds nothing to the binary.
-base64 = "0.22"
+base64 = "0.23"
 # Native shell parity (Phase D): dialogs (openFileSelector), opener (external links + reveal storage folder),
 # process (relaunch/exit), window-state (persist bounds), single-instance (focus the first launch).
 tauri-plugin-dialog = "2"
@@ -72,7 +72,7 @@ hyper = { version = "1", features = ["server", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"
 subtle = "2"
-getrandom = "0.3"
+getrandom = "0.4"
 
 # Unix signal delivery for ExecuteStreaming/BackgroundService kill (SIGTERM/SIGKILL by pid — tokio's
 # Child::kill is SIGKILL-only). Windows uses taskkill by pid instead.
