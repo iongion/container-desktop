@@ -98,63 +98,89 @@ export function limaCreateCommands(name: string, engine: ContainerEngine): Strea
 // provisioning recipe in website-src/manual/macos.md §5.
 const APPLE_CONTAINER_VERSION = "1.7.1";
 const APPLE_CONTAINER_SHA256 = "b6739caf3d47ca53a78f1a7edf32521420a75c7941838c3cefa75f30b80f5a97";
+// socktainer's signed, notarized package (github.com/socktainer/socktainer), installed to /opt/socktainer/bin. It talks
+// to the running service over Apple's API, which stays compatible within a major version, so the pair needs only the
+// same major; bump it with Apple's when a newer socktainer ships.
+const SOCKTAINER_VERSION = "1.6.1";
+const SOCKTAINER_SHA256 = "d27a3ed4d37b421b17a1609e4575e3f227f1fcffb692b1a340d6e14ea178e9dc";
+const SOCKTAINER_BIN = "/opt/socktainer/bin/socktainer";
 
-// macOS's own administrator dialog for installing the package: a GUI app has no terminal for sudo to ask in. The
-// package path is passed as an argument and quoted by AppleScript, never spliced into the script text.
-const MACOS_INSTALL_PKG = [
-  "osascript",
+// macOS's own administrator dialog, once for every package the step needs: a GUI app has no terminal for sudo to ask
+// in. The package paths are arguments, quoted by AppleScript, never spliced into the script text. Cancelling the dialog
+// is error -128; any other failure is the installer's own.
+const MACOS_INSTALL_PKGS = [
+  "out=$(osascript",
   "-e 'on run argv'",
-  `-e 'do shell script "/usr/sbin/installer -pkg " & quoted form of (item 1 of argv) & " -target /" with administrator privileges'`,
+  `-e 'set cmd to ""'`,
+  "-e 'repeat with p in argv'",
+  `-e 'set cmd to cmd & "/usr/sbin/installer -pkg " & quoted form of (p as text) & " -target / && "'`,
+  "-e 'end repeat'",
+  `-e 'do shell script cmd & "true" with administrator privileges'`,
   "-e 'end run'",
-  '"$pkg"',
+  "$pkgs 2>&1) || {",
+  '  echo "$out" >&2;',
+  `  case "$out" in *"-128"*) exit ${ProvisionExit.Elevation};; *) exit ${ProvisionExit.Installer};; esac;`,
+  "};",
 ].join(" ");
 
-// Provision Apple's native `container` runtime on an Apple-silicon Mac: install the signed CLI package
-// (checksum-verified), start its system service, then install + start `socktainer` (the Docker-compatible
-// API bridge Container Desktop connects through). Every command is a host `sh -c` script (no VM/scope) and
-// idempotent — re-running skips work already done — so provisioning can be safely resumed. Mirrors the
-// manual's macOS §5 recipe.
+// Provision Apple's native `container` runtime on an Apple-silicon Mac, then socktainer, the Docker-compatible API
+// bridge Container Desktop connects through. Homebrew is never involved: its `container` formula stops every Apple
+// service when installed, and two installs fight over one service. An Apple container or socktainer Homebrew already
+// installed is kept as it is. Every command is a host `sh -c` script and idempotent, so provisioning can be resumed.
+// Mirrors the manual's macOS §5 recipe.
 export function appleContainerInstallCommands(
   version: string = APPLE_CONTAINER_VERSION,
   sha256: string = APPLE_CONTAINER_SHA256,
 ): StreamCommand[] {
   const pkg = `container-${version}-installer-signed.pkg`;
   const url = `https://github.com/apple/container/releases/download/${version}/${pkg}`;
+  const socktainerUrl = `https://github.com/socktainer/socktainer/releases/download/v${SOCKTAINER_VERSION}/socktainer-installer.pkg`;
   const installScript = [
     "set -e;",
-    // Idempotent: skip download + install when the CLI is already on PATH.
-    "if command -v container >/dev/null 2>&1; then",
-    '  echo "Apple container already installed: $(container --version 2>/dev/null || echo present)";',
+    // A fresh folder under $TMPDIR: the root-run installer cannot read ~/Downloads (macOS privacy protection).
+    'dir=$(mktemp -d "${TMPDIR:-/tmp}/container-desktop-provision.XXXXXX"); pkgs="";',
+    // Download and verify against the pinned checksum before anything is installed (fail-closed).
+    "fetch() {",
+    '  echo "Downloading $1";',
+    `  curl -fL -o "$dir/$1" "$2" || exit ${ProvisionExit.Download};`,
+    `  echo "$3  $dir/$1" | shasum -a 256 -c - || exit ${ProvisionExit.Checksum};`,
+    '  pkgs="$pkgs $dir/$1";',
+    "};",
+    "if [ -x /opt/homebrew/bin/container ]; then",
+    "  cli=/opt/homebrew/bin/container;",
+    '  echo "Keeping Homebrew\'s Apple container: $($cli --version)";',
     "else",
-    '  dir="$HOME/Downloads/container-desktop-provision"; mkdir -p "$dir";',
-    `  pkg="$dir/${pkg}";`,
-    `  echo "Downloading ${pkg}";`,
-    `  curl -fL -o "$pkg" ${url} || exit ${ProvisionExit.Download};`,
-    // Verify the signed package against the pinned checksum before installing (fail-closed).
-    `  echo "${sha256}  $pkg" | shasum -a 256 -c - || exit ${ProvisionExit.Checksum};`,
-    `  ${MACOS_INSTALL_PKG} || exit ${ProvisionExit.Elevation};`,
+    "  cli=/usr/local/bin/container;",
+    `  if [ -x "$cli" ] && "$cli" --version | grep -q -F "version ${version} "; then`,
+    `    echo "Apple container ${version} already installed";`,
+    "  else",
+    // An upgrade replaces a running service's binaries: stop it first, as Apple's notes ask.
+    '    if [ -x "$cli" ]; then "$cli" system stop >/dev/null 2>&1 || true; fi;',
+    `    fetch ${pkg} ${url} ${sha256};`,
+    "  fi;",
     "fi;",
-    // Safe to re-run; brings the runtime up whether freshly installed or already present.
-    "container system start",
+    `if command -v socktainer >/dev/null 2>&1 || [ -x ${SOCKTAINER_BIN} ]; then`,
+    '  echo "socktainer already installed";',
+    "else",
+    `  fetch socktainer-installer.pkg ${socktainerUrl} ${SOCKTAINER_SHA256};`,
+    "fi;",
+    `if [ -n "$pkgs" ]; then ${MACOS_INSTALL_PKGS} fi;`,
+    // Started here, by the chosen install, and non-interactively: with no terminal, the kernel prompt fails the step.
+    `"$cli" system start --enable-kernel-install || exit ${ProvisionExit.Service};`,
   ].join(" ");
   const socktainerScript = [
     "set -e;",
-    "if ! command -v brew >/dev/null 2>&1; then",
-    `  echo "Homebrew is required to install socktainer (https://brew.sh)" >&2; exit ${ProvisionExit.Homebrew};`,
-    "fi;",
-    // Idempotent: only tap + install when brew doesn't already have socktainer.
-    "if brew list socktainer >/dev/null 2>&1; then",
-    '  echo "socktainer already installed";',
-    "else",
-    "  brew tap socktainer/tap && brew install socktainer;",
-    "fi;",
     'mkdir -p "$HOME/.socktainer";',
+    `st=$(command -v socktainer || echo ${SOCKTAINER_BIN});`,
     // Running means the Docker-compatible socket answers: the socket file outlives a socktainer that has stopped.
     'up() { curl -sf -m 3 --unix-socket "$HOME/.socktainer/container.sock" http://localhost/_ping >/dev/null 2>&1; };',
     "if up; then",
     '  echo "socktainer already running";',
     "else",
-    '  nohup socktainer > "$HOME/.socktainer/socktainer.log" 2>&1 &',
+    // The service is already up; socktainer's own auto-start would pick whichever `container` is first on PATH and
+    // refuses one other than its pairing.
+    '  flags=""; if "$st" --help 2>&1 | grep -q -F -- --no-auto-start; then flags=--no-auto-start; fi;',
+    '  nohup "$st" $flags > "$HOME/.socktainer/socktainer.log" 2>&1 &',
     "  for i in 1 2 3 4 5 6 7 8 9 10; do up && break; sleep 1; done;",
     "fi;",
     `up || exit ${ProvisionExit.Socket};`,

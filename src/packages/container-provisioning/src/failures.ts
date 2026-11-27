@@ -12,9 +12,10 @@ export const ProvisionExit = {
   Download: 10,
   Checksum: 11,
   Elevation: 12,
-  Homebrew: 13,
+  Service: 13,
   PackageManager: 14,
   Socket: 15,
+  Installer: 16,
 } as const;
 
 export interface StepFailure {
@@ -40,9 +41,13 @@ const TAGGED: Record<number, { message: string; hint: string }> = {
     message: "The downloaded package did not match its expected checksum, so it was not installed.",
     hint: "Retry. If it fails again, the download may have been altered on the way.",
   },
-  [ProvisionExit.Homebrew]: {
-    message: "Homebrew is required for this step.",
-    hint: "Install Homebrew from brew.sh, then retry.",
+  [ProvisionExit.Installer]: {
+    message: "The installer failed, so nothing was installed.",
+    hint: "Details has the installer's own message. Retry once the cause is fixed.",
+  },
+  [ProvisionExit.Service]: {
+    message: "Apple's container service did not start.",
+    hint: "Details has its output. Run container system start in a terminal to see more, then retry.",
   },
   [ProvisionExit.PackageManager]: {
     message: "No supported package manager was found (apt, dnf or pacman).",

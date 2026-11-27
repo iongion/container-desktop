@@ -185,45 +185,41 @@ Apple's [`container`](https://github.com/apple/container) engine is a native mac
 
 - Apple silicon Mac.
 - macOS 26 Tahoe recommended. macOS 15 can run Apple `container`, but networking is degraded and some network commands are unavailable.
-- Apple's `container` CLI installed from the [official GitHub releases](https://github.com/apple/container/releases).
-- A compatible `socktainer` installation to expose a Docker Engine API socket.
+- Apple's `container` CLI from the [official GitHub releases](https://github.com/apple/container/releases), or Homebrew's.
+- `socktainer`, which exposes a Docker Engine API socket, from its [releases](https://github.com/socktainer/socktainer/releases) or Homebrew.
 
 #### Install Apple™ Container
 
-Download the signed installer package from the [Apple container releases](https://github.com/apple/container/releases), verify it, install it, then start the system service. The example below pins Apple™ Container `1.7.1`; if you choose a newer release, use that release's package name and checksum instead.
+The setup wizard does all of this for you. By hand: download Apple's signed package and socktainer's (the Docker-compatible API bridge), verify both, install both, then start the system service. The example pins Apple™ Container `1.7.1` and socktainer `1.6.1`; for newer releases use their package names and checksums. Use either these packages or Homebrew's `container` and `socktainer`, never both: two installs fight over one service.
 
 ```bash
-mkdir -p ~/Downloads/container-desktop-provision
-cd ~/Downloads/container-desktop-provision
+cd "$(mktemp -d)"
 
 curl -L -o container-1.7.1-installer-signed.pkg \
   https://github.com/apple/container/releases/download/1.7.1/container-1.7.1-installer-signed.pkg
+curl -L -o socktainer-installer.pkg \
+  https://github.com/socktainer/socktainer/releases/download/v1.6.1/socktainer-installer.pkg
 
-shasum -a 256 container-1.7.1-installer-signed.pkg
-# expect: b6739caf3d47ca53a78f1a7edf32521420a75c7941838c3cefa75f30b80f5a97
+shasum -a 256 container-1.7.1-installer-signed.pkg socktainer-installer.pkg
+# expect: b6739caf3d47ca53a78f1a7edf32521420a75c7941838c3cefa75f30b80f5a97  container-1.7.1-installer-signed.pkg
+# expect: d27a3ed4d37b421b17a1609e4575e3f227f1fcffb692b1a340d6e14ea178e9dc  socktainer-installer.pkg
 
 sudo installer -pkg container-1.7.1-installer-signed.pkg -target /
+sudo installer -pkg socktainer-installer.pkg -target /
 
-container system start
+container system start --enable-kernel-install
 ```
 
-#### Install socktainer
+#### Start socktainer
 
-Install the Docker-compatible API bridge:
-
-```bash
-brew tap socktainer/tap
-brew install socktainer
-```
-
-Start `socktainer` in the background and confirm that it exposes the Docker-compatible Unix socket:
+Start `socktainer` in the background, on the service already running, and confirm that its socket answers:
 
 ```bash
 mkdir -p ~/.socktainer
-nohup socktainer > ~/.socktainer/socktainer.log 2>&1 &
+nohup /opt/socktainer/bin/socktainer --no-auto-start > ~/.socktainer/socktainer.log 2>&1 &
 
 sleep 2
-test -S "$HOME/.socktainer/container.sock" && echo "socktainer socket OK"
+curl -sf --unix-socket "$HOME/.socktainer/container.sock" http://localhost/_ping && echo " socktainer OK"
 ```
 
 Verify the socket with the Docker Engine API endpoints Container Desktop uses:

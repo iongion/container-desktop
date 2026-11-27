@@ -114,7 +114,7 @@ describe("commandsForStep", () => {
     expect(cmds.length).toBeGreaterThanOrEqual(2);
     // Apple Container provisions on the macOS host, so nothing is scoped into a VM.
     expect(cmds.every((c) => c.program === "sh" && c.scope === undefined)).toBe(true);
-    expect(cmds[0].args[1]).toContain("container system start");
+    expect(cmds[0].args[1]).toContain('"$cli" system start');
     expect(cmds[1].args[1]).toContain("socktainer");
   });
 

@@ -100,7 +100,7 @@ describe("appleContainerInstallCommands", () => {
     }
   });
 
-  it("downloads a checksum-pinned signed package and installs + starts it, idempotently", () => {
+  it("downloads a checksum-pinned signed package and installs it, idempotently", () => {
     const install = appleContainerInstallCommands("1.0.0", "abc123")[0].args[1];
     // pinned release in the download URL + the package name
     expect(install).toContain(
@@ -117,19 +117,45 @@ describe("appleContainerInstallCommands", () => {
     expect(install).toContain(`exit ${ProvisionExit.Download}`);
     expect(install).toContain(`exit ${ProvisionExit.Checksum}`);
     expect(install).toContain(`exit ${ProvisionExit.Elevation}`);
-    // brings the runtime up
-    expect(install).toContain("container system start");
-    // idempotent: skip the download/install when the CLI is already present
-    expect(install).toMatch(/command -v container/);
+    expect(install).toContain(`exit ${ProvisionExit.Installer}`);
+    // idempotent: skip the download/install when Apple's CLI is already at the pinned version
+    expect(install).toContain('grep -q -F "version 1.0.0 "');
   });
 
-  it("installs socktainer via Homebrew and verifies its socket, idempotently", () => {
+  // Seen on a real Mac: the root-run installer cannot read ~/Downloads (macOS privacy protection) and answered "the
+  // package path specified was invalid" after the password was given.
+  it("downloads into a fresh temporary folder the installer can read, never ~/Downloads", () => {
+    const install = appleContainerInstallCommands()[0].args[1];
+    expect(install).toContain('mktemp -d "${TMPDIR:-/tmp}/container-desktop-provision.XXXXXX"');
+    expect(install).not.toContain("Downloads");
+  });
+
+  it("installs Apple's and socktainer's signed packages, pinned, in one administrator dialog", () => {
+    const install = appleContainerInstallCommands()[0].args[1];
+    expect(install).toContain("github.com/socktainer/socktainer/releases/download/v1.6.1/socktainer-installer.pkg");
+    expect(install).toContain("d27a3ed4d37b421b17a1609e4575e3f227f1fcffb692b1a340d6e14ea178e9dc");
+    expect(install.match(/with administrator privileges/g)).toHaveLength(1);
+    // No Homebrew: its `container` formula stops every Apple service when installed, and two installs fight over one.
+    expect(install).not.toMatch(/brew (install|tap)/);
+  });
+
+  it("keeps an Apple container or socktainer that Homebrew already installed", () => {
+    const install = appleContainerInstallCommands()[0].args[1];
+    expect(install).toContain("[ -x /opt/homebrew/bin/container ]");
+    expect(install).toContain("command -v socktainer");
+  });
+
+  // With no terminal to answer it, the kernel prompt of `system start` fails the step on a fresh Mac.
+  it("starts Apple's service without the interactive kernel prompt", () => {
+    const install = appleContainerInstallCommands()[0].args[1];
+    expect(install).toContain(`"$cli" system start --enable-kernel-install || exit ${ProvisionExit.Service}`);
+  });
+
+  it("starts socktainer on the service already running and verifies its socket answers", () => {
     const socktainer = appleContainerInstallCommands()[1].args[1];
-    expect(socktainer).toMatch(/brew (tap socktainer\/tap|install socktainer)/);
     expect(socktainer).toContain("container.sock");
-    // idempotent guard: don't re-install when brew already has it
-    expect(socktainer).toMatch(/brew list socktainer/);
-    expect(socktainer).toContain(`exit ${ProvisionExit.Homebrew}`);
+    expect(socktainer).toContain("--no-auto-start");
+    expect(socktainer).toContain("/opt/socktainer/bin/socktainer");
     expect(socktainer).toContain(`exit ${ProvisionExit.Socket}`);
   });
 

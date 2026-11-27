@@ -89,6 +89,11 @@ describe("parseProgramVersion", () => {
     expect(parseProgramVersion("container CLI version 1.1.0 (build: release, commit: unspeci)")).toBe("1.1.0");
   });
 
+  // Read off a real Mac: `socktainer --version` names no word `version`, and its third token is `(git`.
+  it("reads the first version-shaped token of a banner without the word `version`", () => {
+    expect(parseProgramVersion("socktainer: v1.6.1 (git commit: 71f2415)")).toBe("1.6.1");
+  });
+
   it("still reads podman and docker, whose banners have no extra word", () => {
     expect(parseProgramVersion("podman version 5.2.2")).toBe("5.2.2");
     expect(parseProgramVersion("Docker version 29.6.2, build dfc4efb1e2")).toBe("29.6.2");

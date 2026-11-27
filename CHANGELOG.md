@@ -14,12 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Setup wizard: a failed step says what went wrong in one sentence, with Retry; the command and its output sit in a collapsed Details section, each copyable
-- Setup wizard installs Apple Container 1.7.1
+- Setup wizard installs Apple Container 1.7.1 and socktainer 1.6.1 from their signed packages, in one password dialog, with no Homebrew needed; an Apple container or socktainer Homebrew installed is kept
 
 ### Fixed
 
 - Setup wizard: installing Apple Container asks for the administrator password in macOS's own dialog, and Linux installs use the desktop's password dialog (pkexec); neither fails any more for lack of a terminal
 - Setup wizard: a socktainer socket left over from an earlier run no longer counts as socktainer running; it starts socktainer and waits until it answers
+- Setup wizard on macOS: the Apple Container install works on a fresh Mac. It downloads into a temporary folder the installer can read (not Downloads), starts the service without its interactive kernel prompt, and a failed installer is no longer reported as a missing password
 - macOS: the window has its close, minimize and zoom buttons again, Apple's own, over the app's header
 - macOS and Linux: a running Podman machine connects; the app dialed the API socket inside the machine's VM instead of the one the machine serves on this computer
 - German: "Volumes" is no longer translated as "Bände"

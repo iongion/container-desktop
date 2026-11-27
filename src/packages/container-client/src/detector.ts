@@ -21,7 +21,10 @@ export const parseProgramVersion = (input: string | undefined) => {
     // Once the word is found, what follows it IS the answer — including nothing. Falling back to the
     // positional reading there re-creates the defect on a truncated banner: the third token of
     // `container CLI version` is the word `version` itself.
-    parsed = (named >= 0 ? (words[named + 1] ?? "") : field.split(" ")?.[2] || "").trim();
+    // A banner without the word (`socktainer: v1.6.1 (git commit: …)`) names its version as the first token shaped
+    // like one; only a banner with neither keeps the positional reading.
+    const shaped = words.map((word) => word.match(/^v?(\d+(?:\.\d+)+)/)?.[1]).find(Boolean);
+    parsed = (named >= 0 ? (words[named + 1] ?? "") : shaped || field.split(" ")?.[2] || "").trim();
   } catch (error: any) {
     logger.error("Unable to parse program version", error.message);
   }

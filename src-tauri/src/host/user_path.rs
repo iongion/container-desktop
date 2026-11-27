@@ -83,6 +83,7 @@ pub(crate) fn install_dirs(home: Option<&Path>) -> Vec<String> {
         "/usr/local/bin",
         "/usr/local/sbin",
         "/opt/podman/bin",
+        "/opt/socktainer/bin",
         "/opt/local/bin",
     ];
     #[cfg(not(target_os = "macos"))]
