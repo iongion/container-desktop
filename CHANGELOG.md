@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Containers, images and the other lists no longer stay empty when an engine is slow to answer at startup (Docker starting many containers at login): lists wait up to 30 s instead of 3 s, and a list that fails while its engine still answers is read again with back-off until it loads
+- A list the engine answers with an error is reported as a failure and retried, instead of showing as an empty list
+- Connection errors name the engine's socket and the cause (`/run/user/1000/podman/podman.sock could not be reached: Connection refused`), not a placeholder URL such as `http://d/_ping`
+
 ## [7.2.0] - 2026-11-27
 
 ### Changed

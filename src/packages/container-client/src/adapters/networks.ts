@@ -14,18 +14,10 @@ export type CreateNetworkOptions = Partial<Network>;
 
 export class NetworksAdapter extends ResourceAdapter {
   async list(): Promise<Network[]> {
-    const driver = await this.driver();
-    try {
-      if (this.usesDockerApi) {
-        const result = await driver.get<any[]>("/networks", { baseURL: DOCKER_BASE_URL });
-        return (result.data as any[]).map((it) => this.normalizers.normalizeNetwork(it));
-      }
-      const result = await driver.get<Network[]>("/networks/json", { baseURL: LIBPOD_BASE_URL });
-      return (result.data || []).map((it) => this.normalizers.normalizeNetwork(it));
-    } catch (error: any) {
-      logger.error("Unable to fetch networks", error);
-      return [];
-    }
+    const items = this.usesDockerApi
+      ? await this.getList<Network[]>("/networks", "networks", { baseURL: DOCKER_BASE_URL })
+      : await this.getList<Network[]>("/networks/json", "networks", { baseURL: LIBPOD_BASE_URL });
+    return (items ?? []).map((it) => this.normalizers.normalizeNetwork(it));
   }
 
   async get(name: string): Promise<Network> {

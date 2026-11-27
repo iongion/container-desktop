@@ -166,6 +166,56 @@ describe("EngineDataService.refresh", () => {
     expect(service.getResourceState(connection.id).containers).toEqual([]);
     expect(service.getResourceState(connection.id).images).toEqual([]);
   });
+
+  // The engine answers its ping but one list failed (it timed out while Docker was busy starting containers at
+  // login). Nothing else re-reads that list until an engine event, so the screen stayed empty: retry it.
+  function flakyHost(failures: number) {
+    let calls = 0;
+    const host = {
+      ENGINE: ContainerEngine.PODMAN,
+      capabilities: { resources: { pods: false, secrets: false, networks: true } },
+      getApiDriver: async () => ({
+        get: async () => {
+          calls += 1;
+          if (calls <= failures) {
+            throw new Error("/var/run/docker.sock did not answer in time");
+          }
+          return { status: 200, data: [{ Id: "c1", Names: ["/web-1"], Image: "img", State: "running" }] };
+        },
+      }),
+      isApiRunning: vi.fn(async () => ({ success: true, details: "Api is reachable" })),
+    } as unknown as HostClientFacade;
+    return { host, calls: () => calls };
+  }
+
+  it("retries a list that failed while the engine still answers, until it loads", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    const { host, calls } = flakyHost(2);
+    (service as any).hostByConnection.set("conn-1", host);
+
+    await expect(service.refresh("conn-1", "containers", host)).rejects.toThrow("did not answer in time");
+    expect(service.getResourceState("conn-1").containers).toEqual([]);
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(service.getResourceState("conn-1").containers).toHaveLength(1);
+    expect(calls()).toBe(3);
+    vi.useRealTimers();
+  });
+
+  it("stops retrying a failed list once its connection is disconnected", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    const { host, calls } = flakyHost(Number.POSITIVE_INFINITY);
+    (service as any).hostByConnection.set("conn-1", host);
+
+    await expect(service.refresh("conn-1", "containers", host)).rejects.toThrow("did not answer in time");
+    await service.disconnectOne("conn-1");
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    expect(calls()).toBe(1);
+    vi.useRealTimers();
+  });
 });
 
 describe("EngineDataService.onEngineEvent", () => {

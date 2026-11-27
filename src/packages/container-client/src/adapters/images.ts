@@ -30,9 +30,8 @@ export class ImagesAdapter extends ResourceAdapter {
   }
 
   async list(): Promise<ContainerImage[]> {
-    const driver = await this.driver();
-    const result = await driver.get<ContainerImage[]>("/images/json");
-    return this.isOk(result) ? result.data.map((it) => this.normalizers.normalizeImage(it)) : [];
+    const items = await this.getList<ContainerImage[]>("/images/json", "images");
+    return items.map((it) => this.normalizers.normalizeImage(it));
   }
 
   async get(id: string, opts?: FetchImageOptions): Promise<ContainerImage | undefined> {

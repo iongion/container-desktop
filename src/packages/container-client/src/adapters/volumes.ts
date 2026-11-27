@@ -20,14 +20,11 @@ export interface FetchVolumeOptions {
 
 export class VolumesAdapter extends ResourceAdapter {
   async list(): Promise<Volume[]> {
-    const driver = await this.driver();
-    if (this.usesDockerApi) {
-      const result = await driver.get<any>("/volumes", { baseURL: DOCKER_BASE_URL });
-      const items: Volume[] = this.isOk(result) ? result.data.Volumes || [] : [];
-      return items.map((it) => this.normalizers.normalizeVolume(it));
-    }
-    const result = await driver.get<Volume[]>("/volumes/json", { baseURL: LIBPOD_BASE_URL });
-    return this.isOk(result) ? result.data.map((it) => this.normalizers.normalizeVolume(it)) : [];
+    const items = this.usesDockerApi
+      ? ((await this.getList<{ Volumes?: Volume[] }>("/volumes", "volumes", { baseURL: DOCKER_BASE_URL })).Volumes ??
+        [])
+      : await this.getList<Volume[]>("/volumes/json", "volumes", { baseURL: LIBPOD_BASE_URL });
+    return items.map((it) => this.normalizers.normalizeVolume(it));
   }
 
   async get(nameOrId: string, _opts?: FetchVolumeOptions): Promise<Volume> {

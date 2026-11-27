@@ -244,7 +244,10 @@ async fn do_buffered(
     if timeout_ms > 0 {
         builder = builder.timeout(Duration::from_millis(timeout_ms));
     }
-    let response = builder.send().await.map_err(|e| e.to_string())?;
+    let response = builder
+        .send()
+        .await
+        .map_err(|e| http::describe_transport_error(&socket, e))?;
     let status = response.status().as_u16();
     let status_text = response
         .status()
@@ -252,7 +255,10 @@ async fn do_buffered(
         .unwrap_or("")
         .to_string();
     let headers = http::collect_headers(response.headers());
-    let body = response.bytes().await.map_err(|e| e.to_string())?;
+    let body = response
+        .bytes()
+        .await
+        .map_err(|e| http::describe_transport_error(&socket, e))?;
     let ok = (200..300).contains(&status);
     Ok(ProxyResponse {
         stream: false,
@@ -296,8 +302,8 @@ pub async fn proxy_request_stream(
         builder.send(),
     )
     .await
-    .map_err(|_| "stream open timeout".to_string())?
-    .map_err(|e| e.to_string())?;
+    .map_err(|_| format!("{socket} did not answer in time"))?
+    .map_err(|e| http::describe_transport_error(&socket, e))?;
     let status = response.status().as_u16();
     let headers = http::collect_headers(response.headers());
     let stream_id = state.next_id();

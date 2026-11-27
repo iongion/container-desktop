@@ -60,6 +60,8 @@ const EVENT_REFRESH_DEBOUNCE_MS = 500;
 const EVENTS_MIN_UPTIME_MS = 1500;
 const EVENTS_ATTACH_TIMEOUT_MS = 3000;
 const RESOURCE_WARMUP_TIMEOUT_MS = 5000;
+// Back-off for re-reading a list that failed while its engine still answers (see scheduleListRetry).
+const LIST_RETRY_POLICY = { initialMs: 1000, maxMs: 30000, factor: 2 };
 const MACHINES_LOAD_TIMEOUT_MS = 3000;
 // Timeout for individual engine connections — prevents indefinite hangs during startup.
 const CONNECTION_TIMEOUT_MS = 60000;
@@ -196,6 +198,9 @@ export class EngineDataService {
   private readonly emitter = new EventEmitter();
   private readonly resourceByConnection = new Map<string, ResourceState>();
   private readonly resourceSignatures = new Map<string, string>();
+  // A list that failed while its engine still answers, keyed "<connectionId>:<domain>": the back-off attempt and the
+  // pending re-read. Nothing else re-reads a list until an engine event, so without it the screen stays empty.
+  private readonly listRetries = new Map<string, { attempt: number; timer?: ReturnType<typeof setTimeout> }>();
   private readonly refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private app?: Application;
   // Multi-connection: a host client, /events stop-handle, machine cache and runtime status PER connection id.
@@ -349,11 +354,48 @@ export class EngineDataService {
     }
     try {
       const items = await this.loadDomain(host, domain);
+      this.clearListRetry(`${connectionId}:${domain}`);
       this.setResourceItems(connectionId, domain, items);
     } catch (error) {
-      await this.handleRefreshFailure(connectionId, host, error);
+      logger.warn("refresh failed", {
+        connectionId,
+        domain,
+        error: error instanceof Error ? error.message : `${error}`,
+      });
+      if (await this.handleRefreshFailure(connectionId, host, error)) {
+        this.scheduleListRetry(connectionId, domain, host);
+      }
       throw error;
     }
+  }
+
+  // Re-read a list that failed while its engine still answers, with the reconnect back-off, until it loads or its
+  // connection is gone (disconnected, dropped, or rebuilt with another host).
+  private scheduleListRetry(connectionId: string, domain: ResourceDomain, host: HostClientFacade): void {
+    const key = `${connectionId}:${domain}`;
+    const pending = this.listRetries.get(key);
+    if (pending?.timer) {
+      return;
+    }
+    const attempt = (pending?.attempt ?? 0) + 1;
+    const delay = this.backoffDelay(attempt, LIST_RETRY_POLICY);
+    const timer = setTimeout(() => {
+      this.listRetries.set(key, { attempt });
+      if (this.hostByConnection.get(connectionId) !== host) {
+        this.listRetries.delete(key);
+        return;
+      }
+      void this.refresh(connectionId, domain, host).catch(() => undefined);
+    }, delay);
+    this.listRetries.set(key, { attempt, timer });
+  }
+
+  private clearListRetry(key: string): void {
+    const pending = this.listRetries.get(key);
+    if (pending?.timer) {
+      clearTimeout(pending.timer);
+    }
+    this.listRetries.delete(key);
   }
 
   private supportsDomain(host: HostClientFacade, domain: ResourceDomain): boolean {
@@ -563,8 +605,7 @@ export class EngineDataService {
     this.hostByConnection.delete(connectionId);
     this.machinesByConnection.delete(connectionId);
     this.runtimeByConnection.delete(connectionId);
-    this.resourceByConnection.delete(connectionId);
-    this.clearResourceSignatures(connectionId);
+    this.forgetResources(connectionId);
     if (this.primaryId === connectionId) {
       this.primaryId = Array.from(this.runtimeByConnection.values()).find((r) => r.running)?.id;
       this.machines = (this.primaryId && this.machinesByConnection.get(this.primaryId)) || [];
@@ -572,9 +613,12 @@ export class EngineDataService {
     this.emitChange();
   }
 
-  private clearResourceSignatures(connectionId: string): void {
+  // Drop a connection's lists, their change signatures and any pending list re-read.
+  private forgetResources(connectionId: string): void {
+    this.resourceByConnection.delete(connectionId);
     for (const domain of RESOURCE_DOMAINS) {
       this.resourceSignatures.delete(`${connectionId}:${domain}`);
+      this.clearListRetry(`${connectionId}:${domain}`);
     }
   }
 
@@ -631,16 +675,18 @@ export class EngineDataService {
     void this.scheduleReconnect(connection, reason);
   }
 
-  private async handleRefreshFailure(connectionId: string, host: HostClientFacade, error: unknown): Promise<void> {
+  // A refresh failed: when the engine no longer answers, demote the connection and reconnect. Answers true when the
+  // engine still answers on this connection's current host, so only that list failed and is worth re-reading.
+  private async handleRefreshFailure(connectionId: string, host: HostClientFacade, error: unknown): Promise<boolean> {
     if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
-      return;
+      return false;
     }
     const api = await settleWithin(host.isApiRunning(), EVENTS_ATTACH_TIMEOUT_MS + 500);
     if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
-      return;
+      return false;
     }
     if (api?.success) {
-      return;
+      return true;
     }
     const reason = api?.details || (error instanceof Error ? error.message : `${error}`) || "API is not reachable";
     const connection = this.connectionById.get(connectionId);
@@ -650,6 +696,7 @@ export class EngineDataService {
     } else {
       this.markConnectionFailed(connectionId, reason);
     }
+    return false;
   }
 
   private clearLiveConnectionState(connectionId: string): void {
@@ -660,8 +707,7 @@ export class EngineDataService {
     }
     this.hostByConnection.delete(connectionId);
     this.machinesByConnection.delete(connectionId);
-    this.resourceByConnection.delete(connectionId);
-    this.clearResourceSignatures(connectionId);
+    this.forgetResources(connectionId);
   }
 
   private markConnectionFailed(connectionId: string, reason: string): void {

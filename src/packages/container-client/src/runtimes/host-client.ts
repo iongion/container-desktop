@@ -458,7 +458,7 @@ export class HostClient implements HostContext {
         // never there from one that answered something unexpected, and the object alone logged as a bare stack.
         this.logger.warn(
           this.id,
-          `API ping service failed - response failure (attempt ${attemptsMade}): ${error?.code ?? "no-code"} ${error?.message ?? error}`,
+          `API ping service failed - response failure (attempt ${attemptsMade}): ${error?.code ? `${error.code} ` : ""}${error?.message ?? error}`,
         );
         return { success: false, details: "API is not reachable - start manually or connect" };
       }

@@ -6,7 +6,7 @@
 // inline `if (engine === DOCKER)` shape branching in shared code — shape lives in the per-engine
 // normalizers; the few genuine endpoint-PATH differences (volumes, networks) live in the owning adapter.
 
-import type { AxiosInstance, AxiosResponse } from "axios";
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 
 import { Application } from "@/container-client/Application";
 import type { StackHookTarget } from "@/container-client/lifecycleHooks";
@@ -14,7 +14,7 @@ import { dockerNormalizers } from "@/container-client/normalizers/docker";
 import { podmanNormalizers } from "@/container-client/normalizers/podman";
 import type { EngineNormalizers } from "@/container-client/normalizers/shared";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
-import { DOCKER_BASE_URL, LIBPOD_BASE_URL, LIFECYCLE_TIMEOUT_MS } from "./baseUrls";
+import { DOCKER_BASE_URL, LIBPOD_BASE_URL, LIFECYCLE_TIMEOUT_MS, LIST_TIMEOUT_MS } from "./baseUrls";
 
 // Re-exported from the dependency-free ./baseUrls leaf so existing importers (`import { DOCKER_BASE_URL }
 // from "./shared"`) keep working, while swarm-rest can import them without pulling Application.
@@ -69,5 +69,17 @@ export abstract class ResourceAdapter {
   // 2xx check.
   protected isOk(response: AxiosResponse): boolean {
     return response.status >= 200 && response.status < 300;
+  }
+
+  // Read a resource list. It gets LIST_TIMEOUT_MS (a busy engine takes seconds to answer), and an error answer
+  // throws with the engine's own reason, so a failed list is retried instead of passing for an empty one.
+  protected async getList<T>(path: string, what: string, config: AxiosRequestConfig = {}): Promise<T> {
+    const driver = await this.driver();
+    const result = await driver.get<T>(path, { ...config, timeout: LIST_TIMEOUT_MS });
+    if (!this.isOk(result)) {
+      const reason = (result.data as { message?: unknown } | undefined)?.message;
+      throw new Error(`Could not list ${what}: the engine answered ${result.status}${reason ? ` (${reason})` : ""}`);
+    }
+    return result.data;
   }
 }

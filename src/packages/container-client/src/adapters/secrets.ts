@@ -17,9 +17,8 @@ export interface FetchSecretOptions {
 
 export class SecretsAdapter extends ResourceAdapter {
   async list(): Promise<Secret[]> {
-    const driver = await this.driver();
-    const result = await driver.get<Secret[]>("/secrets/json", { baseURL: this.baseURL });
-    return this.isOk(result) ? result.data.map((it) => this.normalizers.normalizeSecret(it)) : [];
+    const items = await this.getList<Secret[]>("/secrets/json", "secrets", { baseURL: this.baseURL });
+    return items.map((it) => this.normalizers.normalizeSecret(it));
   }
 
   async get(nameOrId: string, _opts?: FetchSecretOptions): Promise<Secret> {

@@ -46,6 +46,20 @@ pub(super) fn collect_headers(map: &HeaderMap) -> HashMap<String, String> {
     out
 }
 
+// A request that got no answer, in words a user can act on: the socket it dialed and the root cause. Never the
+// URL reqwest names (`http://d/_ping`): the request travels over the socket and that host is never dialed.
+pub(super) fn describe_transport_error(socket: &str, error: reqwest::Error) -> String {
+    if error.is_timeout() {
+        return format!("{socket} did not answer in time");
+    }
+    let error = error.without_url();
+    let mut cause: &dyn std::error::Error = &error;
+    while let Some(next) = cause.source() {
+        cause = next;
+    }
+    format!("{socket} could not be reached: {cause}")
+}
+
 // Linux Flatpak sandbox → host socket remap (mirrors Api.clients.ts): /run/user/* → /var/run/user/*,
 // everything else → /var/run/host/*. No-op outside Flatpak and off Linux.
 #[cfg(target_os = "linux")]
@@ -64,4 +78,57 @@ pub(super) fn flatpak_remap(path: String) -> String {
 #[cfg(not(target_os = "linux"))]
 pub(super) fn flatpak_remap(path: String) -> String {
     path
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::describe_transport_error;
+    use std::time::Duration;
+
+    fn socket_path(name: &str) -> String {
+        let dir = std::env::temp_dir().join(format!("cd-proxy-{}-{name}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir.join("engine.sock").to_string_lossy().into_owned()
+    }
+
+    async fn failed_ping(socket: &str, timeout: Duration) -> reqwest::Error {
+        let client = reqwest::Client::builder()
+            .unix_socket(socket)
+            .build()
+            .unwrap();
+        client
+            .get("http://d/_ping")
+            .timeout(timeout)
+            .send()
+            .await
+            .expect_err("nothing answers on this socket")
+    }
+
+    #[tokio::test]
+    async fn a_missing_socket_names_the_socket_and_why_not_the_placeholder_url() {
+        let socket = socket_path("missing");
+        let message =
+            describe_transport_error(&socket, failed_ping(&socket, Duration::from_secs(2)).await);
+        assert_eq!(
+            message,
+            format!("{socket} could not be reached: No such file or directory (os error 2)")
+        );
+    }
+
+    #[tokio::test]
+    async fn a_socket_that_never_answers_says_so() {
+        let socket = socket_path("silent");
+        let _ = std::fs::remove_file(&socket);
+        let listener = tokio::net::UnixListener::bind(&socket).unwrap();
+        let _held = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            drop(stream);
+        });
+        let message = describe_transport_error(
+            &socket,
+            failed_ping(&socket, Duration::from_millis(200)).await,
+        );
+        assert_eq!(message, format!("{socket} did not answer in time"));
+    }
 }

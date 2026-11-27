@@ -16,3 +16,8 @@ export const DOCKER_BASE_URL = "http://localhost";
 // spuriously "fail" them while the engine is still working — leaving state inconsistent and, under a teardown
 // request storm, tripping a transient disconnect. Finite so a truly hung request still resolves eventually.
 export const LIFECYCLE_TIMEOUT_MS = 60_000;
+
+// Client request timeout (ms) for the resource lists (containers, images, volumes, networks, pods, secrets). A busy
+// engine — Docker starting dozens of containers at login — takes seconds to answer one, and under the generic 3s
+// timeout the list failed and its screen stayed empty.
+export const LIST_TIMEOUT_MS = 30_000;

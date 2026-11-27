@@ -14,14 +14,8 @@ export interface CreatePodOptions {
 
 export class PodsAdapter extends ResourceAdapter {
   async list(): Promise<Pod[]> {
-    const driver = await this.driver();
-    const result = await driver.get<Pod[]>("/pods/json", {
-      baseURL: LIBPOD_BASE_URL,
-      params: {
-        all: true,
-      },
-    });
-    return this.isOk(result) ? result.data.map((it) => this.normalizers.normalizePod(it)) : [];
+    const items = await this.getList<Pod[]>("/pods/json", "pods", { baseURL: LIBPOD_BASE_URL, params: { all: true } });
+    return items.map((it) => this.normalizers.normalizePod(it));
   }
 
   async get(id: string): Promise<Pod> {

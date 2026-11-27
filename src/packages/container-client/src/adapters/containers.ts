@@ -65,13 +65,8 @@ export function isContainerRunning(container?: Pick<Container, "Computed" | "Sta
 
 export class ContainersAdapter extends ResourceAdapter {
   async list(): Promise<Container[]> {
-    const driver = await this.driver();
-    const result = await driver.get<Container[]>("/containers/json", {
-      params: {
-        all: true,
-      },
-    });
-    return this.isOk(result) ? result.data.map((it) => this.normalizers.normalizeContainer(it)) : [];
+    const items = await this.getList<Container[]>("/containers/json", "containers", { params: { all: true } });
+    return items.map((it) => this.normalizers.normalizeContainer(it));
   }
 
   async logs(id: string, opts?: ContainerLogsOptions): Promise<string> {
