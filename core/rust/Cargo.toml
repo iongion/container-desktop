@@ -42,8 +42,8 @@ serde = { version = "=1.0.229", features = ["derive"] }
 # JSON.stringify, which emits insertion order. With the default BTreeMap the core would re-sort the
 # user's entire configuration file on the first connection edit — not data loss, but a diff nobody
 # can read, and it would break byte-identical comparison against the oracle's recordings.
-serde_json = { version = "=1.0.151", features = ["preserve_order"] }
-thiserror = "=2.0.19"
+serde_json = { version = "=1.0.154", features = ["preserve_order"] }
+thiserror = "=2.0.21"
 # Advisory file locking, cross-platform (flock / LockFileEx). The alternative is `unsafe` libc and
 # windows-sys calls, and the workspace forbids unsafe.
 fs4 = { version = "=1.1.0", default-features = false, features = ["sync"] }
@@ -56,13 +56,13 @@ tempfile = "=3.27.0"
 # wildmatch) and nothing native ships — but note its build script pulls `git2`, so libgit2/libssh2/
 # openssl compile at BUILD time for a step that is env-gated off. Upstream packaging flaw, not a
 # runtime cost; do NOT "fix" it by pinning back to 0.4.0, which silently drops `Key=Value` directives.
-ssh2-config = "=0.7.1"
+ssh2-config = "=0.9.0"
 # `killpg` without `unsafe`, which this workspace forbids. Killing a service's direct child leaves
 # `ssh -NL`'s tree reparented to init with no handle anywhere, and the group is the
 # only thing that takes all of it. Confined to `cdc-runtime` and to unix targets — Windows has no
 # process group to signal. Pure Rust over the libc bindings tokio already pulls in; nothing else is added.
-nix = { version = "=0.31.3", default-features = false, features = ["signal"] }
-async-trait = "=0.1.91"
+nix = { version = "=0.32.0", default-features = false, features = ["signal"] }
+async-trait = "=0.1.92"
 # The userinfo percent-encode set, for the one place this port builds a URL by hand: a proxy's
 # credentials in `HTTP_PROXY`, which Go engines parse as a URL. The original gets the encoding free
 # from `new URL()`; hand-writing the WHATWG set is how a password with an `@` in it silently names a
@@ -74,7 +74,7 @@ percent-encoding = "=2.3.2"
 # as something else. No dependencies of its own and `no_std`-capable, so the wasm gate is unaffected —
 # and already in this lockfile via `rustls-pemfile`, though it is declared here because a crate that
 # compiles because a sibling asked for something breaks when the sibling stops.
-base64 = "=0.22.1"
+base64 = "=0.23.1"
 # The jitter in the reconnect back-off, and nothing else. `fastrand` rather than
 # `rand`: this draw is not cryptographic — it decides whether two dropped connections retry in the same
 # millisecond — and `rand` costs `rand_core`, `rand_chacha`, `ppv-lite86`, `zerocopy` and `getrandom`
@@ -86,14 +86,14 @@ fastrand = "=2.5.0"
 # wasm32-unknown-unknown, so the runtime can use them on every target. A host adds `process`, `fs`,
 # `io-util` and `rt-multi-thread` for itself — put them here and the wasm gate breaks, which is the
 # point.
-tokio = { version = "=1.53.1", default-features = false, features = ["sync", "macros", "time", "rt"] }
+tokio = { version = "=1.54.1", default-features = false, features = ["sync", "macros", "time", "rt"] }
 # Logging/instrumentation for the impure layers. NOT for cdc-domain — see core/rust/README.md:
 # the domain emits structured diagnostics, which are assertable; log lines are not.
 tracing = "=0.1.44"
 # OpenTelemetry export. Confined to cdc-otel; forbidden in cdc-domain.
-opentelemetry = "=0.32.0"
-opentelemetry_sdk = "=0.32.1"
-tracing-opentelemetry = "=0.33.0"
+opentelemetry = "=0.33.1"
+opentelemetry_sdk = "=0.33.1"
+tracing-opentelemetry = "=0.34.0"
 # tracing-subscriber belongs to whichever crate installs a subscriber — that is a binary's job, and
 # `cdc-server`'s is the first: the foreground process with structured logging. `env-filter` is
 # what makes a level per module reachable without a rebuild, and `json` is what makes the output
@@ -121,7 +121,7 @@ tokio-tungstenite = { version = "=0.30.0", default-features = false, features = 
 # needs only the `cc` that the target's toolchain already provides. `prefer-post-quantum` is what is
 # given up, and it buys nothing against the certificate this actually terminates: an operator's own,
 # for a listener on a trusted network.
-tokio-rustls = { version = "=0.26.4", default-features = false, features = [
+tokio-rustls = { version = "=0.26.6", default-features = false, features = [
   "logging",
   "tls12",
   "ring",
@@ -135,18 +135,18 @@ rustls-pemfile = "=2.2.0"
 # alternative is the platform store, which is a native dependency per OS and a different answer on each
 # — and this client's realistic case is a certificate the operator issued, reached with `--tls-ca`,
 # where neither store is consulted.
-webpki-roots = "=1.0.9"
+webpki-roots = "=1.0.12"
 # Certificates for the tests, generated at run time. A PEM checked into the tree is a PEM that expires,
 # and the failure it produces is a suite that goes red on a date nobody chose. Dev-only; `ring` is its
 # default provider, which is the same one rustls is built with here.
-rcgen = "=0.14.8"
+rcgen = "=0.14.10"
 # `CancellationToken` and `TaskTracker`: the shutdown pair tokio itself documents. Rolling either from a
 # `broadcast` channel and a counter is how a graceful shutdown ends up not waiting for the task that
 # was still writing.
-tokio-util = { version = "=0.7.19", default-features = false, features = ["rt"] }
+tokio-util = { version = "=0.7.20", default-features = false, features = ["rt"] }
 # `StreamExt`/`SinkExt` for the WebSocket stream — tungstenite speaks `futures` traits, so this is its
 # API surface rather than an addition of ours.
-futures-util = { version = "=0.3.33", default-features = false, features = ["sink"] }
+futures-util = { version = "=0.3.34", default-features = false, features = ["sink"] }
 # Constant-time comparison for the bearer token. `==` on a token short-circuits at
 # the first differing byte, which is a timing oracle that recovers it byte by byte.
 subtle = "=2.6.1"
@@ -156,7 +156,7 @@ subtle = "=2.6.1"
 secrecy = "=0.10.3"
 # The server binary's command line. `env` is what lets the token arrive as `CDC_SERVER_TOKEN` instead of
 # as an argv the whole machine can read in `ps`.
-clap = { version = "=4.6.4", features = ["derive", "env"] }
+clap = { version = "=4.6.10", features = ["derive", "env"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

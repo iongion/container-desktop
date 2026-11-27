@@ -15,7 +15,7 @@ opentelemetry_sdk = { workspace = true, features = ["rt-tokio"] }
 # to port 4318, the transport every collector accepts and the one that needs no gRPC stack. `trace`
 # only — this subsystem exports spans, and pulling metrics and logs in would be three protocols for one
 # consumer.
-opentelemetry-otlp = { version = "=0.32.0", default-features = false, features = ["http-proto", "reqwest-blocking-client", "trace"] }
+opentelemetry-otlp = { version = "=0.33.1", default-features = false, features = ["http-proto", "reqwest-blocking-client", "trace"] }
 tracing.workspace = true
 tracing-opentelemetry.workspace = true
 tracing-subscriber = "=0.3.23"
