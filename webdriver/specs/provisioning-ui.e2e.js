@@ -3,7 +3,7 @@
 // (mock/MockCommand.ts). A failed step shows a plain sentence, Retry and a collapsed Details section; the raw command
 // line appears only inside Details.
 
-import { waitReady } from "../support/mockApp.js";
+import { countOf, waitReady } from "../support/mockApp.js";
 
 const EXIT = Number.parseInt(process.env.CONTAINER_DESKTOP_MOCK_PROVISION_EXIT || "0", 10) || 0;
 const SCENARIO = EXIT ? `exit ${EXIT}` : "success";
@@ -27,18 +27,18 @@ async function openProvisionStep() {
   await (await $(".PWizSystemCheck .bp6-callout")).waitForExist({ timeout: 30000 });
   const rail = await $$(".PWizRail .PWizStep");
   await rail[5].click();
-  await browser.waitUntil(RUN_FINISHED, { timeout: 30000, interval: 300, timeoutMsg: "the provisioning run never ended" });
+  await browser.waitUntil(RUN_FINISHED, {
+    timeout: 30000,
+    interval: 300,
+    timeoutMsg: "the provisioning run never ended",
+  });
 }
 
 describe(`provisioning — ${SCENARIO} scenario`, () => {
   it("runs the plan to the end this scenario asks for", async () => {
     await openProvisionStep();
-    const state = await browser.execute(() => ({
-      failed: document.querySelectorAll(".PWizRunStep.is-failed").length,
-      panels: document.querySelectorAll(".PWizRunStepFailure").length,
-    }));
-    expect(state.failed).toBe(EXIT ? 1 : 0);
-    expect(state.panels).toBe(EXIT ? 1 : 0);
+    expect(await countOf(browser, ".PWizRunStep.is-failed")).toBe(EXIT ? 1 : 0);
+    expect(await countOf(browser, ".PWizRunStepFailure")).toBe(EXIT ? 1 : 0);
   });
 
   it("shows a failure as a plain sentence with Retry, the command only inside Details", async () => {
@@ -69,8 +69,8 @@ describe(`provisioning — ${SCENARIO} scenario`, () => {
     const open = await browser.execute(() => {
       const details = document.querySelector(".PWizRunStepDetails");
       return {
-        labels: [...(details?.querySelectorAll(".PWizRunStepDetailsLabel") ?? [])].map((label) => label.textContent),
-        logs: [...(details?.querySelectorAll(".PWizLog") ?? [])].map((log) => log.textContent),
+        labels: [...(details?.querySelectorAll(".DetailBlockLabel") ?? [])].map((label) => label.textContent),
+        logs: [...(details?.querySelectorAll(".DetailBlockPre") ?? [])].map((log) => log.textContent),
         copies: details?.querySelectorAll(".CopyButton").length ?? 0,
       };
     });
@@ -89,11 +89,12 @@ describe(`provisioning — ${SCENARIO} scenario`, () => {
     }
     await (await $('[data-action="provision.retry"]')).click();
     // The mock fails every time, so a retry ends failed again, on a fresh run (Details collapsed).
-    await browser.waitUntil(
-      async () => browser.execute(() => !document.querySelector(".PWizRunStepDetails")),
-      { timeout: 10000, interval: 200, timeoutMsg: "Retry never reset the run" },
-    );
+    await browser.waitUntil(async () => browser.execute(() => !document.querySelector(".PWizRunStepDetails")), {
+      timeout: 10000,
+      interval: 200,
+      timeoutMsg: "Retry never reset the run",
+    });
     await browser.waitUntil(RUN_FINISHED, { timeout: 30000, interval: 300, timeoutMsg: "the retried run never ended" });
-    expect(await browser.execute(() => document.querySelectorAll(".PWizRunStep.is-failed").length)).toBe(1);
+    expect(await countOf(browser, ".PWizRunStep.is-failed")).toBe(1);
   });
 });

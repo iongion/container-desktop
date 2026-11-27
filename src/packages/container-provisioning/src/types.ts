@@ -10,6 +10,7 @@
 import type { ContainerEngine, ContainerEngineHost, Presence } from "@/container-client/types/engine";
 import type { CreateMachineOptions } from "@/container-client/types/machine";
 import type { OperatingSystem } from "@/container-client/types/os";
+import type { StepFailure } from "./failures";
 
 // Which rung of the per-OS priority ladder a plan targets.
 export type ProvisionStrategy = "reuse.installed" | "apple.container" | "colima.lima" | "wsl.import" | "native.install";
@@ -91,11 +92,9 @@ export interface StepRunState {
   id: string;
   status: StepStatus;
   lines: string[];
-  // A failure: the plain sentence (an i18n key), a hint, and the command + exit code for the Details section.
   error?: string;
-  hint?: string;
-  command?: string;
-  exitCode?: number | null;
+  // What a failed command means, with its command line and exit code for the Details section.
+  failure?: StepFailure;
 }
 export type Overall = "idle" | "running" | "done" | "failed";
 export interface ProvisionRunState {
@@ -107,7 +106,7 @@ export type StepEvent =
   | { type: "step.start"; id: string }
   | { type: "step.line"; id: string; line: string }
   | { type: "step.ok"; id: string }
-  | { type: "step.fail"; id: string; error: string; hint?: string; command?: string; exitCode?: number | null }
+  | { type: "step.fail"; id: string; error: string; failure?: StepFailure }
   | { type: "step.skip"; id: string; reason: string };
 
 // Readiness — derived from EngineConnectorAvailability + a volume ownership probe.

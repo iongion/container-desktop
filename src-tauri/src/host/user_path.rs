@@ -1,9 +1,11 @@
 // The PATH a desktop launch is missing. macOS starts an app from Finder or the Dock with launchd's PATH
 // (/usr/bin:/bin:/usr/sbin:/sbin), so every engine CLI in /usr/local/bin, /opt/homebrew/bin or /opt/podman/bin reads as
 // "not found" — Apple's `container`, Homebrew's podman, socktainer and limactl alike. At startup, before any command
-// runs, the process PATH gains the user's login-shell PATH (macOS) and the usual install dirs that exist; every child
-// (which, the engine CLIs, ssh) inherits it. Entries are only ever appended or deduplicated, never dropped.
+// runs, the process PATH gains the usual install dirs that exist and, on macOS when those still hold no engine CLI, the
+// user's login-shell PATH; every child (which, the engine CLIs, ssh) inherits it. Entries are only ever appended or
+// deduplicated, never dropped.
 
+use std::io::BufRead;
 use std::path::Path;
 #[cfg(target_os = "macos")]
 use std::process::{Command, Stdio};
@@ -11,6 +13,7 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 const MARKER: &str = "__CONTAINER_DESKTOP_ENV__";
+const ENGINE_CLIS: [&str; 3] = ["podman", "docker", "container"];
 #[cfg(target_os = "macos")]
 const SHELL_TIMEOUT: Duration = Duration::from_secs(3);
 
@@ -35,6 +38,31 @@ pub(crate) fn path_from_env_dump(output: &str) -> Option<String> {
         .find_map(|line| line.strip_prefix("PATH="))
         .filter(|path| !path.is_empty())
         .map(str::to_string)
+}
+
+/// The shell's output up to and including the closing marker. It stops there: a background job an rc file starts can
+/// hold the output open long after the shell has printed the dump.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn read_env_dump(reader: impl BufRead) -> String {
+    let mut dump = String::new();
+    let mut markers = 0;
+    for line in reader.lines().map_while(Result::ok) {
+        markers += line.matches(MARKER).count();
+        dump.push_str(&line);
+        dump.push('\n');
+        if markers >= 2 {
+            break;
+        }
+    }
+    dump
+}
+
+/// True when some PATH directory holds an engine CLI, so asking the login shell would gain nothing.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn has_engine_cli(path: &str) -> bool {
+    path.split(':')
+        .filter(|dir| !dir.is_empty())
+        .any(|dir| ENGINE_CLIS.iter().any(|cli| Path::new(dir).join(cli).is_file()))
 }
 
 /// True when PATH holds none of the user install dirs: a launchd launch, so the login shell must be asked. A launch
@@ -76,7 +104,7 @@ pub(crate) fn install_dirs(home: Option<&Path>) -> Vec<String> {
 fn login_shell_path() -> Option<String> {
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
     let script = format!("echo {MARKER}; /usr/bin/env; echo {MARKER}");
-    let child = Command::new(shell)
+    let mut child = Command::new(shell)
         .args(["-ilc", script.as_str()])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -86,19 +114,16 @@ fn login_shell_path() -> Option<String> {
         .env("ZSH_TMUX_AUTOSTART", "false")
         .spawn()
         .ok()?;
-    let pid = child.id() as libc::pid_t;
+    let stdout = child.stdout.take()?;
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
-        let _ = tx.send(child.wait_with_output());
+        let _ = tx.send(read_env_dump(std::io::BufReader::new(stdout)));
     });
-    match rx.recv_timeout(SHELL_TIMEOUT) {
-        Ok(Ok(output)) => path_from_env_dump(&String::from_utf8_lossy(&output.stdout)),
-        _ => {
-            // SAFETY: kill(2) on the shell this function spawned; a stale pid at worst gets ESRCH.
-            unsafe { libc::kill(pid, libc::SIGKILL) };
-            None
-        }
-    }
+    let dump = rx.recv_timeout(SHELL_TIMEOUT).ok();
+    // The dump is in, or it came too late: whatever the shell still runs is not needed.
+    let _ = child.kill();
+    let _ = child.wait();
+    path_from_env_dump(&dump?)
 }
 
 /// Extends the process PATH; call first in `run()`, before any thread or command starts.
@@ -109,16 +134,16 @@ pub fn extend_process_path() {
         .into_iter()
         .filter(|dir| Path::new(dir).is_dir())
         .collect();
-    let extra = existing.join(":");
+    let merged = merge_path_lists(&[&current, &existing.join(":")]);
+    // The login shell loads the user's rc files, up to a second or more, before the window shows: ask it only when the
+    // install dirs still leave every engine CLI unfound.
     #[cfg(target_os = "macos")]
-    let login = if needs_login_shell(&current) {
-        login_shell_path().unwrap_or_default()
+    let merged = if needs_login_shell(&current) && !has_engine_cli(&merged) {
+        let login = login_shell_path().unwrap_or_default();
+        merge_path_lists(&[&login, &merged])
     } else {
-        String::new()
+        merged
     };
-    #[cfg(not(target_os = "macos"))]
-    let login = String::new();
-    let merged = merge_path_lists(&[&login, &current, &extra]);
     if merged != current {
         std::env::set_var("PATH", merged);
     }
@@ -157,6 +182,38 @@ mod tests {
         assert_eq!(path_from_env_dump("PATH=/usr/bin\n"), None);
         assert_eq!(path_from_env_dump(&format!("{MARKER}\nHOME=/Users/me\n{MARKER}\n")), None);
         assert_eq!(path_from_env_dump(&format!("{MARKER}\nPATH=\n{MARKER}\n")), None);
+    }
+
+    // A reader that fails the test if anything past the closing marker is read: an rc file's background job keeps
+    // the real output open, and the probe must not wait for it.
+    struct NeverReadPast;
+    impl std::io::Read for NeverReadPast {
+        fn read(&mut self, _: &mut [u8]) -> std::io::Result<usize> {
+            panic!("read past the closing marker");
+        }
+    }
+
+    #[test]
+    fn env_dump_is_read_up_to_the_closing_marker_only() {
+        use std::io::Read;
+        let head = format!("motd\n{MARKER}\nPATH=/opt/homebrew/bin:/usr/bin\n{MARKER}\n");
+        let reader = std::io::BufReader::new(std::io::Cursor::new(head).chain(NeverReadPast));
+        let dump = read_env_dump(reader);
+        assert_eq!(path_from_env_dump(&dump).as_deref(), Some("/opt/homebrew/bin:/usr/bin"));
+    }
+
+    #[test]
+    fn engine_cli_is_found_only_in_a_path_dir_that_holds_one() {
+        let root = std::env::temp_dir().join(format!("cd-user-path-test-{}", std::process::id()));
+        let with_cli = root.join("with");
+        let without_cli = root.join("without");
+        std::fs::create_dir_all(&with_cli).unwrap();
+        std::fs::create_dir_all(&without_cli).unwrap();
+        std::fs::write(with_cli.join("podman"), "").unwrap();
+        let (with_cli, without_cli) = (with_cli.to_string_lossy(), without_cli.to_string_lossy());
+        assert!(has_engine_cli(&format!("{without_cli}:{with_cli}")));
+        assert!(!has_engine_cli(&format!("{without_cli}::/nonexistent")));
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

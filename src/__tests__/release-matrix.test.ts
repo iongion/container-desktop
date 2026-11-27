@@ -50,7 +50,9 @@ describe("Tauri release matrix", () => {
     ]);
   });
 
-  it("uses a native Linux ARM64 CI runner for Tauri ARM releases", () => {
+  // The oldest Ubuntu runner: an AppImage needs the glibc of the image it was built on, so a newer image locks out
+  // older distros (#250).
+  it("uses a native Linux ARM64 CI runner, on the oldest Ubuntu, for Tauri ARM releases", () => {
     expect(matrix.cdJobsForTarget("linux").map((job: { target: string }) => job.target)).toEqual([
       "linux-x64",
       "linux-arm64",
@@ -65,7 +67,7 @@ describe("Tauri release matrix", () => {
     expect(matrix.cdJobsForTarget("linux-arm64")).toEqual([
       {
         target: "linux-arm64",
-        os: "ubuntu-24.04-arm",
+        os: "ubuntu-22.04-arm",
         rustTarget: "aarch64-unknown-linux-gnu",
         packageScript: "package:tauri:linux_arm",
       },

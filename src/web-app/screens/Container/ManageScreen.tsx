@@ -15,7 +15,9 @@ import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { getContainerLifecycleHooks } from "@/container-client/lifecycleHooks";
 import { type Container, ContainerStateList } from "@/container-client/types/container";
+import { errorMessage } from "@/utils";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
@@ -39,7 +41,6 @@ import {
   useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
 import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
-import { lifecycleHookRunner } from "@/web-app/lifecycleHooks";
 import { pathTo } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -192,22 +193,20 @@ export const Screen: AppScreen<ScreenProps> = () => {
       const eligible = action.eligible ?? (() => true);
       // A stack's own lifecycle hooks run once around the group action: before-start can refuse a start or restart.
       const stack = stackHookTargetOf(containers);
+      const hooks = getContainerLifecycleHooks();
       markGroupBusy(groupKey, true);
       try {
-        if (stack && (actionKey === "start" || actionKey === "restart")) {
-          try {
-            await lifecycleHookRunner().stackBeforeStart(stack);
-          } catch (error) {
-            Notification.show({
-              message: error instanceof Error ? error.message : String(error),
-              intent: Intent.DANGER,
-            });
-            return;
-          }
+        const refused =
+          stack && (actionKey === "start" || actionKey === "restart")
+            ? await hooks?.stackBeforeStart(stack).then(() => undefined, errorMessage)
+            : undefined;
+        if (refused) {
+          Notification.show({ message: refused, intent: Intent.DANGER });
+          return;
         }
         const results = await Promise.allSettled(containers.filter(eligible).map((container) => action.run(container)));
         if (stack && actionKey === "stop") {
-          await lifecycleHookRunner().stackAfterStop(stack);
+          await hooks?.stackAfterStop(stack);
         }
         await bulkRefresh();
         const failed = results.filter((r) => r.status === "rejected").length;
@@ -243,14 +242,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, []);
   // Tear a stack down from its compose-group header — removes the project's containers, networks and pod.
   const onStackTeardown = useCallback(
-    async (project: string, connId: string, groupKey: string, containers: MergedContainer[]) => {
+    async (project: string, connId: string, groupKey: string) => {
       markGroupBusy(groupKey, true);
       try {
+        // ComposeAdapter.down runs the stack's after-stop hook.
         await tearDownStack(connId, project);
-        const stack = stackHookTargetOf(containers);
-        if (stack) {
-          await lifecycleHookRunner().stackAfterStop(stack);
-        }
         await bulkRefresh();
         Notification.show({ message: t("Stack {{name}} removed", { name: project }), intent: Intent.SUCCESS });
       } catch (_error) {
@@ -552,7 +548,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <ConfirmMenu
                             onConfirm={(_tag, confirmed) => {
                               if (confirmed) {
-                                onStackTeardown(groupName, containers[0].connectionId, groupKey, containers);
+                                onStackTeardown(groupName, containers[0].connectionId, groupKey);
                               }
                             }}
                             tag={groupName}

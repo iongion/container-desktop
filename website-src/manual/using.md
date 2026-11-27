@@ -48,7 +48,8 @@ Run a command of your own before a container or a compose stack starts, or after
 
 - A hook runs **on this computer, as you**, for every start and stop: from the screens, the tray, bulk actions, or an AI client through the MCP server. A restart counts as a start.
 - A failing **Before start** hook cancels the start and says why; a failing **After stop** hook is only reported.
-- A stack hook runs once, from the stack's **Start all**, **Stop all**, **Restart all** and **Teardown**; each container's own hooks still run.
+- A stack hook runs once around the stack's **Start all**, **Stop all** and **Restart all**, where each container's own hooks run too. **Import stack**, tearing a stack down, and starting or stopping its pod run only the stack hook.
+- Removing or unpausing a container runs no hook.
 - A hook is a program and its arguments, run without a shell (wrap it in `sh -c "…"` for pipes or redirects), for up to 60 seconds. It gets `CD_HOOK` (`before-start` / `after-stop`), `CD_CONTAINER_ID`, `CD_CONTAINER_NAME`, `CD_CONNECTION`, `CD_ENGINE`, and `CD_STACK` for a stack.
 
 </section>

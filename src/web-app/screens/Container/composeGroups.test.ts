@@ -4,6 +4,7 @@ import type { Container } from "@/container-client/types/container";
 import type { ContainerGroup } from "@/web-app/Types";
 
 import { composeProjectOf, isComposeContainer, isComposeGroup, stackHookTargetOf } from "./composeGroups";
+import type { MergedContainer } from "./flattenGroups";
 
 const withLabels = (labels?: Record<string, string>): Container => ({ Labels: labels }) as unknown as Container;
 
@@ -52,10 +53,7 @@ describe("isComposeGroup", () => {
 
 describe("stackHookTargetOf", () => {
   const member = (labels: Record<string, string> | undefined, connectionId = "c1") =>
-    ({ Labels: labels, connectionId, engine: "podman" }) as unknown as Container & {
-      connectionId: string;
-      engine: string;
-    };
+    ({ Labels: labels, connectionId, engine: "podman" }) as unknown as MergedContainer;
 
   it("names the stack, its connection and engine from the first member with a project label", () => {
     expect(stackHookTargetOf([member(undefined), member({ "com.docker.compose.project": "shop" })])).toEqual({

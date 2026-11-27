@@ -10,12 +10,14 @@ import {
   LIFECYCLE_HOOKS_SETTINGS_KEY,
   type LifecycleHook,
   type LifecycleHooksSettings,
+  normalizeLifecycleHook,
   normalizeLifecycleHooks,
   removeLifecycleHook,
   splitCommandLine,
   upsertLifecycleHook,
 } from "@/container-client/lifecycleHooks";
 import type { Connection } from "@/container-client/types/connection";
+import { errorMessage } from "@/utils";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -63,14 +65,24 @@ interface HookEditorProps {
 const HookEditor: React.FC<HookEditorProps> = ({ draft, connections, onChange, onSave, onCancel }) => {
   const { t } = useTranslation();
   const set = (patch: Partial<Draft>) => onChange({ ...draft, ...patch });
-  const beforeInvalid = quoteError(draft.beforeStart);
-  const afterInvalid = quoteError(draft.afterStop);
-  const canSave =
-    !!draft.name.trim() &&
-    !!draft.connectionId &&
-    !!(draft.beforeStart.trim() || draft.afterStop.trim()) &&
-    !beforeInvalid &&
-    !afterInvalid;
+  // The two command fields differ only in these; rendered from one list, so they stay alike.
+  const commands = [
+    {
+      field: "beforeStart",
+      id: "hookBeforeStart",
+      label: t("Before start"),
+      help: t("If it fails, the start is cancelled."),
+      invalid: quoteError(draft.beforeStart),
+    },
+    {
+      field: "afterStop",
+      id: "hookAfterStop",
+      label: t("After stop"),
+      help: t("A failure is reported; nothing else happens."),
+      invalid: quoteError(draft.afterStop),
+    },
+  ] as const;
+  const canSave = !!normalizeLifecycleHook(draft) && commands.every((command) => !command.invalid);
   const quoteHint = t("A quote is not closed.");
   return (
     <div className="LifecycleHookEditor" data-form="lifecycle-hook">
@@ -110,36 +122,24 @@ const HookEditor: React.FC<HookEditorProps> = ({ draft, connections, onChange, o
         </FormGroup>
       </div>
       <div className="LifecycleHookEditorCommands">
-        <FormGroup
-          label={t("Before start")}
-          labelFor="hookBeforeStart"
-          intent={beforeInvalid ? Intent.DANGER : Intent.NONE}
-          helperText={beforeInvalid ? quoteHint : t("If it fails, the start is cancelled.")}
-        >
-          <InputGroup
-            id="hookBeforeStart"
-            className="LifecycleHookCommand"
-            value={draft.beforeStart}
-            intent={beforeInvalid ? Intent.DANGER : Intent.NONE}
-            placeholder="/path/to/script --flag"
-            onChange={(e) => set({ beforeStart: e.currentTarget.value })}
-          />
-        </FormGroup>
-        <FormGroup
-          label={t("After stop")}
-          labelFor="hookAfterStop"
-          intent={afterInvalid ? Intent.DANGER : Intent.NONE}
-          helperText={afterInvalid ? quoteHint : t("A failure is reported; nothing else happens.")}
-        >
-          <InputGroup
-            id="hookAfterStop"
-            className="LifecycleHookCommand"
-            value={draft.afterStop}
-            intent={afterInvalid ? Intent.DANGER : Intent.NONE}
-            placeholder="/path/to/script --flag"
-            onChange={(e) => set({ afterStop: e.currentTarget.value })}
-          />
-        </FormGroup>
+        {commands.map(({ field, id, label, help, invalid }) => (
+          <FormGroup
+            key={field}
+            label={label}
+            labelFor={id}
+            intent={invalid ? Intent.DANGER : Intent.NONE}
+            helperText={invalid ? quoteHint : help}
+          >
+            <InputGroup
+              id={id}
+              className="LifecycleHookCommand"
+              value={draft[field]}
+              intent={invalid ? Intent.DANGER : Intent.NONE}
+              placeholder="/path/to/script --flag"
+              onChange={(e) => set({ [field]: e.currentTarget.value })}
+            />
+          </FormGroup>
+        ))}
       </div>
       <div className="LifecycleHookEditorActions">
         <Button variant="minimal" text={t("Cancel")} onClick={onCancel} />
@@ -246,7 +246,7 @@ export const LifecycleHooksPanel: React.FC = () => {
       setSettings(next);
       return true;
     } catch (error) {
-      Notification.show({ message: error instanceof Error ? error.message : String(error), intent: Intent.DANGER });
+      Notification.show({ message: errorMessage(error), intent: Intent.DANGER });
       return false;
     }
   }, []);
@@ -261,14 +261,7 @@ export const LifecycleHooksPanel: React.FC = () => {
   }, [draft, persist, settings]);
 
   const onEdit = useCallback((hook: LifecycleHook) => {
-    setDraft({
-      kind: hook.kind,
-      connectionId: hook.connectionId,
-      name: hook.name,
-      beforeStart: hook.beforeStart ?? "",
-      afterStop: hook.afterStop ?? "",
-      original: { kind: hook.kind, connectionId: hook.connectionId, name: hook.name },
-    });
+    setDraft({ beforeStart: "", afterStop: "", ...hook, original: hook });
   }, []);
 
   const count = settings.hooks.length;
@@ -311,7 +304,7 @@ export const LifecycleHooksPanel: React.FC = () => {
       ) : null}
       <p className="LifecycleHooksNotes">
         {t(
-          "A hook is a program and its arguments, run without a shell (wrap it in sh -c \"…\" for pipes or redirects), for up to 60 seconds. It gets CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION and CD_ENGINE, and CD_STACK for a stack. A stack hook runs once, from the stack's Start all, Stop all, Restart all and Teardown; each container's own hooks still run. Restart counts as a start.",
+          "A hook is a program and its arguments, run without a shell (wrap it in sh -c \"…\" for pipes or redirects), for up to 60 seconds. It gets CD_HOOK, CD_CONTAINER_ID, CD_CONTAINER_NAME, CD_CONNECTION and CD_ENGINE, and CD_STACK for a stack. A stack hook runs once around the stack's Start all, Stop all and Restart all, where each container's own hooks run too. Import stack, tearing a stack down, and starting or stopping its pod run only the stack hook. Restart counts as a start; removing or unpausing a container runs no hook.",
         )}
       </p>
     </div>

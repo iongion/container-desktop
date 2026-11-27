@@ -31,15 +31,11 @@ export async function runSteps(
         emit({ type: "step.ok", id: step.id });
       }
     } catch (error) {
-      const details =
-        error instanceof ProvisionStepError
-          ? { hint: error.hint, command: error.command, exitCode: error.exitCode }
-          : undefined;
       emit({
         type: "step.fail",
         id: step.id,
         error: error instanceof Error ? error.message : String(error),
-        ...details,
+        ...(error instanceof ProvisionStepError ? { failure: error.failure } : {}),
       });
       return "failed";
     }

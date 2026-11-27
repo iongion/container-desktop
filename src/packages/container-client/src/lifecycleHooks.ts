@@ -4,14 +4,18 @@
 // hand-edited file can only lose hooks, never gain a half-formed one.
 //
 // The containers adapter calls the registered ContainerLifecycleHooks around start, stop and restart, so every path
-// that changes a container's state (screens, tray, bulk actions, the MCP server) fires them. The app registers the
-// runner at boot (@/platform/lifecycleHookRunner); with none registered nothing runs.
+// that changes a container's state (screens, tray, bulk actions, the MCP server) fires them; the compose and pods
+// adapters fire the stack hooks around a stack's up, down and pod start/stop. The app registers the runner at boot
+// (@/platform/lifecycleHookRunner); with none registered nothing runs.
 
 export const LIFECYCLE_HOOKS_SETTINGS_KEY = "hooks";
 export const HOOK_TIMEOUT_MS = 60_000;
 
 export type HookTargetKind = "container" | "stack";
 export type HookPhase = "beforeStart" | "afterStop";
+
+// How a phase is named to the hook (CD_HOOK) and in its failure message.
+export const HOOK_PHASE_LABEL: Record<HookPhase, string> = { beforeStart: "before-start", afterStop: "after-stop" };
 
 export interface HookTarget {
   kind: HookTargetKind;
@@ -37,7 +41,8 @@ function sameTarget(a: HookTarget, b: HookTarget): boolean {
   return a.kind === b.kind && a.connectionId === b.connectionId && a.name === b.name;
 }
 
-function normalizeHook(value: unknown): LifecycleHook | undefined {
+// One hook as stored, or undefined when it has no valid target or no command (the Settings editor's save rule too).
+export function normalizeLifecycleHook(value: unknown): LifecycleHook | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return undefined;
   }
@@ -63,7 +68,7 @@ export function normalizeLifecycleHooks(value: unknown): LifecycleHooksSettings 
   const list = (value as { hooks?: unknown } | undefined)?.hooks;
   const hooks: LifecycleHook[] = [];
   for (const entry of Array.isArray(list) ? list : []) {
-    const hook = normalizeHook(entry);
+    const hook = normalizeLifecycleHook(entry);
     if (!hook) continue;
     const existing = hooks.findIndex((other) => sameTarget(other, hook));
     if (existing >= 0) hooks.splice(existing, 1);
@@ -78,7 +83,7 @@ export function findLifecycleHook(settings: LifecycleHooksSettings, target: Hook
 
 // Replaces the hook for the same target, in place; a hook with no command left is removed instead.
 export function upsertLifecycleHook(settings: LifecycleHooksSettings, hook: LifecycleHook): LifecycleHooksSettings {
-  const normalized = normalizeHook(hook);
+  const normalized = normalizeLifecycleHook(hook);
   const index = settings.hooks.findIndex((other) => sameTarget(other, hook));
   const hooks = settings.hooks.slice();
   if (!normalized) {
@@ -139,7 +144,7 @@ export interface HookEnvironmentTarget extends HookTarget {
 
 export function hookEnvironment(phase: HookPhase, target: HookEnvironmentTarget): Record<string, string> {
   const env: Record<string, string> = {
-    CD_HOOK: phase === "beforeStart" ? "before-start" : "after-stop",
+    CD_HOOK: HOOK_PHASE_LABEL[phase],
     CD_CONNECTION: target.connectionId,
     CD_ENGINE: target.engine,
   };
@@ -160,11 +165,19 @@ export interface ContainerLifecycleEvent {
   containerName: () => Promise<string | undefined>;
 }
 
+// A compose stack, by project name; a Podman stack in pod mode is the pod of that name.
+export interface StackHookTarget {
+  connectionId: string;
+  engine: string;
+  name: string;
+}
+
 export interface ContainerLifecycleHooks {
-  // Throws to refuse the start.
+  // The before-start hooks throw to refuse the start; the after-stop ones never throw, the target already stopped.
   beforeStart(event: ContainerLifecycleEvent): Promise<void>;
-  // Never throws: the container is already stopped.
   afterStop(event: ContainerLifecycleEvent): Promise<void>;
+  stackBeforeStart(stack: StackHookTarget): Promise<void>;
+  stackAfterStop(stack: StackHookTarget): Promise<void>;
 }
 
 let registered: ContainerLifecycleHooks | undefined;

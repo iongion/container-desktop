@@ -2,6 +2,7 @@
 // Podman-only (libpod) resource — gate calls on `host.capabilities.resources.pods`. All calls target
 // `http://d/v4.0.0/libpod`. `getPodLogs` stays a HostClientFacade proxy, not a REST method.
 
+import { getContainerLifecycleHooks } from "@/container-client/lifecycleHooks";
 import type { Pod, PodProcessReport } from "@/container-client/types/pod";
 
 import { LIBPOD_BASE_URL, ResourceAdapter } from "./shared";
@@ -89,15 +90,29 @@ export class PodsAdapter extends ResourceAdapter {
     return this.isOk(result);
   }
 
+  // A pod-mode compose stack is the pod named after its project, so a pod's start and stop fire that stack's hooks.
+  private async podStack(id: string) {
+    const hooks = getContainerLifecycleHooks();
+    const name = hooks ? (await this.get(id))?.Name : undefined;
+    return hooks && name ? { hooks, stack: this.stackHookTarget(name) } : undefined;
+  }
+
   async stop(id: string): Promise<boolean> {
     const driver = await this.driver();
     const result = await driver.post<boolean>(`/pods/${encodeURIComponent(id)}/stop`, null, {
       baseURL: LIBPOD_BASE_URL,
     });
-    return this.isOk(result);
+    const stopped = this.isOk(result);
+    if (stopped) {
+      const pod = await this.podStack(id).catch(() => undefined);
+      await pod?.hooks.stackAfterStop(pod.stack);
+    }
+    return stopped;
   }
 
   async start(id: string): Promise<boolean> {
+    const pod = await this.podStack(id);
+    await pod?.hooks.stackBeforeStart(pod.stack);
     const driver = await this.driver();
     const result = await driver.post<boolean>(`/pods/${encodeURIComponent(id)}/start`, null, {
       baseURL: LIBPOD_BASE_URL,
@@ -105,7 +120,10 @@ export class PodsAdapter extends ResourceAdapter {
     return this.isOk(result);
   }
 
+  // A restart counts as a start: the stack's before-start hook runs first and can refuse it.
   async restart(id: string): Promise<boolean> {
+    const pod = await this.podStack(id);
+    await pod?.hooks.stackBeforeStart(pod.stack);
     const driver = await this.driver();
     const result = await driver.post<boolean>(`/pods/${encodeURIComponent(id)}/restart`, null, {
       baseURL: LIBPOD_BASE_URL,

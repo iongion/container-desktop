@@ -4,8 +4,10 @@
 // are honored (docker-compose + podman-compose), same as the normalizer's grouping.
 
 import { COMPOSE_PROJECT_LABELS } from "@/container-client/compose/labels";
+import type { StackHookTarget } from "@/container-client/lifecycleHooks";
 import type { Container } from "@/container-client/types/container";
 import type { ContainerGroup } from "@/web-app/Types";
+import type { MergedContainer } from "./flattenGroups";
 
 // The owning compose project name (either engine's label), or undefined if the container isn't in a stack.
 export function composeProjectOf(container: Container): string | undefined {
@@ -33,9 +35,7 @@ export function isComposeGroup(group: ContainerGroup): boolean {
 
 // The stack a group's lifecycle hooks are keyed by: its compose project, on the connection and engine of the member
 // that carries the label. Undefined for a name-prefix group, which has no stack hooks.
-export function stackHookTargetOf(
-  containers: (Container & { connectionId: string; engine: string })[],
-): { connectionId: string; engine: string; name: string } | undefined {
+export function stackHookTargetOf(containers: MergedContainer[]): StackHookTarget | undefined {
   for (const container of containers) {
     const name = composeProjectOf(container);
     if (name) {

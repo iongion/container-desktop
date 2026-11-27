@@ -48,10 +48,7 @@ export async function runPlan(): Promise<Overall> {
 // skipped), so a retry picks up where the failure stopped.
 export async function retryRun(): Promise<Overall> {
   const { plan, setPlan } = useProvisioningStore.getState();
-  if (!plan) {
-    return "failed";
-  }
-  setPlan(plan);
+  if (plan) setPlan(plan);
   return runPlan();
 }
 

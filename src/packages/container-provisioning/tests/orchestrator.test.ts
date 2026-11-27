@@ -57,24 +57,18 @@ describe("runSteps", () => {
     expect(overall).toBe("failed");
   });
 
-  it("carries a step error's hint, command and exit code into the failure event", async () => {
+  it("carries a step error's failure details into the failure event", async () => {
     const events: StepEvent[] = [];
+    const failure = { message: "The download failed.", hint: "retry", command: "sh -c x", exitCode: 10 };
     const execute: StepExecutor = async () => {
-      throw new ProvisionStepError({
-        message: "The download failed.",
-        hint: "retry",
-        command: "sh -c x",
-        exitCode: 10,
-      });
+      throw new ProvisionStepError(failure);
     };
     await runSteps([step("a")], execute, (e) => events.push(e));
     expect(events.find((e) => e.type === "step.fail")).toEqual({
       type: "step.fail",
       id: "a",
       error: "The download failed.",
-      hint: "retry",
-      command: "sh -c x",
-      exitCode: 10,
+      failure,
     });
   });
 

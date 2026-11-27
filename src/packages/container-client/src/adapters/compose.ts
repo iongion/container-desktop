@@ -17,6 +17,7 @@ import type {
   ComposeSource,
   ComposeUpOptions,
 } from "@/container-client/compose/types";
+import { getContainerLifecycleHooks } from "@/container-client/lifecycleHooks";
 import type { EngineConnectorSettings } from "@/container-client/types/connection";
 import { ContainerEngine } from "@/container-client/types/engine";
 import {
@@ -34,6 +35,8 @@ export class ComposeAdapter extends ResourceAdapter {
     opts: ComposeUpOptions = {},
     source?: ComposeSource,
   ): Promise<ComposeChangeSummary> {
+    // The stack's before-start hook runs first and can refuse the import.
+    await getContainerLifecycleHooks()?.stackBeforeStart(this.stackHookTarget(model.name));
     if (this.host.ENGINE === ContainerEngine.DOCKER) {
       return this.dockerUp(model, opts, source);
     }
@@ -44,7 +47,13 @@ export class ComposeAdapter extends ResourceAdapter {
     return composeUp(await this.driver(), model, opts, { resolvePath });
   }
 
+  // Tears the stack down, then runs its after-stop hook.
   async down(project: string, opts: ComposeDownOptions = {}): Promise<void> {
+    await this.teardown(project, opts);
+    await getContainerLifecycleHooks()?.stackAfterStop(this.stackHookTarget(project));
+  }
+
+  private async teardown(project: string, opts: ComposeDownOptions): Promise<void> {
     if (this.host.ENGINE === ContainerEngine.DOCKER) {
       const settings = await this.host.getSettings().catch(() => undefined);
       const scope = settings?.controller?.scope ?? "";

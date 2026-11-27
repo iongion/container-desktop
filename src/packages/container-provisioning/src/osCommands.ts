@@ -14,6 +14,8 @@ import { ProvisionExit } from "./failures";
 export interface StreamCommand {
   program: string;
   args: string[];
+  // The script exits with ProvisionExit tags (failures.ts); only then is its exit code read as one.
+  tagged?: boolean;
   // When set, the command runs INSIDE the VM/distro (host.runScopeCommandStreaming); unset = run on the host.
   scope?: string;
 }
@@ -64,7 +66,7 @@ export function linuxInstallCommands(engine: ContainerEngine): StreamCommand[] {
     `else echo "No supported package manager (apt/dnf/pacman)" >&2; exit ${ProvisionExit.PackageManager}; fi`,
     rootless,
   ].join(" ");
-  return [{ program: "sh", args: ["-c", script] }];
+  return [{ program: "sh", args: ["-c", script], tagged: true }];
 }
 
 // Acquire a rootfs tarball (pinned URL → local cache) then import it as a WSL distro. Checksum/signature
@@ -157,8 +159,8 @@ export function appleContainerInstallCommands(
     'echo "socktainer socket OK"',
   ].join(" ");
   return [
-    { program: "sh", args: ["-c", installScript] },
-    { program: "sh", args: ["-c", socktainerScript] },
+    { program: "sh", args: ["-c", installScript], tagged: true },
+    { program: "sh", args: ["-c", socktainerScript], tagged: true },
   ];
 }
 

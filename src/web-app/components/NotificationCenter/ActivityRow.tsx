@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CopyButton } from "@/web-app/components/CopyButton";
+import { DetailBlock } from "@/web-app/components/DetailBlock";
 import type { ActivityEntry } from "@/web-app/stores/activityTypes";
 import { formatRelativeTime } from "./activityFilters";
 import { friendlyEndpoint } from "./endpointLabels";
@@ -85,21 +86,6 @@ function StatusBadge({ entry }: { entry: ActivityEntry }) {
     );
   }
   return null;
-}
-
-function DetailBlock({ label, value, action }: { label: string; value?: string; action?: ReactNode }) {
-  if (!value && !action) {
-    return null;
-  }
-  return (
-    <div className="ActivityDetailBlock">
-      <div className="ActivityDetailLabel">
-        <span>{label}</span>
-        {action}
-      </div>
-      {value ? <pre className="ActivityDetailPre">{value}</pre> : null}
-    </div>
-  );
 }
 
 export function ActivityRow({ entry, count = 1 }: { entry: ActivityEntry; count?: number }) {

@@ -1,6 +1,9 @@
-// What a failed provisioning command means, in a sentence a person can act on. The install scripts (osCommands)
-// exit with a tagged code for each failure they can name; everything else is a plain failure. The command line and
-// exit code travel along for the wizard's collapsed Details section. Messages and hints are i18n keys (English).
+// What a failed provisioning command means, in a sentence a person can act on. The install scripts (osCommands) exit
+// with a tagged code for each failure they can name, and say so (`tagged`); any other command's exit is a plain
+// failure, so a program's own exit 11 never reads as a checksum mismatch. The command line (shell-quoted, so the copy
+// runs) and the exit code travel along for the wizard's collapsed Details section. Messages and hints are i18n keys.
+
+import { quote } from "shell-quote";
 
 import { OperatingSystem } from "@/container-client/types/os";
 import type { StreamCommand } from "./osCommands";
@@ -21,17 +24,10 @@ export interface StepFailure {
   exitCode?: number | null;
 }
 
-export class ProvisionStepError extends Error implements StepFailure {
-  readonly hint?: string;
-  readonly command?: string;
-  readonly exitCode?: number | null;
-
-  constructor(failure: StepFailure) {
+export class ProvisionStepError extends Error {
+  constructor(readonly failure: StepFailure) {
     super(failure.message);
     this.name = "ProvisionStepError";
-    this.hint = failure.hint;
-    this.command = failure.command;
-    this.exitCode = failure.exitCode;
   }
 }
 
@@ -58,10 +54,17 @@ const TAGGED: Record<number, { message: string; hint: string }> = {
   },
 };
 
-function elevationHint(osType: OperatingSystem): string {
-  return osType === OperatingSystem.MacOS
-    ? "macOS asks for it to install the signed package. Retry and enter it when the dialog appears."
-    : "Retry and enter it when the system asks, or install the packages yourself with sudo.";
+function tagged(exitCode: number, osType: OperatingSystem): { message: string; hint: string } | undefined {
+  if (exitCode === ProvisionExit.Elevation) {
+    return {
+      message: "The administrator password was not given, so nothing was installed.",
+      hint:
+        osType === OperatingSystem.MacOS
+          ? "macOS asks for it to install the signed package. Retry and enter it when the dialog appears."
+          : "Retry and enter it when the system asks, or install the packages yourself with sudo.",
+    };
+  }
+  return TAGGED[exitCode];
 }
 
 export function describeCommandFailure(
@@ -69,20 +72,12 @@ export function describeCommandFailure(
   exitCode: number | null,
   osType: OperatingSystem,
 ): StepFailure {
-  const details = { command: [command.program, ...command.args].join(" "), exitCode };
+  const details = { command: quote([command.program, ...command.args]), exitCode };
   if (exitCode === null) {
     return { ...details, message: "The step was stopped before it finished." };
   }
-  if (exitCode === ProvisionExit.Elevation) {
-    return {
-      ...details,
-      message: "The administrator password was not given, so nothing was installed.",
-      hint: elevationHint(osType),
-    };
-  }
-  const tagged = TAGGED[exitCode];
-  if (tagged) {
-    return { ...details, ...tagged };
-  }
-  return { ...details, message: "The step failed.", hint: "Open Details for the command and its output." };
+  const known = command.tagged ? tagged(exitCode, osType) : undefined;
+  return known
+    ? { ...details, ...known }
+    : { ...details, message: "The step failed.", hint: "Open Details for the command and its output." };
 }

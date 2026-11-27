@@ -3,7 +3,7 @@
 // refuses the start and says why. Routes come from the screens' own paths; the container comes from the live list.
 
 import { keystrokeChunks } from "../support/keystrokes.js";
-import { navigate, waitReady } from "../support/mockApp.js";
+import { expectAtLeast, navigate, waitReady } from "../support/mockApp.js";
 
 const CONTAINERS = "/screens/containers";
 const HOOKS = "/screens/settings/user-settings?category=hooks";
@@ -20,10 +20,7 @@ async function typeInto(selector, text) {
 // breadcrumb shows the whole one, and its Start button is always there.
 async function pickStoppedContainer() {
   await navigate(browser, CONTAINERS);
-  await browser.waitUntil(
-    async () => browser.execute(() => document.querySelectorAll('tr[data-state="exited"] .ContainerLogsButton').length > 0),
-    { timeout: 30000, interval: 500, timeoutMsg: "no stopped container in the mock list" },
-  );
+  await expectAtLeast(browser, 'tr[data-state="exited"] .ContainerLogsButton', 1, 30000);
   const href = await browser.execute(
     () => document.querySelector('tr[data-state="exited"] .ContainerLogsButton')?.getAttribute("href") ?? "",
   );
@@ -77,8 +74,9 @@ describe("lifecycle hooks — settings screen and a container start", () => {
     );
     const toast = await browser.execute(
       () =>
-        [...document.querySelectorAll(".bp6-toast")].find((candidate) => /before-start hook/.test(candidate.textContent))
-          ?.textContent ?? "",
+        [...document.querySelectorAll(".bp6-toast")].find((candidate) =>
+          /before-start hook/.test(candidate.textContent),
+        )?.textContent ?? "",
     );
     expect(toast).toContain(target.name);
     expect(toast).toContain("exit 1");

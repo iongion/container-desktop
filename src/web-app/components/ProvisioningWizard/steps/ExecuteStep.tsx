@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { runLog, runProgress } from "@/container-provisioning/runView";
 import type { StepRunState, StepStatus } from "@/container-provisioning/types";
 import { CopyButton } from "@/web-app/components/CopyButton";
+import { DetailBlock } from "@/web-app/components/DetailBlock";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 
 import { cancelRun, retryRun, runPlan } from "../useProvisioning";
@@ -31,12 +32,15 @@ function StepStatusIcon({ status }: { status: StepStatus }) {
 function StepFailurePanel({ step }: { step: StepRunState }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const { failure } = step;
   const output = step.lines.join("\n");
-  const commandLabel = step.exitCode == null ? t("Command") : t("Command · exit {{code}}", { code: step.exitCode });
+  const command = failure?.command;
+  const commandLabel =
+    failure?.exitCode == null ? t("Command") : t("Command · exit {{code}}", { code: failure.exitCode });
   return (
     <div className="PWizRunStepFailure">
       <div className="PWizRunStepMessage">{t(step.error ?? "The step failed.")}</div>
-      {step.hint ? <div className="PWizRunStepHint">{t(step.hint)}</div> : null}
+      {failure?.hint ? <div className="PWizRunStepHint">{t(failure.hint)}</div> : null}
       <div className="PWizRunStepActions">
         <Button
           size="small"
@@ -46,7 +50,7 @@ function StepFailurePanel({ step }: { step: StepRunState }) {
           data-action="provision.retry"
           onClick={() => void retryRun()}
         />
-        {step.command || output ? (
+        {command || output ? (
           <Button
             size="small"
             variant="minimal"
@@ -60,24 +64,8 @@ function StepFailurePanel({ step }: { step: StepRunState }) {
       </div>
       <Collapse isOpen={open}>
         <div className="PWizRunStepDetails">
-          {step.command ? (
-            <>
-              <div className="PWizRunStepDetailsLabel">
-                <span>{commandLabel}</span>
-                <CopyButton text={step.command} />
-              </div>
-              <pre className="PWizLog">{step.command}</pre>
-            </>
-          ) : null}
-          {output ? (
-            <>
-              <div className="PWizRunStepDetailsLabel">
-                <span>{t("Output")}</span>
-                <CopyButton text={output} />
-              </div>
-              <pre className="PWizLog">{output}</pre>
-            </>
-          ) : null}
+          {command ? <DetailBlock label={commandLabel} value={command} action={<CopyButton text={command} />} /> : null}
+          {output ? <DetailBlock label={t("Output")} value={output} action={<CopyButton text={output} />} /> : null}
         </div>
       </Collapse>
     </div>

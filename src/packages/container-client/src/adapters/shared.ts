@@ -9,6 +9,7 @@
 import type { AxiosInstance, AxiosResponse } from "axios";
 
 import { Application } from "@/container-client/Application";
+import type { StackHookTarget } from "@/container-client/lifecycleHooks";
 import { dockerNormalizers } from "@/container-client/normalizers/docker";
 import { podmanNormalizers } from "@/container-client/normalizers/podman";
 import type { EngineNormalizers } from "@/container-client/normalizers/shared";
@@ -58,6 +59,11 @@ export abstract class ResourceAdapter {
   // The per-engine normalizer set for the active host (symmetric — both engines implement the full surface).
   protected get normalizers(): EngineNormalizers {
     return this.usesDockerApi ? dockerNormalizers : podmanNormalizers;
+  }
+
+  // The stack a compose project or a pod-mode pod of this connection is, for its lifecycle hooks.
+  protected stackHookTarget(name: string): StackHookTarget {
+    return { connectionId: this.host.id, engine: `${this.host.ENGINE}`, name };
   }
 
   // 2xx check.

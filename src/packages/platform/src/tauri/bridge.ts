@@ -73,22 +73,22 @@ export async function installTauriHostBridge(): Promise<void> {
     // The window stays hidden until the renderer's "ready" signal (messageBus.showWindow) fires from
     // AppBootstrapReadySignal, after React has mounted the real AppHeader chrome.
     const osType = await invoke<string>("get_os_type");
-    // Expose CONTAINER_DESKTOP_MOCK BEFORE createCommand() reads it via isMockMode() (mode.ts reads the
-    // globalThis-exposed flag in the webview realm).
-    target.CONTAINER_DESKTOP_MOCK =
-      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK" })) ?? "";
-    // Expose the Runs-at-scale knob to the webview realm (no `process` here) so readMockScaleSpec seeds the
-    // scaled run set under Tauri. Absent ⇒ "" ⇒ no scaled seed (the default).
-    target.CONTAINER_DESKTOP_MOCK_SWARM =
-      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SWARM" })) ?? "";
-    // "none" ⇒ the mock connects no engine at all (mock/mode.ts). Needed in the webview realm because
-    // getMockEngines() decides autoStart there, and it is the only way to drive what the app does with nothing up.
-    target.CONTAINER_DESKTOP_MOCK_CONNECTED =
-      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_CONNECTED" })) ?? "";
-    // An exit code ⇒ every mock provisioning command fails with it (mock/MockCommand.ts), so the wizard's failure
-    // panel can be driven; absent ⇒ "" ⇒ they all succeed.
-    target.CONTAINER_DESKTOP_MOCK_PROVISION_EXIT =
-      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_PROVISION_EXIT" })) ?? "";
+    // The mock knobs, exposed to the webview realm (no `process` here) BEFORE createCommand() reads them through
+    // isMockMode(); absent ⇒ "" ⇒ the default:
+    // - CONTAINER_DESKTOP_MOCK: mock mode itself (mode.ts);
+    // - CONTAINER_DESKTOP_MOCK_SWARM: the swarm scenario;
+    // - CONTAINER_DESKTOP_MOCK_CONNECTED: "none" ⇒ no engine connects (getMockEngines decides autoStart here);
+    // - CONTAINER_DESKTOP_MOCK_PROVISION_EXIT: an exit code ⇒ every mock provisioning command fails with it.
+    const mockKnobs = [
+      "CONTAINER_DESKTOP_MOCK",
+      "CONTAINER_DESKTOP_MOCK_SWARM",
+      "CONTAINER_DESKTOP_MOCK_CONNECTED",
+      "CONTAINER_DESKTOP_MOCK_PROVISION_EXIT",
+    ];
+    const knobValues = await Promise.all(mockKnobs.map((name) => invoke<string | null>("get_env_var", { name })));
+    mockKnobs.forEach((name, index) => {
+      target[name] = knobValues[index] ?? "";
+    });
     // CURRENT_DARWIN_MAJOR (uname-derived natively) so macOS Apple-Container network gating
     // (container-client runtime profiles) works under Tauri too; null/undefined off Darwin.
     const darwinMajor = (await invoke<number | null>("get_darwin_major")) ?? undefined;

@@ -186,9 +186,9 @@ describe("ProvisioningService.run", () => {
       const fail = events.find((e) => e.type === "step.fail");
       expect(fail).toMatchObject({
         error: "The administrator password was not given, so nothing was installed.",
-        exitCode: ProvisionExit.Elevation,
+        failure: { exitCode: ProvisionExit.Elevation },
       });
-      expect(fail && "command" in fail && fail.command).toMatch(/^sh -c /);
+      expect(fail && "failure" in fail && fail.failure?.command).toMatch(/^sh -c /);
     } finally {
       restore();
     }

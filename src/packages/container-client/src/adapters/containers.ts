@@ -181,10 +181,7 @@ export class ContainersAdapter extends ResourceAdapter {
       connectionId: this.host.id,
       engine: `${this.host.ENGINE}`,
       containerId,
-      containerName: async () => {
-        const container = await this.get(containerId);
-        return normalizeContainerName(`${container?.Name ?? container?.Names?.[0] ?? ""}`) || undefined;
-      },
+      containerName: async () => (await this.get(containerId))?.Computed?.Name || undefined,
     };
   }
 
@@ -302,15 +299,8 @@ export class ContainersAdapter extends ResourceAdapter {
     const created = { created: false, started: false };
     if (this.isOk(createResult)) {
       created.created = true;
-      if (opts.Start) {
-        const { Id } = createResult.data;
-        const startResult = await driver.post(`/containers/${pathId(Id)}/start`);
-        if (this.isOk(startResult)) {
-          created.started = true;
-        }
-      } else {
-        created.started = false;
-      }
+      // Through start(), so the new container's before-start hook runs like any other start.
+      created.started = opts.Start ? await this.start(createResult.data.Id) : false;
     }
     return created;
   }

@@ -335,18 +335,8 @@
 .PWizRunStepDetails {
   margin-top: 8px;
 }
-.PWizRunStepDetailsLabel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 8px 0 4px;
-  color: var(--app-text-muted);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.PWizRunStepDetails .PWizLog {
-  max-height: 180px;
+.PWizRunStepDetails .DetailBlock + .DetailBlock {
+  margin-top: 8px;
 }
 .PWizLog {
   margin: 0;

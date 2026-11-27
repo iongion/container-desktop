@@ -103,6 +103,8 @@ describe("ContainersAdapter — lifecycle hooks", () => {
       afterStop: async (event) => {
         seen.push(`after:${event.containerId}`);
       },
+      stackBeforeStart: async () => undefined,
+      stackAfterStop: async () => undefined,
     });
     return { adapter, paths, seen };
   }

@@ -48,9 +48,7 @@ export function reduce(state: ProvisionRunState, event: StepEvent): ProvisionRun
     case "step.fail":
       step.status = "failed";
       step.error = event.error;
-      step.hint = event.hint;
-      step.command = event.command;
-      step.exitCode = event.exitCode;
+      step.failure = event.failure;
       if (activeStepId === event.id) activeStepId = undefined;
       break;
     case "step.skip":

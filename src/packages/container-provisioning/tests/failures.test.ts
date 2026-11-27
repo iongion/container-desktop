@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { OperatingSystem } from "@/container-client/types/os";
 import { describeCommandFailure, ProvisionExit, ProvisionStepError } from "@/container-provisioning/failures";
 
-const command = { program: "sh", args: ["-c", "set -e; echo hi"] };
+const command = { program: "sh", args: ["-c", "set -e; echo hi"], tagged: true };
 
 describe("describeCommandFailure", () => {
   it("says the password was not given on an elevation exit, with the OS's own hint", () => {
@@ -33,9 +33,16 @@ describe("describeCommandFailure", () => {
     );
   });
 
-  it("carries the command line and the exit code for the Details section", () => {
+  it("reads a tag only from a script that declares them: another program's exit 11 is a plain failure", () => {
+    const limactl = { program: "limactl", args: ["start", "x"] };
+    expect(describeCommandFailure(limactl, ProvisionExit.Checksum, OperatingSystem.MacOS).message).toBe(
+      "The step failed.",
+    );
+  });
+
+  it("carries the command line, quoted so the copy runs, and the exit code for the Details section", () => {
     const failure = describeCommandFailure(command, 1, OperatingSystem.Linux);
-    expect(failure.command).toBe("sh -c set -e; echo hi");
+    expect(failure.command).toBe("sh -c 'set -e; echo hi'");
     expect(failure.exitCode).toBe(1);
   });
 });
@@ -47,8 +54,8 @@ describe("ProvisionStepError", () => {
     );
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe("The download failed.");
-    expect(error.exitCode).toBe(ProvisionExit.Download);
-    expect(error.command).toBe("sh -c set -e; echo hi");
-    expect(error.hint).toBeTruthy();
+    expect(error.failure.exitCode).toBe(ProvisionExit.Download);
+    expect(error.failure.command).toBe("sh -c 'set -e; echo hi'");
+    expect(error.failure.hint).toBeTruthy();
   });
 });

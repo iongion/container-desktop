@@ -118,7 +118,7 @@ body.bp6-light .AppDataTableGroupLinkHorizontal {
 [data-theme="bp6-light"] .AppSettingsEngineManagerConnections .PlatformConnectionDescription {
   color: #777;
 }
-body.bp6-light .NotificationCenterDrawer .ActivityDetailPre {
+body.bp6-light .DetailBlockPre {
   background: rgba(17, 20, 24, 0.07);
   color: #1c2127;
 }

@@ -1,5 +1,10 @@
 import merge from "deepmerge";
 
+// The message of anything thrown: an Error's own message, anything else as text.
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
