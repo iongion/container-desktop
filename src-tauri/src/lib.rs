@@ -32,6 +32,16 @@ fn create_main_window(app: &tauri::App) -> tauri::Result<()> {
         .find(|window| window.label == MAIN_WINDOW)
         .expect("tauri.conf.json declares the main window");
     let mut builder = WebviewWindowBuilder::from_config(app.handle(), config)?;
+    // Linux and Windows get a frameless window and the header draws its own window controls. macOS keeps Apple's
+    // traffic lights, overlaid on the header and centred in its 50px height (Electron's "hiddenInset").
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder
+            .decorations(true)
+            .title_bar_style(tauri::TitleBarStyle::Overlay)
+            .hidden_title(true)
+            .traffic_light_position(tauri::LogicalPosition::new(18.0, 18.0));
+    }
     if let Some(dir) = host::platform::webview_data_dir() {
         builder = builder.data_directory(dir);
     }

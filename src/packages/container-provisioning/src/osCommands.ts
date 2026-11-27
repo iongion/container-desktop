@@ -149,14 +149,16 @@ export function appleContainerInstallCommands(
     "  brew tap socktainer/tap && brew install socktainer;",
     "fi;",
     'mkdir -p "$HOME/.socktainer";',
-    // Idempotent: only launch when the Docker-compatible socket isn't already live.
-    'if [ -S "$HOME/.socktainer/container.sock" ]; then',
-    '  echo "socktainer socket already present";',
+    // Running means the Docker-compatible socket answers: the socket file outlives a socktainer that has stopped.
+    'up() { curl -sf -m 3 --unix-socket "$HOME/.socktainer/container.sock" http://localhost/_ping >/dev/null 2>&1; };',
+    "if up; then",
+    '  echo "socktainer already running";',
     "else",
-    '  nohup socktainer > "$HOME/.socktainer/socktainer.log" 2>&1 & sleep 2;',
+    '  nohup socktainer > "$HOME/.socktainer/socktainer.log" 2>&1 &',
+    "  for i in 1 2 3 4 5 6 7 8 9 10; do up && break; sleep 1; done;",
     "fi;",
-    `test -S "$HOME/.socktainer/container.sock" || exit ${ProvisionExit.Socket};`,
-    'echo "socktainer socket OK"',
+    `up || exit ${ProvisionExit.Socket};`,
+    'echo "socktainer is running"',
   ].join(" ");
   return [
     { program: "sh", args: ["-c", installScript], tagged: true },

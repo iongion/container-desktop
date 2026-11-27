@@ -6,7 +6,7 @@
 
 import { ContainerEngineHost } from "@/container-client/types/engine";
 import { OperatingSystem } from "@/container-client/types/os";
-import { isEmpty, isWindowsNamedPipe } from "@/utils";
+import { isEmpty } from "@/utils";
 import type { HostProfile } from "../composition";
 import {
   availableAlways,
@@ -46,24 +46,16 @@ export const podmanVendorProfile: HostProfile = {
   HOST: ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
   LABEL: "Podman Machine",
   async getApiConnection(host, _connection, customSettings) {
-    let relay = "";
     const settings = customSettings || (await host.getSettings());
     const scope = settings.controller?.scope;
     if (isEmpty(scope)) {
       host.logger.error(host.id, "Unable to get api connection - no machine");
       return { uri: "", relay: "" };
     }
-    const uri = await host.transport.resolveScopeURI(host, settings);
-    // A native Windows named pipe (newer Podman) is dialed directly — no relay/bridge. Reading the in-VM
-    // engine socket for a relay is only for the bridged cases (WSL/LIMA/SSH), so skip it when we have a pipe.
-    if (host.isScoped() && !isWindowsNamedPipe(uri)) {
-      try {
-        relay = (await host.dialect.readEngineSocket(host, settings)) || "";
-      } catch (error: any) {
-        host.logger.warn(host.id, "Unable to get system info", error);
-      }
-    }
-    return { uri, relay };
+    // A Podman machine serves its API on this host, as a socket (macOS, Linux) or a named pipe (Windows) that
+    // `podman machine inspect` names, and it is dialed directly. No relay: the engine socket `podman system info`
+    // reports is the one inside the VM, and the native proxy dials a relay first, so it would find nothing there.
+    return { uri: await host.transport.resolveScopeURI(host, settings), relay: "" };
   },
   async isEngineAvailable() {
     return availableAlways();

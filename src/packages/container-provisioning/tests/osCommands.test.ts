@@ -133,6 +133,16 @@ describe("appleContainerInstallCommands", () => {
     expect(socktainer).toContain(`exit ${ProvisionExit.Socket}`);
   });
 
+  // A socket file outlives the socktainer that made it (seen on a real Mac: a months-old container.sock, nothing
+  // listening), so "running" means it answers, never that the file exists.
+  it("counts socktainer as running only when its socket answers", () => {
+    const socktainer = appleContainerInstallCommands()[1].args[1];
+    expect(socktainer).toMatch(
+      /curl [^;]*--unix-socket "\$HOME\/\.socktainer\/container\.sock" http:\/\/localhost\/_ping/,
+    );
+    expect(socktainer).not.toMatch(/\[ -S |test -S /);
+  });
+
   it("pins Apple's 1.7.1 release and its published checksum when called with no arguments", () => {
     const install = appleContainerInstallCommands()[0].args[1];
     expect(install).toContain("container-1.7.1-installer-signed.pkg");

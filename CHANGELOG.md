@@ -19,9 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Setup wizard: installing Apple Container asks for the administrator password in macOS's own dialog, and Linux installs use the desktop's password dialog (pkexec); neither fails any more for lack of a terminal
+- Setup wizard: a socktainer socket left over from an earlier run no longer counts as socktainer running; it starts socktainer and waits until it answers
+- macOS: the window has its close, minimize and zoom buttons again, Apple's own, over the app's header
+- macOS and Linux: a running Podman machine connects; the app dialed the API socket inside the machine's VM instead of the one the machine serves on this computer
 - German: "Volumes" is no longer translated as "Bände"
 - The Linux AppImage and packages run again on distros older than Ubuntu 26.04 (Void, Debian, Ubuntu 24.04, Fedora): they are built on Ubuntu 22.04, glibc 2.35
-- macOS: engines installed by Homebrew, the Podman installer or Apple's package (Apple Container) are found when the app is opened from Finder or the Dock; it now uses the login shell's PATH
+- macOS: engines installed by Homebrew, the Podman installer or Apple's package (Apple Container) are found when the app is opened from Finder or the Dock; it adds the usual install folders to PATH, and the login shell's PATH when those hold no engine
 - Transitive dependencies refreshed to their newest compatible releases, clearing the Dependabot alerts: undici 7.30.2; minimatch 11 and glob 14 for the test tooling that still asked for 10 and 13
 
 ## [7.0.0] - 2026-11-27
