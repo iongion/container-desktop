@@ -58,16 +58,18 @@ const PACKAGE_SCRIPT_BY_PLATFORM_ARCH = {
   },
 };
 
+// The Linux bundles carry the build image's glibc floor (the AppImage bundles its GTK/WebKit libraries), so they build
+// on the oldest Ubuntu GitHub offers, never `ubuntu-latest`: a 26.04 build needs glibc 2.43 and fails on most distros.
 const CD_JOBS = [
   {
     target: "linux-x64",
-    os: "ubuntu-latest",
+    os: "ubuntu-22.04",
     rustTarget: "x86_64-unknown-linux-gnu",
     packageScript: "package:tauri:linux_x86",
   },
   {
     target: "linux-arm64",
-    os: "ubuntu-24.04-arm",
+    os: "ubuntu-22.04-arm",
     rustTarget: "aarch64-unknown-linux-gnu",
     packageScript: "package:tauri:linux_arm",
   },
