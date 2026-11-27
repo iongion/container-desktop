@@ -5,9 +5,6 @@ import { useTranslation } from "react-i18next";
 import { readinessFromRun } from "@/container-provisioning/runView";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 
-// Step 7 — the readiness checklist derived from the run outcome. Ready only when the whole run finished;
-// otherwise it surfaces the failing step so the user knows what to retry. (Phase 2 adds the live
-// availability-gate probe + the volume ownership check on the real connection.)
 export function ReadyStep() {
   const { t } = useTranslation();
   const plan = useProvisioningStore((s) => s.plan);

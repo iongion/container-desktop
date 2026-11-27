@@ -23,7 +23,7 @@ export interface TauriCommandDeps {
   getCommandGlobal?: () => ICommand;
 }
 
-// Engine process/exec/proxy. Mirrors its Wails peer: this file owns only the assembled
+// Engine process/exec/proxy. This file owns only the assembled
 // Command facade; implementation lives in exec/commander, exec/proxy-request, and exec/ssh-transport.
 export function createRustCommand(deps: TauriCommandDeps): ICommand {
   const notImplemented = async (): Promise<never> => {

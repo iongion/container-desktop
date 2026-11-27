@@ -21,7 +21,6 @@
 
 .NotificationSwitch button {
   -webkit-app-region: no-drag;
-  --wails-draggable: no-drag;
 }
 .NotificationCenterSwitch .NotificationCenterSwitchCount {
   margin-left: 6px;

@@ -8,14 +8,25 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
+// The child's stdout is NOT pure JSON: dotenvx announces every env file it injects on stdout ("◇ injected env (13)
+// from .env"), so parsing the whole stream reported "no targets configured" for a machine that had them. Ask it to be
+// quiet AND read only the JSON line, so any future banner on stdout cannot silence the live suite again.
+function jsonLineOf(output) {
+  const lines = output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("[") || line.startsWith("{"));
+  return lines.at(-1) ?? "";
+}
+
 export function loadLiveTargets() {
   try {
     const out = execFileSync("yarn", ["-s", "tsx", "src/__tests__/live/printTargets.ts"], {
       cwd: repoRoot,
       encoding: "utf8",
-      env: process.env,
+      env: { ...process.env, DOTENVX_QUIET: "true", DOTENV_CONFIG_QUIET: "true" },
     });
-    return JSON.parse(out.trim() || "[]");
+    return JSON.parse(jsonLineOf(out) || "[]");
   } catch (error) {
     console.warn(`[live] could not load targets: ${error?.message ?? error}`);
     return [];

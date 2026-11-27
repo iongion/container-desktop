@@ -2,7 +2,7 @@ name: Deploy website to GitHub Pages
 
 # Publishes the static site in website/ to GitHub Pages via GitHub Actions
 # (replaces the classic "deploy from branch /docs" source so the folder can be
-# named freely). The custom domain is preserved through website/CNAME.
+# named freely). Served at https://iongion.github.io/container-desktop/ (no custom domain).
 #
 # Pages deploys ONLY as part of a release: CDPipeline.Tauri.yml's publish-pages job runs
 # this content after the release assets are published. There is intentionally no
@@ -43,7 +43,7 @@ jobs:
           path: website
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
         with:
           artifact_name: github-pages-${{ github.run_attempt }}
           timeout: 1200000 # 20 min — ride out slow GitHub Pages deploys (default 10)

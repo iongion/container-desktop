@@ -17,6 +17,9 @@ use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Emitter, Manager, Theme, Wry};
 
 pub const TRAY_ACTION_EVENT: &str = "tray://action";
+/// Mirrors TRAY_QUIT_ID in src/packages/platform/src/trayMenu.ts. Quit is answered here rather than in the webview,
+/// because the state it has to work in is the one where the webview cannot answer anything.
+pub const TRAY_QUIT_ID: &str = "tray:quit";
 
 // Matches src/platform/tauri/trayController.ts TrayMenuNode: a separator; a submenu (items); a clickable leaf (id); or
 // a disabled label (no id, enabled:false).
@@ -84,6 +87,12 @@ pub fn tray_update(
                 .menu(&menu)
                 .show_menu_on_left_click(true)
                 .on_menu_event(|app: &AppHandle, event| {
+                    // Every other item is a message to the webview, which is right while it can read its mail.
+                    // Quit is the one that has to survive a webview that cannot — so it never leaves this side.
+                    if event.id.0 == TRAY_QUIT_ID {
+                        app.exit(0);
+                        return;
+                    }
                     let _ = app.emit(TRAY_ACTION_EVENT, event.id.0.clone());
                 });
             if let Some(image) = tray_icon_image(&app, icon.as_deref()) {

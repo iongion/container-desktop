@@ -1,8 +1,7 @@
 // Generic OS secret-store (keychain) capability — a thin wrapper over the `keyring` crate's per-key vault
 // (Windows Credential Manager / macOS Keychain / Linux Secret Service). Each secret is a discrete entry keyed
-// by (service, account); the app never persists plaintext itself. Nothing here is AI-specific — the current
-// consumer is the AI provider-key store (the Rust side of the AIKeyStore port), but the primitive is a
-// standalone keychain usable by anything that needs to keep a secret out of app storage.
+// by (service, account); the app never persists plaintext itself. A standalone keychain usable by anything that
+// needs to keep a secret out of app storage (the Rust side of the IKeychain port).
 //
 // keyring's API is SYNCHRONOUS and, on Linux, a Secret-Service D-Bus round-trip (tens-to-hundreds of ms) — so
 // every command is async and does the blocking work on a blocking thread, never on the webview's main thread.
@@ -23,8 +22,7 @@ const KEYCHAIN_SERVICE: &str = "com.iongion.container-desktop.keychain";
 // A sentinel entry used ONLY to probe whether the OS secret store is reachable (the encryption-available check).
 const PROBE_SERVICE: &str = "com.iongion.container-desktop.keychain-probe";
 const PROBE_USER: &str = "probe";
-// Degraded-vault fallback store (see file header). A distinct filename from the AI credentials file
-// (different content) since both shells share the userData dir.
+// Degraded-vault fallback store (see file header).
 const FALLBACK_FILE: &str = "keychain-fallback.json";
 
 // Mirrors the EncryptionStatus the IKeychain port reports. `degraded` drives the renderer's "store the key
@@ -42,9 +40,23 @@ fn entry(service: &str, user: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(service, user).map_err(|e| e.to_string())
 }
 
+// An isolated run (its user data overridden, as the WebDriver harness does) keeps its secrets in the 0600 file in its
+// own user-data dir and never reaches the OS vault, so it can neither read nor replace the real app's secrets.
+fn isolated() -> bool {
+    crate::host::platform::user_data_is_overridden()
+}
+
+/// The OS vault's entry for `account`; an Err in an isolated run.
+fn vault_entry(account: &str) -> Result<keyring::Entry, String> {
+    if isolated() {
+        return Err("an isolated run keeps its secrets in its own user-data dir".into());
+    }
+    entry(KEYCHAIN_SERVICE, account)
+}
+
 /// The OS secret-store backend name for the current platform — shown in the Settings degraded-security notice
 /// ("no OS keychain is available (…)").
-fn keychain_backend_name() -> Option<String> {
+pub fn keychain_backend_name() -> Option<String> {
     if cfg!(target_os = "macos") {
         Some("macOS Keychain".into())
     } else if cfg!(target_os = "windows") {
@@ -124,6 +136,30 @@ fn fallback_clear(account: &str) {
     }
 }
 
+/// Read the secret for `account`: the OS vault first, then the degraded fallback. Rust-only by design: no webview
+/// command reads a stored secret, and a caller that hands one over (mcp_token) does so for its own account only.
+/// Blocking (a D-Bus round trip on Linux): call it off the async threads.
+pub fn keychain_get(account: &str) -> Option<String> {
+    let in_vault = vault_entry(account).ok().and_then(|e| e.get_password().ok());
+    in_vault.filter(|s| !s.is_empty()).or_else(|| fallback_get(account).filter(|s| !s.is_empty()))
+}
+
+/// Store (or overwrite) the secret for `account` in the OS vault. If the vault write fails and the caller opted into
+/// degraded storage, fall back to the 0600 file instead; otherwise the vault error propagates. An isolated run always
+/// stores in the file. Blocking, like keychain_get.
+pub fn store_secret(account: &str, secret: &str, allow_degraded: bool) -> Result<(), String> {
+    let vault_result = vault_entry(account).and_then(|e| e.set_password(secret).map_err(|e| e.to_string()));
+    match vault_result {
+        Ok(()) => {
+            // Vault write succeeded — drop any stale degraded copy so the two never diverge.
+            fallback_clear(account);
+            Ok(())
+        }
+        Err(_) if allow_degraded || isolated() => fallback_set(account, secret),
+        Err(err) => Err(err),
+    }
+}
+
 // Commands.
 
 /// Probe whether the OS secret store is usable by round-tripping a sentinel secret. Any failure ⇒ unavailable +
@@ -131,6 +167,14 @@ fn fallback_clear(account: &str) {
 /// degraded path). `backend` names the platform vault regardless of reachability.
 #[tauri::command]
 pub async fn keychain_status() -> KeychainStatus {
+    // An isolated run's own store is always there, and storing in it needs no consent.
+    if isolated() {
+        return KeychainStatus {
+            available: true,
+            backend: keychain_backend_name(),
+            degraded: false,
+        };
+    }
     let available = tokio::task::spawn_blocking(|| {
         let Ok(probe) = entry(PROBE_SERVICE, PROBE_USER) else {
             return false;
@@ -156,7 +200,7 @@ pub async fn keychain_status() -> KeychainStatus {
 pub async fn keychain_has(account: String) -> bool {
     let account_for_vault = account.clone();
     let in_vault = tokio::task::spawn_blocking(move || {
-        entry(KEYCHAIN_SERVICE, &account_for_vault)
+        vault_entry(&account_for_vault)
             .ok()
             .and_then(|e| e.get_password().ok())
             .map(|s| !s.is_empty())
@@ -170,55 +214,16 @@ pub async fn keychain_has(account: String) -> bool {
             .unwrap_or(false)
 }
 
-/// The plaintext secret for `account` (None if unset) — from the OS vault, else the degraded fallback.
-/// Deliberately NOT a `#[tauri::command]`: the secret stays in this process, and the only caller is the native
-/// provider transport, which attaches it to the outbound request without the web view ever seeing it.
-pub(crate) async fn keychain_get(account: String) -> Result<Option<String>, String> {
-    let account_for_vault = account.clone();
-    let from_vault = tokio::task::spawn_blocking(move || -> Result<Option<String>, String> {
-        let e = entry(KEYCHAIN_SERVICE, &account_for_vault)?;
-        match e.get_password() {
-            Ok(secret) => Ok(Some(secret)),
-            Err(keyring::Error::NoEntry) => Ok(None),
-            Err(err) => Err(err.to_string()),
-        }
-    })
-    .await
-    .map_err(|e| e.to_string())?;
-    // Present in the vault → use it; otherwise (absent OR the vault is unreachable) consult the degraded fallback.
-    Ok(match from_vault {
-        Ok(Some(secret)) => Some(secret),
-        Ok(None) | Err(_) => fallback_get(&account),
-    })
-}
-
-/// Store (or overwrite) the secret for `account` in the OS vault. If the vault write fails and the caller opted
-/// into degraded storage, fall back to the 0600 file instead; otherwise the vault
-/// error propagates.
+/// Store (or overwrite) the secret for `account` — see store_secret.
 #[tauri::command]
 pub async fn keychain_set(
     account: String,
     secret: String,
     allow_degraded: Option<bool>,
 ) -> Result<(), String> {
-    let account_for_vault = account.clone();
-    let secret_for_vault = secret.clone();
-    let vault_result = tokio::task::spawn_blocking(move || {
-        entry(KEYCHAIN_SERVICE, &account_for_vault)?
-            .set_password(&secret_for_vault)
-            .map_err(|e| e.to_string())
-    })
-    .await
-    .map_err(|e| e.to_string())?;
-    match vault_result {
-        Ok(()) => {
-            // Vault write succeeded — drop any stale degraded copy so the two never diverge.
-            fallback_clear(&account);
-            Ok(())
-        }
-        Err(_) if allow_degraded.unwrap_or(false) => fallback_set(&account, &secret),
-        Err(err) => Err(err),
-    }
+    tokio::task::spawn_blocking(move || store_secret(&account, &secret, allow_degraded.unwrap_or(false)))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// Remove the secret for `account` from BOTH the OS vault and the degraded fallback (a no-op where there is none).
@@ -227,7 +232,7 @@ pub async fn keychain_clear(account: String) -> Result<(), String> {
     let account_for_vault = account.clone();
     // Best-effort vault delete: a missing entry or an unreachable vault is not an error for "clear".
     let _ = tokio::task::spawn_blocking(move || {
-        if let Ok(e) = entry(KEYCHAIN_SERVICE, &account_for_vault) {
+        if let Ok(e) = vault_entry(&account_for_vault) {
             let _ = e.delete_credential();
         }
     })
@@ -249,14 +254,14 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::env::set_var("CONTAINER_DESKTOP_USER_DATA_DIR", &dir);
 
-        assert_eq!(fallback_get("openai"), None);
-        fallback_set("openai", "sk-secret").unwrap();
-        assert_eq!(fallback_get("openai"), Some("sk-secret".to_string()));
+        assert_eq!(fallback_get("service-token"), None);
+        fallback_set("service-token", "s3cret").unwrap();
+        assert_eq!(fallback_get("service-token"), Some("s3cret".to_string()));
 
         // Stored base64-encoded, never as plaintext on disk.
         let raw = std::fs::read_to_string(dir.join(FALLBACK_FILE)).unwrap();
         assert!(
-            !raw.contains("sk-secret"),
+            !raw.contains("s3cret"),
             "secret must not be on disk in plaintext: {raw}"
         );
 
@@ -268,8 +273,15 @@ mod tests {
             & 0o777;
         assert_eq!(mode, 0o600, "fallback file must be owner-only");
 
-        fallback_clear("openai");
-        assert_eq!(fallback_get("openai"), None);
+        fallback_clear("service-token");
+        assert_eq!(fallback_get("service-token"), None);
+
+        // An isolated run stores in its own file without the degraded opt-in, and never in the OS vault: a vault write
+        // would have cleared the file's copy.
+        store_secret("isolated-token", "s3cret", false).unwrap();
+        assert_eq!(fallback_get("isolated-token"), Some("s3cret".to_string()));
+        assert_eq!(keychain_get("isolated-token"), Some("s3cret".to_string()));
+        fallback_clear("isolated-token");
 
         std::env::remove_var("CONTAINER_DESKTOP_USER_DATA_DIR");
         let _ = std::fs::remove_dir_all(&dir);

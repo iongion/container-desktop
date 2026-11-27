@@ -5,6 +5,7 @@ import * as ReactIcon from "@mdi/react";
 import React from "react";
 import i18n from "@/i18n";
 import { createLogger } from "@/logger";
+import { CopyButton } from "@/web-app/components/CopyButton";
 
 const logger = createLogger("web.AppErrorBoundary");
 
@@ -26,8 +27,9 @@ export default class AppErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: any) {
-    // Update state so the next render will show the fallback UI.
-    return { hasError: true };
+    // The error itself is kept, not just the fact that there was one. A screen that says "an uncaught error showed
+    // up" and then withholds which one sends the reader to a log file to learn what the app already knew.
+    return { hasError: true, error };
   }
 
   onReconnectClick = () => {
@@ -47,6 +49,20 @@ export default class AppErrorBoundary extends React.Component<
 
   componentDidCatch(error: any, errorInfo: any) {
     logger.error("UI application error", error.message, error.stack, errorInfo);
+    this.setState({ componentStack: errorInfo?.componentStack });
+  }
+
+  // Everything worth pasting into a report, in one string: what failed, where it threw, and which component was
+  // rendering. The reader should never have to go and find the log to answer "what actually broke".
+  report(): string {
+    const error = this.state.error;
+    return [
+      String(error?.message ?? error ?? i18n.t("Unknown error")),
+      error?.stack ? `\n${error.stack}` : "",
+      this.state.componentStack ? `\n${this.state.componentStack}` : "",
+    ]
+      .join("")
+      .trim();
   }
 
   render(): any {
@@ -62,6 +78,18 @@ export default class AppErrorBoundary extends React.Component<
               icon={<ReactIcon.Icon path={mdiEmoticonSad} size={5} />}
             >
               <h3>{this.props.message}</h3>
+              {/* The actual failure, verbatim and selectable. This is the first thing the reader needs and it used
+                  to be the one thing this screen withheld. */}
+              <div className="AppErrorBoundaryReason">
+                <code>{String(this.state.error?.message ?? this.state.error ?? i18n.t("Unknown error"))}</code>
+                <CopyButton text={this.report()} title={i18n.t("Copy the error details")} />
+              </div>
+              {this.report().includes("\n") ? (
+                <details className="AppErrorBoundaryDetails">
+                  <summary>{i18n.t("Show details")}</summary>
+                  <pre>{this.report()}</pre>
+                </details>
+              ) : null}
               <p>{this.props.suggestion}</p>
               <div className="AppErrorBoundaryDashboard">
                 <Button

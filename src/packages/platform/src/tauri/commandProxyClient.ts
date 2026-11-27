@@ -1,6 +1,5 @@
-// Tauri-side client for Command.ProxyRequest. This is the named counterpart to
-// its Wails peer; it speaks to Rust proxy commands.
-// The lower-level implementation lives in exec/proxy-request.ts, mirroring the Wails layout file for file.
+// Tauri-side client for Command.ProxyRequest; it speaks to Rust proxy commands.
+// The lower-level implementation lives in exec/proxy-request.ts.
 
 import { createProxyRequest, type ProxyChannel, type ProxyRequestDeps } from "./exec/proxy-request";
 

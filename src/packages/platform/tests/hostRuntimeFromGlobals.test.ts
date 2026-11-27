@@ -25,8 +25,6 @@ function makeFakeWindow() {
     ActivityBus: { tag: "activity" },
     TrayBus: { tag: "tray" },
     ResourceBus: { tag: "resource" },
-    AI: { tag: "ai" },
-    AIBus: { tag: "aiBus" },
   };
   return { w, sent, invoked, messageBus };
 }
@@ -48,8 +46,6 @@ describe("assembleHostRuntimeFromGlobals", () => {
     expect(runtime.activityBus).toBe(w.ActivityBus);
     expect(runtime.trayBus).toBe(w.TrayBus);
     expect(runtime.resourceBus).toBe(w.ResourceBus);
-    expect(runtime.ai).toBe(w.AI);
-    expect(runtime.aiBus).toBe(w.AIBus);
   });
 
   it("wires windowControl onto the MessageBus.send string channels main handles", () => {
@@ -82,12 +78,12 @@ describe("assembleHostRuntimeFromGlobals", () => {
     const { dialogs } = assembleHostRuntimeFromGlobals(w as any);
 
     await dialogs.openFileSelector({ directory: true } as any);
-    await dialogs.saveFileSelector({ defaultPath: "thread.json" });
+    await dialogs.saveFileSelector({ defaultPath: "session.json" });
     await dialogs.openTerminal({ command: "sh" } as any);
 
     expect(invoked).toEqual([
       { channel: "openFileSelector", args: [{ directory: true }] },
-      { channel: "saveFileSelector", args: [{ defaultPath: "thread.json" }] },
+      { channel: "saveFileSelector", args: [{ defaultPath: "session.json" }] },
       { channel: "openTerminal", args: [{ command: "sh" }] },
     ]);
   });

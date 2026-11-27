@@ -5,27 +5,18 @@ import path from "node:path";
 // src/packages/*; the app (web-app) and shared assets (resources) stay at src/. ORDER MATTERS: every specific
 // "@/<pkg>" precedes the generic "@" -> src fallback, because @rollup/plugin-alias matching is first-hit.
 const PACKAGES = [
-  "ai-system",
   "container-client",
   "container-provisioning",
   "host-contract",
   "logger",
+  "mcp-server",
   "i18n",
   "platform",
-  "template",
   "utils",
 ];
 
 export function makeAliases(root) {
-  const omaOptionalProviderShim = path.join(
-    root,
-    "src/packages/ai-system/src/runtime/omaShim/optionalProviders.ts",
-  );
   const alias = {
-    openai: omaOptionalProviderShim,
-    "@anthropic-ai/sdk": omaOptionalProviderShim,
-    "@google/genai": omaOptionalProviderShim,
-    "@aws-sdk/client-bedrock-runtime": omaOptionalProviderShim,
     "@/cli": path.join(root, "support/cli"),
   };
   for (const pkg of PACKAGES) {

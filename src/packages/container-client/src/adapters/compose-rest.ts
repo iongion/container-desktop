@@ -1,6 +1,6 @@
 // Pure libpod REST logic for compose stacks — the reconciling `up`, teardown `down`, and label-derived
-// listing. Imports only ./baseUrls + compose types (never Application), exactly like swarm-rest.ts, so a
-// dialect can drive it with host.getApiDriver() without the adapter→Application cycle.
+// listing. Imports only ./baseUrls, compose types and the pure normalizers leaf (never Application), exactly
+// like swarm-rest.ts, so a dialect can drive it with host.getApiDriver() without the adapter→Application cycle.
 
 import type { AxiosInstance } from "axios";
 
@@ -17,6 +17,7 @@ import type {
   ComposeProject,
   ComposeUpOptions,
 } from "@/container-client/compose/types";
+import { normalizeContainerName } from "@/container-client/normalizers/shared";
 import { LIBPOD_BASE_URL, LIFECYCLE_TIMEOUT_MS } from "./baseUrls";
 
 type RawContainer = Record<string, any>;
@@ -32,7 +33,7 @@ const projectOf = (labels: Record<string, string>): string | undefined =>
   COMPOSE_PROJECT_LABELS.map((k) => labels[k]).find(Boolean);
 const serviceOf = (labels: Record<string, string>): string =>
   COMPOSE_SERVICE_LABELS.map((k) => labels[k]).find(Boolean) ?? "";
-const nameOf = (c: RawContainer): string => String(c.Names?.[0] ?? c.Name ?? "").replace(/^\//, "");
+const nameOf = (c: RawContainer): string => normalizeContainerName(String(c.Names?.[0] ?? c.Name ?? ""));
 const isRunning = (c: RawContainer): boolean => c.State === "running" || /^up/i.test(String(c.Status ?? ""));
 const projectFilter = (project: string) => JSON.stringify({ label: [`${LABEL_PROJECT}=${project}`] });
 

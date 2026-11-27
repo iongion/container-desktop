@@ -2,6 +2,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // An MCP client that only spawns stdio servers runs this binary with --mcp-stdio: relay to the running app and
+    // exit, before anything of the GUI (GTK, the webview, single-instance) starts.
+    if std::env::args_os().skip(1).any(|arg| arg == "--mcp-stdio") {
+        std::process::exit(container_desktop_lib::run_mcp_stdio());
+    }
     // Note: WEBKIT_DISABLE_COMPOSITING_MODE was tried for the Wayland fractional-scaling font softness and
     // made rendering WORSE, so it is intentionally NOT set. The residual difference from Chromium is
     // inherent to WebKitGTK's GTK3 backend; only wry on GTK4 (webkitgtk-6.0) would truly resolve it. NB

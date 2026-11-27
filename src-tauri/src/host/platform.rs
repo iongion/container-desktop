@@ -1,7 +1,7 @@
 // Platform host port — what the shared renderer reads as window.Platform (os type/arch, env, home, user-data dir,
-// flatpak, darwin major). src-wails/platform_service.go must answer the same values.
+// flatpak, darwin major).
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Mirror of `os.type()` as the renderer's OperatingSystem enum values (Linux / Darwin / Windows_NT).
 #[tauri::command]
@@ -113,20 +113,40 @@ pub fn is_flatpak() -> bool {
     Path::new("/.flatpak-info").exists()
 }
 
+const USER_DATA_OVERRIDE: &str = "CONTAINER_DESKTOP_USER_DATA_DIR";
+
+/// The user-data override, absolute: a relative one is taken from `cwd` when there is one. None when unset or empty.
+fn user_data_override(explicit: Option<&str>, cwd: Option<&Path>) -> Option<PathBuf> {
+    let explicit = Path::new(explicit.filter(|value| !value.is_empty())?);
+    if explicit.is_absolute() {
+        return Some(explicit.to_path_buf());
+    }
+    Some(cwd.map_or_else(|| explicit.to_path_buf(), |cwd| cwd.join(explicit)))
+}
+
+/// Whether this run's user data is overridden: an isolated run (the WebDriver harness) that must leave the real app's
+/// state alone.
+pub fn user_data_is_overridden() -> bool {
+    std::env::var_os(USER_DATA_OVERRIDE).is_some_and(|value| !value.is_empty())
+}
+
+fn webview_data_dir_from(explicit: Option<&str>, cwd: Option<&Path>) -> Option<PathBuf> {
+    user_data_override(explicit, cwd).map(|dir| dir.join("webview"))
+}
+
+/// The webview's own storage (localStorage, HTTP cache) when the user-data dir is overridden, so an isolated run
+/// (the WebDriver harness) never reads or writes the real app's. None keeps the platform default.
+pub fn webview_data_dir() -> Option<PathBuf> {
+    let explicit = std::env::var(USER_DATA_OVERRIDE).ok();
+    webview_data_dir_from(explicit.as_deref(), std::env::current_dir().ok().as_deref())
+}
+
 /// Mirror of Platform.getUserDataPath(): explicit override → else per-OS config dir + "container-desktop".
 #[tauri::command]
 pub fn get_user_data_path() -> String {
-    if let Ok(explicit) = std::env::var("CONTAINER_DESKTOP_USER_DATA_DIR") {
-        if !explicit.is_empty() {
-            let p = Path::new(&explicit);
-            if p.is_absolute() {
-                return explicit;
-            }
-            if let Ok(cwd) = std::env::current_dir() {
-                return cwd.join(&explicit).to_string_lossy().into_owned();
-            }
-            return explicit;
-        }
+    let explicit = std::env::var(USER_DATA_OVERRIDE).ok();
+    if let Some(dir) = user_data_override(explicit.as_deref(), std::env::current_dir().ok().as_deref()) {
+        return dir.to_string_lossy().into_owned();
     }
     let home = get_home_dir();
     let app = "container-desktop";
@@ -151,7 +171,30 @@ pub fn get_user_data_path() -> String {
 
 #[cfg(all(test, unix))]
 mod tests {
-    use super::parse_darwin_major;
+    use super::{parse_darwin_major, webview_data_dir_from};
+    use std::path::{Path, PathBuf};
+
+    // An isolated run (the WebDriver harness sets CONTAINER_DESKTOP_USER_DATA_DIR) gives the webview its own
+    // storage under that dir, so it never reads or writes the real app's localStorage and HTTP cache.
+    #[test]
+    fn webview_data_dir_lives_under_an_overridden_user_data_dir() {
+        let cwd = Path::new("/work");
+        assert_eq!(
+            webview_data_dir_from(Some("/tmp/e2e"), Some(cwd)),
+            Some(PathBuf::from("/tmp/e2e/webview"))
+        );
+        assert_eq!(
+            webview_data_dir_from(Some("webdriver/.e2e-user-data"), Some(cwd)),
+            Some(PathBuf::from("/work/webdriver/.e2e-user-data/webview"))
+        );
+    }
+
+    // Without the override the platform default stays: a normal launch keeps the storage it always had.
+    #[test]
+    fn webview_data_dir_is_the_platform_default_without_an_override() {
+        assert_eq!(webview_data_dir_from(None, Some(Path::new("/work"))), None);
+        assert_eq!(webview_data_dir_from(Some(""), Some(Path::new("/work"))), None);
+    }
 
     // Parses the Darwin kernel major from uname's release string — the value that gates
     // Apple-Container networks. Only the parse is platform-independent (uname itself is macOS-only).

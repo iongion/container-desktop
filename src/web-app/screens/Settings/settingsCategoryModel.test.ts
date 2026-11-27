@@ -9,12 +9,11 @@ import {
 describe("settingsCategoryModel", () => {
   it("exposes the settings categories in display order (alphabetical by title)", () => {
     expect(SETTINGS_CATEGORIES.map((c) => c.id)).toEqual([
-      "ai",
       "policy",
       "appearance",
-      "avatars",
       "config",
       "logging",
+      "mcp",
       "network",
       "startup",
     ]);
@@ -34,13 +33,18 @@ describe("settingsCategoryModel", () => {
 
   it("defaults to the first category", () => {
     expect(DEFAULT_SETTINGS_CATEGORY_ID).toBe(SETTINGS_CATEGORIES[0].id);
-    expect(DEFAULT_SETTINGS_CATEGORY_ID).toBe("ai");
+    expect(DEFAULT_SETTINGS_CATEGORY_ID).toBe("policy");
+  });
+
+  it("falls back to the default for the removed AI Assistant and Avatars categories", () => {
+    expect(resolveSettingsCategoryId("ai")).toBe("policy");
+    expect(resolveSettingsCategoryId("avatars")).toBe("policy");
   });
 
   it("resolves valid deep-link categories and falls back for unknown ones", () => {
     expect(resolveSettingsCategoryId("config")).toBe("config");
     expect(resolveSettingsCategoryId("network")).toBe("network");
-    expect(resolveSettingsCategoryId("avatars")).toBe("avatars");
+    expect(resolveSettingsCategoryId("mcp")).toBe("mcp");
     expect(resolveSettingsCategoryId("nope")).toBe(DEFAULT_SETTINGS_CATEGORY_ID);
     expect(resolveSettingsCategoryId(undefined)).toBe(DEFAULT_SETTINGS_CATEGORY_ID);
   });

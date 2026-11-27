@@ -1,6 +1,6 @@
 // Reachability debugger — shared, node-free vocabulary + pure fact extractors. Both the renderer (query bar,
 // optimistic render) and the main-process prober (engineDataService.probeReachability) import from here, so it
-// must stay free of Node/Tauri/Wails. The transport-aware trace assembly lives in ./report; this file is only
+// must stay free of Node/Tauri. The transport-aware trace assembly lives in ./report; this file is only
 // types + honest reads off the already-normalized Container shape.
 
 import type { Container, ContainerNetworkSettingsPorts } from "@/container-client/types/container";

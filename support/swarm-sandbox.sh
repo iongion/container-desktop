@@ -12,11 +12,45 @@
 #   support/swarm-sandbox.sh down        # remove all sandbox containers + the socket dir
 set -euo pipefail
 
-SANDBOX_DIR="${SANDBOX_DIR:-$(pwd)/temp/swarm-sandbox}"
+# Anchored to the repo, not the caller's cwd: `$(pwd)` put the sandbox — and the socket path registered below —
+# wherever the script happened to be invoked from.
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SANDBOX_DIR="${SANDBOX_DIR:-${ROOT_DIR}/temp/swarm-sandbox}"
 SOCK="${SANDBOX_DIR}/docker.sock"
 DIND_IMAGE="${DIND_IMAGE:-docker:dind}"
 MGR="cd-swarm-mgr"
 WORKER_PREFIX="cd-swarm-wkr"
+
+# The sandbox registers its own target, the way support/ssh-remote-sandbox.sh does. Nothing here is per-machine — a
+# fixed container name and a socket inside the repo's own temp/ — so leaving the operator to wire it by hand only
+# meant the swarm specs skipped for a reason that was never about their environment.
+TARGETS_ENV="${ROOT_DIR}/src/__tests__/live/targets.env"
+MARK_BEGIN="# >>> swarm-sandbox (auto) >>>"
+MARK_END="# <<< swarm-sandbox (auto) <<<"
+
+strip_block() {
+  [ -f "$TARGETS_ENV" ] || return 0
+  local tmp; tmp="$(mktemp)"
+  awk -v b="$MARK_BEGIN" -v e="$MARK_END" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$TARGETS_ENV" > "$tmp"
+  awk 'NF{blank=0} !NF{blank++} blank<2' "$tmp" > "${tmp}.2" && mv "${tmp}.2" "$tmp"
+  mv "$tmp" "$TARGETS_ENV"
+}
+
+write_targets_env() {
+  mkdir -p "$(dirname "$TARGETS_ENV")"
+  strip_block
+  local sep=""; [ -s "$TARGETS_ENV" ] && sep=1
+  {
+    [ -n "$sep" ] && echo ""
+    echo "$MARK_BEGIN"
+    echo "# Disposable swarm sandbox (support/swarm-sandbox.sh). Regenerated on each 'up'."
+    echo "CDT_TARGET_SWARM_ENABLED=true"
+    echo "CDT_TARGET_SWARM_OS=Linux"
+    echo "CDT_TARGET_SWARM_HOSTS=docker.native"
+    echo "CDT_TARGET_SWARM_DOCKER_SOCKET=${SOCK}"
+    echo "$MARK_END"
+  } >> "$TARGETS_ENV"
+}
 
 require_docker() {
   command -v docker >/dev/null 2>&1 || { echo "docker not found on PATH" >&2; exit 1; }
@@ -54,14 +88,17 @@ manager_ip() {
 
 cmd_up() {
   start_manager
+  write_targets_env
   echo "Swarm sandbox up (single dind daemon, NOT in a swarm)."
   echo "  socket: ${SOCK}"
-  echo "  set:    CDT_TARGET_SWARM_DOCKER_SOCKET=${SOCK}"
+  echo "  live target CDT_TARGET_SWARM_* written to ${TARGETS_ENV}"
+  echo "  run:    yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js"
 }
 
 cmd_up_multi() {
   local n="${1:-2}"
   start_manager
+  write_targets_env
   local ip
   ip="$(manager_ip)"
   docker exec "$MGR" docker swarm init --advertise-addr "$ip" >/dev/null
@@ -76,6 +113,7 @@ cmd_up_multi() {
   done
   echo "Swarm sandbox up (manager + ${n} worker(s))."
   echo "  socket: ${SOCK}"
+  echo "  live target CDT_TARGET_SWARM_* written to ${TARGETS_ENV}"
   docker exec "$MGR" docker node ls || true
 }
 
@@ -89,7 +127,10 @@ cmd_down() {
     docker rm -f $workers >/dev/null 2>&1 || true
   fi
   rm -rf "$SANDBOX_DIR"
-  echo "Swarm sandbox down."
+  # And the target with it: a registration left pointing at a deleted socket is worse than none — the gate reports a
+  # stale socket file where the honest answer is that no sandbox is up.
+  strip_block
+  echo "Swarm sandbox down (its live target is unregistered)."
 }
 
 require_docker

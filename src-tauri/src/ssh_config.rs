@@ -1,7 +1,7 @@
 // The Rust side of Platform.getSSHConfig — parses ~/.ssh/config into the renderer's SSHHost[] so the SSH
 // controller-scope picker lists the user's configured hosts. Parsing lives here in the native I/O layer alongside
 // FS/Command/proxy because no JS ssh-config parser bundles into the webview — they all pull node:child_process /
-// node:os. src-wails/ssh_config.go is its Go twin and must stay byte-faithful to it.
+// node:os.
 //
 // The parsed subset is deliberately narrow (do not "improve" it):
 //   - only `Host` blocks are read; HostName / Port / User / IdentityFile via a case-insensitive FIRST match.

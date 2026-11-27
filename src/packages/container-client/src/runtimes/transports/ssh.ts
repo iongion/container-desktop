@@ -41,6 +41,32 @@ export class SSHTransport implements Transport {
     return false;
   }
 
+  // Bring the connection back rather than refusing the command. The app closes a remote connection whose engine API
+  // stopped answering, and EVERY engine command travels on this client, so a
+  // closed client used to turn the user's next action into "SSH connection is not established" until something else
+  // happened to reconnect. One reconnect is shared by whatever asked at the same time, and it deliberately does not go
+  // through `getControllerScopes`: that asks whether the ENGINE is available, which runs a command, which would arrive
+  // back here.
+  protected reconnecting: Promise<void> | undefined;
+
+  protected async ensureConnected(scope?: string): Promise<void> {
+    if (this._connection?.isConnected()) return;
+    if (!scope) throw new Error("SSH connection is not established");
+    this.reconnecting ??= (async () => {
+      const entries = await getAvailableSSHConnections();
+      const entry = entries.find((item) => item.Name === scope || item.Host === scope);
+      if (entry) {
+        await this.startSSHConnection(entry as SSHHost);
+      }
+    })().finally(() => {
+      this.reconnecting = undefined;
+    });
+    await this.reconnecting;
+    if (!this._connection?.isConnected()) {
+      throw new Error(`SSH connection is not established, and ${scope} could not be reconnected`);
+    }
+  }
+
   async runScopeCommand(
     _host: HostContext,
     program: string,
@@ -49,6 +75,7 @@ export class SSHTransport implements Transport {
     _settings?: EngineConnectorSettings,
     execOpts?: HostExecOptions,
   ): Promise<CommandExecutionResult> {
+    await this.ensureConnected(_scope);
     if (!this._connection?.isConnected()) {
       throw new Error("SSH connection is not established");
     }
@@ -58,7 +85,13 @@ export class SSHTransport implements Transport {
     return result;
   }
 
-  async runScopeCommandStreaming(_host: HostContext, program: string, args: string[]): Promise<StreamHandle> {
+  async runScopeCommandStreaming(
+    _host: HostContext,
+    program: string,
+    args: string[],
+    scope?: string,
+  ): Promise<StreamHandle> {
+    await this.ensureConnected(scope);
     if (!this._connection?.isConnected()) {
       throw new Error("SSH connection is not established");
     }

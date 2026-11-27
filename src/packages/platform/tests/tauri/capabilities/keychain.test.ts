@@ -33,20 +33,24 @@ describe("createTauriKeychain", () => {
     expect(invoke.mock.calls.length).toBe(callsAfterConstruct);
   });
 
-  it("forwards has/set/clear to the keychain_* commands, mapping the provider id to the generic account", async () => {
-    const invoke = fakeInvoke({ keychain_has: ({ account }) => account === "openai" });
+  it("forwards has/set/clear to the keychain_* commands, mapping the key to the generic account", async () => {
+    const invoke = fakeInvoke({ keychain_has: ({ account }) => account === "service-token" });
     const store = await createTauriKeychain(asInvoke(invoke));
-    expect(await store.hasKey("openai")).toBe(true);
-    await store.setKey("openai", "sk-new");
-    expect(invoke).toHaveBeenCalledWith("keychain_set", { account: "openai", secret: "sk-new", allowDegraded: false });
-    await store.clearKey("openai");
-    expect(invoke).toHaveBeenCalledWith("keychain_clear", { account: "openai" });
+    expect(await store.hasKey("service-token")).toBe(true);
+    await store.setKey("service-token", "s3cret-new");
+    expect(invoke).toHaveBeenCalledWith("keychain_set", {
+      account: "service-token",
+      secret: "s3cret-new",
+      allowDegraded: false,
+    });
+    await store.clearKey("service-token");
+    expect(invoke).toHaveBeenCalledWith("keychain_clear", { account: "service-token" });
   });
 
   it("refuses to read a key back into the web view, and never asks the backend for one", async () => {
     const invoke = fakeInvoke();
     const store = await createTauriKeychain(asInvoke(invoke));
-    await expect(store.getKey("anthropic")).rejects.toThrow(/not available in the web view/);
+    await expect(store.getKey("service-token")).rejects.toThrow(/not available in the web view/);
     expect(invoke).not.toHaveBeenCalledWith("keychain_get", expect.anything());
   });
 
@@ -54,8 +58,12 @@ describe("createTauriKeychain", () => {
     const invoke = fakeInvoke({ keychain_status: () => DEGRADED });
     const store = await createTauriKeychain(asInvoke(invoke));
     expect(store.getEncryptionStatus().degraded).toBe(true);
-    await expect(store.setKey("openai", "sk")).rejects.toThrow(/degraded/i);
-    await store.setKey("openai", "sk", { allowDegraded: true });
-    expect(invoke).toHaveBeenCalledWith("keychain_set", { account: "openai", secret: "sk", allowDegraded: true });
+    await expect(store.setKey("service-token", "s3cret")).rejects.toThrow(/degraded/i);
+    await store.setKey("service-token", "s3cret", { allowDegraded: true });
+    expect(invoke).toHaveBeenCalledWith("keychain_set", {
+      account: "service-token",
+      secret: "s3cret",
+      allowDegraded: true,
+    });
   });
 });

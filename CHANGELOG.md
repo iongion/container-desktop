@@ -9,10 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- AI workers can wear an avatar — pick a built-in face or upload your own, shown across the workers list, cards and Runs
-- The Workers screen has a cards view, now the default, alongside the table
-- Reach the AI area from a highlighted "Runs" entry in the sidebar; a single button opens the Assistant
-- The goal task graph is an interactive canvas — pan, zoom and reset the view, with curved dependency links drawn between tasks
+- An MCP server for AI clients, set up in Settings → MCP server: loopback only, off by default, read-only by default, its token kept in the OS keychain, and `container-desktop --mcp-stdio` for clients that only speak stdio
+- Branding and packaging details now come from one shared source
+
+### Changed
+
+- Dependencies, Rust crates and pinned GitHub Actions moved to their latest patch releases
+- Linux WebDriver runs no longer put a window on your desktop: the app runs on a private headless sway, on a GPU that is not NVIDIA's, keeps its secrets out of your OS keychain, and a killed run leaves nothing behind. `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows it; sway joins the e2e prerequisites
+- The app now runs entirely in the system's own webview over a native backend, so it starts faster and ships a far smaller download
+- The left sidebar now starts collapsed, giving screens their full width until you expand it
+- Container and pod lists no longer refetch on every health-check probe — only real lifecycle events and health-status changes trigger a refresh
+- Resource actions no longer show a success toast — only failures notify, keeping routine start, stop and remove quiet
+- Development and website screenshots now drive the real app the same way the tests do
+
+### Removed
+
+- The Electron and Wails builds — the app ships on Tauri only
+- The AI assistant: its screens, console, header menu, Settings section and the setup wizard's assistant option. Settings now opens on Air-gap & policy
+- Nothing the assistant left behind is deleted for you: its settings block, stored provider keys, conversations, and the agent images, containers and volume on your engines stay where they are
+- The assistant's strings from all 11 translations
+- Three dependencies nothing used: `tslib`, `vite-plugin-static-copy` and `dmg-license`
+- Installing the app no longer downloads a bundled browser, and provisioning a machine no longer pulls in a display server it does not need
+
+### Fixed
+
+- The swarm smoke spec's manager half skips when the sandbox is down, as its lifecycle half does, instead of failing
+- A WebDriver run no longer reads or writes your installed app's webview storage (localStorage, HTTP cache). With `CONTAINER_DESKTOP_USER_DATA_DIR` set, the webview keeps its own under that directory; a normal launch is unchanged
+- The mock inventory WebDriver spec runs in every mock scenario, the default one included, and fails on an unknown scenario instead of silently skipping
+- The WebDriver tests are two suites again, told apart by what a failure is allowed to mean: `webdriver/specs/*.e2e.js` runs on the mock app only and is never gated, while `webdriver/smoke/*.smoke.js` is real integration with its own entry point (`yarn test:smoke:tauri`) — the two used to share one glob, so the real-integration specs ran against the mock app by default
+- A smoke spec whose machine or engine is simply absent now reports SKIP with the command that fixes it, instead of failing: a powered-off VM used to read as five failing hosts
+- The smoke specs that took several screenshots in one session no longer wedge the session they are measuring — the frames are budgeted, and the container-logs one now asserts that xterm actually painted instead of only logging what it saw
+- A killed app no longer leaves its SSH forwards running, on Windows as well as Linux. Stopping the app has always taken them with it, but being killed — the task manager, a crash, an out-of-memory kill — left each one holding a local port and an open connection to the remote, and the next forward quietly picked a different port, so nothing looked wrong until the ports ran out. The kernel now ends them, in both backends. macOS offers no such mechanism and is unchanged
+- Starting the app with no engine connected no longer throws away the screen you were on. It always redirected to the connection manager, so a reload with the engine down lost your place; it now does that only from the default route, and any other screen reports the missing engine where you are. The engine-less state can also be exercised for the first time (`CONTAINER_DESKTOP_MOCK_CONNECTED=none`), which is what made the behaviour testable at all
+- A remote connection stops dropping itself. One unanswered engine ping used to close the whole connection — including the SSH channel every command travels on, so the next thing you did failed with "SSH connection is not established". A ping is now retried, with a budget that fits what it crosses: on a busy remote engine six pings failed in a single run and every one of them recovered on the next attempt, where before each would have cost you the connection
+- A connection whose channel was closed is reopened instead of refusing your next action
+- A connection to a Windows machine over SSH can be established at all: the app looked for the engine with a command only a Unix shell has, so a Windows remote always reported the engine as missing however it was installed. It now asks the engine itself, and uses the path you configured when you gave one
+- A Windows connection now says that reaching its containers needs WSL, instead of naming an execution target kind the app no longer has
+- An SSH connection that fails now says why: ssh writes a post-quantum advisory to stderr before the real error, and the diagnostic reported that advisory as the reason — so "start Docker Desktop" read as a key-exchange warning
+- An SSH config entry that lists several aliases on one line (`Host web1 web2`) now offers each alias, instead of unusable entries with garbled names
+- A command a container image is too old to know now fails immediately with the reason, instead of hanging for thirty seconds
+- Demo mode holds its engine connections instead of dropping them every few seconds: it was checking the filesystem for sockets no demo has, so the connected engines flapped and the theme flickered between them
+- On Windows, checking whether an engine is listening no longer opens its named pipe — the check now reads the pipe list instead, so a busy engine is not reported as missing and Docker Desktop's current pipe is picked over the legacy one as intended
+- A connection whose engine cannot run on this operating system no longer contacts the engine anyway, and keeps the precise reason instead of replacing it with "API is not reachable"
+- A container the engine reports with no name at all is no longer listed and grouped as "undefined"
+- Container ports, container statistics and a container's health block are now typed the way both engines really answer them, so nothing reads a field that is not there
+- A container's published ports are read from the shape both engines actually send, so a mapped port is no longer reported as unpublished
+- A container that exposes a port without binding it, and one the engine reports without a configuration block, no longer break the list they appear in
+
+## [6.1.0] - 2026-11-17
+
+### Added
+
 - Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
 - Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily
 - Manage image registries per connection — sign in, add or remove them, and set certificates and a proxy for each engine
@@ -22,10 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A colored status dot on each container shows at a glance whether it is running, healthy, starting, paused or stopped
 - When importing a stack, a service now waits for the ones it depends on to become healthy before it starts
 - Starting, stopping or removing a whole group now shows progress and reports if something fails
-- A new Wails desktop build joins Tauri, packaged for the same set of platforms
+- A new Wails desktop build joins Electron and Tauri, packaged for the same set of platforms
 - The Wails build has the same shell behavior: single window, remembered size, relaunch, hide to tray, file logs and keychain storage
 - The Wails window waits until it is ready before appearing, so there is no blank flash at startup
-- Branding and packaging details now come from one shared source across both desktop builds
+- Branding and packaging details now come from one shared source across all three desktop builds
 - Each desktop build has its own release pipeline, with Tauri as the default publisher
 - A driver for automating and taking screenshots of the Wails build during testing
 - Website screenshots can now be captured from the Wails build too
@@ -46,46 +93,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Untagged images show a short ID in the name column instead of a blank cell
 - The container detail header shows a combined health-and-state badge next to the playback controls
 - Container detail is reorganized into one side rail — summary, environment, ports, mounts, logs, processes and more — with playback kept inline
-- Summon the AI assistant as a console over any screen — a bottom panel opened with a keyboard shortcut or the header button and dismissed with Escape
-- The assistant now knows which screen you're on, so you can ask about what you're looking at without spelling it out
-- Each screen offers its own starter questions to kick off a conversation with the assistant
-- Make the assistant console see-through with a transparency slider, so you can keep watching the screen behind it
-- Resize the assistant console by dragging the grip in its header, up to 80% of the window and no smaller than 250px
-- The assistant renders replies as rich markdown — tables, fenced code blocks with a copy button, lists, callouts and links
-- Recall recently sent messages in the assistant composer with the Up and Down arrows
-- The assistant shows an animated thinking indicator above the composer while it works on your request
-- Send a follow-up while the assistant is working to steer its live response or queue it behind an active tool
-- Assistant conversations are durable, navigable, and keep background work and approvals reachable
-- Web search has an explicit enable switch separate from its remembered permission
-- Providers without model discovery can use a manually entered model
-- Point the assistant at a project folder so it can read, search, edit and run things there, always asking before it changes anything
-- The assistant shows file reads, edits, searches, listings and command output as rich cards instead of raw text
-- A new Runs screen: describe an outcome, review the plan the Assistant proposes, then watch a Team work through it in parallel
-- Runs show the task graph, each agent's live transcript, a token budget you set up front, and the final answer
-- Runs add a timing waterfall, per-task runtime evidence, and run-wide duration, usage and cost statistics
-- Assistant and Team Run agents now use Open Multi Agent orchestration while retaining app-native approvals and tools
-- Agents pause for your approval before anything that changes your system, and only the agent that asked waits
-- Run several goals at once and follow them from the Runs list, as a board grouped by stage or as a sortable table
-- A workers library: define reusable agents with their own model, instructions and tool permissions, and hand a goal a team drawn from it
-- Choose per worker whether it may use every tool, must ask you before each one, or is limited to tools you tick individually
-- Choose where each worker runs — this host, a remote host over SSH, inside an existing container, or a throwaway sandbox created for the run and removed after
-- Ollama joins the local inference sources you can pick a model from
 
 ### Changed
 
-- A Run's plan actions sit in the panel header, and rejecting a plan now asks you to confirm first
-- Each task in a Run's graph shows its worker's avatar in a leading column
-- Container and pod lists no longer refetch on every health-check probe — only real lifecycle events and health-status changes trigger a refresh
-- Resource actions no longer show a success toast — only failures notify, keeping routine start, stop and remove quiet
 - Engine health moves runtime details into its header and lets networking use the full width
 - Connection info shows the real socket it connects through and hides rows that don't apply
 - Settings categories are alphabetical, connection links look cleaner, and the image Start button matches the others
 - English is now the complete translation source, and much more of the app — states, headers, menus — can be translated, with wider language coverage
 - Container state and health are now translated instead of showing raw engine text
 - The "Explore more in the docs" link always points to the Container Desktop manual
-- The AI assistant runs on a smaller, leaner internal core — identical streaming, steering, tool approvals and recovery, with less code and one fewer dependency
-- Starting a goal moves into the Runs list, so a Run you open is one of several rather than the only one
-- A selected view mode, such as board or table, now reads as selected instead of looking dimmed
 - Collapsed sidebar labels are trimmed with an ellipsis instead of overflowing
 - Inspect tables are more compact
 - Container inspect breaks environment variables and ports into their own copyable tables
@@ -99,38 +115,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The image vulnerabilities view sets a severity chart and filters beside the findings, with a clear all-clear state
 - The image bill-of-materials is now a sortable package table with export, and licenses get their own panel
 - The reachability tool and engine health now share the same connection-path and diagnosis display
-- The app now runs entirely in the system's own webview over a native backend, so it starts faster and ships a far smaller download
-- Development and website screenshots now drive the real app the same way the tests do
-
-### Removed
-
-- The Electron build — the app ships on Tauri (Rust) and Wails (Go) only
-- Installing the app no longer downloads a bundled browser, and provisioning a machine no longer pulls in a display server it does not need
 
 ### Fixed
 
-- A container the engine reports with no name at all is no longer listed and grouped as "undefined"
-- Container ports, container statistics and a container's health block are now typed the way both engines really answer them, so nothing reads a field that is not there
-- A container's published ports are read from the shape both engines actually send, so a mapped port is no longer reported as unpublished
-- A container that exposes a port without binding it, and one the engine reports without a configuration block, no longer break the list they appear in
-- On Windows, checking whether an engine is listening no longer opens its named pipe — the check now reads the pipe list instead, so a busy engine is not reported as missing and Docker Desktop's current pipe is picked over the legacy one as intended
-- A connection whose engine cannot run on this operating system no longer contacts the engine anyway, and keeps the precise reason instead of replacing it with "API is not reachable"
-- A Run's plan-ready list and tool-approval prompts now scroll within a fixed height, so a large plan or a burst of approvals no longer pushes the task graph off-screen
-- A message typed while the assistant is still answering now redirects that answer immediately, instead of waiting for it to finish and replying separately
-- The AI provider key is used only inside the app's native layer on the Tauri build, so it is never handed to the web view
-- The assistant's web search connects only to the exact public address it already checked, closing a DNS-rebinding gap (verified end-to-end in the real WebKitGTK runtime)
-- The assistant asks again before repeating a previously approved action once it has read a file or tool output, so instructions hidden in that content cannot reuse your earlier approval
-- Finished, failed and awaiting-approval stages in a Run now show their status colour instead of rendering plain
-- Commands the assistant runs in a project folder are held to the same blocked-command list as everywhere else
-- Older conversations reopen cleanly against the rewritten assistant instead of failing on the first reply
-- Stopping the assistant while it is revising an interrupted answer now reliably ends the turn instead of occasionally continuing it
-- A provider stream error now surfaces as an error instead of being reported as a completed answer
-- When the assistant asks for several tool approvals at once, they resolve together and all approved tools run
-- A window closing while the assistant is responding can no longer crash it
-- The assistant no longer gets stuck refusing new messages if a tool approval is interrupted by an error
-- Stopping the assistant while a tool approval is pending — even as it is being saved — now ends the turn cleanly and never runs the tool
-- An answer that ends in a stream error or is cut off partway is reported as failed or stopped, never as a completed answer
-- Stopping the assistant while a tool is running and an approval is pending no longer wedges your next message on a leftover approval
+- The website, manual links, update check and WSL rootfs download moved to iongion.github.io/container-desktop and GitHub releases; the project no longer trusts its former domain
 - IDs are generated in a way that works in every desktop build, not just Chromium-based ones
 - Fixed detecting the image-signing tool's version, which used to log a spurious error
 - Docker networks now report their subnets, so subnet-aware views work just as they do on Podman
@@ -145,7 +133,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux AppImage no longer crashes at startup with EGL_BAD_PARAMETER on rolling-release distros
 - Resource list headers and actions now follow one consistent layout
 - The connection menu shows a solid green icon when connected
-- An SSH config entry that lists several aliases on one line (`Host web1 web2`) now offers each alias, instead of unusable entries with garbled names
 
 ## [6.0.0] - 2026-07-06
 

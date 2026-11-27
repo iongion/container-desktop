@@ -5,8 +5,8 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { redactPayload, redactText } from "@/ai-system/core/redact";
 import type { BuildRun, BuildStep, BuildStepLogLine } from "@/container-client/builder/types";
+import { redactPayload, redactText } from "@/utils/redact";
 
 const RAW_LOG_CAP = 32 * 1024;
 const MAX_PERSISTED_RUNS = 50;

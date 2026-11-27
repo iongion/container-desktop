@@ -227,6 +227,32 @@ flowchart TB
   classDef external fill:#8a8a8a,color:#fff,stroke:#5e5e5e;
 ```
 
+## What one unanswered ping is allowed to mean
+
+A failed `api` verdict is expensive: the caller stops the API, and an SSH transport's `stopApi` closes the ssh client
+**every** engine command travels on — an MCP call included. So the ping is retried before it is believed
+(`runtimes/api-ping.ts`), with a budget that reflects what it crosses: a local socket answers in milliseconds, while a
+remote engine inside a machine is two SSH hops and a unix socket (measured ~1.1s idle, and the same under load).
+
+Three things go wrong on a remote, all measured on a Windows target, none of them the engine being gone:
+
+- **A ping fails transiently and the next one answers.** Measured on a busy target: six attempts failed in one run
+  while all eight verdicts still came back reachable — five recovered on the second attempt, one on the third, each
+  failure and its retry inside the SAME second, so a connection error rather than a timeout. A later idle run had none.
+  What closed those sockets is not pinned down: the bridge's listener is bound before the request is issued, and a
+  connection held through the bridge survives being idle (both measured), so the pooled-connection and
+  racing-the-spawn explanations are both ruled out. Single-shot, each of those six used to close the whole connection.
+- **A remote sshd refuses part of a burst.** Of 14 simultaneous engine commands, up to 2 came back
+  `kex_exchange_identification: read: Connection reset by peer`. A session start fires about a dozen. Such a failure
+  means the command never ran, so `SSHClient.execute` runs it again (`ssh-retry.ts`) — and only for that family of
+  errors, never for an engine's own answer.
+- **A forward can die before it carries anything.** `ssh -NL` exits 255 when the handshake is refused;
+  `openBridgeTunnel` opens it again within a grace window, and reports a death after that as the real loss it is.
+
+A connection whose client was closed is **reopened rather than refused**: `SSHTransport.runScopeCommand` re-establishes
+the scope, with one reconnect shared by whatever asked at the same time. It deliberately does not go through
+`getControllerScopes`, which asks whether the ENGINE is available — that runs a command, which would arrive back here.
+
 ## Function reference (where to look)
 
 | Step | Function · file |

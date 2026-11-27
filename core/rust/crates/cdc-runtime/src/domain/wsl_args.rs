@@ -14,7 +14,7 @@
 //! observable behaviour. A flag in the wrong place produces a command that runs and talks to the wrong
 //! socket, and that is a thing to assert in a test rather than to discover against a live distribution.
 //! It is also shared — the original keeps it node-free precisely so both the JS relay and the
-//! Tauri/Wails webview bindings build the same argv from one source, and this port has the same two
+//! Tauri webview bindings build the same argv from one source, and this port has the same two
 //! consumers in [`crate::runtimes::transports::wsl`] and the relay.
 
 use crate::domain::types::engine::ContainerEngine;

@@ -3,12 +3,18 @@
 // launches once per wdio session. Counts, routes and selectors are the ported originals.
 import { expectAtLeast, navigate, waitReady } from "../support/mockApp.js";
 
-const ENGINE = (process.env.CONTAINER_DESKTOP_MOCK || "podman").toLowerCase();
+// The multi-engine flags (wdio.conf's default is "1") boot the unified workspace, with Podman's system connection
+// as the default row, so they share Podman's minimums.
+const MULTI_ENGINE_FLAGS = new Set(["1", "true", "yes", "unified", "all", "both"]);
+const RAW = (process.env.CONTAINER_DESKTOP_MOCK || "podman").toLowerCase();
+const ENGINE = MULTI_ENGINE_FLAGS.has(RAW) ? "unified" : RAW;
+const PODMAN = {
+  defaultConnectionId: "mock.podman.system",
+  counts: { containers: 9, images: 4, networks: 2, pods: 12, volumes: 2 },
+};
 const SPECS = {
-  podman: {
-    defaultConnectionId: "mock.podman.system",
-    counts: { containers: 9, images: 4, networks: 2, pods: 12, volumes: 2 },
-  },
+  podman: PODMAN,
+  unified: PODMAN,
   docker: {
     defaultConnectionId: "mock.docker.system",
     counts: { containers: 9, images: 5, networks: 2, volumes: 2 },
@@ -16,8 +22,11 @@ const SPECS = {
 };
 const spec = SPECS[ENGINE];
 
-(spec ? describe : describe.skip)(`mock ${ENGINE} inventory over the webview`, () => {
+describe(`mock ${ENGINE} inventory over the webview`, () => {
   before(async () => {
+    if (!spec) {
+      throw new Error(`mock-inventory has no expectations for CONTAINER_DESKTOP_MOCK=${RAW}; add them to SPECS`);
+    }
     await browser.pause(4000);
     await waitReady(browser);
   });
@@ -67,8 +76,7 @@ const spec = SPECS[ENGINE];
     await expectAtLeast(browser, '[data-table="volumes"] tbody tr', spec.counts.volumes);
   });
 
-  // Podman only: the scanner fixture is served for that engine's mock.
-  (ENGINE === "podman" ? it : it.skip)("renders the image security report from the mock scanner", async () => {
+  it("renders the image security report from the mock scanner", async () => {
     await navigate(browser, "/screens/images");
     const imageId = await browser.execute(
       () => document.querySelector("[data-image]")?.getAttribute("data-image") ?? "",

@@ -1,10 +1,10 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Container Desktop",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "identifier": "com.iongion.container-desktop.tauri",
   "build": {
-    "frontendDist": "../build/6.0.0",
+    "frontendDist": "../build/6.1.0",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "yarn tauri:serve"
   },
@@ -12,6 +12,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Container Desktop",
         "width": 1280,
         "height": 800,

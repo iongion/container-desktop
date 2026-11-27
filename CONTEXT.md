@@ -1,94 +1,47 @@
-# Container Desktop AI
+# Container Desktop MCP
 
-The AI context provides conversational assistance and coordinated execution against container environments and
-workspaces.
+The app's MCP server lets an AI client work with the user's container engines through the same engine service the UI
+uses, on this computer only.
 
 ## Language
 
-**Run**:
-A bounded execution tracked from start through completion, cancellation, or failure.
-_Avoid_: Goal Run, job
+**MCP server**:
+The part of Container Desktop that answers AI clients: a loopback listener in the Tauri shell, whose requests the
+webview answers. Off by default.
+_Avoid_: assistant, agent, bridge
 
-**Team Run**:
-A Run in which a coordinator plans a Goal and a Team of Workers executes the resulting Tasks.
-_Avoid_: Goal Run, orchestrator run
+**Client**:
+An AI application that connects to the MCP server, such as Claude Code, Cursor or VS Code.
+_Avoid_: agent, user
 
-**Goal**:
-The user-authored objective a Run is intended to accomplish.
-_Avoid_: Run, prompt
+**Tool**:
+One engine operation the server offers a client, such as `listContainers` or `stopContainer`, with a typed input
+schema and annotations saying whether it changes anything.
+_Avoid_: command, action, function
 
-**Team**:
-The coordinator and Workers assembled to execute one Team Run.
-_Avoid_: roster, agent group
+**Gated tool**:
+A tool that changes an engine (start, stop, pause, restart, remove, pull). Only the **allow** mode lists and runs it.
+_Avoid_: dangerous tool, write tool
 
-**Worker**:
-A reusable specialist available for assignment to Tasks in a Team Run.
-_Avoid_: bot, role
+**Mode**:
+The user's choice of what clients may do: **read-only** (the default: list, inspect, read logs) or **allow** (gated
+tools too). Read from the settings for every request.
+_Avoid_: permission profile, approval mode, access level
 
-**Task**:
-A planned unit of work assigned to one Worker within a Team Run.
-_Avoid_: step, job
+**Token**:
+The bearer secret a client presents on every request: 32 random bytes as hex, kept in the OS keychain. Regenerating it
+cuts off every client still holding the old one.
+_Avoid_: API key, password
 
-**Thread**:
-A durable, resumable, and branchable conversation record between the user and the Assistant.
-_Avoid_: Chat, Conversation, Agent Session, chat run
+**Transport**:
+How a client reaches the server: **Streamable HTTP** at `http://127.0.0.1:<port>/mcp`, or **stdio** through
+`container-desktop --mcp-stdio`, which relays to that endpoint and so needs the app running.
+_Avoid_: channel, connection (a connection is an engine connection)
 
-**Agent Session**:
-The live agent runtime processing work for one Thread.
-_Avoid_: Thread, Chat, Conversation, Team Run
+## Relationships
 
-**Execution Target**:
-The concrete environment where a Thread or Worker runs tools and owns workspace state.
-_Avoid_: connection, workspace, host
-
-**Access Profile**:
-A named upper bound on the tools an Agent Session may receive. It limits capability independently of approvals or
-Execution Target.
-_Avoid_: permission mode, approval policy, tool preset
-
-**Approval Mode**:
-The user preference governing whether an available gated operation asks for confirmation or may reuse a valid
-Permission Decision.
-_Avoid_: Access Profile, permission scope
-
-**Permission Decision**:
-A host-owned allow or reject verdict scoped to a concrete workspace, Execution Target, operation, arguments, and
-content-trust epoch, with Worker or external-server identity when relevant.
-_Avoid_: permission mode, blanket approval
-
-**Content Trust**:
-The authority and taint classification of context injected into an Agent Session. It may invalidate remembered
-Permission Decisions but never widens available tools.
-_Avoid_: Access Profile, extension approval
-
-**Extension Trust**:
-The host-owned decision that a fingerprinted Skill or future extension definition may be loaded. It never grants
-permission for the operations that extension requests.
-_Avoid_: tool approval, Content Trust
-
-**Reasoning Level**:
-A Thread-owned, provider-supported choice for model reasoning effort. It changes model behavior without changing
-tool availability, approval, or Execution Target.
-_Avoid_: model, permission level
-
-**Workspace Change Set**:
-A bounded Git status or diff observation tied to one workspace and one Execution Target.
-_Avoid_: host changes, global changes
-
-**Branch**:
-A new Thread derived from an immutable message boundary in another Thread. It inherits conversation context but
-no active or pending runtime authority.
-_Avoid_: rewind, rollback, clone
-
-**Checkpoint**:
-An immutable message boundary that identifies a coherent conversation state within a Thread. It does not imply
-that container, filesystem, remote, or external-service state can be restored.
-_Avoid_: environment snapshot, rollback point
-
-**Slash Command**:
-A deterministic user instruction that controls the Assistant application without becoming a model message or tool.
-_Avoid_: Command, prompt, tool command
-
-**Skill**:
-A reusable prompt-backed workflow explicitly invoked within a Thread.
-_Avoid_: Slash Command, Worker, plugin
+- A **Client** reaches the **MCP server** over one **Transport** and presents the **Token**.
+- The **Mode** decides which **Tools** run; a **Client** sees every **Tool**, and a **Gated tool** is refused in
+  read-only.
+- Every **Tool** acts on an engine connection of the app; left unnamed, the current one (`current` in
+  `listConnections`).

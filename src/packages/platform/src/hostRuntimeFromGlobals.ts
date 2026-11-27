@@ -1,5 +1,5 @@
 // Assembly of the IHostRuntime port from the window globals. The host bridge exposes the host
-// capabilities as window.* globals (Command/Platform/Path/FS/MessageBus + the receive buses + AI); this
+// capabilities as window.* globals (Command/Platform/Path/FS/MessageBus + the receive buses); this
 // gathers them into the single typed IHostRuntime the portable app consumes via the provider, and maps the
 // typed IWindowControl/IDialogs onto the string IPC channels registerAppControlIpc handles in main. The
 // Tauri binding (src/platform/tauri/) installs the SAME globals over @tauri-apps/api instead.
@@ -36,8 +36,6 @@ export function assembleHostRuntimeFromGlobals(source: typeof globalThis = globa
     activityBus: source.ActivityBus,
     trayBus: source.TrayBus,
     resourceBus: source.ResourceBus,
-    ai: source.AI,
-    aiBus: source.AIBus,
     windowControl,
     dialogs,
   };

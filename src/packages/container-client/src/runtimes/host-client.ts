@@ -12,8 +12,10 @@ import type { ILogger } from "@/logger";
 
 import type { AxiosInstance } from "axios";
 import type EventEmitter from "eventemitter3";
+import { isMockMode } from "@/container-client/mock/mode";
 import { systemNotifier } from "@/container-client/notifier";
 import { Runner } from "@/container-client/runner";
+import { apiPingPolicy, pingUntilAnswered } from "@/container-client/runtimes/api-ping";
 import type { ApiConnection, Connection, EngineConnectorSettings } from "@/container-client/types/connection";
 import {
   type AvailabilityCheck,
@@ -334,14 +336,21 @@ export class HostClient implements HostContext {
       // isApiAvailable's !isScoped guard). The scope is already started by the time getAvailability runs
       // (Application.connectHostClient), so runScopeCommand is live.
       try {
+        // The program is asked for its OWN version rather than located with `which`: that is a POSIX command, and a
+        // Windows remote answers ssh with cmd.exe, where it does not exist — so every Windows SSH connection reported
+        // its engine as absent however it was installed. A version probe is answerable by every shell, and it uses the
+        // configured PATH when the operator gave one, which locating by name threw away.
         const probe = await this.runScopeCommand(
-          "which",
-          [programName],
+          programPath,
+          ["--version"],
           currentSettings.controller?.scope || "",
           currentSettings,
         );
         if (!probe.success) {
-          result.details = `Program "${programName}" was not found`;
+          result.details =
+            programPath === programName
+              ? `Program "${programName}" was not found`
+              : `Program "${programName}" was not found at ${programPath}`;
           return result;
         }
       } catch (error: any) {
@@ -352,7 +361,8 @@ export class HostClient implements HostContext {
           : `Program "${programName}" could not be checked in the remote host`;
         return result;
       }
-    } else if (!(await FS.isFilePresent(programPath))) {
+      // The fixtures ARE the engine in mock mode, so there is no binary to find — see isApiAvailable.
+    } else if (!isMockMode() && !(await FS.isFilePresent(programPath))) {
       result.details =
         programPath === programName
           ? `Program "${programName}" was not detected on this machine`
@@ -390,7 +400,11 @@ export class HostClient implements HostContext {
     // fs.existsSync, which is false for EVERY named pipe (it opens the path, and opening a pipe means
     // becoming a client of it), so checking one here would have refused every Windows connection. The
     // port now answers a pipe address by enumerating \\.\pipe\.
-    if (!this.isScoped()) {
+    // Mock mode serves every request from fixtures, so a connection's address names nothing on this machine —
+    // podman's real socket path with no podman running, or Apple Container's macOS path on Linux. Probing the
+    // filesystem for it fails every time, which failed each liveness ping, which dropped the connection: the
+    // engines flapped and the theme — keyed to the active engine — flickered between them at random.
+    if (!this.isScoped() && !isMockMode()) {
       const address = settings.api.connection.uri || "";
       const socketPath = isWindowsNamedPipe(address) ? address : address.replace(/^unix:\/\//, "");
       if (socketPath && !(await FS.isFilePresent(socketPath))) {
@@ -417,32 +431,40 @@ export class HostClient implements HostContext {
       this.logger.error(this.id, "API is not available - unable to ping", available);
       return available;
     }
-    // Test reachability
-    const result: AvailabilityCheck = {
-      success: false,
-      details: "",
-    };
+    // Test reachability. Retried, and with a budget that reflects what this connection's ping has to cross: a scoped
+    // engine answers over a bridge (an SSH remote in a machine is two SSH hops and a unix socket), so one unanswered
+    // request is a hiccup and not a verdict — and the verdict is expensive, since the caller stops the API and an SSH
+    // transport's `stopApi` closes the ssh client every engine command travels on.
     const driver = await this.getApiDriver();
     systemNotifier.transmit("engine.availability", {
       trace: "Performing api health check - start",
     });
-    try {
-      const response = await driver.request({
-        method: "GET",
-        url: "/_ping",
-        timeout: 3000,
-      });
-      result.success = response?.data === "OK";
-      // Something answered on the engine's address and it was not the engine, so WHAT it said is the
-      // whole content of the reason. It is not necessarily a string, and an empty 200 makes it nothing
-      // at all — which used to leave `details` undefined precisely when a reason was owed.
-      result.details = result.success ? "Api is reachable" : describeUnexpectedPingBody(response?.data);
-      if (!result.success) {
-        this.logger.error(this.id, "API ping service failed - response error", response);
+    const policy = apiPingPolicy(this.isScoped());
+    let attemptsMade = 0;
+    const result: AvailabilityCheck = await pingUntilAnswered(async (timeout) => {
+      attemptsMade += 1;
+      try {
+        const response = await driver.request({ method: "GET", url: "/_ping", timeout });
+        const success = response?.data === "OK";
+        // Something answered on the engine's address and it was not the engine, so WHAT it said is the
+        // whole content of the reason. It is not necessarily a string, and an empty 200 makes it nothing
+        // at all — which used to leave `details` undefined precisely when a reason was owed.
+        if (!success) {
+          this.logger.warn(this.id, `API ping service failed - response error (attempt ${attemptsMade})`, response);
+        }
+        return { success, details: success ? "Api is reachable" : describeUnexpectedPingBody(response?.data) };
+      } catch (error: any) {
+        // The message and code, not just the object: a transport error's own words are what tell a socket that was
+        // never there from one that answered something unexpected, and the object alone logged as a bare stack.
+        this.logger.warn(
+          this.id,
+          `API ping service failed - response failure (attempt ${attemptsMade}): ${error?.code ?? "no-code"} ${error?.message ?? error}`,
+        );
+        return { success: false, details: "API is not reachable - start manually or connect" };
       }
-    } catch (error: any) {
-      result.details = "API is not reachable - start manually or connect";
-      this.logger.error(this.id, "API ping service failed - response failure", error, driver);
+    }, policy);
+    if (!result.success) {
+      this.logger.error(this.id, `API ping service failed after ${attemptsMade} attempts`, result.details, driver);
     }
     systemNotifier.transmit("engine.availability", {
       trace: "Performing api health check - complete",

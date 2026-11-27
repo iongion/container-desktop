@@ -2,8 +2,7 @@ import type { ITrayBus } from "@/platform/contract";
 
 const SUBSCRIBABLE = new Set<string>(["tray:switch-connection"]);
 
-// Tauri webview-side tray receive bridge exposed as window.TrayBus. Mirrors its Wails peer at the
-// API boundary. Tauri tray actions execute in the host realm today, so there is no cross-realm push source.
+// Tauri webview-side tray receive bridge exposed as window.TrayBus. Tauri tray actions execute in the host realm today, so there is no cross-realm push source.
 export function createTauriTrayBus(): ITrayBus {
   return {
     subscribe(channel) {

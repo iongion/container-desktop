@@ -1,7 +1,6 @@
 // Native-shell commands (Phase D): the Rust side of the window/lifecycle integrations the webview reaches
 // through MessageBus channels — reveal the storage folder, toggle devtools, open an external URL (gated
-// JS-side by the shared urlPolicy), and launch a per-OS terminal. Wails' terminal_*.go must match these argv
-// templates emulator for emulator — the two shells launch the same terminals the same way.
+// JS-side by the shared urlPolicy), and launch a per-OS terminal.
 
 use std::path::Path;
 
@@ -21,10 +20,19 @@ pub struct LaunchResult {
     command: String,
 }
 
+// A test instance (the WebDriver harness and the screenshot capture set this) never opens the developer's browser,
+// file manager or a terminal on their desktop: each command below reports success without doing it.
+fn external_opens_disabled() -> bool {
+    std::env::var_os("CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN").is_some_and(|value| !value.is_empty())
+}
+
 /// openStorageFolder — reveal the user-data dir (where the shared config lives) in the OS file manager. Uses
 /// the SAME path get_user_data_path computes, so it's the dir the app actually reads/writes.
 #[tauri::command]
 pub fn open_storage_folder(app: AppHandle) -> Result<(), String> {
+    if external_opens_disabled() {
+        return Ok(());
+    }
     let dir = crate::host::platform::get_user_data_path();
     let _ = std::fs::create_dir_all(&dir);
     app.opener()
@@ -36,6 +44,9 @@ pub fn open_storage_folder(app: AppHandle) -> Result<(), String> {
 /// BEFORE invoking, so this only ever receives vetted URLs.
 #[tauri::command]
 pub fn open_external(app: AppHandle, url: String) -> Result<(), String> {
+    if external_opens_disabled() {
+        return Ok(());
+    }
     app.opener()
         .open_url(url, None::<&str>)
         .map_err(|e| e.to_string())
@@ -116,6 +127,9 @@ pub fn logging_open(app: AppHandle) -> LogOpResult {
     if !path.exists() {
         return LogOpResult::missing();
     }
+    if external_opens_disabled() {
+        return LogOpResult::ok();
+    }
     match app
         .opener()
         .open_path(path.to_string_lossy().to_string(), None::<&str>)
@@ -131,6 +145,9 @@ pub fn logging_reveal(app: AppHandle) -> LogOpResult {
     let path = log_file_path();
     if !path.exists() {
         return LogOpResult::missing();
+    }
+    if external_opens_disabled() {
+        return LogOpResult::ok();
     }
     match app
         .opener()
@@ -155,6 +172,16 @@ pub struct TerminalLaunch {
 /// probed Linux emulator.
 #[tauri::command]
 pub fn launch_terminal(payload: TerminalLaunch) -> LaunchResult {
+    if external_opens_disabled() {
+        return LaunchResult {
+            pid: None,
+            code: Some(0),
+            success: true,
+            stdout: String::new(),
+            stderr: String::new(),
+            command: payload.launcher,
+        };
+    }
     let title = payload.title.unwrap_or_else(|| "Container Desktop".into());
     #[cfg(target_os = "macos")]
     {

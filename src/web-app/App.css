@@ -382,13 +382,61 @@ body.bp6-dark .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] 
 
 .AppErrorBoundaryOverlay {
   position: fixed;
-  inset: 0;
+  inset: var(--app-header-height, 50px) 0 0 0;
   z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
   background: var(--app-bg);
+}
+
+.AppErrorBoundaryReason {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  text-align: left;
+}
+
+.AppErrorBoundaryReason code {
+  flex: 0 1 auto;
+  max-height: 96px;
+  overflow: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.AppErrorBoundaryDetails {
+  margin: 0 0 10px;
+  text-align: left;
+}
+
+.AppErrorBoundaryDetails summary {
+  cursor: pointer;
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.AppErrorBoundaryDetails pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 6px 0 0;
+  padding: 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .AppErrorBoundaryCallout {
@@ -399,8 +447,6 @@ body.bp6-dark .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] 
   border-radius: 15px;
 }
 
-/* Global shortcuts dialog (Blueprint HotkeysDialog) follows the app chrome — neutral surfaces + accent-free
-   keys — rather than any feature palette, so it matches the current theme on every engine. */
 .bp6-hotkey-dialog {
   background-color: var(--app-surface) !important;
   color: var(--app-text);

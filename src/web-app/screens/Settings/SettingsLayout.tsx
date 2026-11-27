@@ -12,8 +12,8 @@ import { VersionCheckWidget } from "./VersionCheckWidget";
 
 // Categorized settings: a left vertical category rail + the active category's panel, under the screen
 // header that carries the version-check action. The active category is local UI state, seeded once from
-// an optional `?category=` search param so other screens (e.g. the chat ModelPicker) can deep-link
-// straight to a section like AI Assistant; absent/unknown values fall back to the default category.
+// an optional `?category=` search param so other screens can deep-link straight to a section; absent/unknown
+// values fall back to the default category.
 export const SettingsLayout: React.FC = () => {
   const { t } = useTranslation();
   const search = useRouteSearch<{ category?: string }>();

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   configReads: [] as Array<{ key: string; hasPlatform: boolean; hasPath: boolean; hasFS: boolean }>,
+  settings: {} as Record<string, unknown>,
   invoke: vi.fn(async (command: string, args?: Record<string, unknown>) => {
     switch (command) {
       case "get_os_type":
@@ -62,14 +63,10 @@ vi.mock("@/container-client/config", () => ({
         hasPath: !!target.Path,
         hasFS: !!target.FS,
       });
-      return undefined;
+      return mocks.settings[key];
     }),
     setProxyConfig: vi.fn(async () => undefined),
   },
-}));
-
-vi.mock("@/platform/tauri/aiSystemHost", () => ({
-  createAISystemHost: vi.fn(async () => ({ ai: {}, aiBus: {} })),
 }));
 
 vi.mock("@/platform/tauri/command", () => ({
@@ -109,6 +106,7 @@ describe("installTauriHostBridge", () => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.configReads.length = 0;
+    mocks.settings = {};
     document.body.replaceChildren();
     for (const key of [
       "Platform",
@@ -120,7 +118,6 @@ describe("installTauriHostBridge", () => {
       "MessageBus",
       "Preloaded",
       "CONTAINER_DESKTOP_MOCK",
-      "CONTAINER_DESKTOP_MOCK_SCALE",
       "CONTAINER_DESKTOP_MOCK_SWARM",
     ]) {
       delete (window as any)[key];
@@ -151,9 +148,8 @@ describe("installTauriHostBridge", () => {
     await installTauriHostBridge();
 
     // The webview has no `process`, so mode.ts reads these as globals. The swarm scenario is what
-    // webdriver/specs/swarm.e2e.js selects with, so it has to cross the boundary like its siblings.
+    // webdriver/specs/swarm-ui.e2e.js selects its fixture state with, so it has to cross the boundary too.
     expect((window as any).CONTAINER_DESKTOP_MOCK).toBe("env:CONTAINER_DESKTOP_MOCK");
-    expect((window as any).CONTAINER_DESKTOP_MOCK_SCALE).toBe("env:CONTAINER_DESKTOP_MOCK_SCALE");
     expect((window as any).CONTAINER_DESKTOP_MOCK_SWARM).toBe("env:CONTAINER_DESKTOP_MOCK_SWARM");
   });
 
@@ -166,5 +162,25 @@ describe("installTauriHostBridge", () => {
     expect(mocks.appWindow.show).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(8000);
     expect(mocks.appWindow.show).not.toHaveBeenCalled();
+  });
+
+  it("starts the MCP listener at boot when the settings enable it", async () => {
+    mocks.settings.mcp = { enabled: true, port: 18080, mode: "allow" };
+    const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
+
+    await installTauriHostBridge();
+
+    await vi.waitFor(() =>
+      expect(mocks.invoke).toHaveBeenCalledWith("mcp_start", { port: 18080, mode: "allow", allowDegraded: false }),
+    );
+  });
+
+  it("leaves the MCP listener off at boot by default", async () => {
+    const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
+
+    await installTauriHostBridge();
+
+    await vi.waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("mcp_stop"));
+    expect(mocks.invoke).not.toHaveBeenCalledWith("mcp_start", expect.anything());
   });
 });

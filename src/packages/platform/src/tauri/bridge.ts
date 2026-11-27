@@ -1,5 +1,5 @@
 // Tauri host bridge — it populates the window.*
-// globals the renderer already reads (Platform / Path / FS / Command / MessageBus + the receive buses + AI),
+// globals the renderer already reads (Platform / Path / FS / Command / MessageBus + the receive buses),
 // backed by @tauri-apps/api `invoke` over the native Rust port. Because the
 // surface is identical, everything above it — container-client, the engine layer, the stores, the whole
 // renderer, and registerHostRuntimeFromGlobals() (which just reads window.*) — runs unchanged.
@@ -15,18 +15,17 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open as openFileDialog, save as saveFileDialog, message as showDialog } from "@tauri-apps/plugin-dialog";
 import { exit as processExit, relaunch as processRelaunch } from "@tauri-apps/plugin-process";
-import { normalizeAISettings } from "@/ai-system/core/settings";
 import { userConfiguration } from "@/container-client/config";
+import { MCP_SETTINGS_KEY, normalizeMcpSettings } from "@/container-client/mcpSettings";
 import { normalizeProxyConfig, validateProxy } from "@/container-client/proxy";
 import { createLogger } from "@/logger";
-import { createConnectionExecAdapter } from "@/platform/capabilities/connectionExec";
 import type { IPlatform, IResourceBus } from "@/platform/contract";
 import { createEngineOpsAdapter } from "@/platform/engineOpsAdapter";
 import { installPlatformGlobals } from "@/platform/globals";
 import { shouldOpenExternally } from "@/platform/urlPolicy";
-import { createAISystemHost } from "./aiSystemHost";
 import { ActivityBus, type CommandProxyStreamEvent, createCommand, type ProcessEventMessage } from "./command";
 import { createFileSystem, createPath, createPlatform } from "./host";
+import { createMcpHost } from "./mcpHost";
 import { createMessageBus } from "./messageBus";
 import { applyProxyAtRuntime, testProxyConnectivity } from "./proxyBootstrap";
 import { createRecoveryService as createTauriRecoveryService, writeFallbackErrorPage } from "./recovery";
@@ -80,10 +79,12 @@ export async function installTauriHostBridge(): Promise<void> {
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK" })) ?? "";
     // Expose the Runs-at-scale knob to the webview realm (no `process` here) so readMockScaleSpec seeds the
     // scaled run set under Tauri. Absent ⇒ "" ⇒ no scaled seed (the default).
-    target.CONTAINER_DESKTOP_MOCK_SCALE =
-      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SCALE" })) ?? "";
     target.CONTAINER_DESKTOP_MOCK_SWARM =
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SWARM" })) ?? "";
+    // "none" ⇒ the mock connects no engine at all (mock/mode.ts). Needed in the webview realm because
+    // getMockEngines() decides autoStart there, and it is the only way to drive what the app does with nothing up.
+    target.CONTAINER_DESKTOP_MOCK_CONNECTED =
+      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_CONNECTED" })) ?? "";
     // CURRENT_DARWIN_MAJOR (uname-derived natively) so macOS Apple-Container network gating
     // (container-client runtime profiles) works under Tauri too; null/undefined off Darwin.
     const darwinMajor = (await invoke<number | null>("get_darwin_major")) ?? undefined;
@@ -110,6 +111,17 @@ export async function installTauriHostBridge(): Promise<void> {
     // MessageBus.invoke/send + ResourceBus.subscribe drive it directly; the renderer's stores are unchanged.
     const resourceSyncHost = createResourceSyncHost();
     target.__resourceSyncHost = resourceSyncHost; // handle for teardown/live-debug (no CDP under WebKitGTK)
+    // The MCP server answers on the SAME in-realm engine service the UI uses, so an MCP change refreshes the UI. The
+    // Rust listener only runs once apply() below finds it enabled in the settings.
+    const mcpHost = createMcpHost({
+      invoke,
+      listen,
+      engineOps: createEngineOpsAdapter(resourceSyncHost.service),
+      serverVersion: import.meta.env.PROJECT_VERSION ?? "0.0.0",
+      readSettings: async () => normalizeMcpSettings(await userConfiguration.getKey(MCP_SETTINGS_KEY)),
+      logger: createLogger("tauri.mcp"),
+    });
+    target.__mcpHost = mcpHost; // live-debug handle (no CDP under WebKitGTK)
     const messageBus = createMessageBus({
       resourceSyncHost,
       invoke,
@@ -134,6 +146,7 @@ export async function installTauriHostBridge(): Promise<void> {
         }
         return await testProxyConnectivity(validation.value, { invoke });
       },
+      mcp: mcpHost,
       logger: createLogger("tauri.app-control"),
     });
     const resourceBus: IResourceBus = createTauriResourceBus(resourceSyncHost);
@@ -148,25 +161,6 @@ export async function installTauriHostBridge(): Promise<void> {
       messageBus,
       extras: { ActivityBus, TrayBus: createTauriTrayBus(), ResourceBus: resourceBus },
     });
-    // Host the AI subsystem IN this realm too: the shared AIBroker +
-    // runtimes run here, reached through window.AI / window.AIBus. engineOps binds to
-    // the SAME in-realm engine service so the assistant's container tools act on live connections.
-    const aiHost = await createAISystemHost({
-      invoke,
-      fs: target.FS,
-      path: target.Path,
-      userDataDir: await invoke<string>("get_user_data_path"),
-      getAISettings: async () => normalizeAISettings(await userConfiguration.getKey("ai")),
-      engineOps: createEngineOpsAdapter(resourceSyncHost.service as any),
-      // Off-host worker execution: bind the AI system to the SAME in-realm engine service so a worker's
-      // remote/container/sandbox target runs where it should, not silently on the host.
-      connectionExec: createConnectionExecAdapter(resourceSyncHost.service as any),
-      mock: !!target.CONTAINER_DESKTOP_MOCK,
-      logger: createLogger("tauri.ai"),
-    });
-    target.__aiSystemHost = aiHost; // teardown/live-debug handle (no CDP under WebKitGTK)
-    target.AI = aiHost.ai;
-    target.AIBus = aiHost.aiBus;
     // Native system tray, projected from the SAME in-realm engine service (rebuilds on change, routes clicks
     // back to performAction). Its presence also arms hide-to-tray on window close (lib.rs). Kept on the window
     // so a live-debug/teardown can reach it (no CDP under WebKitGTK).
@@ -179,6 +173,9 @@ export async function installTauriHostBridge(): Promise<void> {
         void processExit(0);
       },
     });
+    // Start the MCP listener when the settings enable it (a reload also stops one they no longer do). A failure
+    // stays in its status for the Settings screen; it never blocks the boot.
+    void mcpHost.apply();
     // The renderer blocks on window.Preloaded (Native.ts:waitForPreload) — set it LAST, once the surface is up.
     target.Preloaded = true;
     // Custom-chrome behaviors WebKitGTK doesn't give a frameless window for free: drag + resize.

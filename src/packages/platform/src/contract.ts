@@ -1,10 +1,9 @@
 import type { AxiosRequestConfig } from "axios";
-import type { IAI, IAIBus } from "@/ai-system/host/aiClientBridge";
 import type { ISSHClient } from "@/container-client/services";
 import type { EngineConnectorSettings, SSHHost } from "@/container-client/types/connection";
 import type { ServiceOpts } from "@/container-client/types/host";
 import type { OpenFileSelectorOptions, OpenTerminalOptions, OperatingSystem } from "@/container-client/types/os";
-import type { IFileDiscoverySystem, IPath } from "@/host-contract/fs";
+import type { IFileSystem, IPath } from "@/host-contract/fs";
 
 // Handle over a finite streamed process (see platform/tauri/exec/commander.ts). Unlike the
 // EventEmitter from ExecuteAsBackgroundService (a readiness/retry loop), this emits raw process events:
@@ -64,7 +63,7 @@ export interface IPlatform {
   ): Promise<any>; // was CommandExecutionResult; kept `any` to match main's masked surface (see ICommand note).
 }
 
-// send/invoke transport (Tauri event/invoke; Wails Call.ByName).
+// send/invoke transport (Tauri event/invoke).
 export interface IMessageBus {
   invoke: (channel: string, ...data: any[]) => Promise<any>;
   send: (channel: string, ...data: any[]) => void;
@@ -100,7 +99,7 @@ export interface IWindowControl {
   openStorageFolder(): void;
 }
 
-// Native dialogs / OS integrations exposed to the renderer (the Tauri dialog plugin / the Wails services).
+// Native dialogs / OS integrations exposed to the renderer (the Tauri dialog plugin).
 export interface IDialogs {
   openFileSelector(options: OpenFileSelectorOptions): Promise<{ canceled: boolean; filePaths: string[] } | undefined>;
   saveFileSelector(options: SaveFileSelectorOptions): Promise<{ canceled: boolean; filePath?: string } | undefined>;
@@ -119,15 +118,13 @@ export interface IHostRuntime {
   command: ICommand;
   platform: IPlatform;
   path: IPath;
-  fs: IFileDiscoverySystem;
+  fs: IFileSystem;
   messageBus: IMessageBus;
   osType: OperatingSystem;
   darwinMajor?: number;
   activityBus: IActivityBus;
   trayBus: ITrayBus;
   resourceBus: IResourceBus;
-  ai: IAI;
-  aiBus: IAIBus;
   windowControl: IWindowControl;
   dialogs: IDialogs;
 }

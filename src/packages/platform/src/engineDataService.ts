@@ -295,7 +295,7 @@ export class EngineDataService {
   }
 
   // Project the current engine snapshot into the tray-menu data model (buildTrayMenuTemplate's input). Lives on
-  // the service — not a shell — so the Tauri and Wails trays share ONE projection of the
+  // the service — not a shell — so the tray reads ONE projection of the
   // same state; each connection carries its own containers/pods/machines so actions route to the owning host.
   getTrayMenuData(): TrayMenuData {
     const snapshot = this.getSyncSnapshot();

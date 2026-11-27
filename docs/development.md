@@ -32,10 +32,9 @@ Installs with the lockfile respected — don't use floating installs.
 ```bash
 yarn dev          # Tauri (Rust) — the default shell
 yarn dev:mock     # …with the deterministic mock backend, no engine required
-yarn wails:dev    # the Wails (Go) shell; yarn wails:dev:mcp adds the MCP driver
 ```
 
-Both shells serve the SAME Vite renderer on :3000 and rebuild on change. Kill either by PID —
+It serves the Vite renderer on :3000 and rebuilds on change. Kill it by PID —
 never `pkill -f <pattern>` from a one-liner containing that pattern, or it matches its own shell.
 
 ## Verify — run all four before claiming done

@@ -26,17 +26,7 @@ export function crumb(partial: AppBreadcrumb): AppBreadcrumb {
   return partial;
 }
 
-export type RootCrumbId =
-  | "containers"
-  | "images"
-  | "pods"
-  | "machines"
-  | "networks"
-  | "volumes"
-  | "secrets"
-  | "swarm"
-  | "runs"
-  | "workers";
+export type RootCrumbId = "containers" | "images" | "pods" | "machines" | "networks" | "volumes" | "secrets" | "swarm";
 
 // The canonical section roots. Labels double as i18n keys. Hardcoded (stable) rather than read from the
 // Screens registry, which would create an import cycle through App.tsx.
@@ -53,8 +43,6 @@ const ROOT_CRUMBS: Record<RootCrumbId, { labelKey: string; path: string; icon: B
   volumes: { labelKey: "Volumes", path: "/screens/volumes", icon: IconNames.DATABASE },
   secrets: { labelKey: "Secrets", path: "/screens/secrets", icon: IconNames.KEY },
   swarm: { labelKey: "Swarm", path: "/screens/swarm", icon: IconNames.LAYERS },
-  runs: { labelKey: "Runs", path: "/screens/ai/runs", icon: IconNames.GRAPH },
-  workers: { labelKey: "Workers", path: "/screens/ai/workers", icon: IconNames.PEOPLE },
 };
 
 // The leading crumb for a section — links to its list screen, preserving the owning connection.

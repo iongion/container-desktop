@@ -5,6 +5,13 @@ import os from "node:os";
 import path from "node:path";
 import { remote } from "webdriverio";
 import { PROJECT_HOME } from "@/cli/lib/paths";
+import {
+  diesWithParent,
+  headlessWanted,
+  reapStaleDisplays,
+  signalGroup,
+  startHeadlessDisplay,
+} from "../../../../webdriver/support/headlessDisplay.js";
 import { RUNTIME_NAME_SHIM } from "../drivers/runtimeShim";
 import type { CaptureApp, CaptureBackend, LaunchOptions } from "../drivers/types";
 import { createWebdriverDriver } from "../drivers/webdriverDriver";
@@ -13,7 +20,8 @@ import { createWebdriverDriver } from "../drivers/webdriverDriver";
 // Tauri app. Mirrors webdriver/wdio.conf.js. Per-engine mock is set on the launched app's process env
 // (CONTAINER_DESKTOP_MOCK) — the renderer reads it at runtime via invoke("get_env_var") — so one running
 // vite serve covers every engine; only the env differs per launch. CONTAINER_DESKTOP_E2E gates the
-// single-instance plugin OFF (src-tauri/src/lib.rs) so this runs standalone.
+// single-instance plugin OFF (src-tauri/src/lib.rs) so this runs standalone. On Linux the app runs on a private
+// headless sway sized to the capture viewport, as the WebDriver suites do; CONTAINER_DESKTOP_E2E_HEADLESS=0 shows it.
 
 const ROOT = PROJECT_HOME;
 const TAURI_DRIVER_PORT = 4444;
@@ -100,11 +108,24 @@ export const tauriBackend: CaptureBackend = {
           "Or point CONTAINER_DESKTOP_E2E_APP at a self-contained release binary.",
       );
     }
-    const env = tauriEnv(opts.engine);
-    const tauriDriver = spawn(TAURI_DRIVER, ["--native-driver", NATIVE_DRIVER], {
+    let env = tauriEnv(opts.engine);
+    let display: Awaited<ReturnType<typeof startHeadlessDisplay>> | undefined;
+    if (headlessWanted(process.env, process.platform)) {
+      reapStaleDisplays();
+      display = await startHeadlessDisplay({ width: opts.viewport.width, height: opts.viewport.height });
+      env = display.envFor(env);
+    }
+    // Its own process group, ended whole on close, and killed by the kernel if this process dies first.
+    const [driverCommand, driverArgs] = diesWithParent(TAURI_DRIVER, ["--native-driver", NATIVE_DRIVER]);
+    const tauriDriver = spawn(driverCommand, driverArgs, {
       stdio: ["ignore", "inherit", "inherit"],
       env,
+      detached: true,
     });
+    const stopAll = async () => {
+      signalGroup(tauriDriver.pid, "SIGTERM");
+      await display?.stop();
+    };
     let browser: any;
     try {
       // Give tauri-driver a moment to bind its port before WebdriverIO connects.
@@ -131,23 +152,19 @@ export const tauriBackend: CaptureBackend = {
         driver: createWebdriverDriver(browser),
         async close() {
           await browser?.deleteSession().catch(() => {});
-          tauriDriver.kill();
+          await stopAll();
         },
       };
     } catch (error) {
       await browser?.deleteSession().catch(() => {});
-      tauriDriver.kill();
+      await stopAll();
       throw error;
     }
   },
 
+  // A crashed capture leaves no driver behind (tauri-driver dies with its parent), only its display directory;
+  // other sessions' drivers are never touched.
   async killStray(): Promise<void> {
-    for (const pattern of ["tauri-driver", "WebKitWebDriver"]) {
-      await new Promise((resolve) => {
-        const child = spawn("pkill", ["-f", pattern], { stdio: "ignore" });
-        child.once("exit", resolve);
-        child.once("error", resolve);
-      });
-    }
+    reapStaleDisplays();
   },
 };

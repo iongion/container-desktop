@@ -1,9 +1,8 @@
 import type { Box, CaptureDriver } from "./drivers/types";
 
 // Screen-driving actions shared by the screenshot + demo capture scripts. Written against CaptureDriver
-// (not a raw driver page) so a single action layer drives either shell — Wails over MCP or Tauri
-// over WebDriver. DOM reads/writes stay inside evaluate() (identical page-side JS on both); only pointer,
-// screenshot and injection go through backend-specific primitives.
+// (not a raw driver page), driving Tauri over WebDriver. DOM reads/writes stay inside evaluate(); only
+// pointer, screenshot and injection go through backend-specific primitives.
 
 export async function waitReady(driver: CaptureDriver, opts: { timeout?: number } = {}) {
   const timeout = opts.timeout ?? 45_000;
@@ -222,27 +221,6 @@ export async function openNetworkCreate(driver: CaptureDriver) {
   await driver.waitForSelector('[data-form="network.create"]', { timeout: 10_000 });
 }
 
-// Drive the AI assistant into a rendered generative-UI card for the screenshot: type a prompt and send it.
-// In mock mode the ModelPicker auto-selects a model on first discovery (async), so Send stays disabled until
-// then — wait for it to enable before submitting. A read-only "list" prompt (containers/images/…) resolves to
-// a typed-tool card with no approval step, so the transcript settles on prose + the card without interaction.
-export async function askAssistant(driver: CaptureDriver, prompt: string) {
-  await driver.waitForSelector(".AIComposerInput", { timeout: 30_000 });
-  await driver.click(".AIComposerInput");
-  await driver.fill(".AIComposerInput", prompt);
-  await driver.waitForFunction(
-    () => {
-      const button = document.querySelector<HTMLButtonElement>(".AIComposerSend");
-      return !!button && !button.hasAttribute("disabled") && !button.disabled;
-    },
-    undefined,
-    { timeout: 30_000 },
-  );
-  await driver.click(".AIComposerSend");
-  // Wait for the streamed turn to render its typed-tool card (tool-result) before the frame is captured.
-  await driver.waitForSelector('[data-screen="ai.assistant"] .AICard', { timeout: 30_000 });
-}
-
 // Drive the Build Studio into a completed build for the screenshot: click "Build image" and wait for the run
 // to reach the succeeded state. The studio seeds a starter Containerfile and defaults to a native connection,
 // so the button is enabled on load; in mock mode buildFixtures replays engine-shaped output so the timeline
@@ -255,15 +233,13 @@ export async function runBuild(driver: CaptureDriver) {
 
 export async function runPreActions(
   driver: CaptureDriver,
-  actions: Array<{ action: string; rowSelector?: string; prompt?: string; expanded?: boolean }> = [],
+  actions: Array<{ action: string; rowSelector?: string; expanded?: boolean }> = [],
 ) {
   for (const action of actions) {
     if (action.action === "openRowActions") {
       await openRowActions(driver, action.rowSelector!);
     } else if (action.action === "openNetworkCreate") {
       await openNetworkCreate(driver);
-    } else if (action.action === "askAssistant") {
-      await askAssistant(driver, action.prompt!);
     } else if (action.action === "runBuild") {
       await runBuild(driver);
     } else if (action.action === "setSidebarExpanded") {

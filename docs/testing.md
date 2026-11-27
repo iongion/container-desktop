@@ -3,7 +3,7 @@
 The verification gate is **type-check · lint · unit tests · production build** — all enforced on
 every PR and push to `main` by
 [`.github/workflows/CIPipeline.yml`](../.github/workflows/CIPipeline.yml). That is the **CI**
-pipeline; the `CDPipeline.*` files (`CDPipeline.Tauri.yml` default, plus `.Wails`) are the separate **release/publish** pipelines and run no checks.
+pipeline; `CDPipeline.Tauri.yml` is the separate **release/publish** pipeline and runs no checks.
 
 ## JS/TS — Vitest
 
@@ -48,27 +48,23 @@ It implements **every** `ICommand` member (availability/tunnel paths call
 and `ProxyRequest` returns `200`/`"OK"` by default. Shape per-call results to simulate failures
 (`{ success: false, stderr }`).
 
-### Live suite (real engines)
+### The real-machine target registry
 
-`*.live.test.ts` files are excluded from the hermetic run and drive a **real** engine/VM;
-[`installRealCommand()`](../src/__tests__/setup/headless.ts) wires the real Node executor for them.
+Every real-engine and real-model check now runs on WebDriver against the shipped shell (below), so the
+node-level live project ([`vitest.live.config.mts`](../vitest.live.config.mts), `yarn test:live`) is **empty** —
+it stays as the home for a future `*.live.test.ts`, and passes with no tests rather than failing.
 
-Config: [`vitest.live.config.mts`](../vitest.live.config.mts) (node env, 60s timeouts). Select machines
-via the `CDT_TARGET_*` registry — copy [`src/__tests__/live/targets.example.env`](../src/__tests__/live/targets.example.env)
-to `targets.env` (gitignored) and set `CONTAINER_DESKTOP_TEST_TARGETS=<id>`.
+What survives, and what the WebDriver live specs read, is the machine registry: copy
+[`src/__tests__/live/targets.example.env`](../src/__tests__/live/targets.example.env) to `targets.env`
+(gitignored), fill in the `CDT_TARGET_*` entries, and select with `CONTAINER_DESKTOP_TEST_TARGETS=<id>`.
+`tsx src/__tests__/live/printTargets.ts` lists what is configured.
 
-```bash
-yarn test:live                                         # every ENABLED target
-CONTAINER_DESKTOP_TEST_TARGETS=swarm yarn test:live    # just the swarm target
-```
-
-**Docker Swarm** (`swarm.live.test.ts`) runs against a **disposable local sandbox**, never your primary
-daemon — swarm is Docker-only (not Podman/Apple). Bring one up, point the `swarm` target's
-`_DOCKER_SOCKET` at it, run, tear down:
+**Docker Swarm** runs against a **disposable local sandbox**, never your primary daemon — swarm is Docker-only
+(not Podman/Apple). Bring one up, point the `swarm` target's `_DOCKER_SOCKET` at it, run the UI spec, tear down:
 
 ```bash
 support/swarm-sandbox.sh up          # single-node (docker:dind); or `up-multi` for node ops
-CONTAINER_DESKTOP_TEST_TARGETS=swarm yarn test:live
+yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js
 support/swarm-sandbox.sh down
 ```
 
@@ -78,83 +74,100 @@ Config: [`webdriver/wdio.conf.js`](../webdriver/wdio.conf.js). The specs drive t
 there is no CDP in a native webview. UI specs run against deterministic **mock** fixtures
 (`CONTAINER_DESKTOP_MOCK=<engine>`); the swarm spec also sets
 `CONTAINER_DESKTOP_MOCK_SWARM=manager|none` to render the populated vs "Initialize Swarm" states — no
-Docker required.
+Docker required. `CONTAINER_DESKTOP_MOCK_CONNECTED=none` is the one scenario the mock could not otherwise
+reach: an app that boots with NO engine connected. It is decided by `mockAvailability()` alone — the engine
+service reads a connection's `running` off `availability.api` and brings the primary connection up whether or
+not anything is flagged auto-start, so clearing auto-start does not express it.
+
+On Linux the app never shows a window on your desktop
+([`webdriver/support/headlessDisplay.js`](../webdriver/support/headlessDisplay.js), pagecast's method):
+
+- Each session starts a private headless **sway**; the app gets its socket as `WAYLAND_DISPLAY` and no `DISPLAY`,
+  so GTK cannot fall back onto the desktop. It keeps the real `XDG_RUNTIME_DIR`, where the engine sockets live.
+- It renders on the first GPU that is not NVIDIA's (mesa-only EGL), or in software when there is none.
+- `CONTAINER_DESKTOP_E2E_HEADLESS=0` shows the window, to watch a spec. Without sway the run stops and names the
+  fix (`bash support/provision-deps.sh`).
+- `autoXvfb: false` is load-bearing: WebdriverIO otherwise wraps its worker in `xvfb-run` whenever `DISPLAY` is
+  unset, and the worker dies on `write EINVAL`.
+- A run killed mid-way leaves nothing running. Ctrl-C makes WebdriverIO SIGKILL its worker, which runs no exit
+  handler, so sway and tauri-driver start under `setpriv --pdeathsig KILL` and the kernel ends them with it. The
+  next session removes the dead run's directory.
+
+One entry point per suite — `yarn test:e2e:tauri` runs the mock suite ([below](#two-suites-told-apart-by-what-a-failure-is-allowed-to-mean));
+`--spec` selects one and the scenario travels in the environment, so there is no script per combination:
 
 ```bash
-yarn test:e2e:tauri:mock:podman   # inventory counts, podman fixtures
-yarn test:e2e:tauri:mock:docker   # inventory counts, docker fixtures
-yarn test:e2e:tauri:swarm         # swarm tabs (manager)
-yarn test:e2e:tauri:swarm:none    # the Initialize Swarm empty state
+CONTAINER_DESKTOP_MOCK=podman yarn test:e2e:tauri --spec webdriver/specs/mock-inventory.e2e.js
+CONTAINER_DESKTOP_MOCK=docker yarn test:e2e:tauri --spec webdriver/specs/mock-inventory.e2e.js
+CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=manager yarn test:e2e:tauri --spec webdriver/specs/swarm-ui.e2e.js
+CONTAINER_DESKTOP_MOCK=docker CONTAINER_DESKTOP_MOCK_SWARM=none yarn test:e2e:tauri --spec webdriver/specs/swarm-ui.e2e.js
 ```
 
-Real-engine specs need a NON-mock app (`CONTAINER_DESKTOP_MOCK=`) and a configured target in
-`src/__tests__/live/targets.env`. They drive `window.__cdLiveProbe` /
-`window.__cdExecutionMatrixProbe` — DEV-gated seams that run the SHIPPED ports inside the webview, so
-one probe covers both backends:
+On Windows, prefix with `yarn cross-env` instead of a shell assignment.
+
+A spec whose scenario knob has a default asserts what EACH scenario should produce, naming it in the
+`describe` title — `swarm-ui.e2e.js` and `landing-ui.e2e.js` are the two, so a default suite run is never
+vacuous and neither needs a gate:
 
 ```bash
-yarn test:e2e:tauri:connections         # the connectivity matrix
-yarn test:e2e:tauri:execution-targets   # off-host worker execution
-yarn test:e2e:tauri:swarm:live          # real Docker Swarm (use support/swarm-sandbox.sh up)
+CONTAINER_DESKTOP_MOCK=podman CONTAINER_DESKTOP_MOCK_CONNECTED=none \
+  yarn test:e2e:tauri --spec webdriver/specs/landing-ui.e2e.js
 ```
 
-## AI subsystem (two lenses)
-
-The agentic AI subsystem (`@/ai-system`: Assistant chat + Runs multi-agent DAG + Workers with container
-"Runs on" execution) is covered by **two complementary lenses** that test the SAME behaviors:
-
-- **Mock lens** — deterministic, hermetic, CI-capable. The scripted `omaMocks` brain + the seeded
-  `createMockTeamRuns`/`createMockWorkerStore` fixtures drive scale, both approval branches, and every task
-  state without a network. This is what the unit suite and the mock UI flows run.
-- **Live lens** — the REAL model/agent path against **OpenRouter free models only**, run by hand, **never in
-  CI**, skipped loud when the key is absent.
-
-### Mock lens — scale + UI branches
-
-Drive the running mock app (`yarn dev:mock`) over WebDriver. The Runs UI is stressed at scale
-with an env knob — synthetic runs are appended to the baked fixtures:
+Real-engine specs live in the **smoke** suite, which has its own entry point (`yarn test:smoke:tauri` clears
+`CONTAINER_DESKTOP_MOCK` for you) and a configured target in `src/__tests__/live/targets.env`. They drive
+`window.__cdLiveProbe` — a DEV-gated seam that runs the SHIPPED ports inside the webview, so one probe covers
+both backends:
 
 ```bash
-CONTAINER_DESKTOP_MOCK_SCALE="runs:300,tasks:100" yarn dev:mock
+yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js   # the connectivity matrix
+yarn test:smoke:tauri --spec webdriver/smoke/swarm.smoke.js               # real Docker Swarm
 ```
 
-`runs:N` seeds N finished/active Runs for the list; `tasks:N` seeds one plan-gate run (`scale-plan`, clamped
-to `MAX_RUN_TASKS`) plus a mixed-state twin (`scale-graph`) whose tasks span every `RunTaskStatus`. Counts are
-schema-valid so they survive the client-bridge validation.
+## Two suites, told apart by what a failure is allowed to mean
 
-The **AI e2e flows** ([`support/e2e/ai/flows.mjs`](../support/e2e/ai/flows.mjs)) drive the real running app
-through a backend-agnostic `AiE2eDriver` (WebdriverIO on Tauri, MCP on Wails) and assert
-**both branches** of each gate — chat echo/reply, run plan Approve **and** Reject, tool approval Allow **and**
-Reject, task-node output vs the "Waiting…" placeholder, Stop, and the Workers library round-trip:
+| | `webdriver/specs/*.e2e.js` | `webdriver/smoke/*.smoke.js` |
+| --- | --- | --- |
+| Runs against | the **mock app only** — fixtures, no engine, no account, no network | **real integration**: real engines, real machines |
+| A failure means | the app is wrong. Nothing else is involved | either the app is wrong **or** something outside it was missing — so it must not be allowed to mean the first by default |
+| Entry point | `yarn test:e2e:tauri` | `yarn test:smoke:tauri` (clears `CONTAINER_DESKTOP_MOCK`) |
+| Gating | **none, ever.** Nothing is absent, so nothing may be skipped | **skips** when its subject is absent, naming what was missing |
+
+A mock spec carries no gate because there is nothing for it to be missing: gating one would only hide a
+real defect. A smoke spec's *subject is the integration*, so when the engine, the machine or the sandbox
+is not there, there is nothing to prove — failing would blame the app for the
+operator's environment, and passing would claim coverage nobody has. It reports **SKIP** with the command
+that fixes it ([`webdriver/support/prerequisites.js`](../webdriver/support/prerequisites.js)): a VM that is
+shut off must never read as five failing hosts. A machine answering on 22 is not the same question as the engine
+it declares being up — win11 boots long before Docker Desktop does, and its CLI answers while the daemon behind it
+does not — so a remote target's engine is asked separately, over plain ssh (`remoteEngineReason`).
+
+Nothing in that helper starts anything. Bringing a VM up or standing up a sandbox are the operator's
+decisions, never a test's — and a gate that skips something
+which *would* have run is worse than no gate at all, because the report then looks like it ran.
 
 ```bash
-yarn dev:mock        # in one shell
-yarn test:e2e:ai     # attaches to that app (never launches a second one)
+yarn test:e2e:tauri                                                    # the mock suite; must be green
+yarn test:smoke:tauri                                                  # real integration; skips what is absent
+yarn test:smoke:tauri --spec webdriver/smoke/connection-matrix.smoke.js
 ```
 
-The mutating flows each **create their own run** (re-runnable); read-only checks reuse the always-present baked
-`mock-run-*` fixtures. Those baked runs are interactive: a seed run emits granular events on approve/reject/stop
-(`aiMocks.ts` `attachEmit` → the run host's per-run broadcast), so gate actions reflect in the live UI exactly
-like a real run.
+## MCP server
 
-### Live lens — real OpenRouter inference
+Three bands, cheapest first:
 
-[`src/__tests__/live/ai-agent.live.test.ts`](../src/__tests__/live/ai-agent.live.test.ts) exercises the real
-provider stack (`createLanguageModel` → `AISdkAdapter` → open-multi-agent) against OpenRouter: a real assistant
-turn streams per free model, and a **multi-inference** Team Run puts two workers on two DIFFERENT free models —
-proven by a recording `providerFetch` that captures the `model` of every request body (routing is asserted, not
-the noisy free-tier output).
+- **Protocol core** (Vitest, hermetic): `src/packages/mcp-server/tests/` drives `handleMcpMessage` over a fake
+  `EngineOps` — the handshake and versions, the tool catalogue per mode, argument validation, refusals, redaction.
+- **Native listener** (`cargo test --lib mcp`): the request rules (Host, Origin, token, path, method, version, size),
+  the listener on a free port with a fake webview, the token store, and the stdio relay against that listener.
+- **The mock app** (`webdriver/specs/mcp-server.e2e.js`): turns the server on in Settings, reads the endpoint and
+  token from the panel, then speaks MCP from the spec — handshake, read-only listing and refusal, the switch to
+  allow, a 403 for a foreign `Origin` and a 401 for a wrong token. The mock engine is stateless, so a stop is
+  proven by its result, not by the row changing. The run keeps its token in its own data dir, never the OS keychain.
 
 ```bash
-# key in .env.development.local (gitignored):  OPENROUTER_API_KEY=sk-or-...
-yarn test:ai:live
+yarn test:e2e:tauri --spec webdriver/specs/mcp-server.e2e.js
 ```
-
-Skips loud when `OPENROUTER_API_KEY` is unset. The shared free-model roster lives in
-[`testing/agents.ts`](../src/packages/ai-system/src/testing/agents.ts) (`OPENROUTER_FREE_MODELS`) — **verify the
-ids before a run** (`curl -s https://openrouter.ai/api/v1/models`, filter `:free`); the free roster shifts
-weekly. The free tier is rate-limited (~20/min, 50/day unfunded), so the arms run sequentially with a courtesy
-delay and treat a refusal/rate-limit as skipped, not failed.
 
 ## Build tooling (`support/cli/`)
 
@@ -183,7 +196,5 @@ yarn test:run      # includes support/cli/**/*.test.ts
 | Headless globals / live opt-in | [`src/__tests__/setup/headless.ts`](../src/__tests__/setup/headless.ts)       |
 | Recording `Command` fake       | [`src/__tests__/setup/fakeCommand.ts`](../src/__tests__/setup/fakeCommand.ts) |
 | Vitest config                  | [`vitest.config.mts`](../vitest.config.mts)                                   |
-| AI e2e flows (both branches)   | [`support/e2e/ai/flows.mjs`](../support/e2e/ai/flows.mjs)                     |
-| Live AI (OpenRouter)           | [`src/__tests__/live/ai-agent.live.test.ts`](../src/__tests__/live/ai-agent.live.test.ts) |
-| Shared worker/model fixtures   | [`src/packages/ai-system/src/testing/agents.ts`](../src/packages/ai-system/src/testing/agents.ts) |
-| Run scale seeders              | [`src/packages/ai-system/src/testing/scaleRuns.ts`](../src/packages/ai-system/src/testing/scaleRuns.ts) |
+| MCP protocol units             | [`src/packages/mcp-server/tests/`](../src/packages/mcp-server/tests)           |
+| MCP end to end (mock app)      | [`webdriver/specs/mcp-server.e2e.js`](../webdriver/specs/mcp-server.e2e.js) |

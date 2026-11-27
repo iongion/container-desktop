@@ -2,12 +2,19 @@
 
 import { Application } from "@/container-client/Application";
 import { decodeContainerLogPayload } from "@/container-client/logs";
+import { normalizeContainerName } from "@/container-client/normalizers/shared";
 import type { Container, ContainerStateList, ContainerStats } from "@/container-client/types/container";
 import type { ContainerImageMount, ContainerImagePortMapping } from "@/container-client/types/image";
 import { createLogger } from "@/logger";
 import { DOCKER_BASE_URL, LIBPOD_BASE_URL, LIFECYCLE_TIMEOUT_MS, ResourceAdapter } from "./shared";
 
 const logger = createLogger("client.containers");
+
+// An id becomes a path segment ONLY through here. The engine publishes a container's name with Docker's leading slash
+// and that payload is what a caller hands back — a row in the UI, or an id copied out of a listing. Encoded raw it
+// arrives as `%2Fweb`, which the API answers 404 "no such container" for, while the bare name answers 204 — measured
+// against a real podman socket. So the engine's own spelling is normalized off, then the segment is escaped as before.
+const pathId = (id: string): string => encodeURIComponent(normalizeContainerName(id));
 
 export interface FetchContainerOptions {
   Id: string;
@@ -68,7 +75,7 @@ export class ContainersAdapter extends ResourceAdapter {
 
   async logs(id: string, opts?: ContainerLogsOptions): Promise<string> {
     const driver = await this.driver();
-    const result = await driver.get<Uint8Array>(`/containers/${encodeURIComponent(id)}/logs`, {
+    const result = await driver.get<Uint8Array>(`/containers/${pathId(id)}/logs`, {
       params: {
         stdout: true,
         stderr: true,
@@ -86,7 +93,7 @@ export class ContainersAdapter extends ResourceAdapter {
 
   async logsStream(id: string, opts?: ContainerLogsOptions): Promise<ContainerLogsStream> {
     const driver = await this.driver();
-    const result = await driver.get<ContainerLogsStream>(`/containers/${encodeURIComponent(id)}/logs`, {
+    const result = await driver.get<ContainerLogsStream>(`/containers/${pathId(id)}/logs`, {
       params: {
         follow: true,
         stdout: true,
@@ -106,7 +113,7 @@ export class ContainersAdapter extends ResourceAdapter {
 
   async get(id: string, opts?: FetchContainerOptions): Promise<Container> {
     const driver = await this.driver();
-    const result = await driver.get<Container>(`/containers/${encodeURIComponent(id)}/json`);
+    const result = await driver.get<Container>(`/containers/${pathId(id)}/json`);
     if (this.isOk(result)) {
       const container = this.normalizers.normalizeContainer(result.data);
       if (opts?.withLogs) {
@@ -119,7 +126,7 @@ export class ContainersAdapter extends ResourceAdapter {
 
   async stats(id: string): Promise<ContainerStats> {
     const driver = await this.driver();
-    const result = await driver.get<ContainerStats>(`/containers/${encodeURIComponent(id)}/stats`, {
+    const result = await driver.get<ContainerStats>(`/containers/${pathId(id)}/stats`, {
       params: {
         stream: false,
       },
@@ -129,7 +136,7 @@ export class ContainersAdapter extends ResourceAdapter {
 
   async processes(id: string): Promise<any> {
     const driver = await this.driver();
-    const result = await driver.get<any>(`/containers/${encodeURIComponent(id)}/top`, {
+    const result = await driver.get<any>(`/containers/${pathId(id)}/top`, {
       params: {
         ps_args: "-aux",
       },
@@ -155,19 +162,19 @@ export class ContainersAdapter extends ResourceAdapter {
 
   async pause(id: string): Promise<boolean> {
     const driver = await this.driver();
-    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/pause`);
+    const result = await driver.post<boolean>(`/containers/${pathId(id)}/pause`);
     return this.isOk(result);
   }
 
   async unpause(id: string): Promise<boolean> {
     const driver = await this.driver();
-    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/unpause`);
+    const result = await driver.post<boolean>(`/containers/${pathId(id)}/unpause`);
     return this.isOk(result);
   }
 
   async start(id: string): Promise<boolean> {
     const driver = await this.driver();
-    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/start`);
+    const result = await driver.post<boolean>(`/containers/${pathId(id)}/start`);
     return this.isOk(result);
   }
 
@@ -175,7 +182,7 @@ export class ContainersAdapter extends ResourceAdapter {
     const driver = await this.driver();
     // Stop waits the container's grace period server-side (default ~10s, longer if it ignores SIGTERM), so it
     // needs more than the 3s default request timeout — otherwise the client "fails" while the engine works on.
-    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`, undefined, {
+    const result = await driver.post<boolean>(`/containers/${pathId(id)}/stop`, undefined, {
       timeout: LIFECYCLE_TIMEOUT_MS,
     });
     return this.isOk(result);
@@ -184,14 +191,14 @@ export class ContainersAdapter extends ResourceAdapter {
   async restart(id: string): Promise<boolean> {
     const driver = await this.driver();
     try {
-      await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`, undefined, {
+      await driver.post<boolean>(`/containers/${pathId(id)}/stop`, undefined, {
         timeout: LIFECYCLE_TIMEOUT_MS,
       });
     } catch (error: any) {
       logger.error("Failed to stop container", error);
     }
     await new Promise((resolve) => setTimeout(resolve, 3000));
-    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/restart`, undefined, {
+    const result = await driver.post<boolean>(`/containers/${pathId(id)}/restart`, undefined, {
       timeout: LIFECYCLE_TIMEOUT_MS,
     });
     return this.isOk(result);
@@ -200,7 +207,7 @@ export class ContainersAdapter extends ResourceAdapter {
   async remove(id: string): Promise<boolean> {
     const driver = await this.driver();
     // Force-remove stops the container first (grace period), so it can be slow — see stop().
-    const result = await driver.delete<boolean>(`/containers/${encodeURIComponent(id)}`, {
+    const result = await driver.delete<boolean>(`/containers/${pathId(id)}`, {
       params: {
         force: true,
         v: true,
@@ -274,7 +281,7 @@ export class ContainersAdapter extends ResourceAdapter {
       created.created = true;
       if (opts.Start) {
         const { Id } = createResult.data;
-        const startResult = await driver.post(`/containers/${encodeURIComponent(Id)}/start`);
+        const startResult = await driver.post(`/containers/${pathId(Id)}/start`);
         if (this.isOk(startResult)) {
           created.started = true;
         }

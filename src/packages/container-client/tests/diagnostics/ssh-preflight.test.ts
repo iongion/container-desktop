@@ -202,6 +202,47 @@ describe("runSSHPreflight", () => {
     expect(step(report, "remote-engine")?.ok).toBe(false);
   });
 
+  it("reports the reason the engine gave, not ssh's advisory above it", async () => {
+    const report = await runSSHPreflight(
+      target,
+      options,
+      deps({
+        exec: (l, a) =>
+          a.includes("info")
+            ? {
+                success: false,
+                // What a real run against win11 produces: ssh writes its advisory first, and the line that says why
+                // comes after it. Taking the first line reported the warning as the failure, which named nothing
+                // the operator could act on and hid a daemon that simply was not running.
+                stderr: [
+                  "** WARNING: connection is not using a post-quantum key exchange algorithm.",
+                  '** This session may be vulnerable to "store now, decrypt later" attacks.',
+                  "error during connect: Get http://docker/v1.51/info: The system cannot find the file specified.",
+                ].join("\n"),
+              }
+            : allGood(l, a),
+      }),
+    );
+    expect(step(report, "remote-engine")?.ok).toBe(false);
+    expect(step(report, "remote-engine")?.details).toContain("error during connect");
+    expect(step(report, "remote-engine")?.details).not.toContain("post-quantum");
+  });
+
+  it("still reports an advisory when it is the only thing ssh said", async () => {
+    const report = await runSSHPreflight(
+      target,
+      options,
+      deps({
+        exec: (l, a) =>
+          a.includes("info")
+            ? { success: false, stderr: "** WARNING: connection is not using a post-quantum key exchange algorithm." }
+            : allGood(l, a),
+      }),
+    );
+    // Filtering every advisory away would leave the step with no reason at all, which is worse than a vague one.
+    expect(step(report, "remote-engine")?.details).toContain("post-quantum");
+  });
+
   it("omits the remote-engine step when no engine program is given", async () => {
     const report = await runSSHPreflight(target, { osType: OperatingSystem.Linux }, deps({ exec: allGood }));
     expect(stepIds(report)).not.toContain("remote-engine");

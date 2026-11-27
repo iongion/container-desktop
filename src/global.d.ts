@@ -4,7 +4,6 @@
 // (e.g. `const Command: ICommand = ...` with no import) keep resolving unchanged, while the port has one
 // concrete, checkable source of truth.
 
-import type { IAI as _IAI, IAIBus as _IAIBus } from "@/ai-system/host/aiClientBridge";
 import type { SSHHost as _SSHHost } from "@/container-client/Types";
 import type {
   IActivityBus as _IActivityBus,
@@ -30,9 +29,6 @@ declare global {
   type IActivityBus = _IActivityBus;
   type ITrayBus = _ITrayBus;
   type IResourceBus = _IResourceBus;
-  // Host-exposed AI bridges — types imported from @/ai-system/core (see platform/*/aiClient.ts / aiBus.ts).
-  type IAI = _IAI;
-  type IAIBus = _IAIBus;
 
   var Platform: IPlatform;
   var Command: ICommand;
@@ -44,8 +40,6 @@ declare global {
   var ActivityBus: IActivityBus;
   var TrayBus: ITrayBus;
   var ResourceBus: IResourceBus;
-  var AI: IAI;
-  var AIBus: IAIBus;
   var CONTAINER_DESKTOP_MOCK: string;
 
   interface Window {
@@ -59,8 +53,6 @@ declare global {
     ActivityBus: IActivityBus;
     TrayBus: ITrayBus;
     ResourceBus: IResourceBus;
-    AI: IAI;
-    AIBus: IAIBus;
     CONTAINER_DESKTOP_MOCK: string;
   }
 }

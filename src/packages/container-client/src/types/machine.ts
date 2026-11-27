@@ -42,6 +42,11 @@ export interface PodmanMachine {
   Running: boolean;
   LastUp: string;
   VMType: string;
+  // Whether something carries this machine's published ports out to the host running it. WSL-only in podman's
+  // vocabulary — it reads `false` on the machine types that relay by other means — so it only means "unrelayed"
+  // paired with `VMType`. Optional because only `machine list` publishes it: measured against a real WSL machine,
+  // `machine inspect` publishes the flag but not `VMType`, so the pair exists on the listing alone.
+  UserModeNetworking?: boolean;
   CPUs?: string;
   Default?: boolean;
   DiskSize?: number;

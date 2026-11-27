@@ -122,7 +122,7 @@ jobs:
       - name: Checksum ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
         run: yarn cli checksums
       - name: Publish ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: container-desktop-${{ matrix.target }}
           path: release/container-desktop*
@@ -222,7 +222,7 @@ jobs:
           path: website
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
         with:
           artifact_name: github-pages-${{ github.run_attempt }}
           timeout: 1200000 # 20 min — ride out slow GitHub Pages deploys (default 10)

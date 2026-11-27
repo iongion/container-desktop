@@ -1,15 +1,14 @@
-// EngineOps adapter (MAIN). Implements the neutral EngineOps port (ai-system/core/types) over the live
-// EngineDataService — the same host clients + container-client adapters the rest of the app uses. This is
-// the bridge that lets the assistant's typed tools drive the real engines while keys + execution stay in
-// MAIN. `connectionId` defaults to the primary connection; a missing/unconnected target throws a friendly
+// EngineOps adapter. Implements the EngineOps port (container-client/engineOps) over the live EngineDataService —
+// the same host clients + container-client adapters the rest of the app uses — so a typed tool layer can drive
+// the real engines. `connectionId` defaults to the primary connection; a missing/unconnected target throws a friendly
 // error the tool layer surfaces. Lifecycle ops route through performAction so the resource store refreshes;
 // other mutations (image/network/volume remove, image pull) trigger a domain refresh explicitly.
 
-import type { EngineConnectionInfo, EngineOps } from "@/ai-system/core/types";
 import { ContainersAdapter } from "@/container-client/adapters/containers";
 import { ImagesAdapter } from "@/container-client/adapters/images";
 import { NetworksAdapter } from "@/container-client/adapters/networks";
 import { VolumesAdapter } from "@/container-client/adapters/volumes";
+import type { EngineConnectionInfo, EngineOps } from "@/container-client/engineOps";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 
 import type { EngineDataService } from "@/platform/engineDataService";
@@ -35,11 +34,13 @@ export function createEngineOpsAdapter(service: EngineDataService): EngineOps {
 
   return {
     listConnections(): EngineConnectionInfo[] {
-      return service.getAppRuntimeSnapshot().connections.map((c) => ({
+      const snapshot = service.getAppRuntimeSnapshot();
+      return snapshot.connections.map((c) => ({
         id: c.id,
         name: c.name,
         engine: c.engine,
         running: !!service.getHost(c.id),
+        current: c.id === snapshot.currentConnector?.id,
       }));
     },
 

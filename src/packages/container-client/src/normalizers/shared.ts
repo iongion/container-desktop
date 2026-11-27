@@ -21,7 +21,9 @@ import type { Volume } from "@/container-client/types/volume";
 // Container group separators.
 export const CONTAINER_GROUP_SEPARATORS = ["-", "_"];
 
-function normalizeContainerName(name: string): string {
+// Docker reports a container's name with a historical leading slash (`Names: ["/web"]`) and podman's compat surface
+// copies it. Exported because it is also the rule on the way OUT: the API refuses that spelling as a path segment.
+export function normalizeContainerName(name: string): string {
   return name.replace(/^\/+/, "");
 }
 

@@ -4,19 +4,46 @@
 // the host bridge provides, so nothing above the port changes.
 
 mod bridge;
+mod child_guard;
 mod host;
 mod keychain;
+mod mcp;
 mod process;
-mod provider_transport;
 mod proxy;
-mod public_web_fetch;
 mod shell;
 mod spawn_hidden;
 mod ssh_config;
 mod tray;
 
-use tauri::{Manager, WindowEvent};
+use tauri::webview::PageLoadEvent;
+use tauri::{Manager, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
+
+const MAIN_WINDOW: &str = "main";
+
+// The main window is tauri.conf.json's, built here (it is `create: false` there) only so an isolated run can give
+// the webview its own storage: the config's dataDirectory takes relative paths only, and the override is absolute.
+fn create_main_window(app: &tauri::App) -> tauri::Result<()> {
+    let config = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == MAIN_WINDOW)
+        .expect("tauri.conf.json declares the main window");
+    let mut builder = WebviewWindowBuilder::from_config(app.handle(), config)?;
+    if let Some(dir) = host::platform::webview_data_dir() {
+        builder = builder.data_directory(dir);
+    }
+    builder.build()?;
+    Ok(())
+}
+
+/// `container-desktop --mcp-stdio`: relay MCP between stdin/stdout and the running app's loopback endpoint. Nothing
+/// of the GUI starts. Returns the process exit code.
+pub fn run_mcp_stdio() -> i32 {
+    mcp::stdio::run()
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -43,7 +70,7 @@ pub fn run() {
         // runs standalone. No effect on normal/production launches.
         if std::env::var_os("CONTAINER_DESKTOP_E2E").is_none() {
             builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-                if let Some(window) = app.get_webview_window("main") {
+                if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
                     let _ = window.unminimize();
                     let _ = window.show();
                     let _ = window.set_focus();
@@ -102,14 +129,20 @@ pub fn run() {
         .manage(proxy::ProxyState::default())
         // Live-process registry for ExecuteStreaming / ExecuteAsBackgroundService (kill by processId).
         .manage(process::ProcessState::default())
-        // Live-stream registry for the native AI provider transport (teardown by streamId).
-        .manage(provider_transport::ProviderTransportState::default())
-        // Live-stream registry for the address-pinned public web fetch (AI web-search; teardown by streamId).
-        .manage(public_web_fetch::PublicWebFetchState::default())
         // Persistent SSH/WSL dial-stdio bridge registry (survives webview reloads; keyed per connection).
         .manage(bridge::BridgeState::default())
         // The single native tray icon (built on first tray_update from the webview's projected menu).
         .manage(tray::TrayState::default())
+        // The MCP server's listener and the requests waiting for the webview's answers.
+        .manage(mcp::commands::McpState::default())
+        .setup(|app| Ok(create_main_window(app)?))
+        // A reload drops the MCP requests the old page was answering; their clients get a 504 now, not after the
+        // reply timeout.
+        .on_page_load(|webview, payload| {
+            if webview.label() == MAIN_WINDOW && payload.event() == PageLoadEvent::Started {
+                webview.state::<mcp::commands::McpState>().abandon_pending();
+            }
+        })
         // Hide-to-tray: while the tray is up, closing the window HIDES it (keeps the webview + the in-realm
         // engine hub alive). A true quit goes through application.exit
         // (process.exit) or the tray's Quit item — both terminate without firing this.
@@ -136,32 +169,12 @@ pub fn run() {
             host::fs::fs_is_file_present,
             host::fs::fs_mkdir,
             host::fs::fs_rename,
-            host::fs::fs_list_directory,
-            host::fs::fs_lstat,
-            host::fs::fs_real_path,
-            host::fs::fs_is_path_within,
             host::command::command_execute,
-            host::dns::dns_lookup,
-            host::workspace::workspace_root,
-            host::workspace::workspace_read,
-            host::workspace::workspace_write,
-            host::workspace::workspace_write_new,
-            host::workspace::workspace_edit,
-            host::workspace::workspace_list,
-            host::workspace::workspace_stat,
-            host::workspace::workspace_remove,
-            host::workspace::workspace_glob,
-            host::workspace::workspace_grep,
-            host::workspace::workspace_exec,
             ssh_config::get_ssh_config,
             proxy::proxy_request,
             proxy::proxy_request_stream,
             proxy::proxy_stream_destroy,
             proxy::connectivity::proxy_test_connectivity,
-            provider_transport::provider_transport_request,
-            provider_transport::provider_transport_destroy,
-            public_web_fetch::public_web_fetch_request,
-            public_web_fetch::public_web_fetch_destroy,
             process::process_spawn,
             process::process_kill,
             bridge::proxy_bridge_stop,
@@ -177,6 +190,12 @@ pub fn run() {
             keychain::keychain_set,
             keychain::keychain_clear,
             tray::tray_update,
+            mcp::commands::mcp_start,
+            mcp::commands::mcp_stop,
+            mcp::commands::mcp_status,
+            mcp::commands::mcp_reply,
+            mcp::commands::mcp_token,
+            mcp::commands::mcp_regenerate_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Container Desktop Tauri shell");

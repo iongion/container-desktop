@@ -1,10 +1,9 @@
-// Tauri persistence backend for the @/logger façade — the file transport the façade was missing
-// under Tauri. Wails routes through its Go LogService; this is the symmetric Tauri
-// seam: forward already level-gated records to @tauri-apps/plugin-log, whose Rust side (src-tauri/src/lib.rs)
+// Tauri persistence backend for the @/logger façade — the file transport the façade was missing.
+// It forwards already level-gated records to @tauri-apps/plugin-log, whose Rust side (src-tauri/src/lib.rs)
 // writes them to userData/logs/container-desktop.log — the SAME file logging_open / logging_reveal reveal.
 //
-// Console stays owned by the façade; this only ADDS the file sink (no remote/cloud sink). Only the Tauri boot
-// branch (web-app/index.tsx) imports this module, so @tauri-apps/plugin-log never loads under Wails.
+// Console stays owned by the façade; this only ADDS the file sink (no remote/cloud sink). Only the boot
+// (web-app/index.tsx) imports this module.
 
 import { debug, error, info, warn } from "@tauri-apps/plugin-log";
 

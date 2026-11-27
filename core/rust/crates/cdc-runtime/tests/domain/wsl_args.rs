@@ -80,7 +80,7 @@ fn apple_takes_the_non_docker_spelling() {
 /// responsibility is the whole contract, and both halves are elsewhere.
 ///
 /// Every caller in the original strips it first (`\`${remoteAddress}\`.replace("unix://", "")` in the
-/// Tauri and Wails bridges, `unixSocketPath` in `wsl-relay.ts`), so there is deliberately NO guard
+/// Tauri bridge, `unixSocketPath` in `wsl-relay.ts`), so there is deliberately NO guard
 /// against a doubled scheme here: a guard would be behaviour with no producer, and this port has just
 /// finished withdrawing three diagnostic codes for exactly that. The Rust caller normalises the same
 /// way — `start_api` puts `relay` through `normalize_unix_socket_path` — so if `unix://unix://` ever

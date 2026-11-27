@@ -7,7 +7,7 @@ import "./UserSettingsScreen.css";
 import i18n from "@/i18n";
 
 // Thin screen shell: owns the screen identity/route/metadata and delegates the whole body to
-// SettingsLayout (category rail + panels). The per-category forms live in ./panels and ./AISettingsForm.
+// SettingsLayout (category rail + panels). The per-category forms live in ./panels.
 
 interface ScreenProps extends AppScreenProps {}
 

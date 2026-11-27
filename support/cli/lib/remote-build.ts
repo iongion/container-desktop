@@ -348,11 +348,6 @@ function isRemoteExcluded(relPosix: string): boolean {
   if (relPosix.startsWith("src-tauri/target/")) {
     return true;
   }
-  // Wails build output regenerated on the remote box — keep it out of the source archive (bin/ = compiled Go
-  // binaries; frontend/dist = staged renderer, also caught by the `dist` dir rule). Mirrors src-tauri/target/.
-  if (relPosix.startsWith("src-wails/bin/") || relPosix.startsWith("src-wails/frontend/dist/")) {
-    return true;
-  }
   if (REMOTE_EXCLUDED_FILES.has(name)) {
     return true;
   }

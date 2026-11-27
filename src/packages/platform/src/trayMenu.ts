@@ -21,6 +21,29 @@ export interface TrayMenuItem {
   enabled?: boolean;
   click?: () => void;
   submenu?: TrayMenuItem[];
+  // Every CLICKABLE item carries one, and it says what the item does rather than where it sits — see below.
+  // Headers, separators and submenu parents have none, because nothing can be clicked on them.
+  id?: string;
+}
+
+// Quit is the one item that cannot afford to be a message to the webview. Every other tray click is answered by
+// invoking a closure that lives in the renderer's realm — fine while it is healthy, and nothing at all when it is
+// wedged, reloading, or holding a registry built from a different menu than the one the native side is showing.
+// That state leaves a menu that still opens, still lists Quit, and cannot close the app. So this id is stable and
+// each shell's native side acts on it directly.
+export const TRAY_QUIT_ID = "tray:quit";
+
+// Every other clickable item is answered by a closure in the renderer's realm, looked up by the id the native side
+// sends back. That id must describe the ACTION, never the item's position: the native menu and this realm's registry
+// can fall out of step — one failed `tray_update` is enough — and a positional id then resolves to whatever action
+// now happens to sit at that ordinal, so a click stops a container the user never pointed at. An id built from the
+// connection, the verb and the resource cannot be remapped; at worst it is missing from the registry and does nothing.
+// Shared by "Open main window" and every "Show all … in app…" escape, because they perform the same action — one
+// meaning, one id, however many places offer it.
+export const TRAY_SHOW_APP_ID = "tray:show-app";
+
+export function trayActionId(kind: string, id: string, connectionId: string): string {
+  return `tray:action:${connectionId}:${kind}:${id}`;
 }
 
 type Item = TrayMenuItem;
@@ -117,13 +140,18 @@ function resourceItem(
   if (actions.length === 1) {
     const only = actions[0];
     return {
+      id: trayActionId(only.kind, id, connectionId),
       label: i18n.t('{{action}} "{{name}}"', { action: only.title, name }),
       click: () => onAction(only.kind, id, connectionId),
     };
   }
   return {
     label: name,
-    submenu: actions.map((a) => ({ label: a.title, click: () => onAction(a.kind, id, connectionId) })),
+    submenu: actions.map((a) => ({
+      id: trayActionId(a.kind, id, connectionId),
+      label: a.title,
+      click: () => onAction(a.kind, id, connectionId),
+    })),
   };
 }
 
@@ -131,7 +159,11 @@ function resourceItem(
 function capped(rows: Item[], total: number, onShowApp: TrayMenuHandlers["onShowApp"]): Item[] {
   const out = rows.slice(0, LIST_CAP);
   if (total > LIST_CAP) {
-    out.push({ label: i18n.t("Show all {{total}} in app…", { total }), click: () => onShowApp() });
+    out.push({
+      id: TRAY_SHOW_APP_ID,
+      label: i18n.t("Show all {{total}} in app…", { total }),
+      click: () => onShowApp(),
+    });
   }
   return out;
 }
@@ -207,7 +239,7 @@ export function buildTrayMenuTemplate(data: TrayMenuData, handlers: TrayMenuHand
   }
 
   items.push({ type: "separator" });
-  items.push({ label: i18n.t("Open main window"), click: () => onShowApp() });
-  items.push({ label: i18n.t("Quit"), click: () => onQuit() });
+  items.push({ id: TRAY_SHOW_APP_ID, label: i18n.t("Open main window"), click: () => onShowApp() });
+  items.push({ id: TRAY_QUIT_ID, label: i18n.t("Quit"), click: () => onQuit() });
   return items;
 }

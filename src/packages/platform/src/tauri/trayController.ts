@@ -43,10 +43,12 @@ export function projectTrayMenu(
       const node: TrayMenuNode = { label: `${item.label ?? ""}`, enabled: item.enabled !== false };
       if (item.submenu) {
         node.items = walk(item.submenu);
-      } else if (typeof item.click === "function") {
-        const id = `tray:${registry.size}`;
-        registry.set(id, item.click);
-        node.id = id;
+      } else if (typeof item.click === "function" && typeof item.id === "string") {
+        // The id comes from the projection and describes the action, so it survives the native menu and this
+        // registry falling out of step. A clickable item that arrives WITHOUT one is left inert rather than given a
+        // positional stand-in: doing nothing is recoverable, acting on the wrong container is not.
+        registry.set(item.id, item.click);
+        node.id = item.id;
       }
       return node;
     });
@@ -104,10 +106,16 @@ export function createTrayController(deps: TrayControllerDeps): { rebuild: () =>
     if (signature === lastSignature) {
       return; // no change — skip the native round-trip (mirrors TrayController's dedupe)
     }
-    lastSignature = signature;
     registry = projected.registry;
+    // The signature is recorded only once the native side has ACCEPTED the menu. Recording it up front and swallowing
+    // the failure left the native menu on the previous build for good: the next rebuild computed the same signature,
+    // matched it, and returned early — so nothing was ever re-sent. Leaving it unchanged means the next engine change
+    // retries.
     void deps
       .invoke("tray_update", { items: projected.items, tooltip: "Container Desktop", icon })
+      .then(() => {
+        lastSignature = signature;
+      })
       .catch(() => undefined);
   };
 

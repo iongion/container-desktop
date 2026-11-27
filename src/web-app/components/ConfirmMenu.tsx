@@ -97,6 +97,8 @@ export interface ConfirmMenuProps {
   children?: any;
   title?: string;
   actionText?: string;
+  // The action's icon; a removal's trash can by default.
+  actionIcon?: IconName;
   tag?: any;
   onConfirm: ConfirmMenuRemoveHandler;
   // Notified whenever the popover opens/closes. The container list uses this to keep the (hover-gated) row
@@ -110,6 +112,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
   tag,
   title,
   actionText,
+  actionIcon,
   children,
   onConfirm,
   onOpenChange,
@@ -162,6 +165,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
       {children}
       <ConfirmMenuItem
         tag={tag}
+        icon={actionIcon}
         title={title}
         text={actionText}
         disabled={disabled}

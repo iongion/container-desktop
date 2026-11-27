@@ -1,6 +1,6 @@
 import { AnchorButton, Button, ButtonGroup, Divider, Navbar, NavbarGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { mdiBug, mdiRobot } from "@mdi/js";
+import { mdiBug } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,7 +10,6 @@ import type { Program } from "@/container-client/types/engine";
 import { OperatingSystem, type WindowAction } from "@/container-client/types/os";
 import { WINDOW_CONTROLS } from "@/web-app/chrome/appChrome";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
-import { useUIStore } from "@/web-app/stores/uiStore";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
 import type { AppScreen } from "../Types";
@@ -60,11 +59,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const { t } = useTranslation();
   const [withControls, setWithControls] = useState(true);
   // While the full-screen wizard is open its nav targets sit behind the overlay, so every header action
-  // (Connections, AI, Troubleshoot) dismisses the wizard on click (like Skip) and then navigates — rather than
+  // (Connections, Troubleshoot) dismisses the wizard on click (like Skip) and then navigates — rather than
   // being disabled or appearing to do nothing.
   const wizardOpen = useProvisioningStore((s) => s.isOpen);
   const closeWizard = useProvisioningStore((s) => s.closeWizard);
-  const toggleAssistantConsole = useUIStore((s) => s.toggleAssistantConsole);
   const onWindowControlClick = useCallback((e) => {
     const action: WindowAction = e.currentTarget.getAttribute("data-action");
     const handler = WINDOW_ACTIONS_MAP[action];
@@ -92,26 +90,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       );
     });
   }
-
-  // AI lives here as a single button that opens the Assistant. The other AI screens are reached through the
-  // "Work" sidebar entry (→ Workers) and its section tab bar (→ Runs), not a header menu. AI is always on.
-  const aiActions = (
-    <ButtonGroup variant="minimal" className="AppHeaderAIActions">
-      <Button
-        className="AppHeaderActionButton"
-        data-action="ai-assistant"
-        icon={<ReactIcon.Icon className="ReactIcon" path={mdiRobot} size={0.75} />}
-        title={t("AI Assistant")}
-        aria-label={t("AI Assistant")}
-        onClick={() => {
-          if (wizardOpen) {
-            closeWizard();
-          }
-          toggleAssistantConsole();
-        }}
-      />
-    </ButtonGroup>
-  );
 
   const disabledHeaderActions = !(provisioned && running);
   const utilityActions = (
@@ -167,7 +145,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </NavbarGroup>
         <NavbarGroup>
           <div className="AppHeaderActions">
-            {aiActions}
             {utilityActions}
             {headerActionDivider}
             {rightSideControls ? (

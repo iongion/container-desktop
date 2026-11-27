@@ -93,8 +93,8 @@
 }
 .AppSettingsForm[data-form="configuration"],
 .AppSettingsForm[data-form="logging"],
-.AppSettingsForm[data-form="network"],
-.AppSettingsForm[data-form="avatars"] {
+.AppSettingsForm[data-form="mcp"],
+.AppSettingsForm[data-form="network"] {
   display: flex;
   flex-direction: column;
   row-gap: 12px;
@@ -122,6 +122,23 @@
 .AppSettingsForm[data-form="network"] textarea {
   min-height: 86px;
   resize: vertical;
+}
+.AppSettingsForm[data-form="mcp"] .McpField--mode {
+  flex: 1 1 260px;
+}
+.AppSettingsForm[data-form="mcp"] .McpField--port {
+  flex: 0 0 120px;
+}
+.AppSettingsMcpStatus {
+  display: flex;
+  align-items: center;
+  column-gap: 6px;
+  color: var(--app-text-muted);
+}
+.AppSettingsMcpToken {
+  display: flex;
+  align-items: center;
+  column-gap: 4px;
 }
 .AppSettingsNetworkActions {
   display: flex;
@@ -170,54 +187,6 @@
 }
 .AppSettingsFontForm select {
   font-size: 12px;
-}
-
-.AppSettingsForm[data-form="ai"] {
-  display: flex;
-  flex-direction: column;
-  row-gap: 8px;
-  width: 100%;
-  padding: 10px 4px;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-.SettingsPanel[data-category="ai"] {
-  overflow: hidden;
-}
-.AppSettingsForm[data-form="ai"] .AppSettingsAIPrivacy,
-.AppSettingsForm[data-form="ai"] .AppSettingsAIDegraded {
-  margin: 0;
-}
-.AppSettingsForm[data-form="ai"] .AppSettingsAIDegraded .bp6-control {
-  margin-top: 8px;
-  margin-bottom: 0;
-}
-.AppSettingsAIConsents,
-.AppSettingsAIKeys {
-  display: flex;
-  flex-direction: column;
-  row-gap: 6px;
-}
-.AppSettingsAIConsents .bp6-control {
-  margin-bottom: 0;
-}
-.AppSettingsForm[data-form="ai"] .AppSettingsAIPrivacy p:last-child,
-.AppSettingsForm[data-form="ai"] .AppSettingsAIDegraded p {
-  margin-bottom: 0;
-}
-.AppSettingsAIProviders {
-  width: 100%;
-  flex-wrap: wrap;
-}
-.AppSettingsAIProviders.bp6-fill .bp6-button {
-  flex: 1 1 auto;
-  min-width: 116px;
-}
-.AppSettingsAIProviders .AppSettingsAIProviderLocal:not(.bp6-active) .bp6-icon {
-  color: #2e9e5b;
-}
-.AppSettingsAIProviders .AppSettingsAIProviderCloud:not(.bp6-active) .bp6-icon {
-  color: #d98324;
 }
 
 .AppScreenContent.SettingsContent {

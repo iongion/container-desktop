@@ -1,13 +1,12 @@
 // Dev-gated real-engine probes, driven from a WebDriver e2e spec. They run INSIDE the webview, so the ports
-// they use are the running shell's own — Rust under Tauri, Go under Wails — installed as the globals by that
-// shell's host bridge. Nothing here is shell-specific: every call goes through container-client and the
-// generic host ports, so the same probe proves the same behaviour on either backend.
+// they use are the shell's own Rust ports, installed as the globals by its host bridge. Every call goes through
+// container-client and the generic host ports, so the probe proves the shipping path.
 //
-// Registered only behind `import.meta.env.DEV` in index.tsx (same gate as installAssistantDemo), so the whole
+// Registered only behind `import.meta.env.DEV` in index.tsx, so the whole
 // module is tree-shaken out of a production bundle.
 //
 // Each probe returns plain JSON observations and asserts nothing — the spec owns the assertions, matching
-// webdriver/specs/off-host-exec.e2e.js. That keeps the probe free of any test framework.
+// webdriver/specs/sandbox-exec.e2e.js. That keeps the probe free of any test framework.
 import { SwarmAdapter } from "@/container-client/adapters/swarm";
 import { createConnectorBy } from "@/container-client/connection";
 import { runSSHPreflight } from "@/container-client/diagnostics/ssh-preflight";

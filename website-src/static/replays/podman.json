@@ -8,44 +8,40 @@
   "frameDurationMs": 3200,
   "frames": [
     {
-      "screenshot": "/img/podman/000-Overview.png",
+      "screenshot": "../img/podman/000-Overview.png",
       "title": "Auto-detects your engine"
     },
     {
-      "screenshot": "/img/podman/Containers.png",
+      "screenshot": "../img/podman/Containers.png",
       "title": "Real container workloads"
     },
     {
-      "screenshot": "/img/podman/003-ContainerActions.png",
+      "screenshot": "../img/podman/003-ContainerActions.png",
       "title": "Fast, familiar actions"
     },
     {
-      "screenshot": "/img/podman/003-ContainerInspect.png",
+      "screenshot": "../img/podman/003-ContainerInspect.png",
       "title": "Inspect like an operator"
     },
     {
-      "screenshot": "/img/podman/Images.png",
+      "screenshot": "../img/podman/Images.png",
       "title": "Browse images"
     },
     {
-      "screenshot": "/img/podman/ImageSecurity.png",
+      "screenshot": "../img/podman/ImageSecurity.png",
       "title": "Scan for vulnerabilities"
     },
     {
-      "screenshot": "/img/podman/Build.png",
+      "screenshot": "../img/podman/Build.png",
       "title": "Build images"
     },
     {
-      "screenshot": "/img/podman/Pods.png",
+      "screenshot": "../img/podman/Pods.png",
       "title": "Pods for real stacks"
     },
     {
-      "screenshot": "/img/podman/ConnectionManager.png",
+      "screenshot": "../img/podman/ConnectionManager.png",
       "title": "Local, SSH, WSL & LIMA"
-    },
-    {
-      "screenshot": "/img/podman/AIAssistant.png",
-      "title": "Built-in AI assistant"
     }
   ]
 }

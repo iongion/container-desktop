@@ -152,9 +152,8 @@ export interface HostClientFacade
   CONTROLLER: string;
   ENGINE: ContainerEngine;
   HOST: ContainerEngineHost;
-  // The OS of the machine this host runs its commands ON (local box, or the remote/scoped guest). Adapters
-  // that emit shell-shaped argv (e.g. the AI connection-exec) branch on it — a Windows remote has no POSIX
-  // tools, so its workspace argv is bridged through WSL.
+  // The OS of the machine this host runs its commands ON (local box, or the remote/scoped guest). Callers that
+  // emit shell-shaped argv branch on it — a Windows remote has no POSIX tools.
   osType: OperatingSystem;
   id: string;
   logger: ILogger;

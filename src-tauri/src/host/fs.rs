@@ -1,37 +1,33 @@
-// FileSystem host port — the Rust side of IFileSystem. src-wails/fs_service.go must behave identically.
+// FileSystem host port — the Rust side of IFileSystem.
 
 use std::path::Path;
-use std::time::UNIX_EPOCH;
 
-use serde::Serialize;
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileSystemDirEntry {
-    name: String,
-    kind: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileSystemStat {
-    kind: String,
-    size: u64,
-    modified_ms: u64,
-}
-
-fn metadata_kind(metadata: &std::fs::Metadata) -> String {
-    let file_type = metadata.file_type();
-    if file_type.is_symlink() {
-        "symlink"
-    } else if file_type.is_file() {
-        "file"
-    } else if file_type.is_dir() {
-        "directory"
-    } else {
-        "other"
+/// Write a file hardened to owner-only, creating parents. mode(0o600) only applies to a NEWLY created file (and is
+/// masked by umask); set_permissions afterward forces exactly 0600 on both new and pre-existing files, matching the
+/// Node impl's explicit chmodSync. On Windows there is no unix mode, so the hardening is best-effort.
+fn write_private_file(path: &Path, contents: &str) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
     }
-    .to_string()
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(path)
+            .map_err(|e| e.to_string())?;
+        file.write_all(contents.as_bytes()).map_err(|e| e.to_string())?;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(path, contents).map_err(|e| e.to_string())
+    }
 }
 
 #[tauri::command]
@@ -48,36 +44,10 @@ pub fn fs_write_text_file(path: String, contents: String) -> Result<(), String> 
 }
 
 /// Like fs_write_text_file but hardens the file to owner-only — the Rust side of IFileSystem.writePrivateTextFile
-/// (AI credentials / permissions / knowledge, which must never be world-readable). The file is created 0o600 and
-/// chmod'ed 0o600. On Windows there is no unix mode, so the hardening is best-effort and the write still succeeds.
+/// (credentials and permission records, which must never be world-readable).
 #[tauri::command]
 pub fn fs_write_private_text_file(path: String, contents: String) -> Result<(), String> {
-    if let Some(parent) = Path::new(&path).parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    #[cfg(unix)]
-    {
-        use std::io::Write;
-        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-        // mode(0o600) only applies to a NEWLY created file (and is masked by umask); set_permissions afterward
-        // forces exactly 0600 on both new and pre-existing files, matching the Node impl's explicit chmodSync.
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .mode(0o600)
-            .open(&path)
-            .map_err(|e| e.to_string())?;
-        file.write_all(contents.as_bytes())
-            .map_err(|e| e.to_string())?;
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
-            .map_err(|e| e.to_string())?;
-        Ok(())
-    }
-    #[cfg(not(unix))]
-    {
-        std::fs::write(&path, contents).map_err(|e| e.to_string())
-    }
+    write_private_file(Path::new(&path), &contents)
 }
 
 /// The named-pipe filesystem, which Windows lets you LIST.
@@ -136,49 +106,4 @@ pub fn fs_mkdir(path: String, recursive: Option<bool>) -> Result<(), String> {
 #[tauri::command]
 pub fn fs_rename(old_path: String, new_path: String) -> Result<(), String> {
     std::fs::rename(&old_path, &new_path).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn fs_list_directory(path: String) -> Result<Vec<FileSystemDirEntry>, String> {
-    std::fs::read_dir(path)
-        .map_err(|e| e.to_string())?
-        .map(|entry| {
-            let entry = entry.map_err(|e| e.to_string())?;
-            let metadata = std::fs::symlink_metadata(entry.path()).map_err(|e| e.to_string())?;
-            Ok(FileSystemDirEntry {
-                name: entry.file_name().to_string_lossy().to_string(),
-                kind: metadata_kind(&metadata),
-            })
-        })
-        .collect()
-}
-
-#[tauri::command]
-pub fn fs_lstat(path: String) -> Result<FileSystemStat, String> {
-    let metadata = std::fs::symlink_metadata(path).map_err(|e| e.to_string())?;
-    let modified_ms = metadata
-        .modified()
-        .ok()
-        .and_then(|value| value.duration_since(UNIX_EPOCH).ok())
-        .map(|value| value.as_millis() as u64)
-        .unwrap_or(0);
-    Ok(FileSystemStat {
-        kind: metadata_kind(&metadata),
-        size: metadata.len(),
-        modified_ms,
-    })
-}
-
-#[tauri::command]
-pub fn fs_real_path(path: String) -> Result<String, String> {
-    std::fs::canonicalize(path)
-        .map(|value| value.to_string_lossy().to_string())
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn fs_is_path_within(root: String, path: String) -> Result<bool, String> {
-    let canonical_root = std::fs::canonicalize(root).map_err(|e| e.to_string())?;
-    let canonical_path = std::fs::canonicalize(path).map_err(|e| e.to_string())?;
-    Ok(canonical_path.starts_with(canonical_root))
 }
