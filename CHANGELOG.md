@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: "Push after build" no longer fails a Podman build with an unknown `--push` flag, nor does nothing on Apple; only Docker, whose build command pushes, offers it
 - Build: a link to Build for another connection opens on that connection, also when Build is already open
 - Docker: compose stacks of a connection pinned to a Docker context deploy to that context's engine, not the default one
+- Stopping the app with a signal (SIGTERM, Ctrl-C, a closed terminal) exits like Quit and stops what it started; on macOS a socktainer was left running
+- Logging: the level chosen in Settings, or `CONTAINER_DESKTOP_LOG_LEVEL` at launch, applies to installed builds; they always logged warnings only
+- Containers: Generate Kube and Play Kube follow the container's own connection, not the app's current one
 
 ## [7.1.0] - 2026-11-27
 

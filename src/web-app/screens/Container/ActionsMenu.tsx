@@ -11,7 +11,7 @@ import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
-import { connectionCanPause } from "./bulkActions";
+import { connectionCanPause, connectionHasKube } from "./bulkActions";
 import { getContainerServiceUrl, getContainerUrl } from "./Navigation";
 import {
   useConnectContainer,
@@ -72,6 +72,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const connectContainer = useConnectContainer(connectionId);
   // Pause/Resume only where the container's own connection can pause (Apple Container cannot).
   const canPauseHere = useResourceStore((state) => connectionCanPause(state.activeRuntime, connectionId));
+  const isKubeAvailable = useResourceStore((state) => connectionHasKube(state.activeRuntime, connectionId));
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -196,7 +197,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     performActionCommand("container.connect", { confirm: { success: false } });
   }, [performActionCommand]);
 
-  const isKubeAvailable = currentConnector?.capabilities?.extensions.kube === true;
   const kubeDisabledTitle = isKubeAvailable ? "" : t("Not available for current host");
   const expandAsButtons =
     expand && container ? (

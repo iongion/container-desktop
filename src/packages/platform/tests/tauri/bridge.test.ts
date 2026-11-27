@@ -119,6 +119,7 @@ describe("installTauriHostBridge", () => {
       "Preloaded",
       "CONTAINER_DESKTOP_MOCK",
       "CONTAINER_DESKTOP_MOCK_SWARM",
+      "CONTAINER_DESKTOP_LOG_LEVEL",
     ]) {
       delete (window as any)[key];
     }
@@ -151,6 +152,16 @@ describe("installTauriHostBridge", () => {
     // webdriver/specs/swarm-ui.e2e.js selects its fixture state with, so it has to cross the boundary too.
     expect((window as any).CONTAINER_DESKTOP_MOCK).toBe("env:CONTAINER_DESKTOP_MOCK");
     expect((window as any).CONTAINER_DESKTOP_MOCK_SWARM).toBe("env:CONTAINER_DESKTOP_MOCK_SWARM");
+  });
+
+  // `CONTAINER_DESKTOP_LOG_LEVEL=debug <app>` must reach the logger in a packaged build, where the build-time value is
+  // empty: the webview reads the level as a global (getEnvironmentLogLevel).
+  it("forwards the launch-time log level into the webview realm", async () => {
+    const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
+
+    await installTauriHostBridge();
+
+    expect((window as any).CONTAINER_DESKTOP_LOG_LEVEL).toBe("env:CONTAINER_DESKTOP_LOG_LEVEL");
   });
 
   it("keeps the native window hidden when the bridge installs but the renderer has not signaled ready", async () => {

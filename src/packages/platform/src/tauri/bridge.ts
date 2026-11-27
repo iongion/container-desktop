@@ -89,6 +89,10 @@ export async function installTauriHostBridge(): Promise<void> {
     mockKnobs.forEach((name, index) => {
       target[name] = knobValues[index] ?? "";
     });
+    // The launch-time log level (`CONTAINER_DESKTOP_LOG_LEVEL=debug <app>`), read by getEnvironmentLogLevel; when
+    // unset, the level saved in Settings decides.
+    target.CONTAINER_DESKTOP_LOG_LEVEL =
+      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_LOG_LEVEL" })) ?? "";
     // CURRENT_DARWIN_MAJOR (uname-derived natively) for Apple Container's macOS 26 requirement (container-client
     // runtime profiles); null/undefined off Darwin.
     const darwinMajor = (await invoke<number | null>("get_darwin_major")) ?? undefined;

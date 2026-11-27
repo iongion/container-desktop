@@ -50,7 +50,7 @@ tauri-plugin-single-instance = "2"
 # Async process exec (Command.Execute + the streaming/background process port). "time" bounds the proxy
 # stream-open; "sync" the kill channel + bridge registry; "macros" the pump's select!; "net" the SSH/WSL
 # dial-stdio bridge's local UnixListener / named-pipe server.
-tokio = { version = "1", features = ["process", "io-util", "net", "rt", "time", "sync", "macros"] }
+tokio = { version = "1", features = ["process", "io-util", "net", "rt", "time", "sync", "macros", "signal"] }
 # HTTP/1 client for the engine API proxy (ICommand.ProxyRequest). reqwest natively forces requests over a
 # LOCAL transport — ClientBuilder::unix_socket (Linux/macOS, since 0.12.23) and ClientBuilder::windows_named_pipe
 # (Windows, since 0.12.27) — so ONE client API covers both platforms (no hand-rolled dial / query-encoding).

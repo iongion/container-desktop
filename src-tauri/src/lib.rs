@@ -149,7 +149,10 @@ pub fn run() {
         .manage(tray::TrayState::default())
         // The MCP server's listener and the requests waiting for the webview's answers.
         .manage(mcp::commands::McpState::default())
-        .setup(|app| Ok(create_main_window(app)?))
+        .setup(|app| {
+            exit_on_termination_signals(app.handle().clone());
+            Ok(create_main_window(app)?)
+        })
         // A reload drops the MCP requests the old page was answering; their clients get a 504 now, not after the
         // reply timeout.
         .on_page_load(|webview, payload| {
@@ -211,6 +214,35 @@ pub fn run() {
             mcp::commands::mcp_token,
             mcp::commands::mcp_regenerate_token,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running the Container Desktop Tauri shell");
+        .build(tauri::generate_context!())
+        .expect("error while building the Container Desktop Tauri shell")
+        .run(|app, event| {
+            // Every exit, a Quit or a termination signal, stops the children this app started (socktainer, forwards).
+            if let tauri::RunEvent::Exit = event {
+                app.state::<process::ProcessState>().kill_all();
+            }
+        });
 }
+
+/// SIGTERM, SIGINT or SIGHUP exit the app the way Quit does, so the children it started are stopped too; the default
+/// action would end the process at once and leave them running (macOS has no parent-death hook, see child_guard).
+#[cfg(unix)]
+fn exit_on_termination_signals(app: tauri::AppHandle) {
+    use tokio::signal::unix::{signal, SignalKind};
+    tauri::async_runtime::spawn(async move {
+        let (Ok(mut term), Ok(mut int), Ok(mut hup)) =
+            (signal(SignalKind::terminate()), signal(SignalKind::interrupt()), signal(SignalKind::hangup()))
+        else {
+            return;
+        };
+        tokio::select! {
+            _ = term.recv() => {}
+            _ = int.recv() => {}
+            _ = hup.recv() => {}
+        }
+        app.exit(0);
+    });
+}
+
+#[cfg(not(unix))]
+fn exit_on_termination_signals(_app: tauri::AppHandle) {}

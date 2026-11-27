@@ -4,6 +4,7 @@ import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProto
 import { ContainerStateList } from "@/container-client/types/container";
 import {
   connectionCanPause,
+  connectionHasKube,
   containerCanPause,
   containerCanRemove,
   containerCanRestart,
@@ -69,5 +70,19 @@ describe("connectionCanPause", () => {
   it("does not refuse a connection whose capabilities are not known", () => {
     expect(connectionCanPause(runtime, "other")).toBe(true);
     expect(connectionCanPause([], "docker")).toBe(true);
+  });
+});
+
+describe("connectionHasKube", () => {
+  const runtime = [
+    { id: "podman", capabilities: { extensions: { kube: true } } },
+    { id: "docker", capabilities: { extensions: { kube: false } } },
+  ] as unknown as ConnectionRuntimeInfo[];
+
+  // Generate Kube / Play Kube follow the container's own connection, not the app's current one.
+  it("follows the container's own connection's kube capability", () => {
+    expect(connectionHasKube(runtime, "podman")).toBe(true);
+    expect(connectionHasKube(runtime, "docker")).toBe(false);
+    expect(connectionHasKube(runtime, "unknown")).toBe(false);
   });
 });

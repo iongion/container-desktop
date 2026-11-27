@@ -27,6 +27,9 @@ export const containerCanPause = (state: ContainerStateList) => state === Contai
 // Whether the container's OWN connection can pause at all (Apple Container cannot); unknown capabilities do not refuse.
 export const connectionCanPause = (runtime: ConnectionRuntimeInfo[], connectionId: string) =>
   runtime.find((info) => info.id === connectionId)?.capabilities?.pause !== false;
+// Whether the container's OWN connection generates and plays Kubernetes YAML (Podman only).
+export const connectionHasKube = (runtime: ConnectionRuntimeInfo[], connectionId: string) =>
+  runtime.find((info) => info.id === connectionId)?.capabilities?.extensions?.kube === true;
 export const containerCanStop = (state: ContainerStateList) => state === ContainerStateList.RUNNING;
 export const containerCanRestart = (state: ContainerStateList) => state === ContainerStateList.RUNNING;
 export const containerCanStart = (state: ContainerStateList) => state !== ContainerStateList.RUNNING;

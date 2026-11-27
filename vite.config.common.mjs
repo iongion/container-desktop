@@ -148,10 +148,9 @@ export const createDefine = (mode) => {
     "import.meta.env.CONTAINER_DESKTOP_BOOTSTRAP_PREVIEW_DELAY": JSON.stringify(
       process.env.CONTAINER_DESKTOP_BOOTSTRAP_PREVIEW_DELAY === "true",
     ),
-    // Build-time FALLBACK for the renderer log level. The runtime source is the preload bridge
-    // (preload.ts exposes the live CONTAINER_DESKTOP_LOG_LEVEL), so the level can change at launch without a
-    // rebuild; this baked value only applies if that bridge is unavailable. Defaults to "warn".
-    "import.meta.env.CONTAINER_DESKTOP_LOG_LEVEL": JSON.stringify(process.env.CONTAINER_DESKTOP_LOG_LEVEL || "warn"),
+    // Build-time override of the renderer log level, empty unless set at build time. The launch-time value comes
+    // from the host bridge (tauri/bridge.ts); with neither, the level saved in Settings decides (default "warn").
+    "import.meta.env.CONTAINER_DESKTOP_LOG_LEVEL": JSON.stringify(process.env.CONTAINER_DESKTOP_LOG_LEVEL || ""),
     // Bugs
     "process.env.NODE_DEBUG": JSON.stringify(false),
   };

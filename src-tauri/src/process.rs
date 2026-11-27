@@ -103,7 +103,8 @@ impl ProcessEvent {
 
 // State: the live-process registry (kill by processId token)
 
-type Registry = Arc<Mutex<HashMap<String, mpsc::UnboundedSender<i32>>>>;
+// Each live child: the sender its pump task kills it through, and its pid for the synchronous kill at exit.
+type Registry = Arc<Mutex<HashMap<String, (mpsc::UnboundedSender<i32>, u32)>>>;
 
 #[derive(Default)]
 pub struct ProcessState {
@@ -115,14 +116,23 @@ impl ProcessState {
         let n = self.counter.fetch_add(1, Ordering::Relaxed) + 1;
         format!("proc-{n}")
     }
-    fn register(&self, id: String, kill_tx: mpsc::UnboundedSender<i32>) {
-        self.children.lock().unwrap().insert(id, kill_tx);
+    fn register(&self, id: String, kill_tx: mpsc::UnboundedSender<i32>, pid: u32) {
+        self.children.lock().unwrap().insert(id, (kill_tx, pid));
     }
     // Deliver a signal number to the process's pump task (which performs the platform-specific kill). A no-op
     // if the process already exited (its entry self-removed).
     fn signal(&self, id: &str, sig: i32) {
-        if let Some(tx) = self.children.lock().unwrap().get(id) {
+        if let Some((tx, _)) = self.children.lock().unwrap().get(id) {
             let _ = tx.send(sig);
+        }
+    }
+    /// SIGTERM every live child, synchronously: at app exit no pump task is scheduled again, so the kill cannot be
+    /// left to them. Linux and Windows would reap these through child_guard anyway; macOS has nothing else.
+    pub fn kill_all(&self) {
+        for (_, pid) in self.children.lock().unwrap().values() {
+            if *pid != 0 {
+                deliver_signal(*pid, 15);
+            }
         }
     }
 }
@@ -163,7 +173,7 @@ pub async fn process_spawn(
     let pid = child.id();
     let process_id = state.next_id();
     let (kill_tx, kill_rx) = mpsc::unbounded_channel::<i32>();
-    state.register(process_id.clone(), kill_tx);
+    state.register(process_id.clone(), kill_tx, pid.unwrap_or(0));
     async_runtime::spawn(run_process(
         child,
         kill_rx,
@@ -259,5 +269,24 @@ fn parse_signal(signal: Option<&str>) -> i32 {
         Some("SIGINT") | Some("INT") | Some("2") => 2,
         Some(other) => other.parse::<i32>().unwrap_or(15),
         None => 15,
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn kill_all_terminates_every_registered_child() {
+        let state = ProcessState::default();
+        let mut child = tokio::process::Command::new("sleep").arg("30").spawn().unwrap();
+        let (kill_tx, _kill_rx) = mpsc::unbounded_channel::<i32>();
+        state.register("proc-1".into(), kill_tx, child.id().unwrap());
+
+        state.kill_all();
+
+        let status = tokio::time::timeout(Duration::from_secs(5), child.wait()).await.unwrap().unwrap();
+        assert!(!status.success(), "the child outlived kill_all");
     }
 }
