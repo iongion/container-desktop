@@ -48,6 +48,17 @@ describe("machines — Apple's container machine beside Podman's", () => {
     expect(apple.lastUp).not.toContain("Invalid");
   });
 
+  it("offers Stop and Restart inline on a running Apple machine, and stops it", async () => {
+    const row = `[data-table="machines"] tbody tr[data-prefix-group="${APPLE}"]`;
+    const stop = await $(`${row} [data-action="machine.stop"]`);
+    const restart = await $(`${row} [data-action="machine.restart"]`);
+    expect(await stop.isEnabled()).toBe(true);
+    expect(await restart.getAttribute("title")).toBe("Restart");
+    await stop.click();
+    await browser.waitUntil(async () => stop.isEnabled(), { timeout: 15000, timeoutMsg: "Stop stayed pending" });
+    expect(await $(".bp6-toast.bp6-intent-danger").isExisting()).toBe(false);
+  });
+
   it("opens an Apple machine's detail from its row", async () => {
     const [row] = await rowsOf(APPLE);
     expect(row.href).toContain(`connId=${APPLE}`);

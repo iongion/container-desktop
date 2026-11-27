@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
+import { Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiConsole } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -130,16 +130,37 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const onOpenTerminalConsole = useCallback(async () => {
     performActionCommand("machine.connect", { confirm: { success: false } });
   }, [performActionCommand]);
+  // One action at a time; the running one spins on its button, as on containers.
+  const pending = disabledAction !== undefined;
+  const playerActions = machine ? (
+    <div className="InlinePlayerActions">
+      <ButtonGroup variant="minimal">
+        <Button
+          data-machine={machine.Name}
+          data-action="machine.stop"
+          disabled={pending || !isRunning}
+          icon={IconNames.STOP}
+          title={t("Stop")}
+          onClick={onStop}
+          loading={disabledAction === "machine.stop"}
+        />
+        <Button
+          data-machine={machine.Name}
+          data-action="machine.restart"
+          disabled={pending}
+          icon={isRunning ? IconNames.RESET : IconNames.PLAY}
+          title={isRunning ? t("Restart") : t("Start")}
+          onClick={onRestart}
+          loading={disabledAction === "machine.restart"}
+        />
+      </ButtonGroup>
+    </div>
+  ) : null;
   const startButton = withoutCreate ? null : (
     <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = machine ? (
-    <ConfirmMenu
-      onConfirm={onRemove}
-      tag={machine.Name}
-      disabled={disabledAction === "machine.remove"}
-      large={!!onReload}
-    >
+    <ConfirmMenu onConfirm={onRemove} tag={machine.Name} disabled={pending} large={!!onReload}>
       <MenuItem
         icon={IconNames.EYE_OPEN}
         text={t("Inspect")}
@@ -162,7 +183,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         icon={IconNames.STOP}
         intent={Intent.NONE}
         text={t("Stop")}
-        disabled={disabledAction === "machine.stop" || !isRunning}
+        disabled={pending || !isRunning}
         title={isRunning ? t("Machine is running") : t("Machine is not running")}
       />
       <MenuItem
@@ -171,7 +192,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         onClick={onRestart}
         icon={IconNames.RESET}
         intent={Intent.NONE}
-        disabled={disabledAction === "machine.restart"}
+        disabled={pending}
         text={isRunning ? t("Restart") : t("Start")}
       />
     </ConfirmMenu>
@@ -180,6 +201,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     <>
       {onReload ? (
         <ResourceListActions
+          navigation={playerActions}
           actions={withoutCreate ? undefined : { icon: IconNames.PLUS, text: t("Create"), onClick: onCreateClick }}
           utilityActions={removeWidget}
           utilityActionsPlacement="before-reload"
@@ -188,6 +210,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       ) : (
         <ButtonGroup className={machine ? "ResourceItemInlineActionsMenu" : undefined}>
           {startButton}
+          {playerActions ? (
+            <>
+              {playerActions}
+              <Divider />
+            </>
+          ) : null}
           {removeWidget}
         </ButtonGroup>
       )}
