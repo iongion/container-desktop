@@ -10,6 +10,7 @@ const oneEngine = {
       name: "Podman",
       engine: "podman",
       running: true,
+      canPause: true,
       containers: [
         { id: "c1", name: "web", state: "running" },
         { id: "c2", name: "db", state: "exited" },

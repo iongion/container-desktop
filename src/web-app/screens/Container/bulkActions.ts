@@ -13,15 +13,20 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ContainersAdapter } from "@/container-client/adapters/containers";
+import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
 import { type Container, ContainerStateList } from "@/container-client/types/container";
 import type { BulkAction } from "@/web-app/components/Bulk";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 
 type MergedContainer = MergedResource<Container>;
 
 export const containerCanPause = (state: ContainerStateList) => state === ContainerStateList.RUNNING;
+// Whether the container's OWN connection can pause at all (Apple Container cannot); unknown capabilities do not refuse.
+export const connectionCanPause = (runtime: ConnectionRuntimeInfo[], connectionId: string) =>
+  runtime.find((info) => info.id === connectionId)?.capabilities?.pause !== false;
 export const containerCanStop = (state: ContainerStateList) => state === ContainerStateList.RUNNING;
 export const containerCanRestart = (state: ContainerStateList) => state === ContainerStateList.RUNNING;
 export const containerCanStart = (state: ContainerStateList) => state !== ContainerStateList.RUNNING;
@@ -33,6 +38,7 @@ export function useContainerBulkActions(): {
   refresh: () => Promise<void>;
 } {
   const { t } = useTranslation();
+  const activeRuntime = useResourceStore((state) => state.activeRuntime);
   return useMemo(() => {
     const refresh = async () => {
       for (const id of getConnectedConnectionIds()) {
@@ -44,7 +50,8 @@ export function useContainerBulkActions(): {
         key: "pause",
         label: t("Pause"),
         icon: IconNames.PAUSE,
-        eligible: (c) => containerCanPause(c.Computed.DecodedState),
+        eligible: (c) =>
+          containerCanPause(c.Computed.DecodedState) && connectionCanPause(activeRuntime, c.connectionId),
         run: async (c) => new ContainersAdapter(await resolveConnectionHost(c.connectionId)).pause(c.Id),
       },
       {
@@ -83,5 +90,5 @@ export function useContainerBulkActions(): {
       },
     ];
     return { actions, getId: (item: MergedContainer) => item.Id, refresh };
-  }, [t]);
+  }, [t, activeRuntime]);
 }

@@ -230,6 +230,7 @@ describe("EngineDataService.connect", () => {
     const capabilities = {
       resources: { pods: false, secrets: false },
       events: false,
+      pause: true,
       sort: {},
       extensions: {
         machines: false,
@@ -284,6 +285,7 @@ describe("EngineDataService.connect", () => {
         capabilities: {
           resources: { pods: false, secrets: false },
           events: false,
+          pause: true,
           sort: {},
           extensions: { machines: false },
         },
@@ -380,6 +382,7 @@ describe("EngineDataService.connect", () => {
     const capabilities = {
       resources: { pods: false, secrets: false, networks: true },
       events: false,
+      pause: true,
       sort: {},
       extensions: {
         machines: false,

@@ -27,6 +27,7 @@ const conn = (over: Partial<TrayConnectionData> = {}): TrayConnectionData => ({
   name: "Local",
   engine: "podman",
   running: true,
+  canPause: true,
   containers: [],
   pods: [],
   machines: [],
@@ -54,6 +55,16 @@ describe("buildTrayMenuTemplate", () => {
     expect(actions).toEqual(["Pause", "Stop", "Restart"]);
     byLabel(sub(byLabel(running, "web")), "Stop")?.click?.();
     expect(h.onAction).toHaveBeenCalledWith("container.stop", "abc", "c1");
+  });
+
+  // Apple Container cannot pause (socktainer answers "not supported"), so its running containers offer no Pause.
+  it("offers no Pause on a connection that cannot pause", () => {
+    const items = buildTrayMenuTemplate(
+      single({ engine: "container", canPause: false, containers: [{ id: "abc", name: "web", state: "running" }] }),
+      handlers(),
+    );
+    const actions = sub(byLabel(sub(byLabel(items, "Running (1)")), "web")).map((i) => i.label);
+    expect(actions).toEqual(["Stop", "Restart"]);
   });
 
   it("groups each engine under a 'name — engine' section when several are connected, routing per engine", () => {

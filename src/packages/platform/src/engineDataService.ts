@@ -308,6 +308,7 @@ export class EngineDataService {
         name: rt.name,
         engine: rt.engine,
         running: rt.running,
+        canPause: rt.capabilities?.pause !== false,
         containers: containers.map((c) => ({
           id: `${c.Id}`,
           name: `${c.Computed?.Name || (c.Names?.[0] ?? "").replace(/^\//, "") || `${c.Id}`.slice(0, 12)}`,

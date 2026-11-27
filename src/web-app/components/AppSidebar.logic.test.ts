@@ -11,6 +11,7 @@ const dockerRuntime = (id: string): ConnectionRuntimeInfo =>
     capabilities: {
       resources: { pods: false, secrets: false, networks: true },
       events: true,
+      pause: true,
       sort: {},
       extensions: { swarm: true, machines: false, builders: false, compose: false },
     },
@@ -24,6 +25,7 @@ const podmanRuntime = (id: string): ConnectionRuntimeInfo =>
     capabilities: {
       resources: { pods: true, secrets: true, networks: true },
       events: true,
+      pause: true,
       sort: {},
       extensions: { swarm: false, machines: true, builders: false, compose: false },
     },

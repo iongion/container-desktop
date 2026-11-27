@@ -67,6 +67,7 @@ const BASE_CAPABILITIES: Record<string, ConnectorCapabilities> = {
   [ContainerEngine.PODMAN]: {
     resources: { pods: true, secrets: true, networks: true },
     events: true,
+    pause: true,
     sort: {},
     extensions: {
       machines: true,
@@ -83,6 +84,7 @@ const BASE_CAPABILITIES: Record<string, ConnectorCapabilities> = {
   [ContainerEngine.DOCKER]: {
     resources: { pods: false, secrets: false, networks: true },
     events: true,
+    pause: true,
     sort: {},
     extensions: {
       machines: false,
@@ -99,6 +101,7 @@ const BASE_CAPABILITIES: Record<string, ConnectorCapabilities> = {
   [ContainerEngine.APPLE]: {
     resources: { pods: false, secrets: false, networks: true },
     events: true,
+    pause: false,
     sort: {},
     extensions: {
       machines: false,
@@ -238,6 +241,7 @@ function emptyCapabilities(): ConnectorCapabilities {
   return {
     resources: { pods: false, secrets: false, networks: false },
     events: false,
+    pause: false,
     sort: {},
     extensions: {
       machines: false,
@@ -266,6 +270,7 @@ function unionCapabilities(group: ConnectionRuntimeInfo[]): ConnectorCapabilitie
         networks: acc.resources.networks || c.resources.networks === true,
       },
       events: acc.events || c.events === true,
+      pause: acc.pause || c.pause === true,
       sort: { ...acc.sort, ...(c.sort ?? {}) },
       extensions: {
         machines: acc.extensions.machines || c.extensions.machines === true,

@@ -163,6 +163,7 @@ export const dockerDialect: EngineDialect = {
   capabilitiesBase: {
     resources: { pods: false, secrets: false, networks: true },
     events: true,
+    pause: true,
     sort: DOCKER_SORT_CAPABILITIES,
     extensions: {
       machines: false,

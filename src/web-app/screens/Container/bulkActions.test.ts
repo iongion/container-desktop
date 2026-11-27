@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
 import { ContainerStateList } from "@/container-client/types/container";
 import {
+  connectionCanPause,
   containerCanPause,
   containerCanRemove,
   containerCanRestart,
@@ -41,5 +43,31 @@ describe("container bulk eligibility", () => {
     expect(containerCanRemove(ContainerStateList.RUNNING)).toBe(false);
     expect(containerCanRemove(ContainerStateList.EXITED)).toBe(true);
     expect(containerCanRemove(ContainerStateList.PAUSED)).toBe(true);
+  });
+});
+
+// Apple Container cannot pause (socktainer answers "not supported"), so Pause is offered by the container's own
+// connection's capability; a connection with no capabilities known yet is not refused.
+describe("connectionCanPause", () => {
+  const runtime = [
+    { id: "docker", name: "Docker", engine: "docker", phase: "ready", running: true, capabilities: { pause: true } },
+    {
+      id: "apple",
+      name: "Container",
+      engine: "container",
+      phase: "ready",
+      running: true,
+      capabilities: { pause: false },
+    },
+  ] as unknown as ConnectionRuntimeInfo[];
+
+  it("follows the connection's pause capability", () => {
+    expect(connectionCanPause(runtime, "docker")).toBe(true);
+    expect(connectionCanPause(runtime, "apple")).toBe(false);
+  });
+
+  it("does not refuse a connection whose capabilities are not known", () => {
+    expect(connectionCanPause(runtime, "other")).toBe(true);
+    expect(connectionCanPause([], "docker")).toBe(true);
   });
 });

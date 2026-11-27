@@ -74,6 +74,8 @@ export type ApiSurface = "docker" | "libpod";
 export interface CapabilityDescriptor {
   resources: { pods: boolean; secrets: boolean; networks: boolean };
   events: boolean;
+  // Containers can be paused and resumed (Apple Container cannot: socktainer answers "not supported").
+  pause: boolean;
   // Per-field sort capability; REST list endpoints are explicit "client" entries until an API exposes sorting.
   sort: Record<string, SortMode>;
   // Which extension groups are real (vs no-op) on this host.

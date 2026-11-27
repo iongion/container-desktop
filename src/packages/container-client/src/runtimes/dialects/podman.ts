@@ -94,6 +94,7 @@ export const podmanDialect: EngineDialect = {
   capabilitiesBase: {
     resources: { pods: true, secrets: true, networks: true },
     events: true,
+    pause: true,
     sort: PODMAN_SORT_CAPABILITIES,
     extensions: {
       machines: true,

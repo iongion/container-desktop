@@ -135,6 +135,7 @@ export const containerDialect: EngineDialect = {
   capabilitiesBase: {
     resources: { pods: false, secrets: false, networks: true },
     events: true,
+    pause: false,
     sort: DOCKER_SORT_CAPABILITIES,
     extensions: {
       machines: false,

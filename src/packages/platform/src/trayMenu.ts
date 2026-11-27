@@ -53,6 +53,8 @@ export interface TrayConnectionData {
   name: string;
   engine: string;
   running: boolean;
+  // Its containers can be paused (Apple Container's cannot).
+  canPause: boolean;
   containers: Array<{ id: string; name: string; state: string }>; // state from Computed.DecodedState
   pods: Array<{ id: string; name: string; status: string }>;
   machines: Array<{ name: string; running: boolean }>;
@@ -81,11 +83,11 @@ interface Action {
 
 // Which ops a resource exposes for its current state — single-sourced here so the menu and the engine's
 // TRAY_OPS allowlist stay in agreement.
-function containerActions(state: string): Action[] {
+function containerActions(state: string, canPause: boolean): Action[] {
   switch (state.toLowerCase()) {
     case "running":
       return [
-        { kind: "container.pause", title: i18n.t("Pause") },
+        ...(canPause ? [{ kind: "container.pause", title: i18n.t("Pause") }] : []),
         { kind: "container.stop", title: i18n.t("Stop") },
         { kind: "container.restart", title: i18n.t("Restart") },
       ];
@@ -182,14 +184,18 @@ function connectionSections(
   const stopped = connection.containers.filter((c) => !running.includes(c));
   const body: Item[] = [];
   if (running.length > 0) {
-    const rows = running.map((c) => resourceItem(c.name, c.id, containerActions(c.state), id, onAction));
+    const rows = running.map((c) =>
+      resourceItem(c.name, c.id, containerActions(c.state, connection.canPause), id, onAction),
+    );
     body.push({
       label: i18n.t("Running ({{count}})", { count: running.length }),
       submenu: capped(rows, running.length, onShowApp),
     });
   }
   if (stopped.length > 0) {
-    const rows = stopped.map((c) => resourceItem(c.name, c.id, containerActions(c.state), id, onAction));
+    const rows = stopped.map((c) =>
+      resourceItem(c.name, c.id, containerActions(c.state, connection.canPause), id, onAction),
+    );
     body.push({
       label: i18n.t("Stopped ({{count}})", { count: stopped.length }),
       submenu: capped(rows, stopped.length, onShowApp),

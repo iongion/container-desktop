@@ -5,6 +5,7 @@ function emptyCapabilities(): ConnectorCapabilities {
   return {
     resources: { pods: false, secrets: false, networks: false },
     events: false,
+    pause: false,
     sort: {},
     extensions: {
       machines: false,
@@ -42,6 +43,7 @@ export function resolveAvailabilityConnector(
         networks: acc.resources.networks || info.capabilities?.resources?.networks === true,
       },
       events: acc.events || info.capabilities?.events === true,
+      pause: acc.pause || info.capabilities?.pause === true,
       sort: { ...acc.sort, ...(info.capabilities?.sort ?? {}) },
       extensions: {
         machines: acc.extensions.machines || info.capabilities?.extensions?.machines === true,

@@ -9,6 +9,7 @@ import { buildCompatibilityMatrix, sortVersionsDesc } from "./matrix";
 const podmanCaps = (extOver: Partial<ConnectorCapabilities["extensions"]> = {}): ConnectorCapabilities => ({
   resources: { pods: true, secrets: true, networks: true },
   events: true,
+  pause: true,
   sort: {},
   extensions: {
     machines: true,
@@ -27,6 +28,7 @@ const podmanCaps = (extOver: Partial<ConnectorCapabilities["extensions"]> = {}):
 const dockerCaps = (): ConnectorCapabilities => ({
   resources: { pods: false, secrets: false, networks: true },
   events: true,
+  pause: true,
   sort: {},
   extensions: {
     machines: false,
@@ -46,6 +48,7 @@ const dockerCaps = (): ConnectorCapabilities => ({
 const containerCaps = (): ConnectorCapabilities => ({
   resources: { pods: false, secrets: false, networks: true },
   events: true,
+  pause: false,
   sort: {},
   extensions: {
     machines: false,

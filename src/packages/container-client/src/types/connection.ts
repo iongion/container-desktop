@@ -115,6 +115,7 @@ export interface ConnectorCapabilities {
     networks: boolean;
   };
   events: boolean;
+  pause: boolean;
   sort: Record<string, "client" | "server">;
   extensions: Record<
     | "machines"

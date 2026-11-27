@@ -10,6 +10,8 @@ import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
+import { connectionCanPause } from "./bulkActions";
 import { getContainerServiceUrl, getContainerUrl } from "./Navigation";
 import {
   useConnectContainer,
@@ -68,6 +70,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const restartContainer = useRestartContainer(connectionId);
   const removeContainer = useRemoveContainer(connectionId);
   const connectContainer = useConnectContainer(connectionId);
+  // Pause/Resume only where the container's own connection can pause (Apple Container cannot).
+  const canPauseHere = useResourceStore((state) => connectionCanPause(state.activeRuntime, connectionId));
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -284,15 +288,17 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
               title={t("Open terminal console")}
               onClick={onOpenTerminalConsole}
             />
-            <Button
-              data-container={container.Id}
-              data-action={isPaused ? "container.unpause" : "container.pause"}
-              disabled={!canPauseUnpause}
-              icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
-              title={isPaused ? t("Resume") : t("Pause")}
-              onClick={onActionClick}
-              loading={(disabledAction === "container.pause" || disabledAction === "container.unpause") && pending}
-            />
+            {canPauseHere ? (
+              <Button
+                data-container={container.Id}
+                data-action={isPaused ? "container.unpause" : "container.pause"}
+                disabled={!canPauseUnpause}
+                icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
+                title={isPaused ? t("Resume") : t("Pause")}
+                onClick={onActionClick}
+                loading={(disabledAction === "container.pause" || disabledAction === "container.unpause") && pending}
+              />
+            ) : null}
             <Button
               data-container={container.Id}
               data-action="container.stop"
@@ -318,15 +324,17 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       withInlinePlayerActionsWidget = (
         <div className="InlinePlayerActions">
           <ButtonGroup variant="minimal">
-            <Button
-              data-container={container.Id}
-              data-action={isPaused ? "container.unpause" : "container.pause"}
-              disabled={!canPauseUnpause}
-              icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
-              title={isPaused ? t("Resume") : t("Pause")}
-              onClick={onActionClick}
-              loading={(disabledAction === "container.pause" || disabledAction === "container.unpause") && pending}
-            />
+            {canPauseHere ? (
+              <Button
+                data-container={container.Id}
+                data-action={isPaused ? "container.unpause" : "container.pause"}
+                disabled={!canPauseUnpause}
+                icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
+                title={isPaused ? t("Resume") : t("Pause")}
+                onClick={onActionClick}
+                loading={(disabledAction === "container.pause" || disabledAction === "container.unpause") && pending}
+              />
+            ) : null}
             <Button
               data-container={container.Id}
               data-action="container.stop"
@@ -393,14 +401,16 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       />
       {withInlinePlayerActionsWidget ? null : (
         <>
-          <MenuItem
-            data-container={container.Id}
-            data-action={isPaused ? "container.unpause" : "container.pause"}
-            disabled={!canPauseUnpause}
-            icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
-            text={isPaused ? t("Resume") : t("Pause")}
-            onClick={onActionClick}
-          />
+          {canPauseHere ? (
+            <MenuItem
+              data-container={container.Id}
+              data-action={isPaused ? "container.unpause" : "container.pause"}
+              disabled={!canPauseUnpause}
+              icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
+              text={isPaused ? t("Resume") : t("Pause")}
+              onClick={onActionClick}
+            />
+          ) : null}
           <MenuItem
             data-container={container.Id}
             data-action="container.stop"
