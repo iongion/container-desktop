@@ -86,6 +86,12 @@ claude mcp add container-desktop -- "<path to the Container Desktop program>" --
 }
 ```
 
+Where the program is, by how you installed it:
+
+- **Linux** (`.deb`, `.rpm`): `/usr/bin/container-desktop`; the AppImage: the `.AppImage` file itself.
+- **Windows** (the `.exe` installer): `%LOCALAPPDATA%\Container Desktop\container-desktop.exe`; the `.msi`: `C:\Program Files\Container Desktop\container-desktop.exe`.
+- **macOS**: `/Applications/Container Desktop.app/Contents/MacOS/container-desktop`.
+
 The app must be running with the server on: otherwise every request gets an error saying so.
 
 </section>
