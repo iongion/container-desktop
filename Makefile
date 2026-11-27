@@ -74,6 +74,18 @@ build-assets:
 	$(MAKE) screenshots
 	$(MAKE) build-website
 
+# Wait for CIPipeline on the pushed HEAD and stop when it fails: CD builds and publishes the tag, so it only starts
+# on a commit CI has passed.
+wait-ci:
+	@SHA=$$(git rev-parse HEAD); ID=""; \
+	for i in $$(seq 1 30); do \
+		ID=$$(gh run list --workflow CIPipeline.yml --commit $$SHA --limit 1 --json databaseId --jq '.[0].databaseId'); \
+		[ -n "$$ID" ] && break; sleep 5; \
+	done; \
+	if [ -z "$$ID" ]; then echo "No CIPipeline run found for $$SHA"; exit 1; fi; \
+	echo "Waiting for CIPipeline $$ID on $$SHA"; \
+	gh run watch $$ID --exit-status --interval 30
+
 trigger-cd-pipeline:
 	@V=$$(cat VERSION); echo "Triggering CDPipeline.Tauri for $$V"; \
 	gh workflow run CDPipeline.Tauri.yml --ref main \
@@ -84,19 +96,20 @@ trigger-cd-pipeline:
 # INSIDE the release commit. Runs the full local CI gate, bumps the version WITHOUT
 # committing, regenerates the deterministic screenshots + demo replay and the static
 # site from the mock backend, then commits/tags/pushes everything as one release
-# commit and triggers the cloud pipeline for that tag. CDPipeline.Tauri no longer rebuilds
+# commit, waits for CIPipeline to pass on it, and only then triggers the cloud pipeline for that tag. CDPipeline.Tauri no longer rebuilds
 # or commits the website — it just deploys the website/ committed here. Unlike
 # `pnpm cli release` (which builds/bundles locally), this drives the cloud pipeline that
 # builds every OS target and publishes the GitHub release. Override the bump size with
 # `make release PART=minor` (default: patch). Aborts if CHANGELOG.md [Unreleased] is
 # empty, so document the release first.
 release: test
-	@echo "Releasing: bump ($(PART)) → build-assets → commit → trigger CDPipeline"
+	@echo "Releasing: bump ($(PART)) → build-assets → commit → wait for CI → trigger CDPipeline"
 	@if [ -s "$$NVM_DIR/nvm.sh" ]; then . "$$NVM_DIR/nvm.sh"; nvm use || nvm install; fi; \
 	pnpm cli bump --part=$(PART) --perform --no-commit
 	$(MAKE) build-assets
 	@if [ -s "$$NVM_DIR/nvm.sh" ]; then . "$$NVM_DIR/nvm.sh"; nvm use || nvm install; fi; \
 	pnpm cli commit-release
+	$(MAKE) wait-ci
 	$(MAKE) trigger-cd-pipeline
 
 # Run the same verification set as CIPipeline.yml, locally. The CLI unit tests, type-check and

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `make release` starts the release pipeline only after CI passes on the release commit (`make wait-ci`)
+
 ## [7.2.1] - 2026-11-27
 
 ### Fixed
