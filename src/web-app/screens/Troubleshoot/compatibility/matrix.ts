@@ -109,7 +109,7 @@ const BASE_CAPABILITIES: Record<string, ConnectorCapabilities> = {
       contexts: false,
       swarm: false,
       builders: false,
-      compose: false,
+      compose: true,
       registries: false,
       registryTrust: false,
       controllerVersion: false,
@@ -180,7 +180,8 @@ const CATALOG: { title: string; caps: CapSpec[] }[] = [
         key: "compose",
         label: i18n.t("Compose"),
         note: i18n.t("native up/down lifecycle"),
-        // Real on Podman (libpod translation) and Docker (`docker compose` via ComposeAdapter); Apple has none.
+        // Real on Podman (libpod translation), Docker (`docker compose` via ComposeAdapter) and Apple (the Docker CLI's
+        // compose against the socktainer socket).
         compute: flag((c) => c.extensions.compose),
       },
       { key: "kube", label: i18n.t("Generate Kube YAML"), compute: flag((c) => c.extensions.kube) },

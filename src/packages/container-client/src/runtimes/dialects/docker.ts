@@ -38,7 +38,7 @@ function noopCommandResult(): CommandExecutionResult {
 // Global — they precede the subcommand, which is what makes one flag retarget
 // `context inspect` and `system dial-stdio` alike; after the subcommand they would belong to it and retarget
 // nothing. They also beat DOCKER_HOST, so a connection that pins is pinned whatever the environment says.
-function dockerTargetArgs(settings: EngineConnectorSettings): string[] {
+export function dockerTargetArgs(settings: EngineConnectorSettings): string[] {
   const name = (settings.context || "").trim();
   return name ? ["--context", name] : [];
 }

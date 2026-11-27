@@ -112,4 +112,61 @@ describe("ComposeAdapter", () => {
     await new ComposeAdapter(dockerHost(runHostCommand)).down("proj", { removeVolumes: true });
     expect(runHostCommand).toHaveBeenCalledWith("docker", ["compose", "-p", "proj", "down", "-v"], expect.anything());
   });
+
+  // A connection pinned to a Docker context deploys to THAT engine, as every other docker call of the connection does.
+  it("pins `docker compose` to the connection's Docker context", async () => {
+    const runHostCommand = vi.fn(async () => ({ success: true, stdout: "", stderr: "" }));
+    const host = {
+      ...dockerHost(runHostCommand),
+      getSettings: async () => ({ program: { path: "docker" }, context: "colima" }),
+    };
+    await new ComposeAdapter(host).down("proj");
+    expect(runHostCommand).toHaveBeenCalledWith(
+      "docker",
+      ["--context", "colima", "compose", "-p", "proj", "down"],
+      expect.anything(),
+    );
+  });
+
+  // Apple: the Docker CLI's compose, aimed at the socktainer socket (Apple's own `container` has no compose).
+  const appleHost = (runHostCommand: any): any => ({
+    ENGINE: ContainerEngine.APPLE,
+    isScoped: () => false,
+    getSettings: async () => ({
+      program: { path: "/usr/local/bin/container" },
+      api: { connection: { uri: "/Users/me/.socktainer/container.sock", relay: "" } },
+    }),
+    resolveGuestPath: async (p: string) => p,
+    runHostCommand,
+  });
+
+  it("up() on Apple shells the Docker CLI's compose against the socktainer socket", async () => {
+    const runHostCommand = vi.fn(async () => ({ success: true, stdout: "", stderr: "" }));
+    await new ComposeAdapter(appleHost(runHostCommand)).up(model([]), {}, { path: "/work/proj/compose.yml" });
+    const target = ["--host", "unix:///Users/me/.socktainer/container.sock"];
+    expect(runHostCommand).toHaveBeenNthCalledWith(1, "docker", [...target, "compose", "version"], expect.anything());
+    expect(runHostCommand).toHaveBeenNthCalledWith(
+      2,
+      "docker",
+      [...target, "compose", "-f", "/work/proj/compose.yml", "-p", "proj", "up", "-d"],
+      expect.anything(),
+    );
+  });
+
+  it("up() on Apple says the Docker CLI's compose is needed when it is missing", async () => {
+    const runHostCommand = vi.fn(async () => ({ success: false, stdout: "", stderr: "command not found: docker" }));
+    await expect(new ComposeAdapter(appleHost(runHostCommand)).up(model([]), {}, { path: "/c.yml" })).rejects.toThrow(
+      /Apple Container.*Docker CLI/,
+    );
+  });
+
+  it("down() on Apple tears the stack down through the same CLI", async () => {
+    const runHostCommand = vi.fn(async () => ({ success: true, stdout: "", stderr: "" }));
+    await new ComposeAdapter(appleHost(runHostCommand)).down("proj");
+    expect(runHostCommand).toHaveBeenCalledWith(
+      "docker",
+      ["--host", "unix:///Users/me/.socktainer/container.sock", "compose", "-p", "proj", "down"],
+      expect.anything(),
+    );
+  });
 });

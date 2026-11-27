@@ -56,7 +56,7 @@ const containerCaps = (): ConnectorCapabilities => ({
     contexts: false,
     swarm: false,
     builders: false,
-    compose: false,
+    compose: true,
     registries: false,
     registryTrust: false,
     controllerVersion: false,
@@ -162,13 +162,13 @@ describe("buildCompatibilityMatrix", () => {
     expect(cellsOf(m, "machines")[1]).toEqual({ kind: "no" });
   });
 
-  it("shows real gaps as planned/partial keyed to footnotes; Apple container has no Compose", () => {
+  it("shows real gaps as planned/partial keyed to footnotes; every engine has Compose", () => {
     const m = buildCompatibilityMatrix([
       rt({ id: "p", engine: "podman", capabilities: podmanCaps() }),
       rt({ id: "d", engine: "docker", capabilities: dockerCaps() }),
       rt({ id: "c", engine: "container", capabilities: containerCaps() }),
     ]);
-    expect(cellsOf(m, "compose")).toEqual([{ kind: "yes" }, { kind: "yes" }, { kind: "no" }]);
+    expect(cellsOf(m, "compose")).toEqual([{ kind: "yes" }, { kind: "yes" }, { kind: "yes" }]);
     expect(cellsOf(m, "registries")).toEqual([{ kind: "yes" }, { kind: "partial", footnote: 1 }, { kind: "no" }]);
     expect(cellsOf(m, "contexts")).toEqual([{ kind: "no" }, { kind: "partial", footnote: 3 }, { kind: "no" }]);
     expect(cellsOf(m, "imagebuild").map((c) => c.kind)).toEqual(["yes", "yes", "yes"]);

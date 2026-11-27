@@ -15,11 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apple Container: a socktainer run by `brew services` is found when your home has no socktainer socket
 - Apple Container builds forward the SSH agent (`--ssh default`) and build several platforms into one image, amd64 through Rosetta
 - Apple Container: Pause and Resume are no longer offered on its containers (row actions, bulk actions, tray), since socktainer cannot pause one
+- Apple Container: compose stacks (Import stack, tear down) deploy through the Docker CLI's `docker compose` against the socktainer socket; without Docker's CLI the deploy says so
 
 ### Fixed
 
 - Build: "Push after build" no longer fails a Podman build with an unknown `--push` flag, nor does nothing on Apple; only Docker, whose build command pushes, offers it
 - Build: a link to Build for another connection opens on that connection, also when Build is already open
+- Docker: compose stacks of a connection pinned to a Docker context deploy to that context's engine, not the default one
 
 ## [7.1.0] - 2026-11-27
 

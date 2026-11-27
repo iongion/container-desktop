@@ -251,6 +251,8 @@ limactl shell docker   # login to the docker VM
 <li>macOS 26 Tahoe or later.</li>
 <li>Apple's <code>container</code> CLI from the <a href="https://github.com/apple/container/releases">official GitHub releases</a>, or Homebrew's.</li>
 <li><code>socktainer</code>, which exposes a Docker Engine API socket, from its <a href="https://github.com/socktainer/socktainer/releases">releases</a> or Homebrew.</li>
+<li>For compose stacks only: Docker's CLI with its compose plugin (<code>brew install docker docker-compose</code>); the app runs <code>docker compose</code> against the socktainer socket.</li>
+<li>Not available on Apple™ Container: pausing a container, pods, secrets and swarm.</li>
 </ul>
 <h4>Install Apple™ Container</h4>
 <p>The setup wizard does all of this for you. By hand: download Apple's signed package and socktainer's (the Docker-compatible API bridge), verify both, install both, then start the system service. The example pins Apple™ Container <code>1.7.1</code> and socktainer <code>1.6.1</code>; for newer releases use their package names and checksums. Use either these packages or Homebrew's <code>container</code> and <code>socktainer</code>, never both: two installs fight over one service.</p>

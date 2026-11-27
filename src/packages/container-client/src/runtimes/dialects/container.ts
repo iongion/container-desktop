@@ -143,7 +143,9 @@ export const containerDialect: EngineDialect = {
       contexts: false,
       swarm: false,
       builders: false,
-      compose: false,
+      // Through the Docker CLI's compose against the socktainer socket (adapters/compose.ts); a missing plugin fails
+      // the deploy with a clear message, as on Docker, rather than the capability under-claiming.
+      compose: true,
       registries: false,
       registryTrust: false,
       controllerVersion: false,
