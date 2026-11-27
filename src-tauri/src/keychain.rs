@@ -155,15 +155,20 @@ fn fallback_clear(account: &str) {
 /// command reads a stored secret, and a caller that hands one over (mcp_token) does so for its own account only.
 /// Blocking (a D-Bus round trip on Linux): call it off the async threads.
 pub fn keychain_get(account: &str) -> Option<String> {
-    let in_vault = vault_entry(account).ok().and_then(|e| e.get_password().ok());
-    in_vault.filter(|s| !s.is_empty()).or_else(|| fallback_get(account).filter(|s| !s.is_empty()))
+    let in_vault = vault_entry(account)
+        .ok()
+        .and_then(|e| e.get_password().ok());
+    in_vault
+        .filter(|s| !s.is_empty())
+        .or_else(|| fallback_get(account).filter(|s| !s.is_empty()))
 }
 
 /// Store (or overwrite) the secret for `account` in the OS vault. If the vault write fails and the caller opted into
 /// degraded storage, fall back to the 0600 file instead; otherwise the vault error propagates. An isolated run always
 /// stores in the file. Blocking, like keychain_get.
 pub fn store_secret(account: &str, secret: &str, allow_degraded: bool) -> Result<(), String> {
-    let vault_result = vault_entry(account).and_then(|e| e.set_password(secret).map_err(|e| e.to_string()));
+    let vault_result =
+        vault_entry(account).and_then(|e| e.set_password(secret).map_err(|e| e.to_string()));
     match vault_result {
         Ok(()) => {
             // Vault write succeeded — drop any stale degraded copy so the two never diverge.
@@ -236,9 +241,11 @@ pub async fn keychain_set(
     secret: String,
     allow_degraded: Option<bool>,
 ) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || store_secret(&account, &secret, allow_degraded.unwrap_or(false)))
-        .await
-        .map_err(|e| e.to_string())?
+    tokio::task::spawn_blocking(move || {
+        store_secret(&account, &secret, allow_degraded.unwrap_or(false))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Remove the secret for `account` from BOTH the OS vault and the degraded fallback (a no-op where there is none).

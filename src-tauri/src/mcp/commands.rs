@@ -79,7 +79,11 @@ struct WebviewForwarder(AppHandle);
 impl Forwarder for WebviewForwarder {
     fn forward(&self, id: u64, body: String) -> Result<(), String> {
         self.0
-            .emit_to(crate::MAIN_WINDOW, MCP_REQUEST_EVENT, McpRequest { id, body })
+            .emit_to(
+                crate::MAIN_WINDOW,
+                MCP_REQUEST_EVENT,
+                McpRequest { id, body },
+            )
             .map_err(|e| e.to_string())
     }
 }
@@ -97,7 +101,12 @@ async fn keychain_token(allow_degraded: bool, replace: bool) -> Result<Token, St
     .map_err(|e| e.to_string())?
 }
 
-async fn serve(app: &AppHandle, state: &McpState, port: u16, token: Token) -> Result<RunningServer, String> {
+async fn serve(
+    app: &AppHandle,
+    state: &McpState,
+    port: u16,
+    token: Token,
+) -> Result<RunningServer, String> {
     let config = ServerConfig {
         token,
         pending: Arc::clone(&state.pending),
@@ -107,9 +116,16 @@ async fn serve(app: &AppHandle, state: &McpState, port: u16, token: Token) -> Re
     server::start(port, config).await
 }
 
-async fn launch(app: &AppHandle, state: &McpState, port: u16, allow_degraded: bool) -> Result<RunningServer, String> {
+async fn launch(
+    app: &AppHandle,
+    state: &McpState,
+    port: u16,
+    allow_degraded: bool,
+) -> Result<RunningServer, String> {
     if port < MIN_MCP_PORT {
-        return Err(format!("The MCP server's port must be between {MIN_MCP_PORT} and 65535"));
+        return Err(format!(
+            "The MCP server's port must be between {MIN_MCP_PORT} and 65535"
+        ));
     }
     let token = keychain_token(allow_degraded, false).await?;
     serve(app, state, port, token).await
@@ -126,8 +142,15 @@ pub async fn mcp_start(
     allow_degraded: Option<bool>,
 ) -> Result<McpStatus, String> {
     let mut lifecycle = state.lifecycle.lock().await;
-    lifecycle.mode = Some(mode.filter(|mode| MODES.contains(&mode.as_str())).unwrap_or_else(|| MODES[0].into()));
-    if lifecycle.server.as_ref().is_some_and(|server| server.port == port) {
+    lifecycle.mode = Some(
+        mode.filter(|mode| MODES.contains(&mode.as_str()))
+            .unwrap_or_else(|| MODES[0].into()),
+    );
+    if lifecycle
+        .server
+        .as_ref()
+        .is_some_and(|server| server.port == port)
+    {
         return Ok(lifecycle.status());
     }
     if let Some(server) = lifecycle.server.take() {
@@ -171,7 +194,10 @@ pub async fn mcp_reply(state: State<'_, McpState>, id: u64, body: String) -> Res
 /// The token, created and stored first when there is none yet, for the settings to show and copy.
 #[tauri::command]
 pub async fn mcp_token(allow_degraded: Option<bool>) -> Result<String, String> {
-    Ok(keychain_token(allow_degraded.unwrap_or(false), false).await?.expose().to_string())
+    Ok(keychain_token(allow_degraded.unwrap_or(false), false)
+        .await?
+        .expose()
+        .to_string())
 }
 
 /// A new token, stored in place of the old one. A running listener restarts on the same port, so no connection made

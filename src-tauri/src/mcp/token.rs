@@ -16,7 +16,9 @@ impl Token {
     pub fn generate() -> Result<Self, String> {
         let mut bytes = [0u8; TOKEN_BYTES];
         getrandom::fill(&mut bytes).map_err(|e| format!("No randomness for the MCP token: {e}"))?;
-        Ok(Token(bytes.iter().map(|byte| format!("{byte:02x}")).collect()))
+        Ok(Token(
+            bytes.iter().map(|byte| format!("{byte:02x}")).collect(),
+        ))
     }
 
     /// A stored value counts only in the generated shape; anything else is replaced by a new token.
@@ -115,7 +117,10 @@ mod tests {
         let first = Token::generate().unwrap();
         let second = Token::generate().unwrap();
         assert_eq!(first.expose().len(), 64);
-        assert!(first.expose().bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()));
+        assert!(first
+            .expose()
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()));
         assert_ne!(first.expose(), second.expose());
     }
 

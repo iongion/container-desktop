@@ -2,7 +2,7 @@ name: CIPipeline
 
 # Continuous-integration gate (companion to the CDPipeline.* release pipelines, which build/package releases).
 # The release pipeline runs no checks, so this guards every PR and push to main with the full
-# verification set: type-check, lint, unit tests and a production build. The support/cli tooling is
+# verification set: type-check, lint, unit tests, a production build and the Tauri backend's rustfmt and clippy. The support/cli tooling is
 # type-checked, linted and unit-tested as part of the same app job (check-types / lint:check / test:run).
 on:
   pull_request:
@@ -32,6 +32,12 @@ jobs:
         run: npm install -g "$(node -p "require('./package.json').packageManager")"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Use Rust (with rustfmt and clippy)
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup default stable
+      - name: Install Linux build deps (what the Tauri backend compiles against)
+        run: bash support/provision-deps.sh
       - name: Type-check
         run: pnpm check-types
       - name: Lint (biome check, no writes)
@@ -42,3 +48,5 @@ jobs:
         # ENVIRONMENT=production exercises the packaged single-file layout (CLAUDE.md). A plain
         # `pnpm build` defaults to development and would give false confidence.
         run: ENVIRONMENT=production pnpm build
+      - name: Lint the Tauri backend (rustfmt check, clippy -D warnings; needs the build above, which it embeds)
+        run: pnpm lint:tauri

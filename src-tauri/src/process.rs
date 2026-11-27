@@ -280,13 +280,19 @@ mod tests {
     #[tokio::test]
     async fn kill_all_terminates_every_registered_child() {
         let state = ProcessState::default();
-        let mut child = tokio::process::Command::new("sleep").arg("30").spawn().unwrap();
+        let mut child = tokio::process::Command::new("sleep")
+            .arg("30")
+            .spawn()
+            .unwrap();
         let (kill_tx, _kill_rx) = mpsc::unbounded_channel::<i32>();
         state.register("proc-1".into(), kill_tx, child.id().unwrap());
 
         state.kill_all();
 
-        let status = tokio::time::timeout(Duration::from_secs(5), child.wait()).await.unwrap().unwrap();
+        let status = tokio::time::timeout(Duration::from_secs(5), child.wait())
+            .await
+            .unwrap()
+            .unwrap();
         assert!(!status.success(), "the child outlived kill_all");
     }
 }

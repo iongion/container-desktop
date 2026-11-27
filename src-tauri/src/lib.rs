@@ -230,9 +230,11 @@ pub fn run() {
 fn exit_on_termination_signals(app: tauri::AppHandle) {
     use tokio::signal::unix::{signal, SignalKind};
     tauri::async_runtime::spawn(async move {
-        let (Ok(mut term), Ok(mut int), Ok(mut hup)) =
-            (signal(SignalKind::terminate()), signal(SignalKind::interrupt()), signal(SignalKind::hangup()))
-        else {
+        let (Ok(mut term), Ok(mut int), Ok(mut hup)) = (
+            signal(SignalKind::terminate()),
+            signal(SignalKind::interrupt()),
+            signal(SignalKind::hangup()),
+        ) else {
             return;
         };
         tokio::select! {

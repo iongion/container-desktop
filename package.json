@@ -63,6 +63,7 @@
     "lint": "biome check --write ./src ./support/cli",
     "format": "biome format --write ./src ./support/cli",
     "lint:check": "biome check ./src ./support/cli",
+    "lint:tauri": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings",
     "test": "vitest",
     "test:run": "vitest run",
     "test:live": "vitest run --config vitest.live.config.mts",

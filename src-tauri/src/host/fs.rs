@@ -20,9 +20,11 @@ fn write_private_file(path: &Path, contents: &str) -> Result<(), String> {
             .mode(0o600)
             .open(path)
             .map_err(|e| e.to_string())?;
-        file.write_all(contents.as_bytes()).map_err(|e| e.to_string())?;
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).map_err(|e| e.to_string())?;
-        return Ok(());
+        file.write_all(contents.as_bytes())
+            .map_err(|e| e.to_string())?;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
+            .map_err(|e| e.to_string())?;
+        Ok(())
     }
     #[cfg(not(unix))]
     {

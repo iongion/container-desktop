@@ -28,7 +28,9 @@ pub struct Incoming {
 pub fn incoming(line: &str) -> Incoming {
     let message: Value = serde_json::from_str(line).unwrap_or(Value::Null);
     let method = message.get("method").and_then(Value::as_str);
-    let id = message.get("id").filter(|id| method.is_some() && (id.is_string() || id.is_number()));
+    let id = message
+        .get("id")
+        .filter(|id| method.is_some() && (id.is_string() || id.is_number()));
     Incoming {
         id: id.cloned(),
         initialize: method == Some("initialize"),
@@ -52,12 +54,16 @@ pub enum Outcome {
 impl Outcome {
     // Worth reading the port and token again: the app may have moved, or replaced its token.
     fn calls_for_a_fresh_endpoint(&self) -> bool {
-        matches!(self, Outcome::Answered(401, _) | Outcome::Unreachable | Outcome::NoToken)
+        matches!(
+            self,
+            Outcome::Answered(401, _) | Outcome::Unreachable | Outcome::NoToken
+        )
     }
 }
 
 pub fn error_line(id: &Value, message: &str) -> String {
-    json!({ "jsonrpc": "2.0", "id": id, "error": { "code": RELAY_ERROR, "message": message } }).to_string()
+    json!({ "jsonrpc": "2.0", "id": id, "error": { "code": RELAY_ERROR, "message": message } })
+        .to_string()
 }
 
 /// A JSON body as one line: raw newlines can only sit between JSON tokens, never inside a string.
@@ -73,7 +79,8 @@ fn not_running(port: u16) -> String {
     )
 }
 
-const NO_TOKEN: &str = "Container Desktop's MCP token is not in the OS keychain yet. Turn on the MCP server in \
+const NO_TOKEN: &str =
+    "Container Desktop's MCP token is not in the OS keychain yet. Turn on the MCP server in \
                         Container Desktop's settings, which creates it.";
 
 /// The line to write for a message's outcome, if any. Notifications never get one.
@@ -81,7 +88,10 @@ pub fn output_line(incoming: &Incoming, outcome: &Outcome, port: u16) -> Option<
     let refusal = match outcome {
         Outcome::Answered(status, body) if (200..300).contains(status) => return one_line(body),
         Outcome::Answered(status, body) => {
-            format!("Container Desktop refused the request (HTTP {status}): {}", body.trim())
+            format!(
+                "Container Desktop refused the request (HTTP {status}): {}",
+                body.trim()
+            )
         }
         Outcome::Unreachable => not_running(port),
         Outcome::NoToken => NO_TOKEN.to_string(),
@@ -91,7 +101,10 @@ pub fn output_line(incoming: &Incoming, outcome: &Outcome, port: u16) -> Option<
 
 pub fn negotiated_version(body: &str) -> Option<String> {
     let answer: Value = serde_json::from_str(body).ok()?;
-    answer.pointer("/result/protocolVersion")?.as_str().map(String::from)
+    answer
+        .pointer("/result/protocolVersion")?
+        .as_str()
+        .map(String::from)
 }
 
 type EndpointSource = Arc<dyn Fn() -> Endpoint + Send + Sync>;
@@ -106,7 +119,10 @@ pub struct Relay {
 impl Relay {
     pub fn new(source: EndpointSource) -> Result<Self, String> {
         // Straight to loopback: a proxy from the environment must never see the token.
-        let client = reqwest::Client::builder().no_proxy().build().map_err(|e| e.to_string())?;
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .build()
+            .map_err(|e| e.to_string())?;
         Ok(Relay {
             client,
             source,
@@ -137,10 +153,12 @@ impl Relay {
         }
         // Reading the keychain blocks (a D-Bus round trip on Linux), so it runs off the relay's thread.
         let source = Arc::clone(&self.source);
-        let endpoint = tokio::task::spawn_blocking(move || source()).await.unwrap_or(Endpoint {
-            port: DEFAULT_MCP_PORT,
-            token: None,
-        });
+        let endpoint = tokio::task::spawn_blocking(move || source())
+            .await
+            .unwrap_or(Endpoint {
+                port: DEFAULT_MCP_PORT,
+                token: None,
+            });
         *self.endpoint.lock().unwrap() = Some(endpoint.clone());
         endpoint
     }
@@ -222,7 +240,10 @@ async fn relay_lines(relay: Arc<Relay>) {
 
 /// Relay until stdin closes. Returns the process exit code.
 pub fn run() -> i32 {
-    let runtime = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
         Ok(runtime) => runtime,
         Err(error) => {
             eprintln!("container-desktop --mcp-stdio: {error}");
@@ -247,8 +268,7 @@ mod tests {
     use crate::mcp::server::tests::{serve_fake, TOKEN};
     use std::time::Duration;
 
-    const INITIALIZE: &str =
-        r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}"#;
+    const INITIALIZE: &str = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}"#;
     const INITIALIZED: &str = r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#;
 
     fn fixed(port: u16, token: Option<&str>) -> EndpointSource {
@@ -260,26 +280,53 @@ mod tests {
     }
 
     fn free_port() -> u16 {
-        std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port()
+        std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port()
     }
 
     #[test]
     fn mcp_stdio_knows_a_request_by_its_id() {
-        assert_eq!(incoming(INITIALIZE), Incoming { id: Some(json!(1)), initialize: true });
+        assert_eq!(
+            incoming(INITIALIZE),
+            Incoming {
+                id: Some(json!(1)),
+                initialize: true
+            }
+        );
         let named = incoming(r#"{"jsonrpc":"2.0","id":"a","method":"tools/list"}"#);
-        assert_eq!(named, Incoming { id: Some(json!("a")), initialize: false });
+        assert_eq!(
+            named,
+            Incoming {
+                id: Some(json!("a")),
+                initialize: false
+            }
+        );
         assert_eq!(incoming(INITIALIZED).id, None);
-        assert_eq!(incoming(r#"{"jsonrpc":"2.0","id":3,"result":{}}"#).id, None, "a response is not a request");
-        assert_eq!(incoming(r#"{"jsonrpc":"2.0","id":null,"method":"ping"}"#).id, None);
+        assert_eq!(
+            incoming(r#"{"jsonrpc":"2.0","id":3,"result":{}}"#).id,
+            None,
+            "a response is not a request"
+        );
+        assert_eq!(
+            incoming(r#"{"jsonrpc":"2.0","id":null,"method":"ping"}"#).id,
+            None
+        );
         assert_eq!(incoming("not json").id, None);
     }
 
     #[test]
     fn mcp_stdio_writes_each_answer_as_one_line() {
-        let body = "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\r\n  \"result\": {\"text\": \"a\\nb\"}\n}\n";
+        let body =
+            "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\r\n  \"result\": {\"text\": \"a\\nb\"}\n}\n";
         let line = one_line(body).unwrap();
         assert!(!line.contains('\n') && !line.contains('\r'));
-        assert_eq!(serde_json::from_str::<Value>(&line).unwrap(), serde_json::from_str::<Value>(body).unwrap());
+        assert_eq!(
+            serde_json::from_str::<Value>(&line).unwrap(),
+            serde_json::from_str::<Value>(body).unwrap()
+        );
         assert_eq!(one_line("  \n"), None);
     }
 
@@ -291,24 +338,42 @@ mod tests {
         assert_eq!(error["id"], 7);
         assert_eq!(error["error"]["code"], RELAY_ERROR);
         let message = error["error"]["message"].as_str().unwrap();
-        assert!(message.contains("must be running") && message.contains("17627"), "{message}");
+        assert!(
+            message.contains("must be running") && message.contains("17627"),
+            "{message}"
+        );
 
-        let no_token: Value = serde_json::from_str(&output_line(&request, &Outcome::NoToken, 1).unwrap()).unwrap();
-        assert!(no_token["error"]["message"].as_str().unwrap().contains("keychain"));
+        let no_token: Value =
+            serde_json::from_str(&output_line(&request, &Outcome::NoToken, 1).unwrap()).unwrap();
+        assert!(no_token["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("keychain"));
 
-        let refused = output_line(&request, &Outcome::Answered(401, "Unauthorized: …".into()), 1).unwrap();
+        let refused = output_line(
+            &request,
+            &Outcome::Answered(401, "Unauthorized: …".into()),
+            1,
+        )
+        .unwrap();
         assert!(refused.contains("HTTP 401"), "{refused}");
 
         let notification = incoming(INITIALIZED);
         assert_eq!(output_line(&notification, &Outcome::Unreachable, 1), None);
-        assert_eq!(output_line(&notification, &Outcome::Answered(202, String::new()), 1), None);
+        assert_eq!(
+            output_line(&notification, &Outcome::Answered(202, String::new()), 1),
+            None
+        );
     }
 
     #[test]
     fn mcp_stdio_reads_the_negotiated_protocol_version() {
         let answer = r#"{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{}}}"#;
         assert_eq!(negotiated_version(answer).as_deref(), Some("2025-06-18"));
-        assert_eq!(negotiated_version(r#"{"jsonrpc":"2.0","id":1,"error":{}}"#), None);
+        assert_eq!(
+            negotiated_version(r#"{"jsonrpc":"2.0","id":1,"error":{}}"#),
+            None
+        );
     }
 
     #[tokio::test]
@@ -336,17 +401,26 @@ mod tests {
     async fn mcp_stdio_says_the_app_must_be_running_when_nothing_listens() {
         let port = free_port();
         let relay = Relay::new(fixed(port, Some(TOKEN))).unwrap();
-        let line = relay.relay(r#"{"jsonrpc":"2.0","id":"x","method":"ping"}"#).await.unwrap();
+        let line = relay
+            .relay(r#"{"jsonrpc":"2.0","id":"x","method":"ping"}"#)
+            .await
+            .unwrap();
         let error: Value = serde_json::from_str(&line).unwrap();
         assert_eq!(error["id"], "x");
-        assert!(error["error"]["message"].as_str().unwrap().contains(&port.to_string()));
+        assert!(error["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains(&port.to_string()));
     }
 
     #[tokio::test]
     async fn mcp_stdio_reports_a_wrong_token_as_an_error_for_the_request() {
         let (server, webview) = serve_fake(Some("{}"), Duration::from_secs(5)).await;
         let relay = Relay::new(fixed(server.port, Some(&"f".repeat(64)))).unwrap();
-        let line = relay.relay(r#"{"jsonrpc":"2.0","id":2,"method":"ping"}"#).await.unwrap();
+        let line = relay
+            .relay(r#"{"jsonrpc":"2.0","id":2,"method":"ping"}"#)
+            .await
+            .unwrap();
         assert!(line.contains("HTTP 401"), "{line}");
         assert!(webview.seen.lock().unwrap().is_empty());
         server.stop().await;

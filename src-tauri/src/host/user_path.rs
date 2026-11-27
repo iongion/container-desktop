@@ -60,9 +60,11 @@ pub(crate) fn read_env_dump(reader: impl BufRead) -> String {
 /// True when some PATH directory holds an engine CLI, so asking the login shell would gain nothing.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(crate) fn has_engine_cli(path: &str) -> bool {
-    path.split(':')
-        .filter(|dir| !dir.is_empty())
-        .any(|dir| ENGINE_CLIS.iter().any(|cli| Path::new(dir).join(cli).is_file()))
+    path.split(':').filter(|dir| !dir.is_empty()).any(|dir| {
+        ENGINE_CLIS
+            .iter()
+            .any(|cli| Path::new(dir).join(cli).is_file())
+    })
 }
 
 /// True when PATH holds none of the user install dirs: a launchd launch, so the login shell must be asked. A launch
@@ -161,12 +163,18 @@ mod tests {
             "/usr/bin:/bin:/usr/sbin:/sbin",
             "/usr/local/bin:/opt/homebrew/bin",
         ]);
-        assert_eq!(merged, "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin");
+        assert_eq!(
+            merged,
+            "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
+        );
     }
 
     #[test]
     fn merge_drops_empty_entries_and_lists() {
-        assert_eq!(merge_path_lists(&["", "/usr/bin::/bin:", ""]), "/usr/bin:/bin");
+        assert_eq!(
+            merge_path_lists(&["", "/usr/bin::/bin:", ""]),
+            "/usr/bin:/bin"
+        );
         assert_eq!(merge_path_lists(&["", ""]), "");
     }
 
@@ -175,14 +183,23 @@ mod tests {
         let output = format!(
             "Welcome to zsh\nPATH=/fake/from/motd\n{MARKER}\nHOME=/Users/me\nPATH=/opt/homebrew/bin:/usr/bin\nSHELL=/bin/zsh\n{MARKER}\nbye\n"
         );
-        assert_eq!(path_from_env_dump(&output).as_deref(), Some("/opt/homebrew/bin:/usr/bin"));
+        assert_eq!(
+            path_from_env_dump(&output).as_deref(),
+            Some("/opt/homebrew/bin:/usr/bin")
+        );
     }
 
     #[test]
     fn env_dump_without_markers_or_path_is_none() {
         assert_eq!(path_from_env_dump("PATH=/usr/bin\n"), None);
-        assert_eq!(path_from_env_dump(&format!("{MARKER}\nHOME=/Users/me\n{MARKER}\n")), None);
-        assert_eq!(path_from_env_dump(&format!("{MARKER}\nPATH=\n{MARKER}\n")), None);
+        assert_eq!(
+            path_from_env_dump(&format!("{MARKER}\nHOME=/Users/me\n{MARKER}\n")),
+            None
+        );
+        assert_eq!(
+            path_from_env_dump(&format!("{MARKER}\nPATH=\n{MARKER}\n")),
+            None
+        );
     }
 
     // A reader that fails the test if anything past the closing marker is read: an rc file's background job keeps
@@ -200,7 +217,10 @@ mod tests {
         let head = format!("motd\n{MARKER}\nPATH=/opt/homebrew/bin:/usr/bin\n{MARKER}\n");
         let reader = std::io::BufReader::new(std::io::Cursor::new(head).chain(NeverReadPast));
         let dump = read_env_dump(reader);
-        assert_eq!(path_from_env_dump(&dump).as_deref(), Some("/opt/homebrew/bin:/usr/bin"));
+        assert_eq!(
+            path_from_env_dump(&dump).as_deref(),
+            Some("/opt/homebrew/bin:/usr/bin")
+        );
     }
 
     #[test]

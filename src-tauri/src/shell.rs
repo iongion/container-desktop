@@ -23,7 +23,8 @@ pub struct LaunchResult {
 // A test instance (the WebDriver harness and the screenshot capture set this) never opens the developer's browser,
 // file manager or a terminal on their desktop: each command below reports success without doing it.
 fn external_opens_disabled() -> bool {
-    std::env::var_os("CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN").is_some_and(|value| !value.is_empty())
+    std::env::var_os("CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN")
+        .is_some_and(|value| !value.is_empty())
 }
 
 /// openStorageFolder — reveal the user-data dir (where the shared config lives) in the OS file manager. Uses
@@ -369,10 +370,16 @@ mod tests {
     fn linux_terminal_args_match_each_emulator_template() {
         let params = vec!["ps".to_string(), "-a".to_string()];
         let expected: &[(&str, &[&str])] = &[
-            ("ptyxis", &["--new-window", "-T", "Containers", "--", "podman"]),
+            (
+                "ptyxis",
+                &["--new-window", "-T", "Containers", "--", "podman"],
+            ),
             ("gnome-terminal", &["--title", "Containers", "--", "podman"]),
             ("kgx", &["--title", "Containers", "--", "podman"]),
-            ("konsole", &["--new-tab", "--title", "Containers", "-e", "podman"]),
+            (
+                "konsole",
+                &["--new-tab", "--title", "Containers", "-e", "podman"],
+            ),
             ("kitty", &["--title", "Containers", "podman"]),
             ("alacritty", &["--title", "Containers", "-e", "podman"]),
             ("wezterm", &["start", "--", "podman"]),
@@ -399,6 +406,9 @@ mod tests {
 
     #[test]
     fn real_basename_survives_a_path_that_cannot_be_canonicalized() {
-        assert_eq!(real_basename("/definitely/not/here/gnome-terminal"), "gnome-terminal");
+        assert_eq!(
+            real_basename("/definitely/not/here/gnome-terminal"),
+            "gnome-terminal"
+        );
     }
 }

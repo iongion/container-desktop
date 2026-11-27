@@ -44,7 +44,9 @@ Use the project Node first: `nvm use` (24.22.3). Package manager is **pnpm** (`p
 
 - Install: `pnpm install --frozen-lockfile` (or `make prepare`)
 - **Verify — run all before claiming done:** `pnpm check-types` (tsc — app + `support/cli`) · `pnpm lint` (Biome;
-  `pnpm lint:check` = no-write, used in CI) · `pnpm test:run` (Vitest, hermetic) · `pnpm build` (the renderer bundle)
+  `pnpm lint:check` = no-write, used in CI) · `pnpm test:run` (Vitest, hermetic) · `pnpm build` (the renderer bundle) ·
+  `pnpm lint:tauri` (`src-tauri`: rustfmt check + clippy `-D warnings`; after `ENVIRONMENT=production pnpm build`, whose
+  output it embeds). `make test` runs exactly CI's steps, in CI's order.
 - Keep no node/@tauri leaks in shared `src/` code.
 - Dev (hot reload): `pnpm dev` · Format: `pnpm format`
 - Package: `pnpm package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`); full release: `pnpm cli release`

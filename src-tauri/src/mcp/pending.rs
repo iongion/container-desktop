@@ -59,7 +59,10 @@ pub struct PendingReply {
 impl PendingReply {
     /// The answer, or None when it did not come within `limit`.
     pub async fn wait(mut self, limit: Duration) -> Option<String> {
-        tokio::time::timeout(limit, &mut self.receiver).await.ok()?.ok()
+        tokio::time::timeout(limit, &mut self.receiver)
+            .await
+            .ok()?
+            .ok()
     }
 }
 
@@ -81,8 +84,14 @@ mod tests {
         assert_ne!(first.id, second.id);
         assert!(pending.resolve(second.id, "two".into()));
         assert!(pending.resolve(first.id, "one".into()));
-        assert_eq!(first.wait(Duration::from_secs(1)).await.as_deref(), Some("one"));
-        assert_eq!(second.wait(Duration::from_secs(1)).await.as_deref(), Some("two"));
+        assert_eq!(
+            first.wait(Duration::from_secs(1)).await.as_deref(),
+            Some("one")
+        );
+        assert_eq!(
+            second.wait(Duration::from_secs(1)).await.as_deref(),
+            Some("two")
+        );
         assert_eq!(pending.waiting(), 0);
     }
 
@@ -93,7 +102,10 @@ mod tests {
         let id = reply.id;
         assert_eq!(reply.wait(Duration::from_millis(10)).await, None);
         assert_eq!(pending.waiting(), 0);
-        assert!(!pending.resolve(id, "late".into()), "a late answer finds nobody waiting");
+        assert!(
+            !pending.resolve(id, "late".into()),
+            "a late answer finds nobody waiting"
+        );
     }
 
     #[tokio::test]
@@ -102,8 +114,13 @@ mod tests {
         let reply = pending.register();
         pending.abandon_all();
         assert_eq!(pending.waiting(), 0);
-        let waited = tokio::time::timeout(Duration::from_secs(1), reply.wait(Duration::from_secs(60))).await;
-        assert_eq!(waited, Ok(None), "an abandoned request does not wait out its limit");
+        let waited =
+            tokio::time::timeout(Duration::from_secs(1), reply.wait(Duration::from_secs(60))).await;
+        assert_eq!(
+            waited,
+            Ok(None),
+            "an abandoned request does not wait out its limit"
+        );
     }
 
     #[test]

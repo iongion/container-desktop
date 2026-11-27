@@ -46,7 +46,9 @@
 
 /// Spawn a child this app is responsible for, tied to the app's own lifetime by the kernel wherever the kernel
 /// offers that. Elsewhere it is a plain spawn, which leaves exactly the behaviour these children had before.
-pub fn spawn_bound_to_app(cmd: &mut tokio::process::Command) -> std::io::Result<tokio::process::Child> {
+pub fn spawn_bound_to_app(
+    cmd: &mut tokio::process::Command,
+) -> std::io::Result<tokio::process::Child> {
     #[cfg(target_os = "linux")]
     arm_parent_death_signal(cmd);
     let child = cmd.spawn()?;
@@ -84,8 +86,9 @@ mod windows_job {
     use std::sync::OnceLock;
     use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
     use windows_sys::Win32::System::JobObjects::{
-        AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
-        JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation, SetInformationJobObject,
+        AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
+        SetInformationJobObject, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+        JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
     };
 
     // The app's job, as a usize because a raw pointer is not Sync. 0 means "there is none" — every failure to build
@@ -176,7 +179,7 @@ mod tests {
     mod platform {
         use windows_sys::Win32::Foundation::{CloseHandle, WAIT_TIMEOUT};
         use windows_sys::Win32::System::Threading::{
-            OpenProcess, PROCESS_TERMINATE, TerminateProcess, WaitForSingleObject,
+            OpenProcess, TerminateProcess, WaitForSingleObject, PROCESS_TERMINATE,
         };
 
         // SYNCHRONIZE: the right to wait on the object. (winnt.h — windows-sys only exposes it as a FILE_ access
@@ -229,7 +232,10 @@ mod tests {
                 .expect("runtime");
             runtime.block_on(async {
                 let mut command = platform::long_lived();
-                command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+                command
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null());
                 let child = super::spawn_bound_to_app(&mut command).expect("the long-lived child");
                 // Flushed, because stdout is BLOCK-buffered when it is a pipe rather than a terminal: without this
                 // the line sits in this process's buffer, the test above waits for a pid that never arrives, and the
@@ -247,7 +253,12 @@ mod tests {
             // A substring of the test's own name, not `--exact`: libtest matches on the FULL path
             // (`child_guard::tests::…`), so an exact filter of the bare function name selects nothing and the copy
             // runs no test at all — measured, it reported "running 0 tests" and printed no pid.
-            .args(["a_guarded_child_does_not_outlive", "--nocapture", "--test-threads", "1"])
+            .args([
+                "a_guarded_child_does_not_outlive",
+                "--nocapture",
+                "--test-threads",
+                "1",
+            ])
             .env(HELPER, "1")
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -259,13 +270,19 @@ mod tests {
         // and the read then blocked forever on a line that never came — measured, as a hang rather than a failure.
         const MARKER: &str = "GRANDCHILD ";
         let grandchild: u32 = loop {
-            let line = lines.next().expect("the parent never named its child").expect("stdout");
+            let line = lines
+                .next()
+                .expect("the parent never named its child")
+                .expect("stdout");
             if let Some(at) = line.find(MARKER) {
                 break line[at + MARKER.len()..].trim().parse().expect("a pid");
             }
         };
         // Without this the assertion below is vacuous: "the child is gone" says nothing unless it was ever there.
-        assert!(platform::alive(grandchild), "the guarded child never started");
+        assert!(
+            platform::alive(grandchild),
+            "the guarded child never started"
+        );
 
         // `kill` and not a request to stop: SIGKILL on Unix, TerminateProcess on Windows. The case this exists for
         // is the app getting no chance to clean up after itself.

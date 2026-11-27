@@ -113,15 +113,10 @@ fn start_stdio_bridge(spec: &BridgeSpec) -> Result<BridgeEntry, String> {
     let launcher = spec.launcher.clone();
     let argv = spec.argv.clone();
     let task = tokio::spawn(async move {
-        loop {
-            match listener.accept().await {
-                Ok((stream, _)) => {
-                    let launcher = launcher.clone();
-                    let argv = argv.clone();
-                    tokio::spawn(bridge_unix_connection(stream, launcher, argv));
-                }
-                Err(_) => break,
-            }
+        while let Ok((stream, _)) = listener.accept().await {
+            let launcher = launcher.clone();
+            let argv = argv.clone();
+            tokio::spawn(bridge_unix_connection(stream, launcher, argv));
         }
     });
     Ok(BridgeEntry {

@@ -145,7 +145,9 @@ pub fn webview_data_dir() -> Option<PathBuf> {
 #[tauri::command]
 pub fn get_user_data_path() -> String {
     let explicit = std::env::var(USER_DATA_OVERRIDE).ok();
-    if let Some(dir) = user_data_override(explicit.as_deref(), std::env::current_dir().ok().as_deref()) {
+    if let Some(dir) =
+        user_data_override(explicit.as_deref(), std::env::current_dir().ok().as_deref())
+    {
         return dir.to_string_lossy().into_owned();
     }
     let home = get_home_dir();
@@ -193,7 +195,10 @@ mod tests {
     #[test]
     fn webview_data_dir_is_the_platform_default_without_an_override() {
         assert_eq!(webview_data_dir_from(None, Some(Path::new("/work"))), None);
-        assert_eq!(webview_data_dir_from(Some(""), Some(Path::new("/work"))), None);
+        assert_eq!(
+            webview_data_dir_from(Some(""), Some(Path::new("/work"))),
+            None
+        );
     }
 
     // Parses the Darwin kernel major from uname's release string — the value behind Apple Container's macOS 26

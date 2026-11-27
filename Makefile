@@ -146,7 +146,7 @@ mutation:
 	    --output target/mutants
 
 test-app:
-	@echo "App — type-check, lint, unit tests, production build (like CIPipeline)"
+	@echo "App — type-check, lint, unit tests, production build, Tauri backend lint (like CIPipeline)"
 	@# nvm is a shell function — source it (as prepare-node does) so the .nvmrc node is used.
 	@if [ -s "$$NVM_DIR/nvm.sh" ]; then \
 		. "$$NVM_DIR/nvm.sh"; \
@@ -155,4 +155,5 @@ test-app:
 	pnpm check-types && \
 	pnpm lint:check && \
 	pnpm test:run && \
-	ENVIRONMENT=production pnpm build
+	ENVIRONMENT=production pnpm build && \
+	pnpm lint:tauri

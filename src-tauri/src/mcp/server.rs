@@ -57,7 +57,11 @@ pub async fn start(port: u16, config: ServerConfig) -> Result<RunningServer, Str
     let port = listener.local_addr().map_err(|e| e.to_string())?.port();
     let (stop, stopped) = watch::channel(false);
     let accept_loop = tokio::spawn(accept_loop(listener, Arc::new(config), stopped));
-    Ok(RunningServer { port, stop, accept_loop })
+    Ok(RunningServer {
+        port,
+        stop,
+        accept_loop,
+    })
 }
 
 /// Resolves once the server is told to stop, or is gone.
@@ -65,7 +69,11 @@ async fn stop_signal(stopped: &mut watch::Receiver<bool>) {
     let _ = stopped.wait_for(|stop| *stop).await;
 }
 
-async fn accept_loop(listener: TcpListener, config: Arc<ServerConfig>, mut stopped: watch::Receiver<bool>) {
+async fn accept_loop(
+    listener: TcpListener,
+    config: Arc<ServerConfig>,
+    mut stopped: watch::Receiver<bool>,
+) {
     let for_connections = stopped.clone();
     loop {
         tokio::select! {
@@ -81,7 +89,11 @@ async fn accept_loop(listener: TcpListener, config: Arc<ServerConfig>, mut stopp
     }
 }
 
-async fn serve_connection(stream: TcpStream, config: Arc<ServerConfig>, mut stopped: watch::Receiver<bool>) {
+async fn serve_connection(
+    stream: TcpStream,
+    config: Arc<ServerConfig>,
+    mut stopped: watch::Receiver<bool>,
+) {
     let service = service_fn(move |request| {
         let config = Arc::clone(&config);
         async move { Ok::<_, Infallible>(respond(request, &config).await) }
@@ -95,7 +107,12 @@ async fn serve_connection(stream: TcpStream, config: Arc<ServerConfig>, mut stop
 
 async fn respond(request: Request<Incoming>, config: &ServerConfig) -> Response<Full<Bytes>> {
     let (parts, body) = request.into_parts();
-    if let Err(rejection) = check_request(&parts.method, parts.uri.path(), &parts.headers, &config.token) {
+    if let Err(rejection) = check_request(
+        &parts.method,
+        parts.uri.path(),
+        &parts.headers,
+        &config.token,
+    ) {
         return rejected(rejection);
     }
     let body = match read_body(body).await {
@@ -104,7 +121,10 @@ async fn respond(request: Request<Incoming>, config: &ServerConfig) -> Response<
     };
     let pending = config.pending.register();
     if config.forwarder.forward(pending.id, body).is_err() {
-        return text(StatusCode::SERVICE_UNAVAILABLE, "Container Desktop could not hand the request to its window");
+        return text(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Container Desktop could not hand the request to its window",
+        );
     }
     match pending.wait(config.reply_timeout).await {
         None => text(
@@ -122,38 +142,62 @@ where
     B: Body,
     B::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
 {
-    let collected = Limited::new(body, MAX_BODY_BYTES).collect().await.map_err(|error| {
-        if error.downcast_ref::<LengthLimitError>().is_some() {
-            Rejection::too_large()
-        } else {
-            Rejection::new(StatusCode::BAD_REQUEST, "Bad request: the body could not be read")
-        }
-    })?;
-    String::from_utf8(collected.to_bytes().to_vec())
-        .map_err(|_| Rejection::new(StatusCode::BAD_REQUEST, "Bad request: the body must be UTF-8 JSON"))
+    let collected = Limited::new(body, MAX_BODY_BYTES)
+        .collect()
+        .await
+        .map_err(|error| {
+            if error.downcast_ref::<LengthLimitError>().is_some() {
+                Rejection::too_large()
+            } else {
+                Rejection::new(
+                    StatusCode::BAD_REQUEST,
+                    "Bad request: the body could not be read",
+                )
+            }
+        })?;
+    String::from_utf8(collected.to_bytes().to_vec()).map_err(|_| {
+        Rejection::new(
+            StatusCode::BAD_REQUEST,
+            "Bad request: the body must be UTF-8 JSON",
+        )
+    })
 }
 
-fn response(status: StatusCode, content_type: Option<&'static str>, body: Bytes) -> Response<Full<Bytes>> {
+fn response(
+    status: StatusCode,
+    content_type: Option<&'static str>,
+    body: Bytes,
+) -> Response<Full<Bytes>> {
     let mut response = Response::new(Full::new(body));
     *response.status_mut() = status;
     if let Some(content_type) = content_type {
-        response.headers_mut().insert(CONTENT_TYPE, HeaderValue::from_static(content_type));
+        response
+            .headers_mut()
+            .insert(CONTENT_TYPE, HeaderValue::from_static(content_type));
     }
     response
 }
 
 fn text(status: StatusCode, message: impl Into<String>) -> Response<Full<Bytes>> {
-    response(status, Some("text/plain; charset=utf-8"), Bytes::from(message.into()))
+    response(
+        status,
+        Some("text/plain; charset=utf-8"),
+        Bytes::from(message.into()),
+    )
 }
 
 fn rejected(rejection: Rejection) -> Response<Full<Bytes>> {
     let mut response = text(rejection.status, rejection.message);
     match rejection.status {
         StatusCode::UNAUTHORIZED => {
-            response.headers_mut().insert(WWW_AUTHENTICATE, HeaderValue::from_static("Bearer"));
+            response
+                .headers_mut()
+                .insert(WWW_AUTHENTICATE, HeaderValue::from_static("Bearer"));
         }
         StatusCode::METHOD_NOT_ALLOWED => {
-            response.headers_mut().insert(ALLOW, HeaderValue::from_static("POST"));
+            response
+                .headers_mut()
+                .insert(ALLOW, HeaderValue::from_static("POST"));
         }
         _ => {}
     }
@@ -187,7 +231,10 @@ pub mod tests {
         }
     }
 
-    fn fake_config(reply: Option<&str>, reply_timeout: Duration) -> (ServerConfig, Arc<FakeWebview>) {
+    fn fake_config(
+        reply: Option<&str>,
+        reply_timeout: Duration,
+    ) -> (ServerConfig, Arc<FakeWebview>) {
         let pending = Arc::new(PendingReplies::default());
         let webview = Arc::new(FakeWebview {
             pending: Arc::clone(&pending),
@@ -204,14 +251,21 @@ pub mod tests {
     }
 
     /// A server on a free port whose webview answers every request with `reply`.
-    pub async fn serve_fake(reply: Option<&str>, reply_timeout: Duration) -> (RunningServer, Arc<FakeWebview>) {
+    pub async fn serve_fake(
+        reply: Option<&str>,
+        reply_timeout: Duration,
+    ) -> (RunningServer, Arc<FakeWebview>) {
         let (config, webview) = fake_config(reply, reply_timeout);
         (start(0, config).await.unwrap(), webview)
     }
 
     // No pooling: every request gets its own connection, so a rejected one cannot leave a closed one behind.
     fn client() -> reqwest::Client {
-        reqwest::Client::builder().no_proxy().pool_max_idle_per_host(0).build().unwrap()
+        reqwest::Client::builder()
+            .no_proxy()
+            .pool_max_idle_per_host(0)
+            .build()
+            .unwrap()
     }
 
     fn post(client: &reqwest::Client, port: u16, body: &str) -> reqwest::RequestBuilder {
@@ -237,7 +291,10 @@ pub mod tests {
     async fn mcp_server_answers_202_without_a_body_when_the_webview_has_nothing_to_say() {
         let (server, _) = serve_fake(Some(""), Duration::from_secs(5)).await;
         let notification = r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#;
-        let response = post(&client(), server.port, notification).send().await.unwrap();
+        let response = post(&client(), server.port, notification)
+            .send()
+            .await
+            .unwrap();
         assert_eq!(response.status().as_u16(), 202);
         assert_eq!(response.text().await.unwrap(), "");
         server.stop().await;
@@ -249,7 +306,13 @@ pub mod tests {
         let (client, port) = (client(), server.port);
         let url = format!("http://127.0.0.1:{port}/mcp");
 
-        let unauthorized = client.post(&url).bearer_auth("f".repeat(64)).body(PING).send().await.unwrap();
+        let unauthorized = client
+            .post(&url)
+            .bearer_auth("f".repeat(64))
+            .body(PING)
+            .send()
+            .await
+            .unwrap();
         assert_eq!(unauthorized.status().as_u16(), 401);
         assert_eq!(unauthorized.headers()[WWW_AUTHENTICATE], "Bearer");
 
@@ -257,15 +320,30 @@ pub mod tests {
         assert_eq!(get.status().as_u16(), 405);
         assert_eq!(get.headers()[ALLOW], "POST");
 
-        let evil = post(&client, port, PING).header("origin", "http://evil.example").send().await.unwrap();
+        let evil = post(&client, port, PING)
+            .header("origin", "http://evil.example")
+            .send()
+            .await
+            .unwrap();
         assert_eq!(evil.status().as_u16(), 403);
 
-        let rebound = post(&client, port, PING).header("host", "evil.example").send().await.unwrap();
+        let rebound = post(&client, port, PING)
+            .header("host", "evil.example")
+            .send()
+            .await
+            .unwrap();
         assert_eq!(rebound.status().as_u16(), 403);
 
-        let newer = post(&client, port, PING).header("mcp-protocol-version", "2026-07-28").send().await.unwrap();
+        let newer = post(&client, port, PING)
+            .header("mcp-protocol-version", "2026-07-28")
+            .send()
+            .await
+            .unwrap();
         assert_eq!(newer.status().as_u16(), 400);
-        assert!(newer.headers()[CONTENT_TYPE].to_str().unwrap().starts_with("text/plain"));
+        assert!(newer.headers()[CONTENT_TYPE]
+            .to_str()
+            .unwrap()
+            .starts_with("text/plain"));
 
         assert!(webview.seen.lock().unwrap().is_empty());
         server.stop().await;
@@ -273,11 +351,17 @@ pub mod tests {
 
     #[tokio::test]
     async fn mcp_server_caps_a_body_that_runs_past_the_limit() {
-        let over = read_body(Full::new(Bytes::from(vec![b'x'; MAX_BODY_BYTES + 1]))).await.unwrap_err();
+        let over = read_body(Full::new(Bytes::from(vec![b'x'; MAX_BODY_BYTES + 1])))
+            .await
+            .unwrap_err();
         assert_eq!(over.status, StatusCode::PAYLOAD_TOO_LARGE);
-        let at = read_body(Full::new(Bytes::from(vec![b'x'; MAX_BODY_BYTES]))).await.unwrap();
+        let at = read_body(Full::new(Bytes::from(vec![b'x'; MAX_BODY_BYTES])))
+            .await
+            .unwrap();
         assert_eq!(at.len(), MAX_BODY_BYTES);
-        let binary = read_body(Full::new(Bytes::from_static(&[0xff, 0xfe]))).await.unwrap_err();
+        let binary = read_body(Full::new(Bytes::from_static(&[0xff, 0xfe])))
+            .await
+            .unwrap_err();
         assert_eq!(binary.status, StatusCode::BAD_REQUEST);
     }
 
@@ -311,10 +395,17 @@ pub mod tests {
 
         server.stop().await;
         let after = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer)).await;
-        assert_eq!(after.expect("a kept-alive connection closes on stop").unwrap_or(0), 0);
+        assert_eq!(
+            after
+                .expect("a kept-alive connection closes on stop")
+                .unwrap_or(0),
+            0
+        );
 
         let (config, _) = fake_config(None, Duration::from_secs(1));
-        let again = start(port, config).await.expect("the port is free again right after stop");
+        let again = start(port, config)
+            .await
+            .expect("the port is free again right after stop");
         again.stop().await;
     }
 
@@ -323,8 +414,10 @@ pub mod tests {
         let taken = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let port = taken.local_addr().unwrap().port();
         let (config, _) = fake_config(None, Duration::from_secs(1));
-        let error = start(port, config).await.err().expect("a taken port is an error, not a panic");
+        let error = start(port, config)
+            .await
+            .err()
+            .expect("a taken port is an error, not a panic");
         assert!(error.contains(&port.to_string()), "{error}");
     }
 }
-
